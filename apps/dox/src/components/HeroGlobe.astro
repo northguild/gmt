@@ -14,8 +14,9 @@
  * The copy column holds the pages of the landing's carousel: the intro (the title and the
  * tagline) and the pages the landing passes as children, each marked `data-page="<name>"`. Under
  * them are the hero's buttons, and under the buttons the pager: the previous arrow, a dot per
- * page (lib/home-carousel.ts fills them) and the next arrow. Without the script the pager is not
- * shown and every page reads in order (gmt-home-carousel.css).
+ * page (lib/home-carousel.ts fills them) and the next arrow. The carousel runs only where the
+ * landing is locked; stacked, and without the script, the pager is not shown and every page reads
+ * in order (gmt-home-stacked.css).
  */
 import Globe from './Globe.astro';
 import HeroActions from './HeroActions.astro';
@@ -75,19 +76,6 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 			padding-block-start: var(--sl-nav-height);
 			overflow: clip;
 			background-color: var(--gmt-void);
-
-			/* The room the zone drawer takes under the Earth while the hero stacks
-			   (globe.module.css). */
-			--gmt-hero-bay: 30rem;
-		}
-
-		/* Stacked: the copy, then the Earth's area, which takes the rest of the first screen
-		   and the drawer's bay under it. */
-		@media (width < 64rem) or (orientation: portrait) {
-			.gmt-herostage {
-				grid-template-rows: auto 1fr;
-				min-block-size: calc(100dvh + var(--gmt-hero-bay));
-			}
 		}
 
 		/* No panel behind the copy: the Earth, the stars, the Moon and the Sun show through it.
@@ -196,10 +184,38 @@ const { title = data.title, tagline, actions = [] } = data.hero || {};
 </style>
 
 <style is:global>
-	/* The buttons' sizes on a narrower landscape screen, beside the Earth. Unlayered, as the shared
-	   button rules in HeroActions.astro are, and more specific, so these win. */
+	/* The buttons' sizes on a phone, under the tagline, and on a narrower landscape screen, beside
+	   the Earth. Unlayered, as the shared button rules in HeroActions.astro are, and more specific,
+	   so these win. */
 	.gmt-hero-nav .gmt-hero-actions {
 		margin: 0;
+	}
+
+	/* On a phone the two buttons keep one row down to 320px, as compact as the other NorthGuild
+	   landings', and 44px tall for a finger. */
+	@media (width < 50rem) {
+		.gmt-hero-nav .gmt-hero-actions {
+			gap: 0.6rem;
+		}
+
+		.gmt-hero-nav .gmt-hero-actions .sl-link-button {
+			gap: 0.4rem;
+			min-block-size: 2.75rem;
+			padding: 0.6rem 0.9rem;
+			font-size: 0.875rem;
+		}
+
+		.gmt-hero-nav .gmt-hero-actions .sl-link-button svg {
+			inline-size: 1.125rem;
+			block-size: 1.125rem;
+		}
+	}
+
+	@media (width < 24rem) {
+		.gmt-hero-nav .gmt-hero-actions .sl-link-button {
+			padding-inline: 0.75rem;
+			font-size: 0.8125rem;
+		}
 	}
 
 	@media (64rem <= width < 80rem) and (orientation: landscape) {

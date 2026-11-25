@@ -25,10 +25,19 @@ import {
 } from "~/widgets/primitives/combobox/combobox";
 import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import styles from "~/widgets/tools/globe.module.css";
+import phone from "~/widgets/tools/globe-phone.module.css";
 import { registerEscLayer } from "./esc-layers";
 import { cueOnAppear } from "./sound/appear";
 import { cue } from "./sound/cue";
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 import { watchCover } from "./globe-cover";
+import {
+  ATMOSPHERE,
+  frameBand,
+  SPACE_CLEARANCE,
+  STACK_CLEARANCE,
+} from "./globe-frame";
+import { cardBand, followViewport } from "./globe-sheet";
 import type { GlobeHost } from "./globe";
 import { followGlobe, heroOf, offerGlobe, skyWithoutGlobe } from "./hero-space";
 import {
@@ -70,21 +79,6 @@ const DEFAULT_CAPTION =
 
 /** The widget's slug: the gates, `findWidget` and the chat registry read it. */
 export const GLOBE_WIDGET_NAME = "globe";
-
-/** The screens where the zone drawer is a slide-over beside the copy; elsewhere a bottom sheet. */
-const SLIDE_OVER = "(width >= 64rem) and (orientation: landscape)";
-
-/** The share of the stage's half-size the Earth fills at rest. */
-const SPACE_FILL = 0.94;
-
-/** The atmosphere's reach beyond the disc, as drawn by the renderers. */
-const ATMOSPHERE = 1.06;
-
-/** Pixels kept clear between the atmosphere and the stage's edge. */
-const SPACE_CLEARANCE = 16;
-
-/** Pixels kept clear between the Earth's disc and the zoom stack. */
-const STACK_CLEARANCE = 8;
 
 /**
  * The globe's chrome, for both surfaces.
@@ -133,7 +127,7 @@ export function renderGlobeTemplate({
     })}
   </div>`;
 
-  const zoom = html`<div class="${styles.zoom}" id="${id("zoom")}" data-gate="globe-zoom" role="group" aria-label="Globe controls">
+  const zoom = html`<div class="${styles.zoom} ${phone.stack}" id="${id("zoom")}" data-gate="globe-zoom" role="group" aria-label="Globe controls">
     <button type="button" data-globe-zoom="in" data-cue aria-label="Zoom in">+</button>
     <button type="button" data-globe-zoom="out" data-cue aria-label="Zoom out">−</button>
     <button type="button" data-globe-zoom="reset" data-cue aria-label="Reset zoom">⊙</button>
@@ -162,15 +156,15 @@ export function renderGlobeTemplate({
         <div class="${styles.hit}" id="${id("hit")}" data-gate="globe-hit"></div>
         <div class="${styles.layout}">
           <div class="${styles.frame}">
-            <div class="${styles.stage}" id="${id("stage")}" data-gate="globe-stage">${zoom}</div>
+            <div class="${styles.stage} ${phone.stage}" id="${id("stage")}" data-gate="globe-stage">${zoom}</div>
           </div>
           ${drawer({
             id: id("drawer"),
             gate: "globe-drawer",
             label: "Zone finder",
             closeLabel: "Close zone list",
-            className: styles.drawer,
-            closeClassName: styles.drawerClose,
+            className: `${styles.drawer} ${phone.sheet}`,
+            closeClassName: `${styles.drawerClose} ${phone.sheetClose}`,
             children: side,
           })}
         </div>
@@ -238,7 +232,7 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     ? globe.el.querySelector<HTMLElement>("[data-drawer]")
     : null;
   const closeButton = drawerEl?.querySelector<HTMLElement>("button") ?? null;
-  const slideOver = globalThis.matchMedia?.(SLIDE_OVER);
+  const slideOver = globalThis.matchMedia?.(HOME_LOCKED_QUERY);
   /* The hero's copy: on a wide screen the Earth keeps clear of wherever its words end. */
   const findCopy = (): HTMLElement | null =>
     surface
@@ -278,10 +272,15 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
                 8
               );
             },
+            /* Stacked, the card keeps between the intro above and the open sheet. */
+            tooltipBand: () =>
+              slideOver?.matches === true
+                ? null
+                : cardBand(stage, drawerEl, surface),
             engine: {
               ...pause,
-              framing: (width: number, height: number) =>
-                frameSpace(
+              framing: (width: number, height: number) => {
+                return frameSpace(
                   stage,
                   surface,
                   zoom,
@@ -289,7 +288,8 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
                   slideOver?.matches === true,
                   width,
                   height,
-                ),
+                );
+              },
               framingWatch: [stage, zoom, surface, findCopy()].filter(
                 (el): el is HTMLElement => el !== null,
               ),
@@ -452,12 +452,9 @@ function frameSpace(
       cy: height / 2,
       radius: Math.min(width, height) / 2,
     };
-  const half = Math.min(box.width, box.height) / 2;
-  const cy = box.top - origin.top + box.height / 2;
-  const fit = Math.min(
-    half * SPACE_FILL,
-    (half - SPACE_CLEARANCE) / ATMOSPHERE,
-  );
+  const band = frameBand(box, stack, wide);
+  const cy = box.top - origin.top + band.mid;
+  const fit = band.fit;
   /* The stack's laid-out box in the stage, not where its entrance transform has it now. */
   const left = box.left - origin.left + stack.offsetLeft;
   const top = box.top - origin.top + stack.offsetTop;
@@ -514,6 +511,7 @@ function wireSpace(
     "[data-globe-search]",
   );
   if (!panel || !magnifier) return;
+  followViewport(panel, signal);
   let closedByReader = false;
   const drawerHandle = wireDrawer(panel, {
     signal,
@@ -533,14 +531,15 @@ function wireSpace(
       if (drawerHandle.expanded) drawerHandle.close();
       else {
         drawerHandle.open();
-        /* The search takes focus with its list shut: an open list would cover the zones the
-           reader came to see, and one Escape then closes the drawer. */
+        /* The search takes focus with its list shut (an open one would cover the zones), so one Escape closes the drawer. */
         panel.querySelector<GmtCombobox>("gmt-combobox")?.focusInput();
       }
     },
     { signal },
   );
   host.onInteract((kind) => {
+    /* Stacked, only the magnifier opens the sheet; a tap still picks its zone and shows the card. */
+    if (globalThis.matchMedia?.(HOME_LOCKED_QUERY).matches === false) return;
     /* The tap has already picked its zone, or cleared the choice, by the time this runs. */
     if (kind === "tap" && host.getSelected() !== null) {
       drawerHandle.open();

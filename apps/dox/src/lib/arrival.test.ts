@@ -6,6 +6,7 @@
  * document is parsed, and notes an arrival through a view transition. It runs here against a
  * stand-in window so no listener outlives a test.
  */
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 import {
   ARRIVAL_FAILSAFE_MS,
   VIEW_TRANSITION_OPT_IN,
@@ -21,6 +22,10 @@ interface Origin {
   referrer?: string;
   /** The navigation timing entry's `type`: `reload` for a reload. */
   type?: string;
+  /** Whether the screen is locked (`HOME_LOCKED_QUERY` matches). Defaults to true. */
+  locked?: boolean;
+  /** A browser with no `matchMedia`. */
+  noMatchMedia?: boolean;
 }
 
 /** A view transition stand-in that records the types added to it. */
@@ -34,6 +39,8 @@ interface Stand {
   /** Delivers `DOMContentLoaded`: every deferred module script has run. */
   parsed: () => void;
   root: HTMLElement;
+  /** Every media query the script asked about. */
+  asked: string[];
 }
 
 const ORIGIN = "https://northguild.dev";
@@ -42,6 +49,7 @@ const ORIGIN = "https://northguild.dev";
 function run(base: string, path: string, from: Origin = {}): Stand {
   const listeners: Listener[] = [];
   const onParsed: (() => void)[] = [];
+  const asked: string[] = [];
   const win = {
     navigation:
       from.activation === undefined
@@ -51,6 +59,14 @@ function run(base: string, path: string, from: Origin = {}): Stand {
       getEntriesByType: (kind: string) =>
         kind === "navigation" ? [{ type: from.type ?? "navigate" }] : [],
     },
+    matchMedia: from.noMatchMedia
+      ? undefined
+      : (query: string) => {
+          asked.push(query);
+          return {
+            matches: query === HOME_LOCKED_QUERY && from.locked !== false,
+          };
+        },
     addEventListener: (name: string, listener: Listener) => {
       if (name === "pagereveal") listeners.push(listener);
       if (name === "DOMContentLoaded") onParsed.push(listener as () => void);
@@ -70,6 +86,7 @@ function run(base: string, path: string, from: Origin = {}): Stand {
       for (const listener of onParsed) listener();
     },
     root,
+    asked,
   };
 }
 
@@ -277,8 +294,23 @@ describe("the view-transition opt-in", () => {
 });
 
 describe("the carousel mark", () => {
-  it("marks the landing as waiting for the carousel, on any screen", () => {
-    expect(run("/", "/").root.dataset["homeCarousel"]).toBe("wait");
+  it("marks the locked landing as waiting for the carousel", () => {
+    const { root, asked } = run("/", "/");
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+    expect(asked).toEqual([HOME_LOCKED_QUERY]);
+  });
+
+  it("leaves a stacked landing unmarked, so its pages read in order", () => {
+    const { root, parsed } = run("/", "/", { locked: false });
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+    parsed();
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+  });
+
+  it("leaves the landing unmarked where there is no matchMedia", () => {
+    const { root } = run("/", "/", { noMatchMedia: true });
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+    expect(root.dataset["entrance"]).toBe("wait");
   });
 
   it("leaves a page that is not the landing alone", () => {

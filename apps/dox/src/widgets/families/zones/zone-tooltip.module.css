@@ -1,19 +1,43 @@
+/* Three groups, one under the next: where (the id and the sky chip), when (the time, then the
+   date) and the rule (offset and DST), the last cut off by a hairline in the card's own border
+   colour. The width is the content's, up to what fits the screen: the card is placed by its
+   measured width, so it must not shrink to whatever room is left beside its pin. */
 .root {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--gmt-space-1);
+  inline-size: max-content;
+  max-inline-size: calc(100vw - 5rem);
   font-family: var(--gmt-font-mono);
 }
 
+/* A long id wraps at a slash; the chip drops under it when the two do not fit on one row. */
+.where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--gmt-space-2);
+}
+
 .zone {
+  min-inline-size: 0;
   font-size: var(--gmt-text-xs);
+  font-weight: 600;
   color: var(--gmt-ice);
+}
+
+.when {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Time is blue, offset green and DST gold, the same roles as the clock list beside the globe.
    All -ink tokens: this is text, and the bright base tokens clear the 3:1 fill bar only. */
 .time {
-  font-size: 0.95rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
   color: var(--gmt-cyan-ink);
 }
 
@@ -36,6 +60,7 @@
    and every other hue has a job here. The glyph and the word carry it. */
 .sky {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 0.3em;
   font-size: var(--gmt-text-xs);
@@ -47,10 +72,12 @@
   flex: none;
 }
 
-.meta {
+.rule {
   display: flex;
-  align-items: center;
-  gap: 0.3em;
+  justify-content: space-between;
+  gap: var(--gmt-space-3);
+  padding-block-start: var(--gmt-space-1);
+  border-block-start: 1px solid var(--gmt-border-strong);
   font-size: var(--gmt-text-xs);
   color: var(--gmt-ice-dim);
   white-space: nowrap;
@@ -79,12 +106,16 @@
   .date,
   .shift,
   .sky,
-  .meta,
+  .rule,
   .offset,
   .dst,
   .dstOn,
   .lost {
     color: CanvasText;
+  }
+
+  .rule {
+    border-color: CanvasText;
   }
 }
 
@@ -92,7 +123,7 @@
   .time,
   .date,
   .sky,
-  .meta,
+  .rule,
   .offset,
   .dst,
   .dstOn,

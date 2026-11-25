@@ -83,11 +83,25 @@ describe.each(ENGINES)("first-paint layout in %s", (_name, type) => {
             ".gmt-herostage-copy",
           );
           if (!column) throw new Error("no hero copy column");
-          const style = getComputedStyle(column);
+          /* The width a page has to fill. Stacked, the column is `display: contents` and each page
+             is a cell of the hero's grid, so the width is the hero's content box less the cell's
+             own margins. */
+          const contents = getComputedStyle(column).display === "contents";
+          const box = contents ? column.parentElement : column;
+          const cell = column.querySelector<HTMLElement>(
+            ":scope > [data-page]",
+          );
+          if (!box || !cell) throw new Error("no hero box or page");
+          const style = getComputedStyle(box);
+          const gutters = contents
+            ? parseFloat(getComputedStyle(cell).marginInlineStart) +
+              parseFloat(getComputedStyle(cell).marginInlineEnd)
+            : 0;
           const inner =
-            column.clientWidth -
+            box.clientWidth -
             parseFloat(style.paddingInlineStart) -
-            parseFloat(style.paddingInlineEnd);
+            parseFloat(style.paddingInlineEnd) -
+            gutters;
           return {
             mark: document.documentElement.dataset["homeCarousel"] ?? null,
             inner,

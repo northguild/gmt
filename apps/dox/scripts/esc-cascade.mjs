@@ -34,6 +34,7 @@
  * Exits non-zero on any failure.
  */
 import { launchBrowser } from "./lib/browser-launch.mjs";
+import { isLocked } from "./lib/home-locked.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
@@ -637,9 +638,19 @@ async function selectionChecks(page, ctx) {
 async function runGlobe(page, ctx) {
   const { browser, width, path } = ctx;
   const opened = [];
-  // The landing's carousel, on at every width: the next arrow turns it to the second page.
+  /* The landing's carousel, on only where the landing is locked (`HOME_LOCKED_QUERY` in
+     home-carousel.ts): there the next arrow turns it to the second page; stacked, there is none. */
   let turnedTo = null;
-  if (path === "/") {
+  const locked = await isLocked(page);
+  if (path === "/" && !locked && (await page.evaluate(carouselPage)) !== null)
+    fail(
+      "carousel-stacked",
+      browser,
+      width,
+      path,
+      "the carousel is on where the landing stacks; the pages should read in order",
+    );
+  if (path === "/" && locked) {
     const before = await page.evaluate(carouselPage);
     await openByKeyboard(page, '[data-hero-step="1"]');
     turnedTo = await page.evaluate(carouselPage);

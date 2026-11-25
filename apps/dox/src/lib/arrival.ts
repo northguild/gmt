@@ -12,8 +12,9 @@
  *   the buttons and the header already, so nothing freezes in and the entrance makes no sound.
  *   Only the sky fades in once drawn, and the globe dawns. A reload, an arrival from another site
  *   and one from elsewhere on this origin (northguild.dev) get the whole entrance.
- * - On the landing it also sets `data-home-carousel="wait"`, so the paged layout is the first
- *   layout. `home-carousel.ts` writes `on` once it has wired the pages. At `DOMContentLoaded` it
+ * - On the landing, where it is locked (`HOME_LOCKED_QUERY`), it also sets
+ *   `data-home-carousel="wait"`, so the paged layout is the first layout. A stacked landing (and a
+ *   browser with no `matchMedia`) gets no mark: its pages read in order. `home-carousel.ts` writes `on` once it has wired the pages. At `DOMContentLoaded` it
  *   removes a `wait` nothing has replaced. That is not a timer: the carousel is a deferred module
  *   script, and every deferred module has run (or failed) by then, so a slow load keeps the paged
  *   layout and only a carousel that never ran falls back to the pages in order. A timer fired
@@ -31,6 +32,8 @@
  *
  * The source is a string so one definition serves the `<script is:inline>` and the tests.
  */
+
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 
 /** How long a landing may wait for the sequencer before everything is shown as it is. */
 export const ARRIVAL_FAILSAFE_MS = 2500;
@@ -52,6 +55,7 @@ export const FROM_LANDING_TYPE = "from-landing";
 export function arrivalInlineSource(base: string): string {
   const site = JSON.stringify(base.replace(/\/+$/, ""));
   const type = JSON.stringify(FROM_LANDING_TYPE);
+  const locked = JSON.stringify(HOME_LOCKED_QUERY);
   // `w`: 1 when the previous page is this site's, 2 when it is elsewhere on this origin.
   return `(function(){
 var d=document.documentElement,n=window.navigation,w=0;
@@ -64,8 +68,10 @@ if(t&&t.types&&w===2)t.types.add(${type});
 });
 var p=location.pathname.replace(/\\/(index\\.html)?$/,"");
 if(p!==${site})return;
+if(window.matchMedia&&window.matchMedia(${locked}).matches){
 d.dataset.homeCarousel="wait";
 window.addEventListener("DOMContentLoaded",function(){if(d.dataset.homeCarousel==="wait")delete d.dataset.homeCarousel});
+}
 var r=false;
 try{var q=window.performance.getEntriesByType("navigation")[0];r=!!q&&q.type==="reload"}catch(x){}
 if(w===1&&!r){d.dataset.entrance="static";return}

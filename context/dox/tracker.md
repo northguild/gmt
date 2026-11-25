@@ -46,7 +46,8 @@ builds it.
 | 30    | DOX-G12                                     | —          | #534         | Done   |
 | 31    | DOX-G13                                     | —          | #535         | Done   |
 | 32    | DOX-G14                                     | —          | #538         | Todo   |
-| 33    | DOX-G15                                     | —          | #569         | Done   |
+| 33    | DOX-G15                                     | —          | #556         | Done   |
+| 34    | DOX-G15                                     | —          | #569         | Done   |
 
 Owed verification, not work:
 

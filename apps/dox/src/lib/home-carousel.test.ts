@@ -10,11 +10,56 @@ import userEvent from "@testing-library/user-event";
 import { setHtml } from "~/widgets/builders";
 import { html } from "~/widgets/builders/html";
 import { installJsdomShims } from "../test/jsdom-shims";
-import { initHomeCarousel } from "./home-carousel";
+import { HOME_LOCKED_QUERY, initHomeCarousel } from "./home-carousel";
 
 installJsdomShims();
 
 let aborter: AbortController;
+
+/** The locked-layout query as a `MediaQueryList` the test flips and whose listeners it counts. */
+interface Screen {
+  set: (locked: boolean) => void;
+  listeners: () => number;
+}
+
+function screenOf(locked: boolean): Screen {
+  let matches = locked;
+  const listeners = new Set<() => void>();
+  const list = {
+    get matches() {
+      return matches;
+    },
+    media: HOME_LOCKED_QUERY,
+    addEventListener: (
+      _type: string,
+      listener: () => void,
+      options?: { signal?: AbortSignal },
+    ) => {
+      listeners.add(listener);
+      options?.signal?.addEventListener("abort", () =>
+        listeners.delete(listener),
+      );
+    },
+    removeEventListener: (_type: string, listener: () => void) =>
+      listeners.delete(listener),
+  };
+  const idle = {
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  };
+  vi.spyOn(window, "matchMedia").mockImplementation(((query: string) =>
+    query === HOME_LOCKED_QUERY
+      ? list
+      : idle) as unknown as typeof window.matchMedia);
+  return {
+    set: (value) => {
+      matches = value;
+      for (const listener of listeners) listener();
+    },
+    listeners: () => listeners.size,
+  };
+}
 
 interface Hero {
   hero: HTMLElement;
@@ -62,11 +107,21 @@ function hero(): Hero {
   };
 }
 
+/** The hero on a locked screen, as `arrival.ts` leaves it: marked `wait`. */
 function start(): Hero {
   const h = hero();
+  screenOf(true);
   document.documentElement.dataset["homeCarousel"] = "wait";
   initHomeCarousel(h.hero, aborter.signal);
   return h;
+}
+
+/** The hero on a stacked screen, which `arrival.ts` leaves unmarked. */
+function startStacked(): Hero & { screen: Screen } {
+  const h = hero();
+  const screen = screenOf(false);
+  initHomeCarousel(h.hero, aborter.signal);
+  return { ...h, screen };
 }
 
 const shown = (el: HTMLElement): boolean => el.hasAttribute("data-shown");
@@ -77,6 +132,7 @@ beforeEach(() => {
 
 afterEach(() => {
   aborter.abort();
+  vi.restoreAllMocks();
   window.history.replaceState(null, "", "/");
   delete document.documentElement.dataset["homeCarousel"];
   document.body.replaceChildren();
@@ -169,6 +225,7 @@ describe("initHomeCarousel", () => {
 
   it("clears the wait mark when the hero lacks a part", () => {
     const h = hero();
+    screenOf(true);
     h.next.remove();
     document.documentElement.dataset["homeCarousel"] = "wait";
     initHomeCarousel(h.hero, aborter.signal);
@@ -184,5 +241,190 @@ describe("initHomeCarousel", () => {
     expect(screen.queryAllByRole("tab")).toHaveLength(0);
     expect(h.prev).not.toHaveAttribute("tabindex");
     expect(h.prev).toHaveAccessibleName("Previous page");
+  });
+
+  it("does not wire on a stacked screen: the pages read in order", () => {
+    const h = startStacked();
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    for (const page of [h.intro, h.why, h.more]) {
+      expect(page).not.toHaveAttribute("inert");
+      expect(page).not.toHaveAttribute("aria-hidden");
+      expect(page).not.toHaveAttribute("role");
+    }
+  });
+
+  it("clears the wait mark when the screen is stacked by the time it runs", () => {
+    const h = hero();
+    screenOf(false);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    initHomeCarousel(h.hero, aborter.signal);
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+  });
+
+  it("takes everything back when the screen becomes stacked, and the keys do nothing", async () => {
+    const user = userEvent.setup();
+    const h = hero();
+    const screenList = screenOf(true);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    initHomeCarousel(h.hero, aborter.signal);
+    await user.click(h.next);
+    screenList.set(false);
+    expect(document.documentElement.dataset["homeCarousel"]).toBeUndefined();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    for (const page of [h.intro, h.why, h.more]) {
+      expect(page).not.toHaveAttribute("inert");
+      expect(page).not.toHaveAttribute("role");
+      expect(page).not.toHaveAttribute("aria-label");
+      expect(shown(page)).toBe(false);
+    }
+    expect(h.prev).not.toHaveAttribute("tabindex");
+    expect(h.prev).toHaveAccessibleName("Previous page");
+    h.next.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(shown(h.more)).toBe(false);
+  });
+
+  describe("wiring again when the screen becomes locked", () => {
+    /** Places the pages at `tops`. */
+    const place = (tops: Map<HTMLElement, number>): void => {
+      for (const [page, top] of tops)
+        page.getBoundingClientRect = () => ({ top }) as DOMRect;
+    };
+    let frames: FrameRequestCallback[];
+    /** A scroll, then the browser's next frame. */
+    const scroll = (): void => {
+      // oxlint-disable-next-line dox-test/no-dispatch-event -- jsdom has no layout and its scrollTo fires nothing; the event is the input
+      window.dispatchEvent(new Event("scroll"));
+      for (const frame of frames.splice(0)) frame(0);
+    };
+    beforeEach(() => {
+      frames = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((frame) =>
+        frames.push(frame),
+      );
+    });
+
+    it("opens the page the reader scrolled to, though the resize moves every page first", () => {
+      const h = startStacked();
+      place(
+        new Map([
+          [h.intro, -500],
+          [h.why, -100],
+          [h.more, 900],
+        ]),
+      );
+      scroll();
+      // The locked layout is in place before the change event: here it puts `more` at the top.
+      place(
+        new Map([
+          [h.intro, -900],
+          [h.why, -400],
+          [h.more, 0],
+        ]),
+      );
+      h.screen.set(true);
+      expect(document.documentElement.dataset["homeCarousel"]).toBe("on");
+      expect(shown(h.why)).toBe(true);
+      expect(shown(h.more)).toBe(false);
+    });
+
+    it("counts a page as reached where a jump stops, below the top quarter", () => {
+      const h = startStacked();
+      const real = window.getComputedStyle.bind(window);
+      vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+        const style = real(el);
+        if (el === document.documentElement)
+          return {
+            ...style,
+            scrollPaddingBlockStart: "79px",
+          } as CSSStyleDeclaration;
+        return el === h.more
+          ? ({
+              ...style,
+              scrollMarginBlockStart: "71px",
+            } as CSSStyleDeclaration)
+          : style;
+      });
+      /* A jump to `more` on a landscape phone, 390 tall with the quarter at 97.5, stops at the
+         root's 79 px scroll padding (the header) and the page's 71 px scroll margin. */
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(390);
+      place(
+        new Map([
+          [h.intro, -900],
+          [h.why, -300],
+          [h.more, 150],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.more)).toBe(true);
+      expect(shown(h.why)).toBe(false);
+    });
+
+    it("counts the last page as reached at the end of the document, though its top is low", () => {
+      const h = startStacked();
+      /* A tall portrait tablet at the bottom of the page: `more` is too short for its top to
+         reach the quarter at 341.5, and the document ends first. */
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(1366);
+      vi.spyOn(window, "scrollY", "get").mockReturnValue(1986);
+      vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+        3352,
+      );
+      place(
+        new Map([
+          [h.intro, -1915],
+          [h.why, -3],
+          [h.more, 798],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.more)).toBe(true);
+      expect(shown(h.why)).toBe(false);
+    });
+
+    it("keeps the page at the line one pixel short of the end", () => {
+      const h = startStacked();
+      vi.spyOn(window, "innerHeight", "get").mockReturnValue(1366);
+      vi.spyOn(window, "scrollY", "get").mockReturnValue(1984);
+      vi.spyOn(document.documentElement, "scrollHeight", "get").mockReturnValue(
+        3352,
+      );
+      place(
+        new Map([
+          [h.intro, -1915],
+          [h.why, -3],
+          [h.more, 798],
+        ]),
+      );
+      scroll();
+      h.screen.set(true);
+      expect(shown(h.why)).toBe(true);
+      expect(shown(h.more)).toBe(false);
+    });
+  });
+
+  it("leaves no listener on the screen after teardown, wired or stacked", () => {
+    const wired = hero();
+    const first = screenOf(true);
+    document.documentElement.dataset["homeCarousel"] = "wait";
+    const one = new AbortController();
+    initHomeCarousel(wired.hero, one.signal);
+    expect(first.listeners()).toBe(1);
+    one.abort();
+    expect(first.listeners()).toBe(0);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+
+    document.body.replaceChildren();
+    const stacked = hero();
+    const second = screenOf(false);
+    const two = new AbortController();
+    initHomeCarousel(stacked.hero, two.signal);
+    expect(second.listeners()).toBe(1);
+    two.abort();
+    expect(second.listeners()).toBe(0);
   });
 });

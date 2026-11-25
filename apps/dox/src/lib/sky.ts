@@ -488,7 +488,7 @@ export function mountSky(options: SkyOptions): Sky {
     if (!begun || width === 0 || height === 0) return;
     const started = performance.now();
     const view = skyCentre(latest.rotation, latest.instantMs);
-    const lens = skyLens(width, height, latest.centre, latest.zoom);
+    const lens = skyLens(width, height, latest.centre);
     const m = viewMatrix(latest.rotation, latest.instantMs);
     /* The stars and the Milky Way map are in J2000 axes, the Sun and the Moon in axes of date. */
     const stars = starViewMatrix(latest.rotation, latest.instantMs);
@@ -557,7 +557,7 @@ export function mountSky(options: SkyOptions): Sky {
     instantMs: number,
     zoom: number,
   ): boolean {
-    const at = skyLens(width, height, centre ?? latest.centre, zoom);
+    const at = skyLens(width, height, centre ?? latest.centre);
     return (
       !drawn ||
       Math.abs(
