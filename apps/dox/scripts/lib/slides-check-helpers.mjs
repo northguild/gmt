@@ -109,7 +109,7 @@ export function frameStats(deltas) {
 }
 
 /** How many times the step that holds a tour's worst frame is flown again before that frame counts. */
-export const REFLIGHTS = 3;
+const REFLIGHTS = 3;
 
 /**
  * What is wrong with a tour's frame times against the budget, or null when nothing is. The median is
