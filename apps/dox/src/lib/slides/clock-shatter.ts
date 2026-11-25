@@ -14,7 +14,13 @@
  * cell's box, not the dial's (`shardBox`). Twenty whole copies were 6,000 elements, styled on the
  * break's first frame and again on the next, when the wall's state changes on the layer above:
  * 30 ms each at 1280x720, over `frame-budget`.
+ *
+ * The copies go in a few a frame (`COPIES_PER_FRAME`), over the dial while it still shows, so no
+ * one frame of the camera's flight clones and styles them all: twenty in one task were 40 ms of
+ * script and 30 ms of style at four times CPU throttle. The cracks show at once; the dial hides
+ * when the last copy is in (`broken`), and the shards fly what is left of the crack's hold later.
  */
+import { afterFrames, type Frames } from "./frames";
 import { FADE_END_MS, shardPose } from "./ice-wall/shards";
 import { cells, hashSeed, type Cell } from "./ice-wall/voronoi";
 
@@ -30,6 +36,8 @@ const SAMPLES = 24;
 const PERSPECTIVE = 3;
 /** The dial's rim as a share of its box: the cracks run inside it only (`earth-clock.ts`). */
 const RIM_SHARE = 0.4;
+/** The copies of the dial put in a frame: all twenty land well inside the crack's hold. */
+const COPIES_PER_FRAME = 4;
 
 const SEED = hashSeed("earth-clock");
 
@@ -147,17 +155,33 @@ export function shardKeyframes(cell: Cell, size: number): Keyframe[] {
   });
 }
 
+/** How the break is driven: the frames its copies go in on, when to stop, and when it is whole. */
+interface ShatterOptions {
+  win: Pick<Frames, "requestAnimationFrame">;
+  /** Aborted when the break is swept away: no copy goes in after it. */
+  signal: AbortSignal;
+  /** Called once every shard holds its copy: the caller hides the dial then. */
+  broken(): void;
+}
+
 /**
- * Breaks `dial` (the clock's `<svg>`) into shards inside `into`, which covers it, and plays the
- * break when the browser animates. The dial itself is left for the caller to hide; its `<defs>`
- * stay in it, so the copies, which drop theirs, still find their gradients.
+ * Breaks `dial` (the clock's `<svg>`) into shards inside `into`, which covers it: the cracks at
+ * once, the copies over the next frames, then the flight. The dial itself is left for the caller
+ * to hide (`broken`); its `<defs>` stay in it, so the copies, which drop theirs, still find their
+ * gradients.
  */
-export function shatter(dial: SVGSVGElement, into: HTMLElement): void {
+export function shatter(
+  dial: SVGSVGElement,
+  into: HTMLElement,
+  o: ShatterOptions,
+): void {
   const doc = into.ownerDocument;
+  const clock = doc.defaultView?.performance ?? performance;
+  const begun = clock.now();
   const size = into.getBoundingClientRect().width;
   into.style.perspective = `${num(size * PERSPECTIVE)}px`;
   const leaves = leafBoxes(dial, into);
-  for (const cell of shatterCells()) {
+  const shards = shatterCells().map((cell) => {
     const box = shardBox(cell);
     const shard = doc.createElement("div");
     shard.setAttribute("data-shard", "");
@@ -165,30 +189,59 @@ export function shatter(dial: SVGSVGElement, into: HTMLElement): void {
     shard.style.top = pct(box.y);
     shard.style.width = pct(box.w);
     shard.style.height = pct(box.h);
-    shard.style.clipPath = shardClip(cell);
     shard.style.transformOrigin = `${pct((cell.centroid[0] - box.x) / box.w)} ${pct((cell.centroid[1] - box.y) / box.h)}`;
-    const copy = dial.cloneNode(true) as SVGSVGElement;
-    const parts = copy.querySelectorAll("*");
-    for (const leaf of leaves)
-      if (!reaches(leaf.box, box)) parts[leaf.index]?.remove();
-    copy.querySelector("defs")?.remove();
+    // The cell's outline clips what the shard holds, not the shard: on the layer that moves, a
+    // clip is a mask the compositor draws through on every frame, twenty of them as the shards
+    // near the camera; inside it, it is painted into the layer once.
+    const cut = doc.createElement("div");
+    cut.setAttribute("data-shard-cut", "");
+    cut.style.clipPath = shardClip(cell);
     const edge = crack(doc, cell);
-    placeInShard(copy, box);
     placeInShard(edge, box);
-    shard.append(copy, edge);
+    cut.append(edge);
+    shard.append(cut);
     into.append(shard);
-    if (typeof shard.animate !== "function") continue;
-    shard.animate(shardKeyframes(cell, size), {
-      delay: CRACK_HOLD_MS,
-      duration: FADE_END_MS,
-      fill: "both",
-    });
-    shard.lastElementChild?.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: CRACK_HOLD_MS,
-      easing: "ease-out",
-      fill: "both",
-    });
-  }
+    // Backwards only: once in, the crack is as it stands, with no animation left to keep it a
+    // layer of its own inside the cut.
+    if (typeof edge.animate === "function")
+      edge.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: CRACK_HOLD_MS,
+        easing: "ease-out",
+        fill: "backwards",
+      });
+    return { cell, box, cut, shard };
+  });
+
+  let next = 0;
+  const copyIn = (): void => {
+    if (o.signal.aborted) return;
+    const end = Math.min(next + COPIES_PER_FRAME, shards.length);
+    for (; next < end; next++) {
+      const { box, cut } = shards[next]!;
+      const copy = dial.cloneNode(true) as SVGSVGElement;
+      const parts = copy.querySelectorAll("*");
+      for (const leaf of leaves)
+        if (!reaches(leaf.box, box)) parts[leaf.index]?.remove();
+      copy.querySelector("defs")?.remove();
+      placeInShard(copy, box);
+      // Under the crack, which stays on top.
+      cut.prepend(copy);
+    }
+    if (next < shards.length) {
+      afterFrames(o.win, 1, copyIn, o.signal);
+      return;
+    }
+    o.broken();
+    const delay = Math.max(0, CRACK_HOLD_MS - (clock.now() - begun));
+    for (const { cell, shard } of shards)
+      if (typeof shard.animate === "function")
+        shard.animate(shardKeyframes(cell, size), {
+          delay,
+          duration: FADE_END_MS,
+          fill: "both",
+        });
+  };
+  copyIn();
 }
 
 /** The crack round one shard: its cell's edge, inside the dial's rim, moving with the shard. */

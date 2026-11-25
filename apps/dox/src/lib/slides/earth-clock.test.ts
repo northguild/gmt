@@ -232,12 +232,16 @@ describe("the Earth's clock", () => {
     /* oxlint-enable dox-test/no-house-class */
   });
 
-  it("breaks into copies of the dial on shatter, and sweeps them away when it ends", () => {
+  it("breaks into copies of the dial on shatter, and sweeps them away when it ends", async () => {
     const clock = mount();
     clock.set("on");
     clock.set("shatter");
     const shards = host.querySelectorAll("[data-shard]");
+    // The cracks are in at once; the copies follow over the next frames, and the dial hides when
+    // the last is in.
     expect(shards).toHaveLength(SHARD_COUNT);
+    expect(face()).not.toHaveAttribute("data-broken");
+    await vi.waitFor(() => expect(face()).toHaveAttribute("data-broken"));
     for (const shard of shards) {
       // Each copy drops its gradients, which stay with the dial the copies point at.
       expect(shard.querySelector("[data-hands]")).not.toBeNull();
@@ -247,6 +251,7 @@ describe("the Earth's clock", () => {
     expect(host.querySelectorAll("[data-shard]")).toHaveLength(SHARD_COUNT);
     clock.set("off");
     expect(host.querySelectorAll("[data-shard]")).toHaveLength(0);
+    expect(face()).not.toHaveAttribute("data-broken");
     clock.set("shatter");
     abort.abort();
     expect(host.querySelectorAll("[data-shard]")).toHaveLength(0);
@@ -262,9 +267,11 @@ describe("the Earth's clock", () => {
     clock.set("on");
     clock.set("shatter");
     // The shards are copies inside the plain clock, so they break plain too.
-    expect(
-      host.querySelector("[data-plain] [data-shard] [data-legend]"),
-    ).not.toBeNull();
+    await vi.waitFor(() =>
+      expect(
+        host.querySelector("[data-plain] [data-shard] [data-legend]"),
+      ).not.toBeNull(),
+    );
     clock.plain(false);
     expect(face()).not.toHaveAttribute("data-plain");
   });

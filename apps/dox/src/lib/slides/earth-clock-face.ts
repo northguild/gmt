@@ -84,33 +84,49 @@ function defs(): SafeHtml {
   </defs>`;
 }
 
-/** The enamel, the sunburst over it and the depth at its edge. */
+/** Radial strokes as one path's data: `[deg, r0, r1]` each, from `r0` out to `r1`. */
+function spokes(strokes: Array<[number, number, number]>): string {
+  return strokes
+    .map(([deg, r0, r1]) => {
+      const [x1, y1] = at(r0, deg);
+      const [x2, y2] = at(r1, deg);
+      return `M${x1} ${y1}L${x2} ${y2}`;
+    })
+    .join("");
+}
+
+/**
+ * The enamel, the sunburst over it and the depth at its edge. The rays are one path: the shatter
+ * copies the dial into every shard, and 120 lines a copy were most of the elements the break
+ * styles on its first frame (`clock-shatter.ts`).
+ */
 function dial(): SafeHtml {
-  const rays = Array.from({ length: RAYS }, (_, k) => {
-    const [x1, y1] = at(4, (k * 360) / RAYS);
-    const [x2, y2] = at(RIM - 3.5, (k * 360) / RAYS);
-    return html`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
-  });
+  const rays = spokes(
+    Array.from({ length: RAYS }, (_, k) => [(k * 360) / RAYS, 4, RIM - 3.5]),
+  );
   return html`<g data-dial-face>
     <circle cx="50" cy="50" r="${String(RIM)}" fill="url(#earth-clock-enamel)" />
-    <g data-sunburst>${rays}</g>
+    <path data-sunburst d="${rays}" />
     <circle cx="50" cy="50" r="${String(RIM)}" fill="url(#earth-clock-depth)" />
   </g>`;
 }
 
-/** The chapter ring: two hairlines and a mark every quarter hour between the hour indices. */
+/**
+ * The chapter ring: two hairlines and a mark every quarter hour between the hour indices, the
+ * marks one path, as the sunburst's rays are.
+ */
 function chapter(): SafeHtml {
-  const marks = Array.from({ length: QUARTERS }, (_, k) => {
-    if (k % 4 === 0) return null;
-    const deg = (k * 360) / QUARTERS;
-    const [x1, y1] = at(33.4, deg);
-    const [x2, y2] = at(k % 2 === 0 ? 35.4 : 34.8, deg);
-    return html`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`;
-  });
+  const marks = spokes(
+    Array.from({ length: QUARTERS }, (_, k): [number, number, number] => [
+      (k * 360) / QUARTERS,
+      33.4,
+      k % 2 === 0 ? 35.4 : 34.8,
+    ]).filter((_, k) => k % 4 !== 0),
+  );
   return html`<g data-chapter>
     <circle cx="50" cy="50" r="35.6" fill="none" />
     <circle cx="50" cy="50" r="33.2" fill="none" />
-    ${marks}
+    <path d="${marks}" />
   </g>`;
 }
 

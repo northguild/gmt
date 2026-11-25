@@ -970,13 +970,15 @@ html[data-deck="stage"] .gmt-deck[data-blank] .gmt-deck-space {
  * landing page's copy does (below). Reduced motion zeroes the durations and the opt-in is not
  * made, so there it is a cut.
  *
- * The space layer and the bar get names of their own and no animation, so the sky, the Earth, the
- * clock and the pager never fade, ghost or move: only the new picture of each is shown, and the
- * canvases stay live. Groups stack in the order of the page, so leaving the bar in the root would
- * put the space layer over it.
+ * Nothing else is captured, the root included: the sky, the Earth, the clock and the page round
+ * them stay live, drawn under the groups, so they never fade, ghost or move. A captured root and
+ * space layer were nine full-screen surfaces, and the compositor drew them on every frame of the
+ * camera's flight, which starts as the change is ready (`afterSwap`): 20 ms a frame at 1280x720,
+ * over `frame-budget`. The bar gets a name and no animation: groups stack over the page, and the
+ * arriving slide would otherwise cover it.
  */
-html[data-deck-vt] .gmt-deck-space {
-  view-transition-name: deck-space;
+html[data-deck-vt] {
+  view-transition-name: none;
 }
 
 html[data-deck-vt] .gmt-deck-bar {
@@ -996,15 +998,10 @@ html[data-deck-vt]::view-transition {
   pointer-events: none;
 }
 
-html[data-deck-vt]::view-transition-old(root),
-::view-transition-old(deck-space),
 ::view-transition-old(deck-bar) {
   display: none;
 }
 
-html[data-deck-vt]::view-transition-new(root),
-::view-transition-group(deck-space),
-::view-transition-new(deck-space),
 ::view-transition-group(deck-bar),
 ::view-transition-new(deck-bar),
 ::view-transition-group(deck-slide),
