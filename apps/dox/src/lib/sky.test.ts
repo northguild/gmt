@@ -201,6 +201,14 @@ const mountUnstarted = (): Sky =>
     milkyWay,
   });
 /** A sky whose first draw is made, at the anchor, as a globe that never mounted gets it. */
+/** Turns on one of the reader's settings, and returns its query, to turn it off again. */
+const settings = (on: string): EventTarget & { matches: boolean } => {
+  const media = Object.assign(new EventTarget(), { matches: true });
+  vi.stubGlobal("matchMedia", (query: string) =>
+    query === on ? media : Object.assign(new EventTarget(), { matches: false }),
+  );
+  return media;
+};
 const mount = (): Sky => {
   const sky = mountUnstarted();
   sky.view([0, 0], null, clock);
@@ -689,11 +697,45 @@ describe("mountSky", () => {
     expect(vi.getTimerCount()).toBe(1);
   });
 
-  it("does not draw a hidden layer", () => {
-    band.checkVisibility = () => false;
+  it.each([
+    "(prefers-contrast: more)",
+    "(prefers-reduced-transparency: reduce)",
+  ])(
+    "draws no Milky Way, and the stars still, when the reader asks for %s",
+    (setting) => {
+      settings(setting);
+      mount();
+      expect(bandLog.puts).toBe(0);
+      expect(starLog.fills).toBeGreaterThan(0);
+    },
+  );
+
+  it("draws neither layer under a forced palette", () => {
+    settings("(forced-colors: active)");
     mount();
     expect(bandLog.puts).toBe(0);
-    expect(starLog.fills).toBeGreaterThan(0);
+    expect(starLog.fills).toBe(0);
+  });
+
+  it("draws a layer the settings hide once they change back", () => {
+    const media = settings("(prefers-contrast: more)");
+    mount();
+    expect(bandLog.puts).toBe(0);
+    media.matches = false;
+    // oxlint-disable-next-line dox-test/no-dispatch-event -- no user action changes a media query; the event is the input
+    media.dispatchEvent(new Event("change"));
+    expect(bandLog.puts).toBe(1);
+  });
+
+  it("never asks the page whether a layer shows while it draws", () => {
+    const asked = vi.fn(() => true);
+    stars.checkVisibility = asked;
+    band.checkVisibility = asked;
+    const sky = mount();
+    sky.view([40, 10], { ...CENTRE, radius: 90 }, T0);
+    expect(draws()).toBe(2);
+    // oxlint-disable-next-line dox-test/no-implementation-assert -- the question forces a style and layout pass inside the globe's frame, on every frame of a flight (`frame-budget`)
+    expect(asked).not.toHaveBeenCalled();
   });
 
   it("draws no Milky Way without its map, and the stars still", () => {

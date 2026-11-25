@@ -44,48 +44,95 @@ export const codeText = (value: unknown): string =>
     .replace(/\n\s*/g, " ")
     .replace(/"([A-Za-z_]\w*)":/g, "$1:");
 
-/** The widest line of a call: what the deck's run panel shows at its code size without wrapping. */
-const CALL_WIDTH = 50;
+/**
+ * The widest line of a call. The deck's run panel holds 68 code characters at its code size
+ * (`--gmt-deck-text-md`) on any stage, since both scale with the stage, so a call breaks only here.
+ */
+const CALL_WIDTH = 66;
+
+/** An object or array with something in it: the values a line may open. */
+const isBox = (value: unknown): value is object =>
+  typeof value === "object" &&
+  value !== null &&
+  (Array.isArray(value) ? value.length > 0 : Object.keys(value).length > 0);
+
+/** A key as `codeText` writes it: bare when it can be. */
+const keyText = (key: string): string =>
+  /^[A-Za-z_]\w*$/.test(key) ? key : JSON.stringify(key);
 
 /**
- * The call as a person reads it, in as few lines as fit `CALL_WIDTH`: `addDate("2024-01-31", {
- * months: 1 })` on one line; a wider call fills each line with whole arguments and moves the next
- * argument to an indented line of its own, so a string is never split. An argument wider than a
- * line keeps a line to itself.
+ * A value's lines, as Prettier lays them: whole on the line after `lead` while that line, with
+ * `tail` after it, fits `CALL_WIDTH`; else an object or array opens there, puts each entry on a line
+ * of its own two spaces in from `indent`, and closes on a line of its own. A string never splits.
  */
-export const callText = (name: string, args: readonly unknown[]): string => {
-  const lines = [`${name}(`];
-  args.map(codeText).forEach((part, i) => {
-    const last = lines.length - 1;
-    const joined = `${lines[last]}${i === 0 ? "" : " "}${part}`;
-    if (i === 0 || joined.length + 1 <= CALL_WIDTH) lines[last] = joined;
-    else lines.push(`  ${part}`);
-    if (i < args.length - 1) lines[lines.length - 1] += ",";
-  });
-  lines[lines.length - 1] += ")";
-  return lines.join("\n");
+const layout = (
+  value: unknown,
+  lead: string,
+  indent: string,
+  tail: string,
+): string[] => {
+  const whole = `${lead}${codeText(value)}${tail}`;
+  if (!isBox(value) || whole.length <= CALL_WIDTH) return [whole];
+  const inner = `${indent}  `;
+  const entries: [string, unknown][] = Array.isArray(value)
+    ? value.map((v) => ["", v])
+    : Object.entries(value).map(([k, v]) => [`${keyText(k)}: `, v]);
+  const [open, close] = Array.isArray(value) ? ["[", "]"] : ["{", "}"];
+  return [
+    `${lead}${open}`,
+    ...entries.flatMap(([key, v], i) =>
+      layout(v, `${inner}${key}`, inner, i < entries.length - 1 ? "," : ""),
+    ),
+    `${indent}${close}${tail}`,
+  ];
 };
 
 /**
- * The import lines a run's calls need, one per module in the order the calls use them, as a reader
- * would copy them: `import { formatDate } from "@northguild/gmt/plain/format";`. A line wider than
- * `CALL_WIDTH` puts its `from` on an indented line of its own.
+ * The call as a person reads it, laid out as Prettier would: on one line when it fits
+ * `CALL_WIDTH`. A wider call whose last argument is an object or array, the others plain, keeps its
+ * head and opens that argument there: `diffDateAsDuration("2000-01-01", "2001-01-01", "years", {`,
+ * one entry a line, then `})`. One step past Prettier, a first object followed only by plain
+ * arguments opens the same way and closes `}, 2027)`, which saves a slide three lines. Any other
+ * wide call puts each argument on a line of its own.
+ */
+export const callText = (name: string, args: readonly unknown[]): string => {
+  const plain = (list: readonly unknown[]) => list.map(codeText).join(", ");
+  const whole = `${name}(${plain(args)})`;
+  if (whole.length <= CALL_WIDTH) return whole;
+  const fits = (lines: string[]) => lines.every((l) => l.length <= CALL_WIDTH);
+  const [first, ...after] = args;
+  const rest = args.slice(0, -1);
+  const last = args.at(-1);
+  if (isBox(last) && !rest.some(isBox)) {
+    const head = `${name}(${rest.map((a) => `${codeText(a)}, `).join("")}`;
+    const hugged = layout(last, head, "", ")");
+    if (fits(hugged)) return hugged.join("\n");
+  }
+  if (isBox(first) && after.length > 0 && !after.some(isBox)) {
+    const hugged = layout(first, `${name}(`, "", `, ${plain(after)})`);
+    if (fits(hugged)) return hugged.join("\n");
+  }
+  return [
+    `${name}(`,
+    ...args.flatMap((a, i) =>
+      layout(a, "  ", "  ", i < args.length - 1 ? "," : ""),
+    ),
+    ")",
+  ].join("\n");
+};
+
+/**
+ * The import a run's calls need, as a reader would copy it: one line from the package root, each
+ * function once, in the order the calls use them: `import { formatDate } from "@northguild/gmt";`.
+ * The root is short enough to keep the line whole on the stage; the call still runs from its
+ * module (`callGmt`). A line wider than `CALL_WIDTH` puts its `from` on an indented line of its own.
  */
 export const importText = (calls: readonly GmtCall[]): string => {
-  const names = new Map<string, string[]>();
-  for (const c of calls) {
-    const list = names.get(c.module) ?? [];
-    if (!list.includes(c.name)) list.push(c.name);
-    names.set(c.module, list);
-  }
-  return [...names]
-    .map(([module, list]) => {
-      const head = `import { ${list.join(", ")} }`;
-      const from = `from "@northguild/gmt/${module}";`;
-      const line = `${head} ${from}`;
-      return line.length <= CALL_WIDTH ? line : `${head}\n  ${from}`;
-    })
-    .join("\n");
+  const names = [...new Set(calls.map((c) => c.name))];
+  const head = `import { ${names.join(", ")} }`;
+  const from = `from "@northguild/gmt";`;
+  const line = `${head} ${from}`;
+  return line.length <= CALL_WIDTH ? line : `${head}\n  ${from}`;
 };
 
 /**

@@ -2,7 +2,7 @@
  * The presenter view as markup: pure, with no DOM. `pages/slides/<slug>/presenter.astro` renders
  * it on the server and the tests render it into jsdom. `lib/slides/presenter.ts` wires it.
  *
- * - `presenterShell`: the current slide's frame, the next slide, the notes, the four readouts
+ * - `presenterShell`: the current slide's frame, what Next shows, the notes, the four readouts
  *   (Elapsed, Pace, Local time, Demo), the buttons and the readiness list.
  * - `readinessList`: the readiness rows, one list item each; the result is words, never colour
  *   alone (`Loaded`, `Failed: ...`).
@@ -23,6 +23,13 @@ export const PRESENTER_SAMPLES = {
   demo: ["Recorded", "Waiting", "No demo"],
 } as const;
 
+/**
+ * The signal-lost text of a clock readout, as wide as its widest sample: the default sentinel is
+ * twice that, and a readout reserves the width of the longest text it may show, so four of them
+ * would not share a line on a laptop.
+ */
+const PRESENTER_SENTINEL = "⟨ NO SIGNAL ⟩";
+
 /** What a readout shows before the first tick. */
 export const PRESENTER_INITIAL = {
   elapsed: "00:00",
@@ -42,6 +49,7 @@ function cell(
       label,
       value: PRESENTER_INITIAL[key],
       samples: PRESENTER_SAMPLES[key],
+      sentinel: PRESENTER_SENTINEL,
     })}
   </div>`;
 }
@@ -50,7 +58,7 @@ export function presenterShell(): SafeHtml {
   return html`<div class="${styles.root} gmt-theme-dark" data-presenter>
     <section class="gmt-deck-panel ${styles.panel} ${styles.current}" aria-labelledby="pv-current-title">
       <h2 id="pv-current-title" class="${styles.heading}">Current slide</h2>
-      <div class="${styles.frame}"><div class="${styles.stage}" data-pv-stage></div></div>
+      <div class="${styles.stageBox}"><div class="${styles.frame} ${styles.currentFrame}" data-pv-stage></div></div>
       <p class="${styles.position}" data-pv-position></p>
       <div class="${styles.nav}">
         ${buttonRow(html`${button({ id: "pv-prev", label: "Previous" })}${button({ id: "pv-next", label: "Next" })}${button({ id: "pv-blank", label: "Blank" })}`)}
@@ -58,12 +66,12 @@ export function presenterShell(): SafeHtml {
     </section>
     <section class="gmt-deck-panel ${styles.panel} ${styles.upNext}" aria-labelledby="pv-next-title">
       <h2 id="pv-next-title" class="${styles.heading}">Next slide</h2>
-      <p class="${styles.nextTitle}" data-pv-next-title></p>
-      <p class="${styles.nextBuild}" data-pv-next-build></p>
+      <p class="${styles.nextLabel}" data-pv-next-label></p>
+      <div class="${styles.frame}" data-pv-next></div>
     </section>
     <section class="gmt-deck-panel ${styles.panel} ${styles.notes}" aria-labelledby="pv-notes-title">
       <h2 id="pv-notes-title" class="${styles.heading}">Speaker notes</h2>
-      <div class="${styles.notesBody}" data-pv-notes></div>
+      <div class="${styles.notesBody}" data-pv-notes role="group" aria-label="Speaker notes text" tabindex="0"></div>
     </section>
     <section class="gmt-deck-panel ${styles.panel} ${styles.bar}" aria-labelledby="pv-clock-title">
       <h2 id="pv-clock-title" class="${styles.heading}">Clock</h2>
@@ -74,11 +82,11 @@ export function presenterShell(): SafeHtml {
       <div class="${styles.nav}">
         ${buttonRow(html`${button({ id: "pv-start", label: "Start" })}${button({ id: "pv-reset", label: "Reset" })}${button({ id: "pv-overview", label: "Overview" })}${button({ id: "pv-help", label: "Keys" })}`)}
       </div>
-      <p class="${styles.status}" data-pv-status role="status" aria-live="polite"></p>
+      <p class="${styles.status}" data-pv-status role="status" aria-live="polite" aria-label="Status" tabindex="0"></p>
     </section>
     <section class="gmt-deck-panel ${styles.panel} ${styles.check}" aria-labelledby="pv-check-title">
       <h2 id="pv-check-title" class="${styles.heading}">Ready to present?</h2>
-      <ul class="${styles.rows}" data-pv-readiness></ul>
+      <ul class="${styles.rows}" data-pv-readiness aria-labelledby="pv-check-title" tabindex="0"></ul>
       <div class="${styles.nav}">${button({ id: "pv-check", label: "Check again" })}</div>
     </section>
   </div>`;

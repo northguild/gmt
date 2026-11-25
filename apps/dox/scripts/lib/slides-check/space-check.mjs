@@ -38,9 +38,20 @@ const COUNT_FRAMES = () => {
   };
 };
 
-/** Starts timing the frames in which the camera is moving. */
+/**
+ * Starts timing the frames in which the camera is moving. The tour sets `step` to the step being
+ * flown, so the worst frame names the step to fly again (`worstStep`).
+ */
 const START_TIMING = (spaceSelector) => {
-  const timing = { on: true, last: 0, deltas: [], worst: 0, worstAt: "" };
+  const timing = {
+    on: true,
+    last: 0,
+    deltas: [],
+    worst: 0,
+    worstAt: "",
+    step: -1,
+    worstStep: -1,
+  };
   window.__frameTiming = timing;
   const loop = (now) => {
     if (!timing.on) return;
@@ -53,6 +64,7 @@ const START_TIMING = (spaceSelector) => {
       // Where the worst frame fell, so a finding names the moment to profile.
       if (delta > timing.worst) {
         timing.worst = delta;
+        timing.worstStep = timing.step;
         timing.worstAt = `${location.hash || "#"}, flight ${d.flight ?? "-"}, wall ${d.wall ?? "-"}`;
       }
     }
@@ -169,8 +181,57 @@ async function checkWallBreak(page, at, label, wallPins) {
     );
 }
 
+/** Waits until the camera rests and the wall is not breaking; quietly, as the tour reports either. */
+async function still(page) {
+  await page
+    .waitForFunction(
+      (sel) => {
+        const d = document.querySelector(sel)?.dataset ?? {};
+        return (
+          d.flight === "rest" && d.wall !== "approach" && d.wall !== "breaking"
+        );
+      },
+      SPACE,
+      { timeout: SETTLE_MS + WALL_SETTLE_MS },
+    )
+    .catch(() => {});
+}
+
+/**
+ * Marks the step about to be flown, from where the deck is now, and adds it to `steps`: `how` is
+ * `"next"` for a Next press, or the address of a jump.
+ */
+async function markStep(page, steps, how) {
+  const from = await page.evaluate(() => location.hash);
+  steps.push({ from, how });
+  await page.evaluate((i) => {
+    window.__frameTiming.step = i;
+  }, steps.length - 1);
+}
+
+/** Flies `step` again from where it started, timed afresh, and resolves to its frame times. */
+async function flyAgain(page, step) {
+  await page.evaluate((from) => {
+    location.hash = from;
+  }, step.from);
+  await settle(page);
+  await still(page);
+  await page.evaluate(START_TIMING, SPACE);
+  if (step.how === "next") await page.keyboard.press("ArrowRight");
+  else
+    await page.evaluate((to) => {
+      location.hash = to;
+    }, step.how);
+  await settle(page);
+  await still(page);
+  return page.evaluate(() => {
+    window.__frameTiming.on = false;
+    return window.__frameTiming.deltas;
+  });
+}
+
 /** Next steps through the main slides, each checked for where the camera lands and the wall's break. */
-async function tourSlides(page, at, slides, wallPins) {
+async function tourSlides(page, at, slides, wallPins, steps) {
   await page.keyboard.press("Home");
   await settle(page);
   await restOnPlace(page, at, "the first slide", "deck");
@@ -179,6 +240,7 @@ async function tourSlides(page, at, slides, wallPins) {
   const main = slides.filter((s) => !s.spare);
   for (const [i, step] of forwardWalk(main).entries()) {
     if (i > 0) {
+      await markStep(page, steps, "next");
       await page.keyboard.press("ArrowRight");
       await settle(page);
     }
@@ -194,9 +256,10 @@ async function tourSlides(page, at, slides, wallPins) {
 }
 
 /** Going back to the wall, from the last slide, puts it whole again. */
-async function checkWallRestored(page, at, slides) {
+async function checkWallRestored(page, at, slides, steps) {
   const wallSlide = slides.find((s) => s.place === "wall");
   if (wallSlide) {
+    await markStep(page, steps, `#${wallSlide.id}`);
     await page.evaluate((id) => {
       location.hash = `#${id}`;
     }, wallSlide.id);
@@ -284,17 +347,22 @@ export async function checkSpace(env) {
     await settle(page);
     await checkLayerMargins(page, at);
     const slides = await readSlides(page);
-    await tourSlides(page, at, slides, wallPins);
-    await checkWallRestored(page, at, slides);
-    const { deltas, worstAt } = await page.evaluate(() => {
+    const steps = [];
+    await tourSlides(page, at, slides, wallPins, steps);
+    await checkWallRestored(page, at, slides, steps);
+    const { deltas, worstAt, worstStep } = await page.evaluate(() => {
       window.__frameTiming.on = false;
       return window.__frameTiming;
     });
-    const verdict = frameVerdict(deltas);
-    if (verdict)
-      at("frame-budget", `over a full tour: ${verdict} (worst at ${worstAt})`);
     await checkWallPanes(page, at, size);
     await checkFramesAtRest(page, at);
+    // Last, as flying a step again leaves the deck wherever that step ends.
+    const step = steps[worstStep];
+    const verdict = await frameVerdict(deltas, () =>
+      step ? flyAgain(page, step) : [],
+    );
+    if (verdict)
+      at("frame-budget", `over a full tour: ${verdict} (worst at ${worstAt})`);
     return 1;
   } catch (error) {
     at(

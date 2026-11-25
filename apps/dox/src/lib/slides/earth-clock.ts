@@ -83,9 +83,14 @@ export function mountEarthClock(
 
   /** The shards while the clock breaks; `null` otherwise. */
   let shards: HTMLElement | null = null;
+  /** Stops the break's copies going in once it is swept. */
+  let breaking: AbortController | null = null;
   const sweep = (): void => {
+    breaking?.abort();
+    breaking = null;
     shards?.remove();
     shards = null;
+    el.removeAttribute("data-broken");
   };
 
   let fitted = "";
@@ -110,7 +115,13 @@ export function mountEarthClock(
       shards = layer.ownerDocument.createElement("div");
       shards.setAttribute("data-shards", "");
       el.append(shards);
-      shatter(face, shards);
+      breaking = new AbortController();
+      shatter(face, shards, {
+        win: layer.ownerDocument.defaultView ?? window,
+        signal: breaking.signal,
+        // The copies are all in over the dial: it hides, and they fly.
+        broken: () => el.setAttribute("data-broken", ""),
+      });
     },
     hold(utc) {
       if (utc === held) return;

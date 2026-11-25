@@ -13,7 +13,7 @@
  * `slide` is the id of the slide the panel sits on, the name the presenter's Live or Recorded
  * line gives the demo. `recorded` is the deck's recordings (its `recorded.ts`).
  * The presenter's copy of the slides (`presenter`, as `Deck` is given it) gets a static
- * placeholder, so no second chat mounts there.
+ * placeholder (`data-live`, as an island's stand-in is), so no second chat mounts there.
  */
 import DeckDox, { type DeckDoxMode } from "./DeckDox";
 import type { DeckLiveData } from "~/lib/slides/live-data";
@@ -42,7 +42,7 @@ const recordings = selectRecordings(recorded, questions.map((q) => q.id));
 
 {
   presenter ? (
-    <p class="gmt-deck-panel">{PLACEHOLDER[mode]}</p>
+    <p class="gmt-deck-panel" data-live>{PLACEHOLDER[mode]}</p>
   ) : (
     <DeckDox
       client:only="react"

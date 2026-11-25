@@ -52,6 +52,16 @@ function setup(flags: { reduced?: boolean; covered?: boolean } = {}) {
   return { transition, start, made, own };
 }
 
+/** Holds the page's animation frames until the test runs them. */
+function holdFrames(): FrameRequestCallback[] {
+  const frames: FrameRequestCallback[] = [];
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+    frames.push(cb);
+    return frames.length;
+  });
+  return frames;
+}
+
 describe("the deck's slide transition", () => {
   let own: AbortController | undefined;
 
@@ -65,6 +75,7 @@ describe("the deck's slide transition", () => {
     delete (document as { startViewTransition?: unknown }).startViewTransition;
     document.documentElement.removeAttribute(TRANSITION_ATTR);
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("runs a slide change inside a transition typed with its direction", () => {
@@ -108,6 +119,30 @@ describe("the deck's slide transition", () => {
     s.transition.run(commit);
     expect(s.start).not.toHaveBeenCalled();
     expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts what moves after a cut once the frame that paints the cut has gone", () => {
+    const s = setup();
+    own = s.own;
+    const frames = holdFrames();
+    s.transition.run(vi.fn());
+    const fly = vi.fn();
+    s.transition.afterSwap(fly);
+    // The cut's own frame restyles what it shows; a flight started in it stutters at its start.
+    expect(fly).not.toHaveBeenCalled();
+    frames.shift()!(0);
+    expect(fly).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops what waits on a cut when the deck is torn down", () => {
+    const s = setup();
+    own = s.own;
+    const frames = holdFrames();
+    const fly = vi.fn();
+    s.transition.afterSwap(fly);
+    s.own.abort();
+    frames.shift()?.(0);
+    expect(fly).not.toHaveBeenCalled();
   });
 
   it("cuts under reduced motion", () => {

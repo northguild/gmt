@@ -25,6 +25,7 @@ function setup() {
     overview: vi.fn(),
     help: vi.fn(),
     blank: vi.fn(),
+    guide: vi.fn(),
     fullscreen: vi.fn(),
     present: vi.fn(),
     presenter: vi.fn(),
@@ -58,6 +59,8 @@ describe("deck keys", () => {
     ["?", "help", []],
     ["b", "blank", []],
     [".", "blank", []],
+    ["g", "guide", []],
+    ["G", "guide", []],
     ["f", "fullscreen", []],
     ["{F5}", "present", []],
     ["{Shift>}{F5}{/Shift}", "present", []],
@@ -328,7 +331,7 @@ describe("deck keys", () => {
           signal: ctl.signal,
         },
       );
-      await user.keyboard("npo?b.ftr{w>}{/w}q12{Enter}");
+      await user.keyboard("npo?b.fgtr{w>}{/w}q12{Enter}");
       expect(actions.step).toHaveBeenCalledExactlyOnceWith(1);
       expect(seen.slice(0, -1).every((prevented) => !prevented)).toBe(true);
       for (const [name, fn] of Object.entries(actions))

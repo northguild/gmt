@@ -253,8 +253,11 @@ export function mountSky(options: SkyOptions): Sky {
     return ice;
   };
 
-  const visible = (canvas: HTMLCanvasElement): boolean =>
-    canvas.checkVisibility?.() !== false;
+  /* The layers the reader's settings hide (src/styles/gmt-space.css): a forced palette drops both,
+     either of the other two the Milky Way. Asked of the queries and not of the page, since
+     `checkVisibility` forces a style and layout pass inside the globe's frame, on every frame of a
+     flight. */
+  const forcedColors = queries[2];
 
   /** The solid Earth's disc radius, CSS pixels: 0 with no globe on screen, so nothing is kept out. */
   const earthRadius = (lens: SkyLens): number =>
@@ -430,6 +433,8 @@ export function mountSky(options: SkyOptions): Sky {
    * Looks each band pixel up in the Milky Way map: the camera's ray through the pixel's centre,
    * turned into the sky, gives a right ascension and declination, and the map is read there
    * between its four nearest cells. Pixels on the solid Earth's disc or the Moon's are left clear.
+   * The loop runs on every frame of a flight (`frame-budget`), so each row turns one ray into the
+   * sky, at its left edge, and steps along the row from there.
    */
   function drawBand(lens: SkyLens, m: Float64Array): void {
     if (!bandCtx) return;
@@ -449,6 +454,11 @@ export function mountSky(options: SkyOptions): Sky {
     const gain = BAND_PEAK * BAND_GAIN;
     for (let j = 0, o = 0; j < out.height; j++) {
       const y = (j + 0.5) / BAND_SCALE;
+      directionAt(lens, 0, y, ray);
+      /* The camera's rotation is orthonormal, so its transpose turns the ray into the sky. */
+      const ax = m[0]! * ray[0] + m[3]! * ray[1] + m[6]! * ray[2];
+      const ay = m[1]! * ray[0] + m[4]! * ray[1] + m[7]! * ray[2];
+      const az = m[2]! * ray[0] + m[5]! * ray[1] + m[8]! * ray[2];
       for (let i = 0; i < out.width; i++, o += 4) {
         const x = (i + 0.5) / BAND_SCALE;
         let alpha = 0;
@@ -456,14 +466,16 @@ export function mountSky(options: SkyOptions): Sky {
           (x - lens.centreX) ** 2 + (y - lens.centreY) ** 2 >= earth &&
           !(moon && (x - moon.x) ** 2 + (y - moon.y) ** 2 < moon.r ** 2)
         ) {
-          directionAt(lens, x, y, ray);
-          /* The camera's rotation is orthonormal, so its transpose turns the ray into the sky. */
-          const sx = m[0]! * ray[0] + m[3]! * ray[1] + m[6]! * ray[2];
-          const sy = m[1]! * ray[0] + m[4]! * ray[1] + m[7]! * ray[2];
-          const sz = m[2]! * ray[0] + m[5]! * ray[1] + m[8]! * ray[2];
+          /* A pixel's ray (`directionAt`) is affine in the pixel: `x` to the right adds `x` to its
+             second part, which the rotation turns into `x` times its second row. */
+          const sx = ax + x * m[3]!;
+          const sy = ay + x * m[4]!;
+          const sz = az + x * m[5]!;
           const u = (Math.atan2(sy, sx) / (2 * Math.PI) + 1) * mw - 0.5;
+          /* The angle from the pole, `acos(sz / |s|)`, taken without the ray's length: `Math.hypot`
+             is several times the cost of a square root, here once a pixel. */
           const v =
-            (Math.acos(sz / Math.hypot(sx, sy, sz)) / Math.PI) * mh - 0.5;
+            (Math.atan2(Math.sqrt(sx * sx + sy * sy), sz) / Math.PI) * mh - 0.5;
           const u0 = Math.floor(u);
           const v0 = clamp(0, Math.floor(v), mh - 2);
           const du = u - u0;
@@ -494,7 +506,7 @@ export function mountSky(options: SkyOptions): Sky {
     const stars = starViewMatrix(latest.rotation, latest.instantMs);
     drawn = { ...latest, lens };
     moonDisc = null;
-    if (visible(starsCanvas)) {
+    if (!forcedColors?.matches) {
       drawStars(lens, stars);
       starsCanvas.dataset["skyBodies"] = drawBodies(lens, m);
       starsCtx?.restore();
@@ -502,7 +514,7 @@ export function mountSky(options: SkyOptions): Sky {
         Number(starsCanvas.dataset["skyDraws"] ?? 0) + 1,
       );
     }
-    if (visible(bandCanvas)) drawBand(lens, stars);
+    if (!queries.some((query) => query?.matches)) drawBand(lens, stars);
     /* What the gate reads: the view drawn, how many draws, and how long the last one took (ms). */
     starsCanvas.dataset["skyView"] =
       `${view.ra.toFixed(3)} ${view.dec.toFixed(3)} ${latest.instantMs}`;

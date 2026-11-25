@@ -6,8 +6,8 @@ export interface PresenterElements {
   source: HTMLElement;
   stage: HTMLElement;
   position: HTMLElement;
-  nextTitle: HTMLElement;
-  nextBuild: HTMLElement;
+  nextLabel: HTMLElement;
+  nextStage: HTMLElement;
   notes: HTMLElement;
   plan: HTMLElement;
   status: HTMLElement;
@@ -35,8 +35,8 @@ export function findPresenterElements(
     ),
     stage: find<HTMLElement>("[data-pv-stage]"),
     position: find<HTMLElement>("[data-pv-position]"),
-    nextTitle: find<HTMLElement>("[data-pv-next-title]"),
-    nextBuild: find<HTMLElement>("[data-pv-next-build]"),
+    nextLabel: find<HTMLElement>("[data-pv-next-label]"),
+    nextStage: find<HTMLElement>("[data-pv-next]"),
     notes: find<HTMLElement>("[data-pv-notes]"),
     plan: find<HTMLElement>("[data-pv-plan]"),
     status: find<HTMLElement>("[data-pv-status]"),

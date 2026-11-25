@@ -56,21 +56,23 @@
   }
 
   /* The stage is laid out at 1024x576, where every slide fits, and scaled to the room left of the
-     bar. A transform, not `zoom`: WebKit resolves `cqi` under `zoom` against the zoomed box. */
+     bar, by `.gmt-stage-fit` (`slides.css`). */
   html[data-deck] .gmt-deck-stage {
     --gmt-phone-stage: min(100vw - var(--gmt-deck-bar-size), 100dvh * 16 / 9);
+    --gmt-fit-w: 1024px;
+    --gmt-fit-to: var(--gmt-phone-stage);
 
     grid-column: 1;
     grid-row: 1;
     place-self: start;
-    inline-size: 1024px;
+
+    /* The stage's own inline size (above in `slides.css`) outweighs the class's. */
+    inline-size: var(--gmt-fit-w);
     margin: 0;
-    transform-origin: 0 0;
     translate: calc(
         (100vw - var(--gmt-deck-bar-size) - var(--gmt-phone-stage)) / 2
       )
       calc((100dvh - var(--gmt-phone-stage) * 9 / 16) / 2);
-    scale: tan(atan2(var(--gmt-phone-stage), 1024px));
   }
 
   html[data-deck="stage"] .gmt-deck-bar,

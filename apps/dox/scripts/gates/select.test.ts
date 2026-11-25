@@ -1,5 +1,7 @@
 import { fileURLToPath } from "node:url";
 
+import { DECKS } from "../../src/slides/decks";
+
 import { buildPages, importsOf, sitePathOf } from "./graph.mjs";
 import {
   CAP,
@@ -177,6 +179,39 @@ describe("selectPages", () => {
     expect(plan.pages.length).toBeLessThanOrEqual(CAP);
   });
 
+  it("keeps a page for each gate the diff reached, past the cap", () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      page(`/p/${String(i).padStart(2, "0")}/`, [HELPER]),
+    );
+    const deck = page("/slides/deck/", [HELPER]);
+    const universe = [...pages.slice(0, 3), ...many, deck];
+    const plan = selectPages({
+      changed: [HELPER],
+      pages: universe,
+      sample: SAMPLE,
+      gatePages: { "slides-check": ["/slides/deck/", "/slides/other/"] },
+    });
+    expect(plan.capped?.from).toBe(34);
+    expect(plan.pages).toContain("/slides/deck/");
+    expect(plan.reasons["/slides/deck/"]).toContain(
+      "cap: kept for slides-check",
+    );
+  });
+
+  it("adds nothing for a gate whose pages the diff did not reach", () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      page(`/p/${String(i).padStart(2, "0")}/`, [HELPER]),
+    );
+    const plan = selectPages({
+      changed: [HELPER],
+      pages: [...pages.slice(0, 3), ...many, page("/slides/deck/")],
+      sample: SAMPLE,
+      gatePages: { "slides-check": ["/slides/deck/"] },
+    });
+    expect(plan.pages).not.toContain("/slides/deck/");
+    expect(plan.pages).toHaveLength(SAMPLE.length + CAP_REST);
+  });
+
   it("leaves 12 pages or fewer alone", () => {
     const dozen = Array.from({ length: CAP }, (_, i) =>
       page(`/q/${i}/`, [HELPER]),
@@ -238,6 +273,31 @@ describe("isRelevant", () => {
         .map((f) => `${p.path} imports ${f}`),
     );
     expect(rejected).toEqual([]);
+  });
+});
+
+describe("the deck routes in the graph", () => {
+  // The first registered deck stands for them all: a shared test never spells a deck's slug.
+  const slug = DECKS[0]!.slug;
+
+  it("are pages, each reaching its own deck's files", () => {
+    const root = fileURLToPath(new URL("../../../../", import.meta.url));
+    const pages = buildPages(root, {
+      "apps/dox/src/pages/slides/[slug]/index.astro": [`/slides/${slug}/`],
+    });
+    const deck = pages.find((p) => p.path === `/slides/${slug}/`);
+    expect(deck?.file).toBe("apps/dox/src/pages/slides/[slug]/index.astro");
+    expect(deck?.closure).toContain(`apps/dox/src/slides/${slug}/content.ts`);
+    expect(deck?.closure).toContain(
+      "apps/dox/src/components/slides/slides.css",
+    );
+  });
+
+  it("are left out without their paths, as any dynamic route is", () => {
+    const root = fileURLToPath(new URL("../../../../", import.meta.url));
+    expect(
+      buildPages(root).some((p) => p.path.startsWith(`/slides/${slug}/`)),
+    ).toBe(false);
   });
 });
 

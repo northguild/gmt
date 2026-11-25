@@ -49,9 +49,27 @@ describe("isSentinel", () => {
 });
 
 describe("callText", () => {
-  it("shows a short call on one line and fills a long one with whole arguments", () => {
+  it("shows a call that fits on one line", () => {
     expect(callText("addDate", ["2024-01-31", { months: 1 }])).toBe(
       'addDate("2024-01-31", { months: 1 })',
+    );
+  });
+
+  it("keeps a wide call's head and opens its last object there, one entry a line, as Prettier does", () => {
+    expect(
+      callText("diffDateAsDuration", [
+        "2000-01-01",
+        "2001-01-01",
+        "years",
+        { smallestUnit: "months", roundingMode: "halfExpand" },
+      ]),
+    ).toBe(
+      [
+        'diffDateAsDuration("2000-01-01", "2001-01-01", "years", {',
+        '  smallestUnit: "months",',
+        '  roundingMode: "halfExpand"',
+        "})",
+      ].join("\n"),
     );
     expect(
       callText("resolveLocal", [
@@ -61,10 +79,14 @@ describe("callText", () => {
       ]),
     ).toBe(
       [
-        'resolveLocal("2027-03-28T03:30:00",',
-        '  "Europe/Helsinki", { disambiguation: "reject" })',
+        'resolveLocal("2027-03-28T03:30:00", "Europe/Helsinki", {',
+        '  disambiguation: "reject"',
+        "})",
       ].join("\n"),
     );
+  });
+
+  it("opens a first object in place when the arguments after it are plain, so the slide keeps its height", () => {
     const rule = {
       name: "Spring Festival",
       kind: "calendarFixed",
@@ -73,26 +95,79 @@ describe("callText", () => {
       day: 1,
     };
     expect(callText("holidayDates", [rule, 2027])).toBe(
-      `holidayDates(${codeText(rule)},\n  2027)`,
+      [
+        "holidayDates({",
+        '  name: "Spring Festival",',
+        '  kind: "calendarFixed",',
+        '  calendar: "chinese",',
+        '  monthCode: "M01",',
+        "  day: 1",
+        "}, 2027)",
+      ].join("\n"),
     );
+  });
+
+  it("puts each argument on a line of its own when no object can open in place, and opens one too wide for its line", () => {
+    const wide = { name: "Spring Festival", kind: "calendarFixed", day: 1 };
+    expect(callText("f", ["x", wide, 2027])).toBe(
+      [
+        "f(",
+        '  "x",',
+        '  { name: "Spring Festival", kind: "calendarFixed", day: 1 },',
+        "  2027",
+        ")",
+      ].join("\n"),
+    );
+  });
+
+  it("keeps a nested object or array whole while it fits its line, and never splits a string", () => {
+    const text = callText("f", [
+      { a: "x, y", nested: { deep: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" } },
+      ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "cccccccccccccccccccccccccccccc"],
+    ]);
+    expect(text).toBe(
+      [
+        "f(",
+        "  {",
+        '    a: "x, y",',
+        '    nested: { deep: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }',
+        "  },",
+        "  [",
+        '    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",',
+        '    "cccccccccccccccccccccccccccccc"',
+        "  ]",
+        ")",
+      ].join("\n"),
+    );
+    for (const line of text.split("\n"))
+      expect(line.length).toBeLessThanOrEqual(66);
   });
 });
 
 describe("importText", () => {
-  it("imports each module's functions once, in the order the calls use them, its from on a line of its own when wide", () => {
-    const call = (module: string, name: string) => ({ module, name, args: [] });
+  const call = (module: string, name: string) => ({ module, name, args: [] });
+
+  it("imports every function once from the package root, in the order the calls use them", () => {
     expect(
       importText([
         call("instant/convert", "resolveLocal"),
-        call("instant/convert", "classifyLocal"),
-        call("instant/convert", "resolveLocal"),
         call("utc/get", "now"),
+        call("instant/convert", "resolveLocal"),
+      ]),
+    ).toBe('import { resolveLocal, now } from "@northguild/gmt";');
+  });
+
+  it("puts the from on a line of its own when the import is wide", () => {
+    expect(
+      importText([
+        call("plain/format", "formatDateToParts"),
+        call("plain/calculate", "diffDateAsDuration"),
+        call("instant/convert", "classifyLocal"),
       ]),
     ).toBe(
       [
-        "import { resolveLocal, classifyLocal }",
-        '  from "@northguild/gmt/instant/convert";',
-        'import { now } from "@northguild/gmt/utc/get";',
+        "import { formatDateToParts, diffDateAsDuration, classifyLocal }",
+        '  from "@northguild/gmt";',
       ].join("\n"),
     );
   });

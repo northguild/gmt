@@ -9,11 +9,11 @@
  * tallest and nothing below it moves. Without `html[data-deck]` (JavaScript off: the page is the
  * handout) and in print (`slides-print.css`) the steps stand one under another instead.
  */
-html[data-deck] .gmt-swap {
+:is(html[data-deck], [data-slide-stage]) .gmt-swap {
   display: grid;
 }
 
-html[data-deck] .gmt-swap > * {
+:is(html[data-deck], [data-slide-stage]) .gmt-swap > * {
   grid-area: 1 / 1;
   min-inline-size: 0;
 
@@ -21,8 +21,11 @@ html[data-deck] .gmt-swap > * {
   margin: 0;
 }
 
-/* ui-standards-ok: a state, not a layout: a picture hides once a later build has been reached. */
-html[data-deck] .gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
+/* A picture hides once a later build has been reached. */
+:is(html[data-deck], [data-slide-stage])
+  .gmt-swap
+  /* ui-standards-ok: a state, not a layout; it was `:has()` on main before this story. */
+  > :has(~ .gmt-build[data-reached="true"]) {
   visibility: hidden;
 }
 
@@ -33,12 +36,12 @@ html[data-deck] .gmt-swap > :has(~ .gmt-build[data-reached="true"]) {
  * the pieces leaving it fade there while the column is shifted; one more than half gone
  * (`data-stack-gone`) fades out whole.
  */
-html[data-deck] .gmt-stack {
+:is(html[data-deck], [data-slide-stage]) .gmt-stack {
   overflow: clip;
   max-block-size: var(--gmt-stack-room, none);
 }
 
-html[data-deck] .gmt-stack[data-shifted] {
+:is(html[data-deck], [data-slide-stage]) .gmt-stack[data-shifted] {
   mask-image: linear-gradient(
     to bottom,
     transparent,
@@ -47,7 +50,7 @@ html[data-deck] .gmt-stack[data-shifted] {
 }
 
 /* The track is its pieces' offset parent: the shift is measured from its top. */
-html[data-deck] .gmt-stack-track {
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -56,20 +59,20 @@ html[data-deck] .gmt-stack-track {
   transition: transform var(--gmt-duration-slow) var(--gmt-enter-easing);
 }
 
-html[data-deck] .gmt-stack-track > * {
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track > * {
   min-inline-size: 0;
   margin: 0;
   transition: opacity var(--gmt-duration-med) var(--gmt-enter-easing);
 }
 
-html[data-deck] .gmt-stack-track > [data-stack-gone] {
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track > [data-stack-gone] {
   opacity: 0;
   visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-deck] .gmt-stack-track,
-  html[data-deck] .gmt-stack-track > * {
+  :is(html[data-deck], [data-slide-stage]) .gmt-stack-track,
+  :is(html[data-deck], [data-slide-stage]) .gmt-stack-track > * {
     transition-duration: var(--gmt-deck-fade);
   }
 }
@@ -79,7 +82,7 @@ html[data-deck] .gmt-stack-track > [data-stack-gone] {
  * Each shows its report's own lines as a picture, with the filing as a small receipt in the
  * corner. Every readout reserves its box, so a rolling counter or a typing line moves nothing.
  */
-html[data-deck] .gmt-visual {
+:is(html[data-deck], [data-slide-stage]) .gmt-visual {
   display: grid;
   gap: var(--gmt-deck-space-lg);
   align-content: start;
@@ -147,19 +150,19 @@ html[data-deck] .gmt-visual {
 
 /* On the stage the table stands beside the count, in the room left of the planet: under it, the
    twelve rows ran past the stage's bottom edge. */
-html[data-deck] .gmt-pins {
+:is(html[data-deck], [data-slide-stage]) .gmt-pins {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto 1fr;
   align-items: start;
   column-gap: var(--gmt-deck-space-2xl);
 }
 
-html[data-deck] .gmt-pins-count {
+:is(html[data-deck], [data-slide-stage]) .gmt-pins-count {
   font-size: max(1.2rem, 4cqi);
   white-space: nowrap;
 }
 
-html[data-deck] .gmt-pins .gmt-deck-table {
+:is(html[data-deck], [data-slide-stage]) .gmt-pins .gmt-deck-table {
   grid-column: 2;
   grid-row: 1 / span 2;
   inline-size: auto;
@@ -172,7 +175,7 @@ html[data-deck] .gmt-pins .gmt-deck-table {
  * beside a wrong result the value expected (beside GMT's result, the filed bug's value). Wrong is red, right green (the deck's
  * pair in `slides.css`), gmt's sentinel amber (the only amber).
  */
-html[data-deck] .gmt-run {
+:is(html[data-deck], [data-slide-stage]) .gmt-run {
   display: grid;
   gap: var(--gmt-deck-space-xs);
   align-content: start;
@@ -184,8 +187,8 @@ html[data-deck] .gmt-run {
 }
 
 /* The deck's paragraph margin (`slides.css`, same weight, earlier) gives way to the panel's gap. */
-html[data-deck] .gmt-run > p,
-html[data-deck] .gmt-familiar-run > p {
+:is(html[data-deck], [data-slide-stage]) .gmt-run > p,
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-run > p {
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -234,8 +237,8 @@ html[data-deck] .gmt-familiar-run > p {
 }
 
 /* The deck's flow margins give way to the panel's own gap. */
-html[data-deck] .gmt-run-outcome,
-html[data-deck] .gmt-run-outcome > p {
+:is(html[data-deck], [data-slide-stage]) .gmt-run-outcome,
+:is(html[data-deck], [data-slide-stage]) .gmt-run-outcome > p {
   margin: 0;
 }
 
@@ -258,13 +261,15 @@ html[data-deck] .gmt-run-outcome > p {
 }
 
 /* A step's rows sit together; the next prompt starts a step of its own. */
-html[data-deck] .gmt-run-outcome + :is(.gmt-run-line, .gmt-run-code) {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-run-outcome
+  + :is(.gmt-run-line, .gmt-run-code) {
   margin-block-start: var(--gmt-deck-space-xs);
 }
 
 /* A run's code block takes the panel's text size and a thin pad, so a step of code, result and
    expected value stays a few lines tall. */
-html[data-deck] .gmt-run-code .gmt-deck-code {
+:is(html[data-deck], [data-slide-stage]) .gmt-run-code .gmt-deck-code {
   --ec-codeFontSize: var(--gmt-deck-text-md);
   --ec-codePadBlk: var(--gmt-deck-space-xs);
 }
@@ -298,6 +303,11 @@ html[data-deck] .gmt-run-code .gmt-deck-code {
 /* The note is prose, not output: a step smaller. */
 .gmt-run-note {
   font-size: var(--gmt-deck-text-md);
+}
+
+/* Its inline code is a step smaller again, but never under the room floor. */
+.gmt-run-note code {
+  font-size: max(var(--gmt-deck-text-sm), 0.9em);
 }
 
 /* The cursor shows on the line that is typing, and nowhere once the run is through. */

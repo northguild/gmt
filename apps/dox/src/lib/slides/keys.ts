@@ -42,6 +42,7 @@ export type DeckAction =
   | "overview"
   | "help"
   | "blank"
+  | "guide"
   | "fullscreen"
   | "present"
   | "presenter"
@@ -79,6 +80,11 @@ export const KEY_TABLE: readonly KeyRow[] = [
     action: "blank",
     keys: ["B", "."],
     label: "Blank the stage; any step key brings it back",
+  },
+  {
+    action: "guide",
+    keys: ["G"],
+    label: "Show the safe-area guide: what a TV may crop",
   },
   { action: "fullscreen", keys: ["F"], label: "Fullscreen on or off" },
   {
@@ -145,6 +151,8 @@ function actionFor(
       return "blank";
     case "f":
       return "fullscreen";
+    case "g":
+      return "guide";
     case "r":
       return "home";
     case "t":
@@ -194,6 +202,8 @@ export interface DeckKeyActions {
   overview(): void;
   help(): void;
   blank(): void;
+  /** Shows or hides the safe-area guide. */
+  guide(): void;
   fullscreen(): void;
   present(): void;
   /** Opens the presenter view in its own window. */
@@ -242,6 +252,8 @@ export function mountKeys(
         return actions.help();
       case "blank":
         return actions.blank();
+      case "guide":
+        return actions.guide();
       case "fullscreen":
         return actions.fullscreen();
       case "present":

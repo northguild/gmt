@@ -592,13 +592,17 @@ jobs:
   # until the owner makes it one. `main` is covered by the weekly sweep, not by this job.
   # `--against` is the merge base `determine-affected` computes, so both see the same diff.
   #
-  # Five legs, each on its own 4 vCPU, because the clock-still gates flake when gates share a runner
+  # Six legs, each on its own 4 vCPU, because the clock-still gates flake when gates share a runner
   # and the runner keeps gates serial within one. The measured times:
   #   contrast          contrast-measure 5.4 min
   #   canada            canada-layout-check 3.8 + data-credits-check 0.4 + a11y-media 0.5 +
   #                     frame-check 0.1 min
   #   esc-grow          esc-cascade 2.2 + grow-measure 2.0 min
-  #   other             a11y-axe 1.1 + a11y-tab-walk 1.6 min, and any gate added later (`--skip`)
+  #   slides            slides-check alone: its five window sizes over each deck ran past 9m50s
+  #                     on #577's first run, in the leg it shared with a11y-axe and a11y-tab-walk,
+  #                     and took 17.5 min on a laptop
+  #   other             sound-check 3.1 + a11y-axe 1.1 + a11y-tab-walk 1.6 min, and any gate added
+  #                     later (`--skip`)
   #   readout-still     alone, as long as every other gate together: with the Timetable Reader
   #                     selected, #486's run recorded it at 25m37s, so it keeps 40 minutes (#490).
   # Each leg's gate step stops 5 minutes before its job, so its logs are still uploaded, and the
@@ -637,9 +641,15 @@ jobs:
             job-limit: 20
             step-limit: 15
             deadline: 13
+          - leg: slides
+            slug: slides
+            select: --only slides-check
+            job-limit: 35
+            step-limit: 30
+            deadline: 28
           - leg: every other gate
             slug: other
-            select: --skip readout-still,contrast-measure,canada-layout-check,data-credits-check,a11y-media,frame-check,esc-cascade,grow-measure
+            select: --skip readout-still,contrast-measure,canada-layout-check,data-credits-check,a11y-media,frame-check,esc-cascade,grow-measure,slides-check
             job-limit: 20
             step-limit: 15
             deadline: 13

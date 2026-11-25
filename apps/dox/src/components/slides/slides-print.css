@@ -116,6 +116,7 @@
   html[data-deck] .gmt-deck-bar,
   .gmt-deck-bar,
   .gmt-deck-blank,
+  .gmt-deck-guide,
   .gmt-deck-dialog,
   .gmt-notes,
   html[data-deck] [data-notes] {

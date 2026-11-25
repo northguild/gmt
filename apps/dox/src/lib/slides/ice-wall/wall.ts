@@ -49,7 +49,10 @@ export interface IceWall {
   /** Shows the wall whole at a depth (1 at rest). */
   show(depth?: number): void;
   hide(): void;
-  /** Sets the depth while the wall hangs (free flight). */
+  /**
+   * Sets the depth while the wall hangs (free flight). It runs on every frame of a flight, so it
+   * keeps the cards' boxes from the last measure: a depth change moves nothing on the page.
+   */
   setDepth(depth: number): void;
   /** Flies the camera in, then breaks the panes over `zones`. */
   flyThrough(zones: readonly string[]): void;
@@ -106,8 +109,11 @@ export function mountIceWall(o: WallOptions): IceWall {
     return models.map(() => elapsed);
   };
 
-  /** One frame at timestamp `now`, or a still frame when `now` is `null`. */
-  const render = (now: number | null): FrameOutput | null => {
+  /**
+   * One frame at timestamp `now`, or a still frame when `now` is `null`. A whole wall measures its
+   * cards again unless `measured` is `false`: a depth change alone does not move them.
+   */
+  const render = (now: number | null, measured = true): FrameOutput | null => {
     if (!surface.ready || state === "hidden") return null;
     if (state === "gone") {
       surface.draw([]);
@@ -115,7 +121,7 @@ export function mountIceWall(o: WallOptions): IceWall {
     }
     /* The panes hang on their cards, so they follow them, and the lens centre, if either moves. The
        approach and the break hold the geometry the wall had when they started. */
-    if (state === "whole") geometry.place(run.depth);
+    if (state === "whole") geometry.place(run.depth, measured);
     const out = buildFrame({
       lens: lens(),
       z: run.depth,
@@ -176,7 +182,7 @@ export function mountIceWall(o: WallOptions): IceWall {
     setDepth(z) {
       if (state !== "whole" || z === run.depth) return;
       run.depth = z;
-      render(null);
+      render(null, false);
     },
     flyThrough: run.approach,
     breakAll: run.breakNow,

@@ -1,19 +1,41 @@
 /*
  * The deck's Dox frame. The chat and the rail are the real ones (gmt-hive.css, chat.css); this
- * only sizes them to the stage. The stage is a size container, so the frame takes a share of its
+ * only sizes them to the stage. The stage is a size container, so the slot takes a share of its
  * height in `cqb`.
+ *
+ * The chat is set in `rem`, so it is laid out as it would be on a 1280x720 stage (the slot's width
+ * and 74% of the height there) and scaled with the stage (`.gmt-stage-fit`): a `1rem` line is 1.25cqi
+ * at every stage size. The slot keeps the scaled size and clips what the layout box has beyond it.
  *
  * The frame sets its own text size and line height: the slide's scale with the stage (`cqi`), and
  * the chat inherits them, so a question in the chat would grow with the slide. The chat reads at
  * the size it has on the site.
  */
+.slot {
+  inline-size: 100%;
+  block-size: 74cqb;
+  overflow: clip;
+}
+
 .frame {
+  --gmt-fit-w: 1280px;
+  --gmt-fit-h: calc(var(--gmt-fit-w) * 0.74 * 9 / 16);
   --gmt-hive-cover-licence: 0px;
+
+  /* The frame is opaque, so a glass blur inside it blurs a flat fill and shows nothing, but it is
+     redrawn on every frame of the camera's flight past it: the composer's alone broke
+     `frame-budget` at 1280x720. The token swap is the one `gmt-a11y.css` makes for reduced
+     transparency.
+     ui-standards-ok: gmt-a11y.css swaps these under a media query on the root, and CSS has no one rule that also holds them on this frame whatever the media */
+  --gmt-glass-blur: none;
+  --gmt-glass-blur-saturate: none;
+  --gmt-glass-blur-half: none;
+  --gmt-glass-blur-heavy: none;
+  --gmt-glass-blur-dim: none;
+  --gmt-header-blur: none;
 
   container: deck-dox / inline-size;
   box-sizing: border-box;
-  inline-size: 100%;
-  block-size: 74cqb;
   display: flex;
   flex-direction: column;
   min-block-size: 0;

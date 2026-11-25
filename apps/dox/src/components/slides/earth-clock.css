@@ -25,13 +25,15 @@
 }
 
 /* The enamel's sunburst, the chapter ring and the meridians are hairlines in the face's units. */
-.gmt-earth-clock [data-sunburst] line {
+.gmt-earth-clock [data-sunburst] {
+  fill: none;
   stroke: var(--gmt-ice);
   stroke-opacity: 0.06;
   stroke-width: 0.12;
 }
 
-.gmt-earth-clock [data-chapter] :is(circle, line) {
+.gmt-earth-clock [data-chapter] :is(circle, path) {
+  fill: none;
   stroke: var(--gmt-ice-dim);
   stroke-width: 0.16;
 }
@@ -155,8 +157,9 @@
 }
 
 /*
- * The break (`lib/slides/clock-shatter.ts`, over the stage's `REVEAL_MS`): the dial hides and its
- * shards, copies of it clipped to their cells, crack and fly; the Web Animations API moves them.
+ * The break (`lib/slides/clock-shatter.ts`, over the stage's `REVEAL_MS`): the dial cracks, and
+ * hides once its shards, copies of it clipped to their cells, hold it whole; then they fly, moved by
+ * the Web Animations API.
  * Behind them the Earth, already turned to its place, fades in and grows from nine tenths of its
  * size about its own centre (`--gmt-earth-x`, `--gmt-earth-y`, set with the clock's fit), so it
  * comes up from behind the clock at the clock's size.
@@ -173,27 +176,38 @@
       var(--gmt-emerge-at) both;
 }
 
-.gmt-deck-space[data-earth-clock="shatter"] .gmt-earth-clock > svg {
+/* The dial hides once its copies are all in its shards (`data-broken`), as they begin to fly;
+   until then the copies go in over it, a few a frame. */
+.gmt-deck-space[data-earth-clock="shatter"]
+  .gmt-earth-clock[data-broken]
+  > svg {
   visibility: hidden;
 }
 
-.gmt-earth-clock [data-shards],
-.gmt-earth-clock [data-shard] {
+.gmt-earth-clock [data-shards] {
   position: absolute;
   inset: 0;
 }
 
+/* A shard's box is its cell's box, and its copy of the dial is placed inside it at the dial's
+   size (`clock-shatter.ts`): wider than the shard, so the site's cap on an `svg`'s size is lifted. */
 .gmt-earth-clock [data-shard] {
+  position: absolute;
+  overflow: clip;
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
 
-.gmt-earth-clock [data-shard] > svg {
+.gmt-earth-clock [data-shard-cut] {
   position: absolute;
   inset: 0;
+}
+
+.gmt-earth-clock [data-shard-cut] > svg {
+  position: absolute;
   display: block;
-  inline-size: 100%;
-  block-size: 100%;
+  max-inline-size: none;
+  max-block-size: none;
   overflow: visible;
 }
 

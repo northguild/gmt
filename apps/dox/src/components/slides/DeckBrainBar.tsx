@@ -40,7 +40,7 @@ export function DeckBrainBar({
           />
         </>
       ) : (
-        <p className={styles["brainsNote"]}>
+        <p className={styles["brainsNote"]} data-fine-print>
           {brains.status === "loading"
             ? "Reading Dox's brains…"
             : "Dox's brains did not answer: questions left unknown, recorded answers still play."}

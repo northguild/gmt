@@ -2,7 +2,7 @@
  * The chat transport the deck's slides hand to `DoxChat` (`createTransport`), so a slide shows the
  * real Dox chat and the demo's rules live here, not in the components.
  *
- * The rules of the demo (`context/dox/specs/dox-g12/s4b-live-agents.md`):
+ * The rules of the demo:
  *  - A question typed in the composer goes live, to `POST /gmt/api/chat`, through the AI SDK's
  *    `DefaultChatTransport`, the one `/dox` uses, so the Worker sees the same body.
  *  - 8 s to the first output. Past it, or on an HTTP error, a refusal or a stream error before any

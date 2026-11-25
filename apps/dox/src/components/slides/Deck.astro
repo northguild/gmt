@@ -78,9 +78,15 @@ const previewAt = start === null ? undefined : convertZonedToUtc(start) || undef
       <canvas data-sky-layer="stars" data-sky-canvas="stars"></canvas>
     </div>
   </div>
-  <div class="gmt-deck-stage" data-deck-stage>
+  <div class="gmt-deck-stage gmt-stage-fit" data-deck-stage>
     <div class="gmt-deck-slides"><slot /></div>
     <div class="gmt-deck-blank" data-deck-blank aria-hidden="true" hidden></div>
+    <div class="gmt-deck-guide" data-deck-guide aria-hidden="true" hidden>
+      <div class="gmt-deck-guide-box" data-safe="action"></div>
+      <div class="gmt-deck-guide-box" data-safe="title"></div>
+      <div class="gmt-deck-guide-corners"></div>
+      <p class="gmt-deck-guide-size" data-guide-size></p>
+    </div>
   </div>
   <p class="gmt-deck-turn">Turn your phone sideways, or widen the window, to see the slides.</p>
   <Fragment set:html={deckControls(KEY_TABLE, allCredits).value} />

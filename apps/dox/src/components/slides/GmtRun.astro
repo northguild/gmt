@@ -17,7 +17,7 @@ interface Props {
 }
 const { calls } = Astro.props;
 const steps = (await gmtSteps(calls)).map((s, i) =>
-  i === 0 ? { ...s, code: `${importText(calls)}\n${s.code}` } : s,
+  i === 0 ? { ...s, code: `${importText(calls)}\n\n${s.code}` } : s,
 );
 const { node, icu } = process.versions;
 ---

@@ -7,9 +7,13 @@
  * Stepping back slides it down again. The stack's own box ends at the foot (`--gmt-stack-room`).
  *
  * The deck marks each build reached or not (`deck-nav.ts`) before it announces the state, so the
- * shift is read from those marks on every `gmt-deck-state`, and again whenever the column or the
- * slide changes size (a window resize, a late font).
+ * shift is read from those marks on every `gmt-deck-state` for the stacks on the slide it names,
+ * and again for every stack whenever a column or a slide changes size (a window resize, a late
+ * font). Reading a stack forces style and layout inside the key press that started the change, so
+ * a state for a slide without one reads nothing: on a CI runner, those forced reads put the first
+ * frame of the camera's flight over `frame-budget`.
  */
+import { drawnScale } from "~/lib/drawn-scale";
 import { onDeckState } from "./deck-state";
 
 /** The room under the stack's top edge: down to the slide's padding at its foot. */
@@ -20,10 +24,7 @@ function room(stack: HTMLElement, win: Window): number {
   const box = slide.getBoundingClientRect();
   // The boxes are drawn pixels and the pieces' offsets are layout pixels; a scaled stage (a phone,
   // `slides-phone.css`) makes them differ, so the room is turned back into layout pixels.
-  const scale =
-    slide.offsetHeight > 0 && box.height > 0
-      ? box.height / slide.offsetHeight
-      : 1;
+  const scale = drawnScale(slide, "block");
   return (
     (box.bottom - stack.getBoundingClientRect().top) / scale -
     (Number.isFinite(foot) ? foot : 0)
@@ -91,13 +92,17 @@ export function mountBuildStacks(
     root.querySelectorAll<HTMLElement>("[data-stack]"),
   ).flatMap((stack) => {
     const track = stack.querySelector<HTMLElement>("[data-stack-track]");
-    return track ? [{ stack, track }] : [];
+    const slide = stack.closest<HTMLElement>("[data-slide]")?.id || null;
+    return track ? [{ stack, track, slide }] : [];
   });
   if (stacks.length === 0) return;
   const settleAll = (): void => {
     for (const { stack, track } of stacks) settle(stack, track, o.win);
   };
-  onDeckState(root, o.signal, settleAll);
+  onDeckState(root, o.signal, (state) => {
+    for (const { stack, track, slide } of stacks)
+      if (slide === null || slide === state.id) settle(stack, track, o.win);
+  });
   if (typeof ResizeObserver === "undefined") return;
   const resized = new ResizeObserver(settleAll);
   for (const { stack, track } of stacks) {

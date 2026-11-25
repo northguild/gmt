@@ -1,3 +1,4 @@
+import { drawnScale } from "~/lib/drawn-scale";
 import { prefersReducedMotion } from "~/lib/reduced-motion";
 
 /** How long the rail's body must hold its size before the glide starts. */
@@ -16,10 +17,11 @@ export function glideToLead(host: HTMLElement): () => void {
     const scroller = host.querySelector<HTMLElement>(".gmt-hive-artifact-body");
     const lead = scroller?.querySelector<HTMLElement>("[data-rail-lead]");
     if (!scroller || !lead) return;
+    /* The chat is drawn scaled (`gmt-stage-fit`): rects are in drawn px, scrollTop in layout px. */
+    const box = scroller.getBoundingClientRect();
+    const scale = drawnScale(scroller, "block");
     const top =
-      scroller.scrollTop +
-      lead.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top;
+      scroller.scrollTop + (lead.getBoundingClientRect().top - box.top) / scale;
     if (scroller.scrollHeight - scroller.clientHeight < top) return;
     stop();
     scroller.scrollTo({

@@ -50,20 +50,20 @@
   color: var(--gmt-ice-bright);
 }
 
-html[data-deck] .gmt-stand-ins {
+:is(html[data-deck], [data-slide-stage]) .gmt-stand-ins {
   gap: var(--gmt-deck-space-md);
-  font-size: max(0.8rem, 1.45cqi);
+  font-size: max(0.8rem, 1.3cqi);
   line-height: 1.3;
 }
 
-html[data-deck] .gmt-stand-in {
+:is(html[data-deck], [data-slide-stage]) .gmt-stand-in {
   gap: var(--gmt-deck-space-sm);
   padding: var(--gmt-deck-space-md);
 }
 
-html[data-deck] .gmt-stand-ins-closing {
+:is(html[data-deck], [data-slide-stage]) .gmt-stand-ins-closing {
   padding-block-start: var(--gmt-deck-space-lg);
-  font-size: max(0.9rem, 1.7cqi);
+  font-size: max(0.9rem, 1.45cqi);
 }
 
 /* The presenter's and print copies on a narrow page stack the panels; the stage keeps three. */

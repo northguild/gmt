@@ -164,7 +164,11 @@ function Chat(
             onWidget={showWidget}
             host={host}
             aboveComposer={
-              <output className={styles["source"]} data-slot="source">
+              <output
+                className={styles["source"]}
+                data-slot="source"
+                data-fine-print
+              >
                 {sourceText(source, mode)}
               </output>
             }
@@ -213,20 +217,23 @@ export default function DeckDox(props: DeckDoxProps) {
   });
 
   return (
-    <div
-      ref={rootRef}
-      className={`gmt-ask ${styles["frame"]}`}
-      data-deck-dox=""
-      data-mode={mode}
-      data-demo-id={demoId}
-    >
-      <Chat
-        key={round}
-        {...props}
-        session={session}
-        source={source}
-        run={run}
-      />
+    <div className={styles["slot"]}>
+      <div
+        ref={rootRef}
+        className={`gmt-ask gmt-stage-fit gmt-stage-fit-fill ${styles["frame"]}`}
+        data-deck-dox=""
+        data-fine-print
+        data-mode={mode}
+        data-demo-id={demoId}
+      >
+        <Chat
+          key={round}
+          {...props}
+          session={session}
+          source={source}
+          run={run}
+        />
+      </div>
     </div>
   );
 }

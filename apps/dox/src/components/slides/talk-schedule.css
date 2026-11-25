@@ -3,7 +3,7 @@
  * time, the doors time, the zone and the venue. The page is the Earth clock's date window at a fixed width, centred on the slot's height;
  * its drawing rules are in `earth-clock.css`. The card's panel look is the shared one in `slides.css`.
  */
-html[data-deck] .gmt-talk-schedule {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-schedule {
   display: inline-flex;
   gap: var(--gmt-deck-space-xl);
   align-items: center;
@@ -12,37 +12,37 @@ html[data-deck] .gmt-talk-schedule {
     var(--gmt-deck-space-lg) var(--gmt-deck-space-lg);
 }
 
-html[data-deck] .gmt-talk-page {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-page {
   flex: none;
   inline-size: 12cqi;
   block-size: auto;
   overflow: visible;
 }
 
-html[data-deck] .gmt-talk-slot {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-slot {
   display: grid;
   align-content: center;
   gap: var(--gmt-deck-space-xs);
 }
 
-html[data-deck] .gmt-talk-slot :is(p, address) {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-slot :is(p, address) {
   margin: 0;
 }
 
-html[data-deck] .gmt-talk-event {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-event {
   font-family: var(--gmt-font-display);
-  font-size: max(0.9rem, 2.2cqi);
+  font-size: max(0.9rem, 1.9cqi);
   letter-spacing: 0.06em;
   color: var(--gmt-cyan-bright);
 }
 
-html[data-deck] .gmt-talk-date {
-  font-size: max(0.8rem, 1.8cqi);
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-date {
+  font-size: max(0.8rem, 1.6cqi);
   color: var(--gmt-ice);
 }
 
 /* The start is the card's headline: the largest line. */
-html[data-deck] .gmt-talk-when {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-when {
   padding-block-start: var(--gmt-deck-space-xs);
   font-family: var(--gmt-font-display);
   font-size: max(1.6rem, 5cqi);
@@ -51,23 +51,23 @@ html[data-deck] .gmt-talk-when {
   color: var(--gmt-ice-bright);
 }
 
-html[data-deck] .gmt-talk-doors {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-doors {
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice);
 }
 
-html[data-deck] .gmt-talk-zone {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-zone {
   font-size: var(--gmt-deck-text-md);
   color: var(--gmt-ice-dim);
 }
 
-html[data-deck] .gmt-talk-venue {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-venue {
   padding-block-start: var(--gmt-deck-space-sm);
   font-size: var(--gmt-deck-text-md);
   font-style: normal;
   color: var(--gmt-ice);
 }
 
-html[data-deck] .gmt-talk-venue a {
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-venue a {
   color: var(--gmt-cyan-bright);
 }

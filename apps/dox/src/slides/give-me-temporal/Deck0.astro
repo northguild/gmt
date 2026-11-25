@@ -1,7 +1,7 @@
 ---
 /**
  * Deck 0, "Give Me Temporal": the 29 slides of the HelsinkiJS talk and its spare, in the outline's order
- * (`context/dox/specs/dox-g12/index.md`). Every bug on a slide is a filing read from
+ * (`context/dox/built/slides.md`). Every bug on a slide is a filing read from
  * `upstream-filings.json`, every gmt result is computed by gmt at build time, and every count is
  * derived; the filing slides' wording lives in `content.ts`. Places are IANA zones or the stage's
  * keywords (`lib/slides/places.ts`); the venue's clock stands in the Earth's place until the talk
@@ -75,7 +75,8 @@ import { zoneJump } from "~/lib/slides/zone-jump";
 import { pageHref } from "~/lib/site";
 import { DECKS } from "~/slides/decks";
 import { wallCredit } from "~/slides/give-me-temporal/credits";
-import { AGENTS_FAULT, GMT_CALLS, REPORTS, VISUALS, newMoonFacts } from "~/slides/give-me-temporal/content";
+import { AGENTS_FAULT, GMT_CALLS, VISUALS, newMoonFacts } from "~/slides/give-me-temporal/content";
+import { REPORTS } from "~/slides/give-me-temporal/reports";
 import { KINDS } from "~/slides/give-me-temporal/kinds";
 import NewMoonPanel from "./components/NewMoonPanel.astro";
 import { LIVE } from "./live-data";

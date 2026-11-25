@@ -38,6 +38,17 @@
   }
 }
 
+/* The site's smallest text is 12 px, 0.94cqi once the frame is scaled to the stage; the tools and
+   the hive in the frame are held to 1cqi (`data-fine-print`), so their small size is 13 px. */
+[data-deck-dox] {
+  --gmt-text-xs: 0.8125rem;
+}
+
+/* The accuracy note is a disclaimer the room must read: 1rem here is 1.25cqi on the stage. */
+[data-deck-dox] .gmt-hive-accuracy-note {
+  font-size: 1rem;
+}
+
 /* The deck's questions are one line; the field starts at two lines' height. */
 [data-deck-dox] .gmt-hive-chat .gmt-hive-composer textarea {
   min-block-size: 2.5rem;

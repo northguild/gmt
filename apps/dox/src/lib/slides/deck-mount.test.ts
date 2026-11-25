@@ -445,15 +445,19 @@ describe("mountDeck", () => {
     /** The browser's view transition, held until the test lets the update run. */
     let updates: (() => void)[];
     let types: string[][];
+    /** Each transition's `ready`, settled when the test says its new picture is up. */
+    let readies: (() => void)[];
 
     beforeEach(() => {
       updates = [];
       types = [];
+      readies = [];
       (document as { startViewTransition?: unknown }).startViewTransition =
         vi.fn((o: { update: () => void; types: string[] }) => {
           updates.push(o.update);
           types.push(o.types);
           return {
+            ready: new Promise<void>((resolve) => readies.push(resolve)),
             finished: new Promise<void>(() => {}),
             skipTransition: vi.fn(),
           };
@@ -484,10 +488,18 @@ describe("mountDeck", () => {
       updates[0]();
       expect(live()).toBe("Slide 2 of 3: Second");
       expect(window.location.hash).toBe("#second");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
-        hop: true,
-        at: { slide: 1, build: 0 },
-      });
+      // The camera waits for the new picture, so the flight never starts on the swap's slow frames.
+      expect(space.goTo).not.toHaveBeenCalledWith(
+        "Asia/Tehran",
+        expect.anything(),
+      );
+      readies[0]();
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
+          hop: true,
+          at: { slide: 1, build: 0 },
+        }),
+      );
     });
 
     it("plays a step back as a back transition", async () => {
@@ -545,35 +557,46 @@ describe("mountDeck", () => {
     it("hops to each slide's place, and to a build's own place once it is reached", async () => {
       const { user } = await start();
       await user.keyboard("{ArrowRight}");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
-        hop: true,
-        at: { slide: 1, build: 0 },
-      });
+      // A cut's flight waits for the frame that paints it, as a transition's does for its picture.
+      expect(space.goTo).not.toHaveBeenCalledWith(
+        "Asia/Tehran",
+        expect.anything(),
+      );
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tehran", {
+          hop: true,
+          at: { slide: 1, build: 0 },
+        }),
+      );
       await user.keyboard("{ArrowRight}{ArrowRight}");
-      expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tokyo", {
-        hop: true,
-        at: { slide: 1, build: 2 },
-      });
+      await vi.waitFor(() =>
+        expect(space.goTo).toHaveBeenLastCalledWith("Asia/Tokyo", {
+          hop: true,
+          at: { slide: 1, build: 2 },
+        }),
+      );
     });
 
     it("runs the slide's lapse, then the highest reached build's, and none where a slide names none", async () => {
       const { user } = await start();
       expect(space.lapse).toHaveBeenLastCalledWith(null);
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tehran");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tehran");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith("tokyo");
-      await user.keyboard("{ArrowRight}");
-      expect(space.lapse).toHaveBeenLastCalledWith(null);
+      for (const zone of ["tehran", "tehran", "tokyo", null]) {
+        const calls = space.lapse.mock.calls.length;
+        await user.keyboard("{ArrowRight}");
+        await vi.waitFor(() =>
+          expect(space.lapse.mock.calls.length).toBeGreaterThan(calls),
+        );
+        expect(space.lapse).toHaveBeenLastCalledWith(zone);
+      }
     });
 
     it("tells the slides' visuals where the deck is", async () => {
       const { user } = await start();
       const seen = recordDeckStates(deckRoot());
       await user.keyboard("{ArrowRight}{ArrowRight}");
-      expect(seen.at(-1)).toMatchObject({ id: "second", build: 1 });
+      await vi.waitFor(() =>
+        expect(seen.at(-1)).toMatchObject({ id: "second", build: 1 }),
+      );
     });
 
     it("lights the route while the overview is open and drops it on close", async () => {

@@ -9,16 +9,16 @@
 }
 
 /* On the stage a quote's type is set in container units, in the text column. */
-html[data-deck] .gmt-quote {
+:is(html[data-deck], [data-slide-stage]) .gmt-quote {
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: 0;
   padding: var(--gmt-deck-space-md) var(--gmt-deck-space-lg);
-  font-size: max(0.75rem, 1.7cqi);
+  font-size: max(0.75rem, 1.45cqi);
   line-height: 1.3;
 }
 
-html[data-deck] .gmt-quote .expressive-code {
+:is(html[data-deck], [data-slide-stage]) .gmt-quote .expressive-code {
   min-inline-size: 0;
   max-inline-size: 100%;
   font-size: var(--gmt-deck-text-md);
@@ -28,31 +28,40 @@ html[data-deck] .gmt-quote .expressive-code {
  * The answer slide stacks the question, the agent's code and its result in the text column, so it
  * sets a size smaller than the other panels, and the code sits straight in the quote's panel.
  */
-html[data-deck]
+:is(html[data-deck], [data-slide-stage])
   :is([data-quote="question"], [data-quote="recorded"], [data-quote="result"]) {
   font-size: var(--gmt-deck-text-md);
 }
 
-html[data-deck] [data-quote="recorded"] blockquote {
+:is(html[data-deck], [data-slide-stage]) [data-quote="recorded"] blockquote {
   padding: 0;
   border: 0;
 }
 
 /* The answer's code is set smaller than the stage's code blocks (`.gmt-deck-code`, `slides.css`),
    so the question, the code and the result share the column. */
-html[data-deck] [data-quote="recorded"] .expressive-code {
+:is(html[data-deck], [data-slide-stage])
+  [data-quote="recorded"]
+  .expressive-code {
   --ec-codeFontSize: max(0.75rem, 1.25cqi);
 }
 
-html[data-deck] [data-quote="recorded"] figcaption {
+:is(html[data-deck], [data-slide-stage]) [data-quote="recorded"] figcaption {
   margin-block-start: var(--gmt-deck-space-sm);
 }
 
-html[data-deck] .gmt-slide-body [data-quote="result"] p {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide-body
+  [data-quote="result"]
+  p {
   margin-block: 0;
 }
 
-html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide-body
+  [data-quote="result"]
+  p
+  + p {
   margin-block-start: var(--gmt-deck-space-xs);
 }
 
@@ -61,7 +70,10 @@ html[data-deck] .gmt-slide-body [data-quote="result"] p + p {
 }
 
 /* The plain fact the guess missed, called out above the value: larger, in the deck's wrong ink. */
-html[data-deck] .gmt-slide-body [data-quote="result"] .gmt-quote-gap {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide-body
+  [data-quote="result"]
+  .gmt-quote-gap {
   margin-block-end: var(--gmt-deck-space-sm);
   font-size: 1.35em;
   font-weight: 600;
@@ -80,6 +92,6 @@ html[data-deck] .gmt-slide-body [data-quote="result"] .gmt-quote-gap {
 
 /* The agents' table holds four answers and their thrown messages, so it sets at the code tables'
    size (`deck-table.css`) and keeps the slide's bottom margin. */
-html[data-deck] .gmt-agent-table {
+:is(html[data-deck], [data-slide-stage]) .gmt-agent-table {
   font-size: var(--gmt-deck-text-sm);
 }

@@ -64,17 +64,6 @@
   background: var(--gmt-void);
 }
 
-/* Padding before a shorter value: an empty slot, not a wrong flap. */
-.gmt-flap-tile[data-blank] {
-  background: none;
-  border-style: dashed;
-  border-color: color-mix(in oklab, var(--gmt-border), transparent 40%);
-}
-
-.gmt-flap-tile[data-blank]::after {
-  content: none;
-}
-
 /* A flap that differs between the rows, lit once its row lands (or at once without script). */
 .gmt-run:not([data-armed]) > .gmt-flap [data-diff="expected"],
 [data-landed] > [data-diff="expected"] {
@@ -137,7 +126,7 @@
 }
 
 .gmt-month-page th {
-  font-size: max(0.75rem, 1.2cqi);
+  font-size: var(--gmt-deck-text-sm);
   font-weight: 400;
   letter-spacing: 0.06em;
   text-transform: uppercase;

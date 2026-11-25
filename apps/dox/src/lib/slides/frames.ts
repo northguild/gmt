@@ -39,3 +39,21 @@ export function play(
     win.cancelAnimationFrame(handle);
   };
 }
+
+/**
+ * Calls `fn` once `count` more frames have come (at once for 0), unless `signal` aborts first.
+ * Work that must wait out a change's first painted frames, rather than animate, waits here.
+ */
+export function afterFrames(
+  win: Pick<Frames, "requestAnimationFrame">,
+  count: number,
+  fn: () => void,
+  signal?: AbortSignal,
+): void {
+  const step = (left: number): void => {
+    if (signal?.aborted) return;
+    if (left <= 0) fn();
+    else win.requestAnimationFrame(() => step(left - 1));
+  };
+  step(count);
+}

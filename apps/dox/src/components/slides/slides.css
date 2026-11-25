@@ -14,18 +14,57 @@
  * the window.
  */
 
-/* ---- The article: the same dark island in both site themes ---- */
-.gmt-deck {
-  --gmt-deck-bar-size: 3.5rem;
-  --gmt-deck-bar: var(--gmt-deck-bar-size);
-  --gmt-deck-fade: 200ms;
-
+/* What a slide's pieces read, wherever a slide is drawn: on the stage and in the presenter's
+   previews. */
+:is(.gmt-deck, [data-slide-stage]) {
   /* A wrong result and the right value, wherever the deck shows them: red and green, the way a
      test runner prints a failed assertion (`RunLabel`, the flaps, the calendar marks). */
   --gmt-deck-wrong: var(--gmt-danger);
   --gmt-deck-wrong-ink: var(--gmt-danger-ink);
   --gmt-deck-right: var(--gmt-spring);
   --gmt-deck-right-ink: var(--gmt-spring-ink);
+}
+
+/* A preview never animates in: every duration a slide's pieces read is 0. */
+[data-slide-stage] {
+  --gmt-deck-fade: 0s;
+  --gmt-duration-fast: 0s;
+  --gmt-duration-med: 0s;
+  --gmt-duration-slow: 0s;
+  --gmt-duration-sweep: 0s;
+  --gmt-duration-fade: 0s;
+}
+
+/*
+ * A box laid out at a design size and scaled to fit: `--gmt-fit-w` by `--gmt-fit-h` (the size it
+ * lays out at), scaled from its start corner to `--gmt-fit-to` (default: the inline size of the
+ * nearest container). Every slide lays out as it does on the stage, whatever room it is shown in.
+ * A transform, not `zoom`: WebKit resolves `cqi` under `zoom` against the zoomed box. Without
+ * `--gmt-fit-w` the class does nothing, so a user sets the size where it applies it (the phone
+ * stage, the presenter's previews). The box is a `container-type: size` container too, so `cqi` and
+ * `cqb` inside it resolve against the design size: its user sets that (a class that did would
+ * collapse the stage of the page without JavaScript).
+ */
+.gmt-stage-fit {
+  inline-size: var(--gmt-fit-w);
+  block-size: var(--gmt-fit-h);
+  transform-origin: 0 0;
+  scale: tan(atan2(var(--gmt-fit-to, 100cqi), var(--gmt-fit-w)));
+}
+
+/* A fit box that fills its parent's width instead of a fixed one: it lays out at the parent's width
+   divided by the scale, so drawn at the scale it is as wide as the parent. */
+.gmt-stage-fit-fill {
+  inline-size: calc(
+    100% * tan(atan2(var(--gmt-fit-w), var(--gmt-fit-to, 100cqi)))
+  );
+}
+
+/* ---- The article: the same dark island in both site themes ---- */
+.gmt-deck {
+  --gmt-deck-bar-size: 3.5rem;
+  --gmt-deck-bar: var(--gmt-deck-bar-size);
+  --gmt-deck-fade: 200ms;
 
   position: relative;
   background: var(--gmt-void);
@@ -57,9 +96,10 @@
   color: var(--gmt-ice-dim);
 }
 
-/* The bar and the blank layer are for the stage. */
+/* The bar, the blank layer and the safe-area guide are for the stage. */
 .gmt-deck-bar,
-.gmt-deck-blank {
+.gmt-deck-blank,
+.gmt-deck-guide {
   display: none;
 }
 
@@ -80,23 +120,32 @@ html[data-deck] main {
   block-size: 100%;
 }
 
-html[data-deck] .content-panel {
+html[data-presenter] main {
+  padding: 0;
+}
+
+/*
+ * The presenter view (`html[data-presenter]`, set by an inline head script) shares the deck's page
+ * chrome, not its fixed height: it drops the content padding, the title band and the footer, and
+ * its own grid fills the window under the header (it scrolls as a long page where it stacks).
+ */
+:is(html[data-deck], html[data-presenter]) .content-panel {
   padding: 0;
   border: 0;
 }
 
-html[data-deck] .sl-container {
+:is(html[data-deck], html[data-presenter]) .sl-container {
   max-inline-size: none;
   margin: 0;
 }
 
-html[data-deck] .sl-markdown-content,
-html[data-deck] .sl-markdown-content > * + * {
+:is(html[data-deck], html[data-presenter]) .sl-markdown-content,
+:is(html[data-deck], html[data-presenter]) .sl-markdown-content > * + * {
   margin-block: 0;
 }
 
 /* The page's own heading names the article; the stage shows slide headings only. */
-html[data-deck] .content-panel:first-child h1 {
+:is(html[data-deck], html[data-presenter]) .content-panel:first-child h1 {
   position: absolute;
   inline-size: 1px;
   block-size: 1px;
@@ -110,7 +159,9 @@ html[data-deck] .content-panel:first-child h1 {
 
 /* The footer and the licence line sit under the deck, out of the stage's way. */
 html[data-deck] footer,
-html[data-deck] .gmt-licence {
+html[data-deck] .gmt-licence,
+html[data-presenter] footer,
+html[data-presenter] .gmt-licence {
   display: none;
 }
 
@@ -156,27 +207,41 @@ html[data-deck] .gmt-deck-slides {
   inset: 0;
 }
 
-html[data-deck] .gmt-slide {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide {
   position: absolute;
   inset: 0;
   box-sizing: border-box;
   padding-block: var(--gmt-deck-pad-block);
-  padding-inline: var(--gmt-deck-pad-inline);
+  padding-inline: var(--gmt-deck-pad-start) var(--gmt-deck-pad-inline);
   border: 0;
   overflow: hidden;
-  font-size: max(0.75rem, 2.6cqi);
+  font-size: max(0.75rem, 2.1cqi);
   line-height: 1.4;
   opacity: 0;
   visibility: hidden;
   transition:
     opacity var(--gmt-duration-med) var(--gmt-enter-easing),
-    visibility 0s linear var(--gmt-duration-med);
+    visibility 0s linear var(--gmt-duration-med),
+    content-visibility 0s linear var(--gmt-duration-med) allow-discrete;
 }
 
-html[data-deck] .gmt-slide[data-shown] {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide[data-shown] {
   opacity: 1;
   visibility: visible;
   transition-delay: 0s;
+}
+
+/*
+ * A slide that is not shown skips its style and layout. The stage renders every slide, so a
+ * change that restyles the whole page (a view transition starting is one) otherwise restyles
+ * about 2,800 elements: some 40 ms on a laptop, a dropped frame on every slide change. The
+ * leaving slide keeps its content until its fade ends, as it keeps its visibility. Print shows
+ * every slide, so this is for the screen only.
+ */
+@media screen {
+  html[data-deck="stage"] .gmt-slide:not([data-shown]) {
+    content-visibility: hidden;
+  }
 }
 
 /*
@@ -186,9 +251,9 @@ html[data-deck] .gmt-slide[data-shown] {
  * motion. The body is `display: contents` on the experiment slides, so its children carry the
  * fade.
  */
-html[data-deck] .gmt-slide > .gmt-slide-title,
-html[data-deck] .gmt-slide > .gmt-slide-body,
-html[data-deck] .gmt-slide > .gmt-slide-body > * {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide > .gmt-slide-title,
+:is(html[data-deck], [data-slide-stage]) .gmt-slide > .gmt-slide-body,
+:is(html[data-deck], [data-slide-stage]) .gmt-slide > .gmt-slide-body > * {
   transition: opacity calc(var(--gmt-duration-med) * 1.25)
     var(--gmt-enter-easing);
 }
@@ -219,20 +284,23 @@ html[data-deck="wait"] .gmt-slide ~ .gmt-slide {
 
 /* Rung when a reader Tabs to the slide (the site's ring, drawn inside it); not when a page turn
    hands it focus (`data-quiet-focus`). */
-html[data-deck] .gmt-slide:focus-visible:not([data-quiet-focus]) {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide:focus-visible:not([data-quiet-focus]) {
   outline-offset: -4px;
 }
 
-html[data-deck] .gmt-slide-body {
-  font-size: max(0.8rem, 2.1cqi);
+:is(html[data-deck], [data-slide-stage]) .gmt-slide-body {
+  font-size: max(0.8rem, 1.7cqi);
 }
 
-html[data-deck] .gmt-slide[data-layout="title"] .gmt-slide-body {
-  font-size: max(1rem, 2.6cqi);
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="title"]
+  .gmt-slide-body {
+  font-size: max(1rem, 2.2cqi);
 }
 
-html[data-deck] .gmt-slide-title {
-  font-size: max(1.25rem, 3.6cqi);
+:is(html[data-deck], [data-slide-stage]) .gmt-slide-title {
+  font-size: max(1.25rem, 2.8cqi);
   line-height: 1.15;
   margin-block-end: var(--gmt-deck-space-2xl);
 }
@@ -243,8 +311,8 @@ html[data-deck] .gmt-slide-title {
   white-space: nowrap;
 }
 
-html[data-deck] .gmt-slide-title[data-langs] {
-  font-size: max(1.25rem, 3.2cqi);
+:is(html[data-deck], [data-slide-stage]) .gmt-slide-title[data-langs] {
+  font-size: max(1.25rem, 2.6cqi);
 }
 
 /* Chinese comes from a system face, not the display face; its light weight matches the display
@@ -253,32 +321,34 @@ html[data-deck] .gmt-slide-title[data-langs] {
   font-weight: 300;
 }
 
-html[data-deck] .gmt-slide[data-layout="title"] {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide[data-layout="title"] {
   display: grid;
   align-content: center;
 }
 
-html[data-deck] .gmt-slide[data-layout="title"] .gmt-slide-title {
-  font-size: max(1.5rem, 7cqi);
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="title"]
+  .gmt-slide-title {
+  font-size: max(1.5rem, 5.5cqi);
 }
 
-html[data-deck] [data-notes] {
+:is(html[data-deck], [data-slide-stage]) [data-notes] {
   display: none;
 }
 
 /* A build not yet reached keeps its place in the layout, so nothing moves when it appears. */
-html[data-deck] .gmt-build {
+:is(html[data-deck], [data-slide-stage]) .gmt-build {
   transition: opacity var(--gmt-duration-med) var(--gmt-enter-easing);
 }
 
-html[data-deck] .gmt-build[data-reached="false"] {
+:is(html[data-deck], [data-slide-stage]) .gmt-build[data-reached="false"] {
   opacity: 0;
   visibility: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-deck] .gmt-slide,
-  html[data-deck] .gmt-build {
+  :is(html[data-deck], [data-slide-stage]) .gmt-slide,
+  :is(html[data-deck], [data-slide-stage]) .gmt-build {
     transition-duration: var(--gmt-deck-fade);
   }
 }
@@ -294,6 +364,85 @@ html[data-deck="stage"] .gmt-deck-blank {
 
 html[data-deck="stage"] .gmt-deck-blank[hidden] {
   display: none;
+}
+
+/* ---- The safe-area guide ----
+ * Over the slide and under nothing: two outlines (action-safe, title-safe), marks at the stage's
+ * corners so a cropped corner shows at once, and the window's size on a plate. No fill. */
+html[data-deck="stage"] .gmt-deck-guide {
+  --guide-line: var(--gmt-ice-dim);
+  --guide-mark: 3cqi;
+
+  display: block;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+html[data-deck="stage"] .gmt-deck-guide[hidden] {
+  display: none;
+}
+
+/* Starlight's flow rule gives a following sibling a top margin; the guide's boxes own their places. */
+.gmt-deck-guide-box,
+.gmt-deck-guide-corners,
+.gmt-deck-guide-size {
+  margin-block: 0;
+}
+
+.gmt-deck-guide-box {
+  position: absolute;
+  border: 1px dashed var(--guide-line);
+}
+
+.gmt-deck-guide-box[data-safe="action"] {
+  inset: var(--gmt-deck-safe-action);
+}
+
+.gmt-deck-guide-box[data-safe="title"] {
+  inset: var(--gmt-deck-safe-title);
+  border-style: solid;
+}
+
+.gmt-deck-guide-corners {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--guide-line), var(--guide-line)) top left /
+      var(--guide-mark) 2px,
+    linear-gradient(var(--guide-line), var(--guide-line)) top left / 2px
+      var(--guide-mark),
+    linear-gradient(var(--guide-line), var(--guide-line)) top right /
+      var(--guide-mark) 2px,
+    linear-gradient(var(--guide-line), var(--guide-line)) top right / 2px
+      var(--guide-mark),
+    linear-gradient(var(--guide-line), var(--guide-line)) bottom left /
+      var(--guide-mark) 2px,
+    linear-gradient(var(--guide-line), var(--guide-line)) bottom left / 2px
+      var(--guide-mark),
+    linear-gradient(var(--guide-line), var(--guide-line)) bottom right /
+      var(--guide-mark) 2px,
+    linear-gradient(var(--guide-line), var(--guide-line)) bottom right / 2px
+      var(--guide-mark);
+  background-repeat: no-repeat;
+}
+
+.gmt-deck-guide-size {
+  position: absolute;
+  inset-block-end: calc(var(--gmt-deck-safe-title) + var(--gmt-deck-space-md));
+  inset-inline: 0;
+  margin-inline: auto;
+  inline-size: max-content;
+  padding: var(--gmt-deck-space-sm) var(--gmt-deck-space-md);
+  border: 1px solid var(--guide-line);
+  border-radius: var(--gmt-bevel-md);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-size: var(--gmt-deck-text-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ---- The bar ---- */
@@ -736,12 +885,12 @@ html[data-deck] .gmt-deck-space > canvas {
  */
 html[data-deck] .gmt-deck-stage,
 html[data-deck] .gmt-deck-slides,
-html[data-deck] .gmt-slide {
+:is(html[data-deck], [data-slide-stage]) .gmt-slide {
   pointer-events: none;
 }
 
-html[data-deck] .gmt-slide-body > *,
-html[data-deck] .gmt-slide-title,
+:is(html[data-deck], [data-slide-stage]) .gmt-slide-body > *,
+:is(html[data-deck], [data-slide-stage]) .gmt-slide-title,
 html[data-deck] .gmt-deck-blank {
   pointer-events: auto;
 }
@@ -750,14 +899,15 @@ html[data-deck] .gmt-deck-blank {
    clear of it. The room is kept from the first paint: the head script sets `html[data-deck]`
    before the page draws, and the stage (`data-space`) mounts later, so keying the room on the
    stage drew the content at full width and then squeezed it. */
-html[data-deck] .gmt-deck .gmt-slide {
+:is(html[data-deck] .gmt-deck, [data-slide-stage]) .gmt-slide {
   padding-inline-end: var(--gmt-deck-clock-room);
 }
 
 /* A full slide takes the whole page: the Earth, or the clock in its place, fades out while it
-   shows, and the sky stays. */
-html[data-deck] .gmt-deck .gmt-slide[data-layout="full"] {
-  padding-inline-end: var(--gmt-deck-pad-inline);
+   shows, and the sky stays. Its end side mirrors the start side, so the margins match. */
+:is(html[data-deck] .gmt-deck, [data-slide-stage])
+  .gmt-slide[data-layout="full"] {
+  padding-inline-end: var(--gmt-deck-pad-start);
 }
 
 html[data-deck]
@@ -805,7 +955,9 @@ html[data-deck="stage"] .gmt-deck[data-blank] .gmt-deck-space {
  * chat out without adding weight, so a component's own paragraph margins (`.gmt-run > p` and the
  * rest, which come later at the same weight) still win.
  */
-html[data-deck] .gmt-slide-body p:not(:where(.gmt-ask p)) {
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide-body
+  p:not(:where(.gmt-ask p)) {
   margin-block: 0 var(--gmt-deck-space-md);
 }
 
@@ -818,13 +970,15 @@ html[data-deck] .gmt-slide-body p:not(:where(.gmt-ask p)) {
  * landing page's copy does (below). Reduced motion zeroes the durations and the opt-in is not
  * made, so there it is a cut.
  *
- * The space layer and the bar get names of their own and no animation, so the sky, the Earth, the
- * clock and the pager never fade, ghost or move: only the new picture of each is shown, and the
- * canvases stay live. Groups stack in the order of the page, so leaving the bar in the root would
- * put the space layer over it.
+ * Nothing else is captured, the root included: the sky, the Earth, the clock and the page round
+ * them stay live, drawn under the groups, so they never fade, ghost or move. A captured root and
+ * space layer were nine full-screen surfaces, and the compositor drew them on every frame of the
+ * camera's flight, which starts as the change is ready (`afterSwap`): 20 ms a frame at 1280x720,
+ * over `frame-budget`. The bar gets a name and no animation: groups stack over the page, and the
+ * arriving slide would otherwise cover it.
  */
-html[data-deck-vt] .gmt-deck-space {
-  view-transition-name: deck-space;
+html[data-deck-vt] {
+  view-transition-name: none;
 }
 
 html[data-deck-vt] .gmt-deck-bar {
@@ -844,15 +998,10 @@ html[data-deck-vt]::view-transition {
   pointer-events: none;
 }
 
-html[data-deck-vt]::view-transition-old(root),
-::view-transition-old(deck-space),
 ::view-transition-old(deck-bar) {
   display: none;
 }
 
-html[data-deck-vt]::view-transition-new(root),
-::view-transition-group(deck-space),
-::view-transition-new(deck-space),
 ::view-transition-group(deck-bar),
 ::view-transition-new(deck-bar),
 ::view-transition-group(deck-slide),
@@ -901,7 +1050,7 @@ html[data-deck-vt]::view-transition-new(root),
  * A code block on the stage (`DeckCode`): Expressive Code sizes its block from its own variables,
  * so the stage sets them in container units, with a panel's tighter lines.
  */
-html[data-deck] .gmt-deck-code {
+:is(html[data-deck], [data-slide-stage]) .gmt-deck-code {
   --ec-codeFontSize: var(--gmt-deck-text-lg);
   --ec-codeLineHt: 1.35;
   --ec-codePadBlk: var(--gmt-deck-space-sm);

@@ -4,6 +4,8 @@
  * mount (a deep link opens mid-deck) and again on each event.
  */
 
+import { afterFrames } from "./frames";
+
 export interface DeckState {
   /** The slide's id, as in the URL hash. */
   id: string;
@@ -49,4 +51,53 @@ export function isActive(el: HTMLElement, state: DeckState): boolean {
     el.closest<HTMLElement>("[data-build]")?.dataset["build"] ?? 0,
   );
   return state.build >= build;
+}
+
+/** The longest `whenStageRests` waits: a camera that never rests still lets the work run. */
+const REST_WAIT_MS = 6000;
+
+/**
+ * Runs `fn` once the deck's space stage is at rest (`data-flight="rest"`, `stage-camera.ts`), so
+ * work that lays out (a chat remounting on a slide just left) never lands on a flight's frames
+ * (`frame-budget` in `slides-check`). The stage writes its state on its next frame, so this looks
+ * after two. A deck without the stage, or a camera still moving after `REST_WAIT_MS`, runs `fn`
+ * anyway. Aborting `signal` drops it.
+ */
+export function whenStageRests(
+  deck: HTMLElement,
+  signal: AbortSignal,
+  fn: () => void,
+): void {
+  const win = deck.ownerDocument.defaultView;
+  const host = deck.querySelector<HTMLElement>("[data-flight]");
+  if (!win || !host) {
+    fn();
+    return;
+  }
+  let done = false;
+  const run = (): void => {
+    if (done || signal.aborted) return;
+    done = true;
+    watch.disconnect();
+    win.clearTimeout(cap);
+    fn();
+  };
+  const watch = new MutationObserver(() => {
+    if (host.dataset["flight"] !== "moving") run();
+  });
+  const cap = win.setTimeout(run, REST_WAIT_MS);
+  signal.addEventListener("abort", () => {
+    watch.disconnect();
+    win.clearTimeout(cap);
+  });
+  afterFrames(
+    win,
+    2,
+    () => {
+      if (done) return;
+      if (host.dataset["flight"] !== "moving") run();
+      else watch.observe(host, { attributeFilter: ["data-flight"] });
+    },
+    signal,
+  );
 }

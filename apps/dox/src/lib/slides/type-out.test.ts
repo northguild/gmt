@@ -88,4 +88,27 @@ describe("rolling a counter", () => {
     ]);
     expect(el.children).toHaveLength(4);
   });
+
+  it("spins a blank flap with the others, then lands it empty", () => {
+    const el = document.createElement("span");
+    for (let i = 0; i < 4; i += 1) {
+      const tile = document.createElement("span");
+      tile.dataset["tile"] = "";
+      if (i < 3) tile.dataset["blank"] = "";
+      el.append(tile);
+    }
+    const { callbacks, win } = frames();
+    rollText({ el, end: "   3", win, reduced: false });
+    callbacks.shift()!(0);
+    callbacks.shift()!(ROLL_MS / 2);
+    for (const tile of Array.from(el.children).slice(0, 3))
+      expect(tile).toHaveTextContent(/^\d$/);
+    callbacks.shift()!(ROLL_MS);
+    expect(Array.from(el.children, (t) => t.textContent)).toEqual([
+      " ",
+      " ",
+      " ",
+      "3",
+    ]);
+  });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { isActive, onDeckState } from "~/lib/slides/deck-state";
+import { isActive, onDeckState, whenStageRests } from "~/lib/slides/deck-state";
 import {
   announceDemo,
   createDeckSession,
@@ -11,8 +11,10 @@ import type { DeckToolScript } from "~/lib/slides/live-data";
 
 /**
  * A Dox slide's life on the deck: one session for each round, where the answer on screen comes
- * from, and how many times the slide has been reached. Leaving the slide aborts the session,
- * clears the demo line and starts a new round, so a fresh chat follows and nothing is left running.
+ * from, and how many times the slide has been reached. Leaving the slide aborts the session and
+ * clears the demo line at once, and starts a new round once the stage rests (`whenStageRests`), so a
+ * fresh chat follows, nothing is left running and the remount never lands on the flight's frames.
+ * Coming back before then starts the new round at once.
  */
 export function useDeckSession(o: {
   mode: DeckDoxMode;
@@ -61,19 +63,33 @@ export function useDeckSession(o: {
     deckRef.current = deck;
     if (!root || !deck) return;
     const life = new AbortController();
+    /** The new round waiting for the stage to rest, if any. */
+    let pending: AbortController | null = null;
+    // One listener for the effect's life, not one each time the slide is left.
+    life.signal.addEventListener("abort", () => pending?.abort(), {
+      once: true,
+    });
+    const newRound = (): void => {
+      pending?.abort();
+      pending = null;
+      setSource(null);
+      setRun(0);
+      setRound((n) => n + 1);
+    };
     onDeckState(deck, life.signal, (state) => {
       const now = isActive(root, state);
       if (now === activeRef.current) return;
       activeRef.current = now;
       if (now) {
+        // Back before the stage rested: the fresh chat comes now.
+        if (pending) newRound();
         if (mode === "tools") setRun((n) => n + 1);
         return;
       }
       session.abort();
       announceDemo(deck, null);
-      setSource(null);
-      setRun(0);
-      setRound((n) => n + 1);
+      pending = new AbortController();
+      whenStageRests(deck, pending.signal, newRound);
     });
     const leave = (): void => session.abort();
     addEventListener("pagehide", leave);

@@ -78,3 +78,8 @@ export function announceDemo(
 ): void {
   root.dispatchEvent(new CustomEvent("gmt-demo", { detail }));
 }
+
+/** A browser event no person sends: `resize`, `fullscreenchange`, `visibilitychange`. */
+export function sendBrowserEvent(target: EventTarget, name: string): void {
+  target.dispatchEvent(new Event(name));
+}
