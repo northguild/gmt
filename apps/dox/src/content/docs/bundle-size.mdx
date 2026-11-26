@@ -1,6 +1,7 @@
 ---
 title: Bundle size
 description: Minified and gzipped bytes of the whole package and of single functions, measured from the source on every build, with the budget each is held to.
+industries: [core]
 ---
 
 import { Aside } from "@astrojs/starlight/components";
@@ -113,4 +114,4 @@ Each engine fails its own tests, for its own bugs: Node and Chromium share one e
 
 GMT does not ship code that it knows gives a wrong answer. A bug it finds is fixed before the release that would carry it, never shipped and written up as a known issue ([Zero known bugs](/guides/concepts/correct-at-the-edges/#zero-known-bugs)). A build without the polyfill would ship every one of these failures, so there is none. On `temporal-polyfill`, GMT gives the standard's answer in each case.
 
-The polyfill stays until a stable Safari ships `Temporal` and the weekly run against native `Temporal` passes on Node 26, Chromium, Firefox and WebKit for 12 weeks running ([#316](https://github.com/northguild/gmt/issues/316)).
+The polyfill stays until a stable Safari ships `Temporal` and the weekly run against native `Temporal` passes on Node 26, Chromium, Firefox, WebKit on Linux and WebKit on macOS for 12 weeks running ([#316](https://github.com/northguild/gmt/issues/316)). [Pulse](/pulse/) shows the checks that watch for it.

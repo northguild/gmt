@@ -4,7 +4,8 @@
  * A `<figure>` named by its caption, over one `<output>` that holds the instant (broken at
  * the kit's `instant` points), the NO SIGNAL pill or nothing. A reading that is not an
  * instant (the empty box, a word) keeps the plate's box: every part is a `hold` that
- * reserves the widest thing it can show, so a result never moves the page.
+ * reserves the widest thing it can show, so a result never moves the page. The value's hold
+ * keeps the pill too: on a narrow plate the pill is taller than a line of the instant.
  *
  * - `lost` is the library's sentinel for invalid input, in amber and in words.
  * - an empty `value` with `lost` false is a legitimate empty reading, and the reason says so.
@@ -65,7 +66,10 @@ export function instantHero(o: InstantHeroOptions): SafeHtml {
     <figcaption class="${styles.caption}">${hold(o.caption, o.captions, { ghostClass: styles.caption })}</figcaption>
     ${hold(
       html`<output class="${styles.value}" aria-label="${o.label}" aria-live="off">${value}</output>`,
-      [instant(o.sample)],
+      [
+        instant(o.sample),
+        html`<span class="${styles.pill}" data-sample="${NO_SIGNAL_PILL}"></span>`,
+      ],
       { ghostClass: styles.value },
     )}
     ${

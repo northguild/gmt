@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { isoYearString } from "../../internal/isoYearString";
 
 /**
@@ -17,7 +17,7 @@ import { isoYearString } from "../../internal/isoYearString";
  * @example getYear() // "" (when system timeZone unavailable)
  */
 export function getYear(): string {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) return "";
 
   try {

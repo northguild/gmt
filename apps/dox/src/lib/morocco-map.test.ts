@@ -250,16 +250,11 @@ describe("the small-shape rings", () => {
 });
 
 describe("a narrow section", () => {
-  it("fetches nothing and still renders the list", async () => {
-    const fetchSpy = vi.fn(() => {
-      throw new Error("a narrow section must not fetch");
-    });
+  it("draws the map at 375 px as well, and renders the list", async () => {
     const { svg, listButtons, listButton } = await draw({
       measure: () => 375,
-      fetch: fetchSpy as unknown as typeof fetch,
     });
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(svg()).not.toBeInTheDocument();
+    expect(svg()).toBeInTheDocument();
     expect(listButtons()).toHaveLength(IDS.length);
     expect(listButton("Africa/Casablanca")).toHaveTextContent(
       "Stopped changing clocks on 20 September 2026 at 02:00 local time (01:00 UTC)",

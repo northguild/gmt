@@ -1,8 +1,5 @@
-import {
-  coalesceIntervalNanoseconds,
-  parseIntervalNanosecondsList,
-} from "../../internal";
 import type { Interval } from "../../types";
+import { mergeIntervalList } from "../../internal/intervalNanoseconds";
 
 /**
  * Collapse a list of half-open intervals into the fewest sorted, non-overlapping intervals.
@@ -31,20 +28,5 @@ import type { Interval } from "../../types";
  * @example mergeIntervals([{ start: "2024-01-01T17:00:00Z", end: "2024-01-01T09:00:00Z" }]) // [] — inverted
  */
 export function mergeIntervals(intervals: Interval[]): Interval[] {
-  try {
-    const records = parseIntervalNanosecondsList(intervals);
-
-    if (records === null) {
-      return [];
-    }
-
-    return coalesceIntervalNanoseconds(records).map((run) => ({
-      start: run.startText,
-      end: run.endText,
-    }));
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return [];
-  }
+  return mergeIntervalList(intervals);
 }

@@ -14,12 +14,15 @@ export const VERDICT_FILES = {
   "temporal-compat-chromium": "artifacts/temporal-compat-chromium.json",
   "temporal-compat-firefox": "artifacts/temporal-compat-firefox.json",
   "temporal-compat-webkit": "artifacts/temporal-compat-webkit.json",
+  "temporal-compat-webkit-macos": "artifacts/temporal-compat-webkit-macos.json",
   "temporal-oracle": "artifacts/temporal-oracle-verdict.json",
   "leap-seconds": "artifacts/leap-seconds.json",
+  "us-clock-watch": "artifacts/us-clock-watch.json",
   "native-suite-node": "artifacts/native-suite-node.json",
   "native-suite-chromium": "artifacts/native-suite-chromium.json",
   "native-suite-firefox": "artifacts/native-suite-firefox.json",
   "native-suite-webkit": "artifacts/native-suite-webkit.json",
+  "native-suite-webkit-macos": "artifacts/native-suite-webkit-macos.json",
   "temporal-polyfill-swap-node": "artifacts/temporal-polyfill-swap-node.json",
   "temporal-polyfill-swap-chromium":
     "artifacts/temporal-polyfill-swap-chromium.json",
@@ -101,7 +104,7 @@ export function compatCheckVerdict({ runtime, groups, snapshotCurrent }) {
  * (`scripts/lib/native-suite-compat.mjs`), against the polyfill GMT ships. No snapshot: the
  * committed one is Node's.
  *
- * @param {{ leg: "chromium" | "firefox" | "webkit", engine: string,
+ * @param {{ leg: "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *           engineId: "v8" | "firefox" | "webkit",
  *           runtime: { polyfill: string, node: string, playwright: string },
  *           groups: CompatGroup[] }} input
@@ -176,7 +179,7 @@ const MESSAGE_CHARS_IN_VERDICT = 300;
  * from `classify`; the verdict keeps the first 50 of each, with each message cut to 300 characters, and
  * says when it cut. The counts stay the full numbers. Raw Vitest reports stay in `artifacts/`.
  *
- * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", engine: string,
+ * @param {{ leg: "node" | "chromium" | "firefox" | "webkit" | "webkit-macos", engine: string,
  *           runtime: { node: string, vitest: string, playwright: string | null },
  *           counts: { files: number, tests: number, passed: number, tagged: number,
  *                     untagged: number, hostTagged: number, hostUntagged: number,
@@ -230,7 +233,8 @@ export function nativeSuiteVerdict({
  * candidate, `version`) against the pinned one (`pinned`). `failing` is what fails on the candidate
  * and passes on the control in the same runtime; the verdict keeps the first 50, each message cut to 300
  * characters, and says when it cut. `counts.failed` is the full number. `both` and `fixed` are
- * counts only: their rows stay in the uploaded Vitest reports. `sweep` is `null` off Node.
+ * counts only: their rows stay in the uploaded Vitest reports. `sweep` (the offset sweep) and
+ * `calendarSweep` (the calendar sweep, CORE-110) are `null` off Node.
  * `entryLoaded` is whether the swap pass's own check passed: the seam's `Temporal` was the
  * candidate's object. Without it the counts say nothing about the candidate.
  *
@@ -242,6 +246,8 @@ export function nativeSuiteVerdict({
  *                     failed: number, both: number, fixed: number },
  *           failing: NativeFailure[],
  *           sweep: null | { status: "ran", [field: string]: unknown }
+ *                | { status: "could-not-run", message: string },
+ *           calendarSweep: null | { status: "ran", [field: string]: unknown }
  *                | { status: "could-not-run", message: string } }} input
  */
 export function polyfillSwapVerdict({
@@ -254,6 +260,7 @@ export function polyfillSwapVerdict({
   counts,
   failing,
   sweep,
+  calendarSweep,
 }) {
   return {
     source: `temporal-polyfill-swap-${leg}`,
@@ -274,6 +281,7 @@ export function polyfillSwapVerdict({
       })),
     failingTruncated: failing.length > UNTAGGED_ROWS_IN_VERDICT,
     sweep,
+    calendarSweep,
   };
 }
 
@@ -303,9 +311,25 @@ export function leapSecondsVerdict({
 }
 
 /**
+ * @typedef {{ status: "ran", differences: string[], [field: string]: unknown }
+ *   | { status: "could-not-run", message: string }} ClockWatchPart
+ */
+
+/**
+ * The `us-clock-watch check` verdict: one part per source (`federal`, `state`, `tz`), each either
+ * ran with its `differences` (bill lines for the first two, zone names for `tz`) or could not run.
+ * A source that failed does not stop the others from reporting.
+ *
+ * @param {{ federal: ClockWatchPart, state: ClockWatchPart, tz: ClockWatchPart }} parts
+ */
+export function usClockWatchVerdict({ federal, state, tz }) {
+  return { source: "us-clock-watch", status: "ran", federal, state, tz };
+}
+
+/**
  * What a command that exited 2 leaves behind: a canary that cannot run is a finding, not a silence.
  *
- * The swap check adds `sweep` to a Node leg that stopped after its offset sweep ran.
+ * The swap check adds `sweep` and `calendarSweep` to a Node leg that stopped after those sweeps ran.
  *
  * @returns {{ source: string, status: "could-not-run", message: string }}
  */

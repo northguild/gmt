@@ -56,11 +56,14 @@ export function joinDateTimeConnector(
   dayLabel: string,
   timeStyle: "short" | "medium" | "long" | "full",
 ): string {
-  const parts = cachedFormatter("DateTimeFormat", locale, {
-    dateStyle: "full",
-    timeStyle,
-    timeZone,
-  }).formatToParts(epochMilliseconds);
+  // Every date part is replaced by the day label, so no date is printed in any calendar: the
+  // date refusal (compat D33) does not apply to these two formatters.
+  const parts = cachedFormatter(
+    "DateTimeFormat",
+    locale,
+    { dateStyle: "full", timeStyle, timeZone },
+    false,
+  ).formatToParts(epochMilliseconds);
 
   let lastDateIdx = -1;
   parts.forEach((part, i) => {
@@ -71,10 +74,12 @@ export function joinDateTimeConnector(
   // dateStyle-only format would still produce with no time present — it
   // belongs to the date field, not the connector, even though the combined
   // format fuses it into the same literal token as the real connector.
-  const dateOnlyParts = cachedFormatter("DateTimeFormat", locale, {
-    dateStyle: "full",
-    timeZone,
-  }).formatToParts(epochMilliseconds);
+  const dateOnlyParts = cachedFormatter(
+    "DateTimeFormat",
+    locale,
+    { dateStyle: "full", timeZone },
+    false,
+  ).formatToParts(epochMilliseconds);
   const dateOnlyLast = dateOnlyParts[dateOnlyParts.length - 1];
   const dateSuffix = dateOnlyLast?.type === "literal" ? dateOnlyLast.value : "";
 

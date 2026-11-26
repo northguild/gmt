@@ -39,8 +39,9 @@ import type { EdifactOffsetDateTimeFormat } from "../../types/edi";
  * - **The output is the element value, not segment text.** `+` is the EDIFACT data element
  *   separator, so a value that holds one must be released when it is placed in a segment: write
  *   `?+`. The function does not add the release character.
- * - A bracketed RFC 9557 time zone is read as `toOffsetInstant` reads it: it must agree with
- *   the offset, and beside `Z` it sets the clock the digits are written on.
+ * - The value is an instant string: `Z` or an offset, and nothing after it. A zone bracket
+ *   (`[Europe/Berlin]`) or any other annotation returns `""`; this function writes the offset it
+ *   is given and takes no zone, so a zoned string is a different kind.
  * - A wall clock whose year is outside 0000–9999 returns `""`.
  * - Returns `""` for any other code, a code of another kind included, and for a non-string
  *   argument.

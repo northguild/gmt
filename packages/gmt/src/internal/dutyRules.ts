@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { isValidTime } from "../plain/validate/isValidTime";
+import { plainTimeOf } from "./inputChecks";
 import type { DutySeverity } from "../types";
 import type { CalendarUnit } from "./dutyPeriods";
 import { exactDurationNanoseconds } from "./exactDuration";
@@ -310,9 +310,7 @@ function instant(value: unknown): bigint {
 }
 
 function wallTime(value: unknown): Temporal.PlainTime {
-  return typeof value === "string" && isValidTime(value)
-    ? Temporal.PlainTime.from(value)
-    : fail();
+  return plainTimeOf(value) ?? fail();
 }
 
 function localWindow(value: unknown): ResolvedLocalWindow {

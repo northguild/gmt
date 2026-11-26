@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsSpan } from "../../internal";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return true when the half-open interval B `[bStart, bEnd)` lies within the half-open interval
@@ -44,21 +44,27 @@ export function intervalEngulfsUtc(
     return false;
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const aS = utcInstantOf(aStart);
+  if (aS === null) {
+    return false;
+  }
+
+  const aE = utcInstantOf(aEnd);
+  if (aE === null) {
+    return false;
+  }
+
+  const bS = utcInstantOf(bStart);
+  if (bS === null) {
+    return false;
+  }
+
+  const bE = utcInstantOf(bEnd);
+  if (bE === null) {
     return false;
   }
 
   try {
-    const aS = Temporal.Instant.from(aStart);
-    const aE = Temporal.Instant.from(aEnd);
-    const bS = Temporal.Instant.from(bStart);
-    const bE = Temporal.Instant.from(bEnd);
-
     if (Temporal.Instant.compare(aS, aE) > 0) {
       return false;
     }

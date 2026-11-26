@@ -11,7 +11,9 @@
  * seam (an alias, see packages/gmt/vitest.swap.config.ts). A test that fails on the swap and passes
  * on the control blocks the upgrade; one that fails on both is the host's and does not. No tag
  * excuses anything. Type errors do not decide. The Node leg also compares the candidate's UTC
- * offsets with Intl's on every day from 1970 to ten years ahead (scripts/lib/offset-sweep.mjs).
+ * offsets with Intl's on every day from 1970 to ten years ahead (scripts/lib/offset-sweep.mjs). It
+ * also compares each calendar's years from ISO -3000 to 5000 with Node's built-in Temporal
+ * (scripts/lib/calendar-sweep.mjs).
  *
  * The candidate must already be installed in packages/gmt under the npm alias
  * `temporal-polyfill-candidate` (the swap job does it; the alias is never in a committed manifest
@@ -37,6 +39,7 @@ import {
   runPassAgainIfStopped,
 } from "./native-suite.mjs";
 import { classify } from "./lib/native-suite-tags.mjs";
+import { sweepCalendars } from "./lib/calendar-sweep.mjs";
 import { sweepOffsets, sweepSpan } from "./lib/offset-sweep.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -73,6 +76,7 @@ const messageOf = (error) =>
  *   runtime: (leg: Leg) => Promise<Runtime>,
  *   loadEntry: (root: string) => Promise<{ Temporal?: unknown }>,
  *   sweep: (entry: any, today: SweepDate) => object,
+ *   calendarSweep: (entry: any) => object,
  *   today: () => SweepDate,
  * }} Deps
  */
@@ -146,6 +150,26 @@ export function sweep(
   };
 }
 
+/**
+ * Every calendar the runtime lists, the swap's years against the runtime's built-in Temporal
+ * (`globalThis.Temporal`, the reference). A host without a built-in Temporal cannot run it.
+ * @param {any} entry
+ * @param {string[]} [calendars]  the calendars to compare (default: every one `Intl` lists)
+ */
+export function calendarSweep(
+  entry,
+  calendars = Intl.supportedValuesOf("calendar"),
+) {
+  if (!globalThis.Temporal) {
+    throw new Error("this host has no built-in Temporal to compare with");
+  }
+  return sweepCalendars({
+    candidate: entry.Temporal,
+    reference: globalThis.Temporal,
+    calendars,
+  });
+}
+
 /** @param {Leg} leg @returns {Promise<Runtime>} */
 export async function runtime(leg) {
   const require = createRequire(import.meta.url);
@@ -177,6 +201,7 @@ const realDeps = {
   runtime,
   loadEntry,
   sweep: (entry, today) => sweep(entry, today),
+  calendarSweep: (entry) => calendarSweep(entry),
   today: () => globalThis.Temporal.Now.plainDateISO("UTC"),
 };
 
@@ -257,6 +282,14 @@ function summary(root, leg, stdout) {
   } else if (v?.sweep) {
     lines.push(`Offset sweep could not run: ${v.sweep.message}`);
   }
+  const cal = v?.calendarSweep;
+  if (cal?.status === "ran") {
+    lines.push(
+      `Calendar sweep: ${cal.differingCalendars} calendars differ from Node's built-in Temporal, ${cal.from} to ${cal.through}, ${cal.calendars} calendars.`,
+    );
+  } else if (cal) {
+    lines.push(`Calendar sweep could not run: ${cal.message}`);
+  }
   stdout(`${lines.join("\n")}\n`);
 }
 
@@ -293,7 +326,13 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     const verdict = couldNotRunVerdict(source, message);
     saveVerdict(
       root,
-      sweepResult === null ? verdict : { ...verdict, sweep: sweepResult },
+      {
+        ...verdict,
+        ...(sweepResult === null ? {} : { sweep: sweepResult }),
+        ...(calendarSweepResult === null
+          ? {}
+          : { calendarSweep: calendarSweepResult }),
+      },
       "polyfill-swap",
     );
     stderr(`polyfill-swap: ${leg} could not run: ${message}\n`);
@@ -304,6 +343,8 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
   let host;
   /** @type {object | null} */
   let sweepResult = null;
+  /** @type {object | null} */
+  let calendarSweepResult = null;
   /** @type {ReturnType<typeof runBoth>} */
   let passes;
   /** @type {string | null} */
@@ -330,6 +371,14 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
         sweepResult = d.sweep(entry, d.today());
       } catch (error) {
         sweepResult = { status: "could-not-run", message: messageOf(error) };
+      }
+      try {
+        calendarSweepResult = d.calendarSweep(entry);
+      } catch (error) {
+        calendarSweepResult = {
+          status: "could-not-run",
+          message: messageOf(error),
+        };
       }
     }
     host = await d.runtime(leg);
@@ -385,6 +434,7 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
       counts,
       failing,
       sweep: leg === "node" ? sweepResult : null,
+      calendarSweep: leg === "node" ? calendarSweepResult : null,
     }),
     "polyfill-swap",
   );
@@ -392,8 +442,12 @@ export async function main(argv, { root = ROOT, stdout, stderr, deps = {} }) {
     sweepResult && "differingZones" in sweepResult
       ? `; sweep: ${sweepResult.differingZones} zones differ`
       : "";
+  const calendarNote =
+    calendarSweepResult && "differingCalendars" in calendarSweepResult
+      ? `; calendar sweep: ${calendarSweepResult.differingCalendars} calendars differ`
+      : "";
   stdout(
-    `polyfill-swap: ${leg} temporal-polyfill ${version}: ${counts.failed} swap-only failures of ${counts.tests} tests${sweepNote}\n`,
+    `polyfill-swap: ${leg} temporal-polyfill ${version}: ${counts.failed} swap-only failures of ${counts.tests} tests${sweepNote}${calendarNote}\n`,
   );
   return 0;
 }

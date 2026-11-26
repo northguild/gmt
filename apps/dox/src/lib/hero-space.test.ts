@@ -9,12 +9,21 @@ import {
 import type { GlobeHost } from "./globe";
 
 /* The sky itself is tested in sky.test.ts; here it is a recorder that marks the hero ready on its first view, as the real one does. */
-const views: { rotation: readonly [number, number]; centre: unknown }[] = [];
+const views: {
+  rotation: readonly [number, number];
+  centre: unknown;
+  zoom: number | undefined;
+}[] = [];
 vi.mock("./sky", () => ({
   mountSky: ({ host }: { host: HTMLElement }) => ({
     ready: Promise.resolve(),
-    view: (rotation: readonly [number, number], centre: unknown) => {
-      views.push({ rotation, centre });
+    view: (
+      rotation: readonly [number, number],
+      centre: unknown,
+      _instantMs: number,
+      zoom?: number,
+    ) => {
+      views.push({ rotation, centre, zoom });
       host.dataset["sky"] = "ready";
     },
   }),
@@ -34,6 +43,7 @@ const globe = (frames: (() => void)[]): GlobeHost =>
   ({
     getRotation: () => [10, 20],
     getCentre: () => ({ x: 100, y: 200, radius: 300 }),
+    getZoom: () => 2,
     onFrame: (callback: () => void) => frames.push(callback),
   }) as unknown as GlobeHost;
 
@@ -46,6 +56,7 @@ beforeEach(() => {
   skyRoot = document.createElement("div");
   skyRoot.dataset["heroSky"] = "";
   skyRoot.dataset["src"] = "/sky.bin";
+  skyRoot.dataset["milkyWay"] = "/milkyway.webp";
   for (const which of ["band", "stars", "meteor"]) {
     const canvas = document.createElement("canvas");
     canvas.dataset["skyCanvas"] = which;
@@ -60,6 +71,7 @@ beforeEach(() => {
     vi.fn(async () => ({
       ok: true,
       arrayBuffer: async () => new ArrayBuffer(0),
+      blob: async () => new Blob(),
     })),
   );
 });
@@ -68,6 +80,7 @@ afterEach(() => {
   controller.abort();
   hero.remove();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const sky = (): HTMLElement => skyRoot;
@@ -90,6 +103,7 @@ describe("the hero's sky", () => {
     expect(views).toHaveLength(1);
     expect(views[0]?.rotation).toEqual([10, 20]);
     expect(views[0]?.centre).toMatchObject({ radius: 300 });
+    expect(views[0]?.zoom).toBe(2);
     // oxlint-disable-next-line dox-test/no-implementation-assert -- the page fades the layers in from this attribute
     expect(hero.dataset["sky"]).toBe("ready");
     expect(meteors).toHaveLength(1);

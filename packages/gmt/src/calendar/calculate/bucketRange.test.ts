@@ -1,6 +1,9 @@
 import { Temporal } from "../../internal/temporal";
 import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
-import { runInBoundedChild } from "../../test/boundedChild";
+import {
+  BOUNDED_CHILD_TEST_TIMEOUT_MS,
+  runInBoundedChild,
+} from "../../test/boundedChild";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import type { ZoneBucketUnit } from "../../types";
 import { bucketRange } from "./bucketRange";
@@ -482,43 +485,47 @@ describe("bucketRange", () => {
 // runner; a 1 s budget failed on a slow one with the refusal working. Expected [] because each span
 // holds more wall-clock units than the cap: hours 2,381 million, days 21,915, months 23,507, weeks
 // 11,687, months 12,000.
-describe("bucketRange over the cap without walking it", () => {
-  it.each`
-    start                        | end                       | unit       | timeZone              | why
-    ${"-271821-04-20T00:00:00Z"} | ${"2024-11-03T08:00:00Z"} | ${"hour"}  | ${"Etc/GMT+12"}       | ${"the whole range in hours"}
-    ${"1900-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"day"}   | ${"Etc/GMT+12"}       | ${"60 years of days"}
-    ${"0001-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"month"} | ${"Etc/GMT-14"}       | ${"1,959 years of months"}
-    ${"1800-01-01T00:00:00Z"}    | ${"2024-01-01T00:00:00Z"} | ${"week"}  | ${"America/New_York"} | ${"224 years of weeks across LMT and DST transitions"}
-    ${"1000-01-01T00:00:00Z"}    | ${"2000-01-01T00:00:00Z"} | ${"month"} | ${"America/New_York"} | ${"1,000 years of months"}
-  `(
-    "returns [] for $unit buckets from $start to $end in $timeZone without walking them ($why)",
-    async ({ start, end, unit, timeZone }) => {
-      const run = await runInBoundedChild([
-        `gmt.bucketRange(${JSON.stringify(start)}, ${JSON.stringify(end)}, ${JSON.stringify(unit)}, ${JSON.stringify(timeZone)})`,
-      ]);
-      expect(
-        { timedOut: run.timedOut, crashed: run.crashed },
-        run.stderr,
-      ).toEqual({ timedOut: false, crashed: false });
-      expect(run.calls[0]?.value).toEqual([]);
-      expect(run.calls[0]?.ms).toBeLessThan(10_000);
-    },
-  );
+describe(
+  "bucketRange over the cap without walking it",
+  { timeout: BOUNDED_CHILD_TEST_TIMEOUT_MS },
+  () => {
+    it.each`
+      start                        | end                       | unit       | timeZone              | why
+      ${"-271821-04-20T00:00:00Z"} | ${"2024-11-03T08:00:00Z"} | ${"hour"}  | ${"Etc/GMT+12"}       | ${"the whole range in hours"}
+      ${"1900-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"day"}   | ${"Etc/GMT+12"}       | ${"60 years of days"}
+      ${"0001-01-01T00:00:00Z"}    | ${"1960-01-01T00:00:00Z"} | ${"month"} | ${"Etc/GMT-14"}       | ${"1,959 years of months"}
+      ${"1800-01-01T00:00:00Z"}    | ${"2024-01-01T00:00:00Z"} | ${"week"}  | ${"America/New_York"} | ${"224 years of weeks across LMT and DST transitions"}
+      ${"1000-01-01T00:00:00Z"}    | ${"2000-01-01T00:00:00Z"} | ${"month"} | ${"America/New_York"} | ${"1,000 years of months"}
+    `(
+      "returns [] for $unit buckets from $start to $end in $timeZone without walking them ($why)",
+      async ({ start, end, unit, timeZone }) => {
+        const run = await runInBoundedChild([
+          `gmt.bucketRange(${JSON.stringify(start)}, ${JSON.stringify(end)}, ${JSON.stringify(unit)}, ${JSON.stringify(timeZone)})`,
+        ]);
+        expect(
+          { timedOut: run.timedOut, crashed: run.crashed },
+          run.stderr,
+        ).toEqual({ timedOut: false, crashed: false });
+        expect(run.calls[0]?.value).toEqual([]);
+        expect(run.calls[0]?.ms).toBeLessThan(10_000);
+      },
+    );
 
-  // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
-  // New York local days (-04:00 in June) start at 04:00Z.
-  it("returns the New York day buckets for the plural unit days", () => {
-    expect(
-      bucketRange(
-        "2024-06-15T03:00:00Z",
-        "2024-06-17T03:00:00Z",
-        "days",
-        "America/New_York",
-      ),
-    ).toEqual([
-      "2024-06-14T04:00:00Z",
-      "2024-06-15T04:00:00Z",
-      "2024-06-16T04:00:00Z",
-    ]);
-  });
-});
+    // Temporal §13.17 GetTemporalUnitValuedOption: a plural unit name is the same unit as its singular.
+    // New York local days (-04:00 in June) start at 04:00Z.
+    it("returns the New York day buckets for the plural unit days", () => {
+      expect(
+        bucketRange(
+          "2024-06-15T03:00:00Z",
+          "2024-06-17T03:00:00Z",
+          "days",
+          "America/New_York",
+        ),
+      ).toEqual([
+        "2024-06-14T04:00:00Z",
+        "2024-06-15T04:00:00Z",
+        "2024-06-16T04:00:00Z",
+      ]);
+    });
+  },
+);

@@ -25,6 +25,7 @@ import { REGION_KEY, classPhrase } from "./clock-change-tense";
 import type { Moment, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 import { withBase } from "./site";
+import { link } from "~/widgets/builders/link";
 
 /** The instant every probe row is read at: a Monday noon UTC, after all five changes took effect. */
 export const PROBE_INSTANT = "2026-11-02T12:00:00Z";
@@ -179,7 +180,7 @@ export function canadaVerdict(where: VerdictPlace): VerdictText {
     wrongAfter: ". From 1 November 2026 it shows their time an hour wrong.",
     more: [
       "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
-      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="${developersHref(where)}">For developers</a>.`,
+      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under ${link({ href: developersHref(where), body: "For developers" })}.`,
     ],
     unknown: "Your browser cannot read these zones.",
   };

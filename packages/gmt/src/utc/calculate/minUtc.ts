@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return the earliest (minimum) of the given UTC datetime values.
@@ -19,16 +19,17 @@ export function minUtc(utcDateTimes: string[]): string | null {
   try {
     if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return null;
 
-    const valid = utcDateTimes.filter(isValidUtc);
+    const valid = utcDateTimes
+      .map((candidate) => utcInstantOf(candidate))
+      .filter((candidate) => candidate !== null);
     if (!valid.length) return null;
 
     try {
-      const min = valid.reduce((currentMin, candidateStr) => {
-        const candidate = Temporal.Instant.from(candidateStr);
+      const min = valid.reduce((currentMin, candidate) => {
         return Temporal.Instant.compare(candidate, currentMin) < 0
           ? candidate
           : currentMin;
-      }, Temporal.Instant.from(valid[0]));
+      }, valid[0]);
 
       return min.toString();
     } catch {

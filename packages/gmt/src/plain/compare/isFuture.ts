@@ -1,6 +1,4 @@
-import { getToday } from "../get/getToday";
-import { isValidDate } from "../validate";
-import { isAfterDate } from "./isAfterDate";
+import { compareToToday } from "../../internal/compareToToday";
 
 /**
  * Return true when `value` is strictly after today, per the system clock
@@ -8,7 +6,7 @@ import { isAfterDate } from "./isAfterDate";
  *
  * - `value === today` returns false — "future" means strictly after, not
  *   on-or-after.
- * - Compares against `getToday()`, so this depends on the **system clock and
+ * - Compares against today, so this depends on the **system clock and
  *   system timeZone**. A caller needing determinism should use
  *   `isZonedFuture` with an explicit timeZone, or compare against an
  *   explicit reference with `isAfterDate`.
@@ -23,14 +21,5 @@ import { isAfterDate } from "./isAfterDate";
  * @example isFuture("invalid") // false
  */
 export function isFuture(value: string): boolean {
-  if (!isValidDate(value)) {
-    return false;
-  }
-
-  const today = getToday();
-  if (today === "") {
-    return false;
-  }
-
-  return isAfterDate(value, today);
+  return compareToToday(value) === 1;
 }

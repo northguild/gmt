@@ -1,14 +1,14 @@
 import { MustTestLocales } from "../../test";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { formatUtc } from "./formatUtc";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so one reset after every row covers the file, even a
 // row that fails while mocked.
 afterEach(() => {
-  vi.mocked(getSystemTimeZone).mockReset();
+  vi.mocked(systemTimeZone).mockReset();
 });
 
 describe("formatUtc", () => {
@@ -46,8 +46,8 @@ describe("formatUtc", () => {
     ).toEqual("February 3, 2024 at 3:30:45 PM");
   });
 
-  it("uses getSystemTimeZone() when timeZone is 'local'", () => {
-    vi.mocked(getSystemTimeZone).mockReturnValue("Europe/Paris");
+  it("reads the system time zone when timeZone is 'local'", () => {
+    vi.mocked(systemTimeZone).mockReturnValue("Europe/Paris");
 
     expect(
       formatUtc("2024-02-03T14:30:45Z", MustTestLocales.enUS, {
@@ -59,7 +59,7 @@ describe("formatUtc", () => {
   });
 
   it("returns the host's own zone again after the 'local' row mocked it", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });
@@ -219,12 +219,11 @@ describe("formatUtc with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatUtc with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -236,6 +235,6 @@ describe("formatUtc with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });

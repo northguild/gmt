@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * Live redirect and routing checks for Dox after a deploy: the live rows of the redirect matrix
- * (context/domination/issues/CORE-86.md, Decisions D3 to D5). Run by
+ * (the Worker's routing in worker/index.ts and the asset rules in wrangler.jsonc). Run by
  * .github/workflows/deploy-dox.yml after `wrangler deploy`; run it by hand with
  *
  *     node apps/dox/scripts/deploy-smoke.mjs
  *
  * Node 22+, no dependencies. Rows 26-29 (the landing page, the zone and the landing's
- * robots.txt) belong to the landing repo's deploy and are checked by hand (runbook section 5).
+ * robots.txt) belong to the landing repo's deploy and are checked by hand after a deploy.
  *
  * Requests go through `node:https`, not `fetch`: undici adds its own `sec-fetch-mode`
  * header, and the (N) rows must send exactly the headers a browser following a link sends.
@@ -15,11 +15,17 @@
  *
  * The whole set is retried up to 6 times, 10 s apart, for route propagation. The exit code
  * is 1 with a table of failures when the last attempt still fails. It does not roll back.
+ *
+ * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers` and the 404
+ * page) against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
+ * live hosts and are skipped.
  */
 import { readFileSync } from "node:fs";
-import { request } from "node:https";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 
-const ND = "https://northguild.dev";
+const LOCAL = process.env.DOX_SMOKE_LOCAL?.replace(/\/$/, "");
+const ND = LOCAL ?? "https://northguild.dev";
 const WD = "https://gmt-dox.northguild.workers.dev";
 const ATTEMPTS = 6;
 const WAIT_MS = 10_000;
@@ -33,6 +39,7 @@ const NAV = {
 /** One request, no redirect following. Resolves to `{ status, location, type, headers, body }`. */
 function send(method, url, { headers = {}, body } = {}) {
   return new Promise((resolve, reject) => {
+    const request = url.startsWith("http:") ? httpRequest : httpsRequest;
     const req = request(
       url,
       {
@@ -114,6 +121,103 @@ const hop = (rows, label, from, to, { headers, final = 200 } = {}) =>
     headers,
     steps: [{ status: 301, location: to }, { status: final }],
   });
+
+/** The meta tag that asks a crawler not to index a page. */
+const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
+
+/**
+ * The rows for the headers in `src/assets-root/_headers` and for the 404 page. `_headers` rules are
+ * joined with a comma when several match, so the hashed-asset row wants the one `immutable` value.
+ */
+async function crawlRows() {
+  const rows = [];
+  const noindex = ({ headers }) =>
+    headers["x-robots-tag"] === "noindex"
+      ? undefined
+      : `x-robots-tag is ${headers["x-robots-tag"]}, not noindex`;
+  rows.push(
+    {
+      label: "noindex install.md",
+      url: `${ND}/gmt/install.md`,
+      steps: [{ status: 200, check: noindex }],
+    },
+    {
+      label: "noindex llms.txt",
+      url: `${ND}/gmt/llms.txt`,
+      steps: [{ status: 200, check: noindex }],
+    },
+    {
+      label: "noindex a namespace llms.txt",
+      url: `${ND}/gmt/reference/zoned/llms.txt`,
+      steps: [
+        {
+          status: 200,
+          check: (res) =>
+            (res.headers["content-type"] ?? "").startsWith("text/plain")
+              ? noindex(res)
+              : `content-type is ${res.headers["content-type"]}, not text/plain`,
+        },
+      ],
+    },
+    {
+      label: "root llms.txt fits in 64 KiB",
+      url: `${ND}/gmt/llms.txt`,
+      steps: [
+        {
+          status: 200,
+          check: ({ body }) =>
+            Buffer.byteLength(body) <= 65536
+              ? undefined
+              : `${Buffer.byteLength(body)} bytes, over 65536`,
+        },
+      ],
+    },
+    {
+      label: "no noindex header on /gmt/",
+      url: `${ND}/gmt/`,
+      steps: [
+        {
+          status: 200,
+          check: ({ headers }) =>
+            headers["x-robots-tag"] === undefined
+              ? undefined
+              : `x-robots-tag is ${headers["x-robots-tag"]}`,
+        },
+      ],
+    },
+  );
+  // The hashed script a page names. Its header is the one `_headers` rule, not the default joined to it.
+  const home = await send("GET", `${ND}/gmt/`);
+  const script = /["'](\/gmt\/_astro\/[^"']+\.js)["']/.exec(home.body)?.[1];
+  rows.push({
+    label: "immutable _astro script",
+    url: script ? `${ND}${script}` : `${ND}/gmt/`,
+    steps: [
+      {
+        status: 200,
+        check: ({ headers }) =>
+          script === undefined
+            ? "no /gmt/_astro/*.js named in /gmt/"
+            : headers["cache-control"] === "public, max-age=31536000, immutable"
+              ? undefined
+              : `cache-control is ${headers["cache-control"]}`,
+      },
+    ],
+  });
+  rows.push({
+    label: "404 page asks not to be indexed",
+    url: `${ND}/gmt/does-not-exist/`,
+    steps: [
+      {
+        status: 404,
+        type: "text/html",
+        check: ({ body }) =>
+          NOINDEX_META.test(body) ? undefined : "no noindex meta",
+      },
+    ],
+  });
+  return rows;
+}
 
 async function buildRows() {
   const rows = [];
@@ -569,6 +673,133 @@ async function buildRows() {
       },
     ],
   });
+  // The US rows make two calls to the `sunshine-protection-act:` bucket per run (the GET and the
+  // HEAD), under its 20 a minute. The PUT answers 405 before the bucket counts it. The answer has
+  // one row per zone of `us-region-zones.json`, in that file's order; the offsets follow the
+  // season, so the row checks their form, not their values.
+  const US_API = `${ND}/gmt/api/sunshine-protection-act`;
+  const US_ZONES = JSON.parse(
+    readFileSync(
+      new URL("../src/lib/us-region-zones.json", import.meta.url),
+      "utf8",
+    ),
+  ).zones;
+  add({
+    label: "sunshine-protection-act today",
+    url: US_API,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ headers, body }) => {
+          if (headers["cache-control"] !== "no-store")
+            return `cache-control is ${headers["cache-control"]}, not no-store`;
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          const { now, zones } = parsed;
+          // An RFC 3339 instant in UTC, as `getUtcNow` writes it.
+          if (
+            typeof now !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(now)
+          )
+            return `now is ${JSON.stringify(now)}, not a UTC instant`;
+          if (!Array.isArray(zones)) return "no zones array";
+          const got = zones.map((z) => z.zone).join(",");
+          if (got !== US_ZONES.join(","))
+            return `zones differ from us-region-zones.json: ${got}`;
+          const bad = zones.filter(
+            (z) =>
+              !/^[+-]\d{2}:\d{2}$/.test(z.offset) ||
+              typeof z.observes !== "boolean" ||
+              !("last" in z) ||
+              !("next" in z),
+          );
+          return bad.length
+            ? `malformed rows: ${bad.map((z) => z.zone).join(", ")}`
+            : undefined;
+        },
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act HEAD",
+    method: "HEAD",
+    url: US_API,
+    steps: [
+      {
+        status: 200,
+        check: ({ headers, body }) => {
+          if (headers["cache-control"] !== "no-store")
+            return `cache-control is ${headers["cache-control"]}, not no-store`;
+          return body === "" ? undefined : "HEAD body is not empty";
+        },
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act PUT",
+    method: "PUT",
+    body: "",
+    url: US_API,
+    steps: [
+      {
+        status: 405,
+        check: ({ headers }) =>
+          headers.allow === "GET, HEAD"
+            ? undefined
+            : `allow is ${headers.allow}, not GET, HEAD`,
+      },
+    ],
+  });
+  add({
+    label: "sunshine-protection-act page",
+    url: `${ND}/gmt/check/us-sunshine-protection-act/`,
+    steps: [{ status: 200, type: "text/html" }],
+  });
+  add({
+    label: "us zone boundary file",
+    url: `${ND}/gmt/timezone-boundaries-us.json`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          try {
+            return JSON.parse(body).license === "ODbL-1.0"
+              ? undefined
+              : "license is not ODbL-1.0";
+          } catch {
+            return "body is not JSON";
+          }
+        },
+      },
+    ],
+  });
+  add({
+    label: "us state boundary file",
+    url: `${ND}/gmt/state-boundaries-us.json`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: ({ body }) => {
+          let parsed;
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            return "body is not JSON";
+          }
+          // The 50 states, DC and five territories, keyed by postal code.
+          const n = parsed.features?.length;
+          return n === 56 ? undefined : `${n} state shapes, not 56`;
+        },
+      },
+    ],
+  });
   add({
     label: "25",
     url: `${ND}/gmtx`,
@@ -591,12 +822,26 @@ async function buildRows() {
       },
     ],
   });
-  return rows;
+  return [...rows, ...(await crawlRows())];
 }
 
 async function attempt() {
+  /* Building the rows sends requests of its own (the home page, for the names of its hashed
+     files). A dropped one is a failed attempt, retried like a failed row, not a crash. */
+  let rows;
+  try {
+    rows = LOCAL ? await crawlRows() : await buildRows();
+  } catch (error) {
+    return [
+      {
+        row: "building the rows",
+        url: `${ND}/gmt/`,
+        problem: `request failed: ${error.message}`,
+      },
+    ];
+  }
   const failures = [];
-  for (const row of await buildRows()) {
+  for (const row of rows) {
     let problem;
     try {
       problem = await run(row);

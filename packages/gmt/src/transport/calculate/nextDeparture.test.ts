@@ -92,15 +92,17 @@ describe("nextDeparture — list form", () => {
   });
 
   it.each`
-    timetable                                                      | why
-    ${[...ferries, "2024-06-15T12:00:00"]}                         | ${"a zoneless entry: every entry needs an offset"}
-    ${[...ferries, "2024-06-15T12:00:00[America/New_York]"]}       | ${"a zoned wall time without an offset: a repeated hour would be ambiguous"}
-    ${[...ferries, "2024-06-15T12:00:00Z[Not/AZone]"]}             | ${"a named zone that does not exist"}
-    ${[...ferries, "2024-06-15T12:00:00-05:00[America/New_York]"]} | ${"an offset that contradicts its zone"}
-    ${[...ferries, "12:00"]}                                       | ${"a bare time"}
-    ${[...ferries, null]}                                          | ${"a null entry"}
-    ${[...ferries, "+275760-09-13T00:00:00.000000001Z"]}           | ${"an entry past the instant range"}
-    ${Object.assign([], { 0: ferries[0], 2: ferries[2] })}         | ${"a sparse list: a hole is not an entry"}
+    timetable                                                                   | why
+    ${[...ferries, "2024-06-15T12:00:00"]}                                      | ${"a zoneless entry: every entry needs an offset"}
+    ${[...ferries, "2024-06-15T12:00:00[America/New_York]"]}                    | ${"a zoned wall time without an offset: a repeated hour would be ambiguous"}
+    ${[...ferries, "2024-06-15T12:00:00Z[Not/AZone]"]}                          | ${"a named zone that does not exist"}
+    ${[...ferries, "2024-06-15T12:00:00-05:00[America/New_York]"]}              | ${"an offset that contradicts its zone"}
+    ${[...ferries, "12:00"]}                                                    | ${"a bare time"}
+    ${[...ferries, "2024-06-15T12:00:00-04:00[America/New_York][u-ca=hebrew]"]} | ${"a calendar annotation on a zoned entry"}
+    ${[...ferries, "2024-06-15T12:00:00Z[u-ca=iso8601]"]}                       | ${"a calendar annotation on an instant entry"}
+    ${[...ferries, null]}                                                       | ${"a null entry"}
+    ${[...ferries, "+275760-09-13T00:00:00.000000001Z"]}                        | ${"an entry past the instant range"}
+    ${Object.assign([], { 0: ferries[0], 2: ferries[2] })}                      | ${"a sparse list: a hole is not an entry"}
   `("returns an empty string for $why", ({ timetable }) => {
     expect(nextDeparture("2024-06-15T09:00:00Z", timetable)).toBe("");
   });
@@ -143,7 +145,7 @@ describe("nextDeparture — headway form", () => {
     ${{ headway: "PT20M", from: "2024-06-15T06:00:00+05:30:15", to: "2024-06-15T09:00:00Z" }}                                       | ${"2024-06-15T00:45:00Z"}           | ${"2024-06-15T06:20:00+05:30:15"}                | ${"a sub-minute offset is kept as written (06:00 is 00:29:45Z, 06:20 is 00:49:45Z)"}
     ${{ headway: "PT20M", from: "2024-06-15T06:00:00-04:00[America/New_York]", to: "2024-06-15T09:00:00-04:00[America/New_York]" }} | ${"2024-06-15T10:05:00Z"}           | ${"2024-06-15T06:20:00-04:00[America/New_York]"} | ${"the result keeps from's zone"}
     ${{ headway: "PT20M", from: "2024-06-15T06:00:00Z[UTC]", to: "2024-06-15T09:00:00Z" }}                                          | ${"2024-06-15T06:05:00Z"}           | ${"2024-06-15T06:20:00+00:00[UTC]"}              | ${"a UTC bracket is a zone, written as Temporal writes it"}
-    ${{ headway: "PT20M", from: "2024-06-15T06:00:00Z[foo=bar]", to: "2024-06-15T09:00:00Z" }}                                      | ${"2024-06-15T06:05:00Z"}           | ${"2024-06-15T06:20:00Z"}                        | ${"an elective unknown annotation is ignored"}
+    ${{ headway: "PT20M", from: "2024-06-15T06:00:00Z[foo=bar]", to: "2024-06-15T09:00:00Z" }}                                      | ${"2024-06-15T06:05:00Z"}           | ${""}                                            | ${"an elective annotation makes `from` invalid"}
     ${{ headway: "PT0.000000001S", from: "2024-06-15T06:00:00Z", to: "2024-06-15T09:00:00Z" }}                                      | ${"2024-06-15T08:30:00.123456789Z"} | ${"2024-06-15T08:30:00.123456789Z"}              | ${"a one-nanosecond headway over three hours, computed without stepping"}
     ${{ headway: "PT1H", from: "2024-06-15T06:00:00Z", to: "2024-06-15T06:00:00.000000001Z" }}                                      | ${"2024-06-15T05:00:00Z"}           | ${"2024-06-15T06:00:00Z"}                        | ${"a one-nanosecond window still holds from"}
   `(

@@ -255,6 +255,11 @@ export function sliderDate(position: number): string {
   return `${iso.slice(0, 10)}T00:00:00Z`;
 }
 
+/** A trailing offset in any spelling Temporal reads: `+05`, `+0530`,
+ *  `+05:30`, and with seconds, `-00:44:30` or `-004430` (Monrovia before
+ *  1972). */
+const TRAILING_OFFSET = /[+-]\d{2}(?::?\d{2}(?::?\d{2}(?:[.,]\d{1,9})?)?)?$/;
+
 /**
  * An instant read for drawing. A second 60 is placed on its own `59` (a
  * drawing position, not a result), and anything that does not parse is `null`.
@@ -263,7 +268,7 @@ export function drawMs(text: string): number | null {
   const t = text.trim().replace(/(:\d{2}:)60(?=[.,Z+-]|$)/, "$159");
   if (!/^\d{4}-\d{2}-\d{2}/.test(t)) return null;
   const z = convertUtcToUnix(t);
-  if (z !== null || !/[+-]\d{2}(:?\d{2})?$/.test(t)) return z;
+  if (z !== null || !TRAILING_OFFSET.test(t)) return z;
   // An offset spelling: the polyfill places it for drawing only. The shown
   // results still come from the library.
   try {

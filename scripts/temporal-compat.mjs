@@ -295,8 +295,8 @@ async function check(args) {
 /**
  * Mismatches that are not GMT bugs: rows where test262 and Chromium's native Temporal disagree
  * (test262 wins; the order of authorities is in CORE-6 Decisions). Each entry names its test262 file and matches mismatches by
- * `{ scan, calendar, op }` plus an optional `row` predicate. All owner decisions
- * (calendar-standards-decisions.md) are resolved, so no row is tagged for an open decision.
+ * `{ scan, calendar, op }` plus an optional `row` predicate. No row is tagged
+ * for an open decision.
  */
 const TAGGED_MISMATCHES = [];
 

@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { timeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidTimeInterval } from "./validate";
 import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -75,13 +75,13 @@ export function intervalDivideEquallyTime(
       return [];
     }
 
-    if (!isValidTimeInterval(start, end)) {
+    const bounds = timeIntervalOf(start, end);
+    if (bounds === null) {
       return [];
     }
 
     try {
-      const startVal = Temporal.PlainTime.from(start);
-      const endVal = Temporal.PlainTime.from(end);
+      const [startVal, endVal] = bounds;
 
       if (startVal.equals(endVal)) {
         return Array.from({ length: n }, () => ({

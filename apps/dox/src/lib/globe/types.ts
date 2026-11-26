@@ -149,6 +149,12 @@ export interface GlobeOptions {
   /** Defaults to `auto`. */
   renderer?: RendererChoice;
   /**
+   * Whether the canvas-2D backend may draw in a Web Worker. Defaults to true; where the browser
+   * cannot (no `OffscreenCanvas`) or the worker does not start, it draws on the main thread
+   * either way. False forces the main thread.
+   */
+  offThread?: boolean;
+  /**
    * Epoch milliseconds for the sun's position, read once per frame.
    *
    * A function, not a number, and supplied by the caller rather than read here:
@@ -174,10 +180,18 @@ export interface GlobeOptions {
   /** Defaults to `[1, 5]`. */
   zoomRange?: readonly [number, number];
   /**
+   * The zoom the globe opens at, so a page that frames the Earth at a set size shows it at that
+   * size from the first frame rather than easing up from the range's low end, the default.
+   */
+  initialZoom?: number;
+  /**
    * Whether to suppress ambient spin, inertia and eased transitions. Read on
    * every frame, so a preference change takes effect without a remount.
    */
   reducedMotion?: () => boolean;
+  /** False never schedules the ambient spin: the globe stays at rest and draws no frames until
+   *  moved. Default true. */
+  ambient?: boolean;
   /**
    * Where to put the sphere inside the host. Called with the host's CSS box on
    * every measure; `cx`/`cy` are the centre and `radius` the radius at zoom 1,
@@ -206,6 +220,12 @@ export interface GlobeOptions {
    */
   pauseWhenHidden?: Element;
   /**
+   * Stop the frame loop while the host says something covers the globe. The engine calls this
+   * once with a setter (`true` holds the loop, `false` resumes it where it stopped) and keeps the
+   * function it returns, which it calls on `destroy()`.
+   */
+  pauseWhile?: (hold: (held: boolean) => void) => () => void;
+  /**
    * How the Earth arrives. `"fade"` (default) draws at once and the host fades the canvas in.
    * `"dawn"` draws nothing until `startDawn()`, then lights the Earth from a dark disc over
    * about 2.4 s; the host runs no entrance animation of its own on the canvas.
@@ -232,8 +252,40 @@ export interface GlobeEngine {
   setRegions(regions: readonly GlobeRegion[]): void;
   setMarkers(markers: readonly GlobeMarker[]): void;
   setArcs(arcs: readonly GlobeArc[]): void;
-  /** Rotate to `[λ, φ]`, eased unless reduced motion is on. */
-  flyTo(rotation: readonly [number, number]): void;
+  /**
+   * Rotate to `[λ, φ]`, eased unless reduced motion is on. With `hop` the flight is timed: the
+   * camera lifts to `dipZoom` at the midpoint and comes down at the goal. Reduced motion snaps.
+   */
+  flyTo(
+    rotation: readonly [number, number],
+    options?: { hop?: { durationMs: number; dipZoom: number } },
+  ): void;
+  /** Hold a camera rate (degrees per second east and north, zoom units per second) until the
+   *  next call with zeros. A drag or `flyTo` cancels it. */
+  steer(vector: { lng: number; lat: number; zoom: number }): void;
+  /**
+   * Turn the globe, or ease it to a stop, with the idle spin's own rate and ramp. It begins at
+   * once at any zoom (no idle wait) once no flight or drag holds the camera. Off eases the speed
+   * down on the same ramp. Reduced motion never spins. `getView().moving` stays false while only
+   * this spin moves the globe.
+   */
+  setSpin(on: boolean): void;
+  /** True from the moment a requested spin starts until its ramp down has ended. */
+  isSpinning(): boolean;
+  /** Measure the host and `framing` again now, for a host whose frame changed without a resize. */
+  refit(): void;
+  /** Where the camera is and whether it is still moving. */
+  getView(): {
+    rotation: readonly [number, number];
+    zoom: number;
+    moving: boolean;
+    /** The camera's distance from the Earth's centre, in Earth radii (the one camera, 6.61). */
+    distance: number;
+    /** The pinhole's focal length in CSS pixels. */
+    focalPx: number;
+    /** The Earth's centre on the canvas, which is the pinhole's principal point. */
+    centre: { x: number; y: number };
+  };
   setZoom(zoom: number): void;
   zoomBy(factor: number): void;
   getZoom(): number;
@@ -242,6 +294,8 @@ export interface GlobeEngine {
   project(point: LngLat): { x: number; y: number; visible: boolean };
   /** The point under a position in CSS pixels, or null if it missed the sphere. */
   unproject(x: number, y: number): LngLat | null;
+  /** The sphere's centre in CSS pixels and its silhouette radius, as the camera holds them. */
+  getCentre(): { x: number; y: number; radius: number };
   /** A tap that selected a marker, hit a region, or neither. */
   onTap(
     callback: (hit: {
@@ -258,6 +312,13 @@ export interface GlobeEngine {
    */
   onInteract(callback: (kind: GlobeInteraction) => void): void;
   /**
+   * The reader moved the zoom a step: `dir` is 1 in, -1 out, `closeness` 0 at the widest zoom to 1
+   * at the closest. A wheel event, a `+` or `-`, `setZoom`, `zoomBy`, or a pinch every wheel
+   * notch's worth; a step at a limit that changes nothing does not count. Replaces any earlier
+   * callback.
+   */
+  onZoom(callback: (dir: 1 | -1, closeness: number) => void): void;
+  /**
    * `"dawn"` only: resolves once the renderer has its imagery and label atlas on the GPU, so the
    * dawn can run without decoding or uploading. Resolved at once for any other entrance.
    */
@@ -270,6 +331,10 @@ export interface GlobeEngine {
   startDawn(): Promise<void>;
   /** After every frame — where a host repositions DOM chrome such as a tooltip. */
   onFrame(callback: () => void): void;
+  /** Whether the frame loop is stopped: the tab is hidden, or the host is out of view or covered. */
+  isHeld(): boolean;
+  /** Called each time the frame loop stops for one of those reasons. Replaces any earlier callback. */
+  onHold(callback: () => void): void;
   /** Redraw once, for a change the engine cannot observe (a new theme token). */
   requestRender(): void;
   destroy(): void;

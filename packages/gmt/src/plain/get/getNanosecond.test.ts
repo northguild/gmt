@@ -5,20 +5,20 @@ import {
   YesterdayTimeZone,
 } from "../../test";
 import { mockTemporalNowPlainDateTimeISOThrow } from "../../test/mocks";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { getNanosecond } from "./getNanosecond";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 describe("getNanosecond", () => {
   const systemTime = "2024-02-29T00:00:00.000Z";
-  let timeZoneSpy: MockedFunction<typeof getSystemTimeZone>;
+  let timeZoneSpy: MockedFunction<typeof systemTimeZone>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     setFakeSystemTime(systemTime);
 
-    timeZoneSpy = vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+    timeZoneSpy = vi.mocked(systemTimeZone).mockReturnValue("UTC");
   });
 
   afterEach(() => {
@@ -59,18 +59,18 @@ describe("getNanosecond", () => {
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so each file resets this one explicitly.
-describe("getSystemTimeZone after a mocked row", () => {
+describe("systemTimeZone after a mocked row", () => {
   afterEach(() => {
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
   });
 
   it("returns the mocked zone while a row replaces it", () => {
-    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
-    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+    vi.mocked(systemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(systemTimeZone()).toBe("Pacific/Kiritimati");
   });
 
   it("returns the host's own zone again in the next row", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });

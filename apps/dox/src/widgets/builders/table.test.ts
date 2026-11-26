@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { screen, within } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
+import { html } from "./html";
 import { table } from "./table";
 
 const markup = () =>
@@ -163,6 +164,44 @@ describe("table", () => {
         .toString()
         .match(/ role="/g),
     ).toHaveLength(1);
+  });
+
+  it("escapes a string header and passes a SafeHtml header through", () => {
+    renderHtml(
+      table({
+        caption: "Heads",
+        columns: [
+          { key: "a", header: "<i>Plain</i>", align: "start", numeric: false },
+          {
+            key: "b",
+            header: html`<span>Correct</span>, <span>tzdb 2026c</span>`,
+            align: "end",
+            numeric: true,
+          },
+        ],
+        rows: [{ a: "x", b: "y" }],
+      }),
+    );
+    const t = screen.getByRole("table", { name: "Heads" });
+    expect(
+      within(t).getByRole("columnheader", { name: "<i>Plain</i>" }),
+    ).toBeInTheDocument();
+    expect(
+      within(t).getByRole("columnheader", { name: "Correct, tzdb 2026c" }),
+    ).toBeInTheDocument();
+  });
+
+  it("refuses to label cells from a markup header", () => {
+    expect(() =>
+      table({
+        caption: "Heads",
+        labelCells: true,
+        columns: [
+          { key: "a", header: html`<b>A</b>`, align: "start", numeric: false },
+        ],
+        rows: [{ a: "x" }],
+      }),
+    ).toThrow(/needs a string header/);
   });
 
   it("has no axe violations", async () => {

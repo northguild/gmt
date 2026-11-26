@@ -1,5 +1,5 @@
 import type { X12DateTimeFormat } from "../../types/edi";
-import { parseX12DateTime } from "../parse/parseX12DateTime";
+import { x12DateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is an X12 Date Time Period value (data element 1251) that states a
@@ -12,7 +12,7 @@ import { parseX12DateTime } from "../parse/parseX12DateTime";
  * | `RTS` | `CCYYMMDDHHMMSS` | "Date and Time Expressed in Format CCYYMMDDHHMMSS" |
  *
  * - True exactly when `parseX12DateTime` returns a date-time for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - A value is valid only against its code: `"202406151430"` is a `DT` value and not an `RTS`
  *   one.
  * - Checks the calendar as well as the shape: 31 June, 29 February 2023, hour 24 and second 60
@@ -33,5 +33,5 @@ export function isValidX12DateTime(
   value: string,
   format: X12DateTimeFormat,
 ): boolean {
-  return parseX12DateTime(value, format) !== "";
+  return x12DateTimeText(value, format) !== "";
 }

@@ -19,6 +19,7 @@ import {
   isZoneless,
   type CutoffLib,
 } from "./cutoff-widgets";
+import { exactOffsetText } from "./exact-offset";
 
 export const CUSTOM_PRESET_ID = "custom";
 
@@ -85,7 +86,7 @@ export const COUNTDOWN_PRESETS: readonly CountdownPreset[] = [
     description:
       "The same instant written on a Kolkata clock. Both are compared as instants, so the zone each is written in does not matter.",
     cutoff: GATEIN,
-    now: "2024-06-12T20:30:00+05:30[Asia/Kolkata]",
+    now: "2024-06-12T20:30:00+05:30",
     timeZone: AMS,
   },
   {
@@ -94,7 +95,7 @@ export const COUNTDOWN_PRESETS: readonly CountdownPreset[] = [
     description:
       "The cut-off is the first 01:30, BST. Now is the second 01:30, GMT, an hour later. The offsets tell them apart.",
     cutoff: "2024-10-27T01:30:00+01:00[Europe/London]",
-    now: "2024-10-27T01:30:00+00:00[Europe/London]",
+    now: "2024-10-27T01:30:00+00:00",
     timeZone: LON,
   },
   {
@@ -177,7 +178,7 @@ export function collectCountdownFacts(
     past: lib.isPastCutoff(now, cutoff),
     left: lib.timeToCutoff(now, cutoff),
     nowLocal: lib.etaAtZone(now, timeZone),
-    cutoffLocal: lib.etaAtZone(cutoff, timeZone),
+    cutoffLocal: lib.etaAtZone(lib.toInstant(cutoff), timeZone),
   };
 }
 
@@ -236,7 +237,7 @@ const COUNTDOWN_NULL_TEXT: Record<CountdownNullReason, string> = {
     "The cut-off has no offset or zone, so it is not a moment. isPastCutoff's false here means invalid input, not on time.",
   "invalid-zone": "The clock is not a time zone this browser knows.",
   "invalid-instant":
-    "Now or the cut-off is not an instant or a zoned date-time.",
+    "Now must be an instant: Z or an offset, with no zone name after it. The cut-off must be a zoned date-time as cutoffAt writes it: an offset, then one zone name in brackets.",
 };
 
 export function countdownNullText(reason: CountdownNullReason): string {
@@ -254,6 +255,22 @@ export function countdownNullReason(
   if (isZoneless(cutoff, lib)) return "zoneless-cutoff";
   if (!lib.isValidTimeZone(state.timeZone.trim())) return "invalid-zone";
   return "invalid-instant";
+}
+
+/** Floors a real instant string to the whole second, for a live reading.
+ *  Sub-second precision from `Temporal.Now.instant()` is real but not
+ *  meaningful here, and left in it would print as noise in the duration
+ *  text every single tick. Presentation only: the floored instant is
+ *  still a real instant, and is what `isPastCutoff`/`timeToCutoff` are
+ *  then asked about, never a result computed by this rounding. */
+export function floorToSecond(text: string): string {
+  try {
+    return Temporal.Instant.fromEpochMilliseconds(
+      Math.floor(epochMs(text) / 1000) * 1000,
+    ).toString();
+  } catch {
+    return text;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -293,10 +310,10 @@ export function nowFromSlider(
   timeZone: string,
 ): string {
   try {
-    return Temporal.Instant.from(cutoff)
-      .add({ minutes })
-      .toZonedDateTimeISO(timeZone)
-      .toString();
+    return exactOffsetText(
+      Temporal.Instant.from(cutoff).add({ minutes }),
+      timeZone,
+    );
   } catch {
     return "";
   }

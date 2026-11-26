@@ -44,6 +44,12 @@ export const HUB_SECTIONS = [
 
 export type HubSection = (typeof HUB_SECTIONS)[number]["section"];
 
+/** The file that declares the industries: their labels, definitions, namespaces and modules. */
+export const INDUSTRY_DECLARATIONS = "apps/dox/src/data/industries.json";
+
+/** The file that holds the text of a hub: what the industry is and what its functions solve. */
+export const INDUSTRY_OVERVIEW_TEXT = "apps/dox/src/lib/industry-overview.ts";
+
 /** A guide, tool, scenario or mistakes page, as its frontmatter states it. */
 export interface HubSectionPage {
   section: HubSection;
@@ -52,6 +58,8 @@ export interface HubSectionPage {
   title: string;
   description: string;
   industries: readonly string[];
+  /** The page's file, repo-relative. Dates the hub that lists it. */
+  path?: string;
 }
 
 /** One generated file under `src/content/docs/industries/`. */
@@ -59,6 +67,8 @@ export interface HubFile {
   /** `index.mdx` or `<id>.mdx`. */
   file: string;
   mdx: string;
+  /** The files the page states, repo-relative: what its `lastUpdated` is dated from. */
+  inputs: string[];
 }
 
 export interface HubInput {
@@ -234,7 +244,22 @@ function renderHub(
     }
     lines.push("");
   }
-  return { file: `${industry.id}.mdx`, mdx: lines.join("\n") };
+  const members = HUB_SECTIONS.flatMap(({ section }) =>
+    input.sectionPages.filter(
+      (p) => p.section === section && p.industries.includes(industry.id),
+    ),
+  );
+  const inputs = [
+    INDUSTRY_DECLARATIONS,
+    INDUSTRY_OVERVIEW_TEXT,
+    ...reachable.map((p) => p.sourcePath),
+    ...members.map((p) => p.path),
+  ].filter((path): path is string => path !== undefined);
+  return {
+    file: `${industry.id}.mdx`,
+    mdx: lines.join("\n"),
+    inputs: [...new Set(inputs)].sort(),
+  };
 }
 
 /** `/industries/`: every industry, with the namespace it owns and the modules it draws on. */
@@ -262,7 +287,11 @@ function renderIndex(industries: readonly HubIndustry[]): HubFile {
     lines.push(parts.join(" "));
   }
   lines.push("");
-  return { file: "index.mdx", mdx: lines.join("\n") };
+  return {
+    file: "index.mdx",
+    mdx: lines.join("\n"),
+    inputs: [INDUSTRY_DECLARATIONS],
+  };
 }
 
 /** The index and one page per industry, in declared order. */

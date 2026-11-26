@@ -59,6 +59,14 @@ import {
 } from "./departure-board-mount";
 import { mountDtmDecoder, renderDtmDecoderTemplate } from "./dtm-decoder-mount";
 import {
+  mountFhirDateChecker,
+  renderFhirDateCheckerTemplate,
+} from "./fhir-date-checker-mount";
+import {
+  mountHl7TimestampReader,
+  renderHl7TimestampReaderTemplate,
+} from "./hl7-timestamp-reader-mount";
+import {
   mountBlDateStamp,
   renderBlDateStampTemplate,
 } from "./bl-date-stamp-mount";
@@ -116,6 +124,70 @@ import {
   renderStoredTimeAuditTemplate,
 } from "./stored-time-audit-mount";
 import {
+  mountTai64nLogReader,
+  renderTai64nLogReaderTemplate,
+} from "./tai64n-log-reader-mount";
+import {
+  mountFixTimestampReader,
+  renderFixTimestampReaderTemplate,
+} from "./fix-timestamp-reader-mount";
+import {
+  mountSsimDateReader,
+  renderSsimDateReaderTemplate,
+} from "./ssim-date-reader-mount";
+import {
+  mountReportTimeResolver,
+  renderReportTimeResolverTemplate,
+} from "./report-time-resolver-mount";
+import {
+  mountJulianDayCounter,
+  renderJulianDayCounterTemplate,
+} from "./julian-day-counter-mount";
+import {
+  mountDoublePrecisionMeter,
+  renderDoublePrecisionMeterTemplate,
+} from "./double-precision-meter-mount";
+import {
+  mountCcsdsTimeCodeDecoder,
+  renderCcsdsTimeCodeDecoderTemplate,
+} from "./ccsds-time-code-decoder-mount";
+import {
+  mountCodeBDayRuler,
+  renderCodeBDayRulerTemplate,
+} from "./code-b-day-ruler-mount";
+import {
+  mountSwiftValueDateReader,
+  renderSwiftValueDateReaderTemplate,
+} from "./swift-value-date-reader-mount";
+import {
+  mountGtfsTimeReader,
+  renderGtfsTimeReaderTemplate,
+} from "./gtfs-time-reader-mount";
+import {
+  mountGtfsServiceDayClock,
+  renderGtfsServiceDayClockTemplate,
+} from "./gtfs-service-day-clock-mount";
+import {
+  mountGtfsTripBoard,
+  renderGtfsTripBoardTemplate,
+} from "./gtfs-trip-board-mount";
+import {
+  mountPtpClockConverter,
+  renderPtpClockConverterTemplate,
+} from "./ptp-clock-converter-mount";
+import {
+  mountOpeningHoursBoard,
+  renderOpeningHoursBoardTemplate,
+} from "./opening-hours-board-mount";
+import {
+  mountScheduleChecker,
+  renderScheduleCheckerTemplate,
+} from "./schedule-checker-mount";
+import {
+  mountTerrestrialTimeStack,
+  renderTerrestrialTimeStackTemplate,
+} from "./terrestrial-time-stack-mount";
+import {
   mountHolidayRuleBuilder,
   renderHolidayRuleBuilderTemplate,
 } from "./holiday-rule-builder-mount";
@@ -135,6 +207,10 @@ import {
   mountMoroccoClockChangeWidget,
   renderMoroccoClockChangeWidgetTemplate,
 } from "./morocco-clock-change-mount";
+import {
+  mountSunshineProtectionActWidget,
+  renderSunshineProtectionActWidgetTemplate,
+} from "./sunshine-protection-act-mount";
 import {
   mountDurationParserBench,
   renderDurationParserBenchTemplate,
@@ -253,6 +329,16 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     mountDtmDecoder as MountFn<never>,
   ],
   [
+    "hl7 timestamp reader",
+    () => renderHl7TimestampReaderTemplate("hl7-timestamp-reader"),
+    mountHl7TimestampReader as MountFn<never>,
+  ],
+  [
+    "fhir date checker",
+    () => renderFhirDateCheckerTemplate("fhir-date-checker"),
+    mountFhirDateChecker as MountFn<never>,
+  ],
+  [
     "x12 time reader",
     () => renderX12TimeReaderTemplate("x12-time-reader"),
     mountX12TimeReader as MountFn<never>,
@@ -308,6 +394,86 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     mountStoredTimeAudit as MountFn<never>,
   ],
   [
+    "tai64n log reader",
+    () => renderTai64nLogReaderTemplate("test"),
+    mountTai64nLogReader as MountFn<never>,
+  ],
+  [
+    "fix timestamp reader",
+    () => renderFixTimestampReaderTemplate("test"),
+    mountFixTimestampReader as MountFn<never>,
+  ],
+  [
+    "ssim date reader",
+    () => renderSsimDateReaderTemplate("test"),
+    mountSsimDateReader as MountFn<never>,
+  ],
+  [
+    "report time resolver",
+    () => renderReportTimeResolverTemplate("test"),
+    mountReportTimeResolver as MountFn<never>,
+  ],
+  [
+    "swift value date reader",
+    () => renderSwiftValueDateReaderTemplate("test"),
+    mountSwiftValueDateReader as MountFn<never>,
+  ],
+  [
+    "gtfs time reader",
+    () => renderGtfsTimeReaderTemplate("test"),
+    mountGtfsTimeReader as MountFn<never>,
+  ],
+  [
+    "gtfs service day clock",
+    () => renderGtfsServiceDayClockTemplate("test"),
+    mountGtfsServiceDayClock as MountFn<never>,
+  ],
+  [
+    "gtfs trip board",
+    () => renderGtfsTripBoardTemplate("test"),
+    mountGtfsTripBoard as MountFn<never>,
+  ],
+  [
+    "ptp clock converter",
+    () => renderPtpClockConverterTemplate("test"),
+    mountPtpClockConverter as MountFn<never>,
+  ],
+  [
+    "operating schedule checker",
+    () => renderScheduleCheckerTemplate("test", {}),
+    mountScheduleChecker as MountFn<never>,
+  ],
+  [
+    "opening hours board",
+    () => renderOpeningHoursBoardTemplate("test", {}),
+    mountOpeningHoursBoard as MountFn<never>,
+  ],
+  [
+    "terrestrial time stack",
+    () => renderTerrestrialTimeStackTemplate("test"),
+    mountTerrestrialTimeStack as MountFn<never>,
+  ],
+  [
+    "julian day counter",
+    () => renderJulianDayCounterTemplate("test"),
+    mountJulianDayCounter as MountFn<never>,
+  ],
+  [
+    "double precision meter",
+    () => renderDoublePrecisionMeterTemplate("test"),
+    mountDoublePrecisionMeter as MountFn<never>,
+  ],
+  [
+    "ccsds time code decoder",
+    () => renderCcsdsTimeCodeDecoderTemplate("test"),
+    mountCcsdsTimeCodeDecoder as MountFn<never>,
+  ],
+  [
+    "code b day ruler",
+    () => renderCodeBDayRulerTemplate("test"),
+    mountCodeBDayRuler as MountFn<never>,
+  ],
+  [
     "holiday rule builder",
     () => renderHolidayRuleBuilderTemplate("test"),
     mountHolidayRuleBuilder as MountFn<never>,
@@ -331,6 +497,11 @@ const MOUNTS: [string, () => SafeHtml, MountFn<never>][] = [
     "morocco clock-change checker",
     () => renderMoroccoClockChangeWidgetTemplate("morocco", moroccoTense),
     mountMoroccoClockChangeWidget as MountFn<never>,
+  ],
+  [
+    "sunshine protection act",
+    () => renderSunshineProtectionActWidgetTemplate("sunshine"),
+    mountSunshineProtectionActWidget as MountFn<never>,
   ],
   [
     "duration parser bench",

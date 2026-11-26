@@ -1,10 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import {
-  halfOpenContainsPoint,
-  halfOpenContainsSpan,
-  parseCalendarZonedValue,
-} from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return true when `pointOrStart` falls within the half-open interval
@@ -55,20 +51,21 @@ export function intervalContainsZoned(
   // strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown zones
   // and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
   // RFC 9557 calendar annotations. `pointEnd` is optional, so it is only checked when supplied.
+  const startZdt = calendarZonedOf(intervalStart);
+  const endZdt = calendarZonedOf(intervalEnd);
+  const pointZdt = calendarZonedOf(pointOrStart);
+  const endPointZdt =
+    pointEnd === undefined ? undefined : calendarZonedOf(pointEnd);
   if (
-    !isValidCalendarZonedDateTime(intervalStart) ||
-    !isValidCalendarZonedDateTime(intervalEnd) ||
-    !isValidCalendarZonedDateTime(pointOrStart) ||
-    (pointEnd !== undefined && !isValidCalendarZonedDateTime(pointEnd))
+    startZdt === null ||
+    endZdt === null ||
+    pointZdt === null ||
+    endPointZdt === null
   ) {
     return false;
   }
 
   try {
-    const startZdt = parseCalendarZonedValue(intervalStart);
-    const endZdt = parseCalendarZonedValue(intervalEnd);
-    const pointZdt = parseCalendarZonedValue(pointOrStart);
-
     const startInstant = startZdt.toInstant();
     const endInstant = endZdt.toInstant();
     const pointInstant = pointZdt.toInstant();
@@ -79,7 +76,7 @@ export function intervalContainsZoned(
 
     const outer = { start: startInstant, end: endInstant };
 
-    if (pointEnd === undefined) {
+    if (endPointZdt === undefined) {
       return halfOpenContainsPoint(
         outer,
         pointInstant,
@@ -87,7 +84,6 @@ export function intervalContainsZoned(
       );
     }
 
-    const endPointZdt = parseCalendarZonedValue(pointEnd);
     const endPointInstant = endPointZdt.toInstant();
 
     if (Temporal.Instant.compare(pointInstant, endPointInstant) > 0) {

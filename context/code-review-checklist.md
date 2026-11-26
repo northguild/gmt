@@ -9,19 +9,19 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 
 - [ ] No `Date` objects anywhere (search for `Date`, `new Date`, `.getTime()`)
 - [ ] Public inputs/outputs are strings, numbers, booleans, arrays, `bigint` or plain objects — no Temporal objects leaking out
-- [ ] Invalid input returns the correct sentinel per the [sentinel table](./coding-standards.md#api-contract), never throws
+- [ ] Invalid input returns the correct sentinel per the [sentinel table](./coding-standards/api-contract.md#api-contract), never throws
 
 ## Architecture
 
 - [ ] Plain/zoned separation maintained — no `PlainDateTime`/`ZonedDateTime` mixing in the same function
-- [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
-- [ ] New functions follow the existing directory structure (`calendar/`, `duration/`, `gnss/`, `instant/`, `intermodal/`, `interval/`, `plain/`, `precision/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `workforce/`, `zoned/`) and the `get/` vs `calculate/` rule
-- [ ] A function shared across industries is in the cross-industry layer for its domain (`workforce/`, `gnss/`) or in Core if truly general — not in a grab-bag "shared" namespace, not in one industry's namespace, not in a new namespace that is not a recognised domain ([§ Plain / Zoned Separation](./coding-standards.md#plain--zoned-separation))
-- [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards.md#calendar--zone-semantics)
+- [ ] All Temporal method calls wrapped in `try-catch` — the only exception is the [UTC clock readers](./coding-standards/api-contract.md#scoped-exception-the-utc-clock-readers); a read of the system time zone still needs one
+- [ ] New functions follow the existing directory structure (`aviation/`, `calendar/`, `duration/`, `finance/`, `gnss/`, `healthcare/`, `instant/`, `intermodal/`, `interval/`, `iot/`, `plain/`, `precision/`, `rail/`, `recurrence/`, `regex/`, `span/`, `timescale/`, `transport/`, `unix/`, `utc/`, `workforce/`, `zoned/`) and the `get/` vs `calculate/` rule
+- [ ] A function shared across industries is in the cross-industry layer for its domain (`workforce/`, `gnss/`) or in Core if truly general — not in a grab-bag "shared" namespace, not in one industry's namespace, not in a new namespace that is not a recognised domain ([§ Plain / Zoned Separation](./coding-standards/design-rules.md#plain--zoned-separation))
+- [ ] Zoned unit boundaries are not computed by truncating the wall clock and re-resolving it (`round({ roundingMode: "trunc" })`, `.with()` + `"compatible"`) — see [§ Calendar & zone semantics](./coding-standards/calendar-and-zones.md#calendar--zone-semantics)
 - [ ] Bounded loops (walkers, steppers, caps) return the sentinel on exhaustion, never a partial value
 - [ ] Repeated calendar steps are computed from the anchor (`start.add(amount × k)`), not by compounding the previous result
 - [ ] Calendar arithmetic clamps (TC39 `overflow: "constrain"`) unless the function is a parser
-- [ ] No loop's count grows with the input span where a closed form exists; no Temporal parse or construction per iteration or in a comparator ([§ Loop cost](./coding-standards.md#loop-cost))
+- [ ] No loop's count grows with the input span where a closed form exists; no Temporal parse or construction per iteration or in a comparator ([§ Loop cost](./coding-standards/design-rules.md#loop-cost))
 - [ ] Calendars, schedules and zones resolved once per call; no public function calls another; no `new Intl.*Format` outside the formatter cache
 - [ ] No module-level work and no test data in shipped modules; `pnpm size` within budget
 
@@ -33,7 +33,7 @@ This is the mechanical layer. Standards conformance and domain-convention correc
 - [ ] Error paths tested using pre-built mocks from `packages/gmt/src/test/mocks` (imported relatively, e.g. `../../test/mocks`)
 - [ ] Module-level state a test changes (a cache, a registry) is reset in the test or `setupTests.ts`; `vi.spyOn` is used over `vi.mock` where it works ([shared modules](./testing-standards/references/index.md#shared-modules-and-isolated-files))
 - [ ] `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` (from `src/test/icuVariants.ts`) used only for verified CLDR wording variants
-- [ ] Timezone coverage uses `battleTestTimeZones` / `MustTestDstTimeZones` — no hand-copied literal zone tables — plus the probe-zone transition rows for boundary functions (see [testing standards](./testing-standards/references/index.md#zoned-and-unix-functions-must-use-the-battle-test-timezone-fixtures))
+- [ ] Timezone coverage uses `battleTestTimeZones` / `MustTestDstTimeZones` — no hand-copied literal zone tables — plus the probe-zone transition rows for boundary functions (see [testing standards](./testing-standards/references/writing-tests.md#zoned-and-unix-functions-must-use-the-battle-test-timezone-fixtures))
 - [ ] Edge cases covered: invalid input, empty arrays, boundary values (leap years, DST transitions, midnight, etc.)
 - [ ] Each test runs under 0.3 s locally; a timeout sits only on a slower test, with a comment giving its CI time or why the work cannot shrink ([test cost](./testing-standards/references/index.md#test-cost))
 - [ ] Zero known bugs: no `it.fails` / `.skip` / `.todo` / `.only` / `xit` / `describe.skip`, and no "known defect" note anywhere. A defect found in review blocks the PR until it is fixed ([Core Rule 12](../AGENTS.md#core-rules-quick-reference); `node scripts/test-markers.mjs check`)
@@ -54,8 +54,8 @@ This is the mechanical layer. Standards conformance and domain-convention correc
   - [ ] Neither README holds a section for one function or one feature; that content is in a docs guide and the generated reference
 - [ ] TanStack Intent skills in `packages/gmt/skills/` updated if a public function was added, renamed, removed, or gained/changed an option (see `/tanstack-intent` skill, `CONTRIBUTING.md` § Keeping agent skills current) — check the relevant `SKILL.md`'s code examples and `_artifacts/domain_map.yaml`'s `covers:` list actually name the new/changed function
 - [ ] Published figures are derived, not typed. GMT's figures count `packages/gmt` only. `pnpm stats:sync` writes them into both READMEs and regenerates `apps/dox/src/data/gmt-stats.json`, which also holds the function count of each namespace. `pnpm run validate` fails on drift. In `apps/dox`, flag any GMT figure typed into copy instead of imported from `src/data/gmt-stats.ts`. `sync` rewrites digits only. `stats check` also reports what `sync` cannot fix: a library the opening line names wrongly, a namespace link that is missing, extra or on the wrong line, and a guarded README line that was reworded so its figure is no longer checked. Each needs a hand edit
-- [ ] International authority first ([coding-standards § International authority first](./coding-standards.md#international-authority-first)): every rule cites an international body before any national one, no national system, agency or convention is a default, the only authority or the subject of its own named function, and new examples do not default to one country's zone, locale, holiday or date order
-- [ ] Changeset present with the bump the [changeset rule](./coding-standards.md#changesets) requires
+- [ ] International authority first ([coding-standards § International authority first](./coding-standards/design-rules.md#international-authority-first)): every rule cites an international body before any national one, no national system, agency or convention is a default, the only authority or the subject of its own named function, and new examples do not default to one country's zone, locale, holiday or date order
+- [ ] Changeset present with the bump the [changeset rule](./coding-standards/changesets.md#changesets) requires
 
 ## Intentional — do not flag
 

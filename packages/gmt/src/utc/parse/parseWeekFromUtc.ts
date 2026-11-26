@@ -1,8 +1,7 @@
-import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
-import { isValidUtc } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -52,17 +51,16 @@ export function parseWeekFromUtc(
       return null;
     }
 
-    if (!isValidUtc(value)) return null;
+    const instant = utcInstantOf(value);
+    if (instant === null) return null;
 
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
     const frame = normalizeZoneFrame(optionsArg?.timeZone);
     if (weekStartsOn === null || frame === null) return null;
 
     try {
-      const instant = Temporal.Instant.from(value);
       const dt = frameWallClock(instant, frame);
-      const dateStr = dt.toPlainDate().toString();
-      return getWeekNumber(dateStr, weekStartsOn);
+      return weekNumberOf(dt.toPlainDate(), weekStartsOn);
     } catch {
       return null;
     }

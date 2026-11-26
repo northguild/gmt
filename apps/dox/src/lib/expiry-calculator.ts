@@ -16,7 +16,7 @@
  * passes its result in.
  */
 import type { ExpiryLib, ExpiryTtl, ExpiryUnits } from "./expiry-lib";
-import { literal } from "./holiday-rule-builder";
+import { literal } from "./literal";
 
 export type ExpiryUnit =
   | "years"
@@ -367,6 +367,10 @@ export function platesOf(
   return pureValues(lib, units, state.start);
 }
 
+/** What the page says when Now has no result: `ttlFromNow` answered `null`. */
+export const HINT_NOW_NULL =
+  "ttlFromNow takes a whole length of zero or more, and its end needs a four-digit year. A past Expires is formatHttpDate(getUtcAgo({ days: 1 })).";
+
 /** The one `ttlFromNow` read a tick makes. `null` when the amount is refused. */
 export function readTtl(lib: ExpiryLib, state: ExpiryState): ExpiryTtl | null {
   const units = unitsOf(state);
@@ -431,6 +435,7 @@ export function callsSizerLine(): string {
     convertUtcToZoned: () => `${wideText.slice(0, -1)}+00:00[UTC]`,
     formatHttpDate: () => "Thu, 15 Jun 2028 12:00:00 GMT",
     getUtcIn: () => wideText,
+    getUtcNow: () => wideText,
     isValidUtc: () => true,
   } as unknown as ExpiryLib;
   const state: ExpiryState = {

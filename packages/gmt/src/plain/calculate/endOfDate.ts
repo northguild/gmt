@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import type { SmallestUnit } from "../../internal/temporalTypes";
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { isValidDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 const supported: Temporal.DateUnit[] = ["year", "month", "week", "day"];
@@ -49,15 +49,15 @@ export function endOfDate(
     const resolvedUnit = resolveDateTimeUnit(unit);
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
 
+    const source = plainDateOf(value);
     if (
       weekStartsOn === null ||
-      !isValidDate(value) ||
+      source === null ||
       !supported.includes(resolvedUnit as Temporal.DateUnit)
     )
       return "";
 
     try {
-      const source = Temporal.PlainDate.from(value);
       let result: Temporal.PlainDate;
 
       switch (resolvedUnit) {

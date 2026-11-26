@@ -50,3 +50,18 @@
     border-width: 2px;
   }
 }
+
+/* The hand-off row: the link and its hint sit together and wrap on a narrow column. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}

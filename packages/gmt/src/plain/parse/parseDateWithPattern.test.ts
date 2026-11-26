@@ -5,8 +5,47 @@ import { hostileProxy, revokedProxy } from "../../test/hostileValues";
 import { expectOneOfIcu, oneOfIcu } from "../../test/icuVariants";
 import { utcMs } from "../../test/utcMs";
 import { getLocaleEraNames } from "../locale/getLocaleEraNames";
-import { getLocaleWeekdayNames } from "../locale/getLocaleWeekdayNames";
 import { parseDateWithPattern } from "./parseDateWithPattern";
+
+// A weekday name straight from `Intl`, so these rows do not depend on a locale's first day (a
+// region whose week data runtimes dispute has none, but its names still parse).
+/**
+ * March 2024's name in the host's own `Intl.DateTimeFormat`, so the text a row parses is what the
+ * host prints (a round trip) and the parsed date is asserted exactly on every host. `context` picks
+ * the format form (read from a date with a day) or the stand-alone form.
+ * The Gregorian calendar is named because the pattern parser reads Gregorian dates, and some hosts
+ * default ar-SA to the Umm al-Qura calendar, whose month names are different months.
+ */
+const marchName = (
+  locale: string,
+  month: "long" | "short",
+  context: "standAlone" | "format",
+): string => {
+  const march = utcMs("2024-03-15T00:00:00Z");
+  const standAlone = new Intl.DateTimeFormat(`${locale}-u-ca-gregory`, {
+    month,
+    timeZone: "UTC",
+  }).format(march);
+  if (context === "standAlone") {
+    return standAlone;
+  }
+  // A date with a day prints the format form. Where it prints the month as digits (zh, ja, pt-PT
+  // short), the language has no separate form and the stand-alone text is the name.
+  const printed =
+    new Intl.DateTimeFormat(`${locale}-u-ca-gregory`, {
+      day: "numeric",
+      month,
+      timeZone: "UTC",
+    })
+      .formatToParts(march)
+      .find((part) => part.type === "month")?.value ?? standAlone;
+  return /\d/u.test(printed) ? standAlone : printed;
+};
+
+const mondayName = (locale: string, weekday: "long" | "short"): string =>
+  new Intl.DateTimeFormat(locale, { weekday, timeZone: "UTC" }).format(
+    utcMs("2024-01-15T00:00:00Z"),
+  );
 
 describe("parseDateWithPattern", () => {
   describe("numeric tokens", () => {
@@ -135,14 +174,14 @@ describe("parseDateWithPattern", () => {
     );
 
     // A hostile bag is an Object, so it passes the GetOptionsObject guard; reading `yearWindow`
-    // from it throws. Only a yy pattern reads it.
+    // from it throws, and that is invalid input whatever the pattern.
     it.each`
       make                                                                | kind
       ${() => hostileProxy()}                                             | ${"a Proxy that throws on any trap"}
       ${() => revokedProxy()}                                             | ${"a revoked Proxy"}
       ${() => Object.defineProperty({}, "yearWindow", { get: throwing })} | ${"an object whose yearWindow getter throws"}
     `(
-      'returns "" for a yy pattern with options that are $kind, and never reads them for a yyyy pattern',
+      'returns "" for a yy pattern and for a yyyy pattern with options that are $kind',
       ({ make }) => {
         expect(
           parseDateWithPattern(
@@ -159,11 +198,11 @@ describe("parseDateWithPattern", () => {
             undefined,
             make() as never,
           ),
-        ).toBe("2024-03-15");
+        ).toBe("");
       },
     );
 
-    it("reads yearWindow once per call for a yy pattern, and never for a yyyy pattern", () => {
+    it("reads yearWindow once per call, for a yy pattern and for a yyyy pattern", () => {
       let reads = 0;
       const options = {
         get yearWindow(): number {
@@ -174,8 +213,28 @@ describe("parseDateWithPattern", () => {
       parseDateWithPattern("24-03-15", "yy-MM-dd", undefined, options);
       expect(reads).toBe(1);
       parseDateWithPattern("2024-03-15", "yyyy-MM-dd", undefined, options);
-      expect(reads).toBe(1);
+      expect(reads).toBe(2);
     });
+
+    // A value the types reject returns the sentinel even when the pattern has no yy to use it.
+    it.each`
+      yearWindow               | label
+      ${"2000"}                | ${"a numeric string"}
+      ${"x"}                   | ${"a string that is not rolling"}
+      ${new String("rolling")} | ${"a String object"}
+      ${new Number(2000)}      | ${"a Number object"}
+      ${true}                  | ${"a boolean"}
+      ${null}                  | ${"null"}
+    `(
+      'returns "" for a yyyy pattern when yearWindow is $label',
+      ({ yearWindow }) => {
+        expect(
+          parseDateWithPattern("15.03.2024", "dd.MM.yyyy", undefined, {
+            yearWindow,
+          } as never),
+        ).toBe("");
+      },
+    );
 
     it("reads a function carrying yearWindow as the options object it is", () => {
       expect(
@@ -265,7 +324,7 @@ describe("parseDateWithPattern", () => {
         },
       );
 
-      // A pattern with no yy token never reads the option, so the clock a rolling window needs
+      // A pattern with no yy token never resolves the window, so the clock a rolling window needs
       // is never read for it: the result is the one the same call gives with no options.
       it("a yyyy pattern gives 2024-03-15 with a rolling window when the clock cannot be read", () => {
         mockTemporalNowInstantThrow();
@@ -289,35 +348,34 @@ describe("parseDateWithPattern", () => {
 
   describe("month name tokens (MMMM / MMM) — 17-locale matrix", () => {
     it.each`
-      locale                  | long       | short
-      ${MustTestLocales.enUS} | ${"March"} | ${"Mar"}
-      ${MustTestLocales.enGB} | ${"March"} | ${"Mar"}
-      ${MustTestLocales.deDE} | ${"März"}  | ${"Mär"}
-      ${MustTestLocales.frFR} | ${"mars"}  | ${"mars"}
-      ${MustTestLocales.esES} | ${"marzo"} | ${"mar"}
-      ${MustTestLocales.itIT} | ${"marzo"} | ${"mar"}
-      ${MustTestLocales.ptPT} | ${"março"} | ${"mar."}
-      ${MustTestLocales.svSE} | ${"mars"}  | ${"mars"}
-      ${MustTestLocales.isIS} | ${"mars"}  | ${"mar."}
-      ${MustTestLocales.zhCN} | ${"三月"}  | ${"3月"}
-      ${MustTestLocales.zhTW} | ${"3月"}   | ${"3月"}
-      ${MustTestLocales.jaJP} | ${"3月"}   | ${"3月"}
-      ${MustTestLocales.koKR} | ${"3월"}   | ${"3월"}
-      ${MustTestLocales.arSA} | ${"مارس"}  | ${"مارس"}
-      ${MustTestLocales.heIL} | ${"מרץ"}   | ${"מרץ"}
-      ${MustTestLocales.ruRU} | ${"март"}  | ${"март"}
-      ${MustTestLocales.trTR} | ${"Mart"}  | ${"Mar"}
-    `(
-      "resolves MMMM/MMM month name for $locale to month 03",
-      ({ locale, long, short }) => {
-        expect(
-          parseDateWithPattern(`${long} 15, 2024`, "MMMM d, yyyy", locale),
-        ).toBe("2024-03-15");
-        expect(
-          parseDateWithPattern(`${short} 15, 2024`, "MMM d, yyyy", locale),
-        ).toBe("2024-03-15");
-      },
-    );
+      locale
+      ${MustTestLocales.enUS}
+      ${MustTestLocales.enGB}
+      ${MustTestLocales.deDE}
+      ${MustTestLocales.frFR}
+      ${MustTestLocales.esES}
+      ${MustTestLocales.itIT}
+      ${MustTestLocales.ptPT}
+      ${MustTestLocales.svSE}
+      ${MustTestLocales.isIS}
+      ${MustTestLocales.zhCN}
+      ${MustTestLocales.zhTW}
+      ${MustTestLocales.jaJP}
+      ${MustTestLocales.koKR}
+      ${MustTestLocales.arSA}
+      ${MustTestLocales.heIL}
+      ${MustTestLocales.ruRU}
+      ${MustTestLocales.trTR}
+    `("resolves MMMM/MMM month name for $locale to month 03", ({ locale }) => {
+      const long = marchName(locale, "long", "standAlone");
+      const short = marchName(locale, "short", "standAlone");
+      expect(
+        parseDateWithPattern(`${long} 15, 2024`, "MMMM d, yyyy", locale),
+      ).toBe("2024-03-15");
+      expect(
+        parseDateWithPattern(`${short} 15, 2024`, "MMM d, yyyy", locale),
+      ).toBe("2024-03-15");
+    });
 
     it("defaults to en-US when locale is omitted but a name token is present", () => {
       expect(parseDateWithPattern("March 15, 2024", "MMMM d, yyyy")).toBe(
@@ -361,26 +419,28 @@ describe("parseDateWithPattern", () => {
     );
 
     it.each`
-      locale                  | long       | short
-      ${MustTestLocales.enUS} | ${"March"} | ${"Mar"}
-      ${MustTestLocales.enGB} | ${"March"} | ${"Mar"}
-      ${MustTestLocales.deDE} | ${"März"}  | ${"März"}
-      ${MustTestLocales.frFR} | ${"mars"}  | ${"mars"}
-      ${MustTestLocales.esES} | ${"marzo"} | ${"mar"}
-      ${MustTestLocales.itIT} | ${"marzo"} | ${"mar"}
-      ${MustTestLocales.ptPT} | ${"março"} | ${"mar."}
-      ${MustTestLocales.svSE} | ${"mars"}  | ${"mars"}
-      ${MustTestLocales.isIS} | ${"mars"}  | ${"mar."}
-      ${MustTestLocales.zhCN} | ${"三月"}  | ${"3月"}
-      ${MustTestLocales.zhTW} | ${"3月"}   | ${"3月"}
-      ${MustTestLocales.jaJP} | ${"3月"}   | ${"3月"}
-      ${MustTestLocales.koKR} | ${"3월"}   | ${"3월"}
-      ${MustTestLocales.arSA} | ${"مارس"}  | ${"مارس"}
-      ${MustTestLocales.heIL} | ${"מרץ"}   | ${"מרץ"}
-      ${MustTestLocales.trTR} | ${"Mart"}  | ${"Mar"}
+      locale
+      ${MustTestLocales.enUS}
+      ${MustTestLocales.enGB}
+      ${MustTestLocales.deDE}
+      ${MustTestLocales.frFR}
+      ${MustTestLocales.esES}
+      ${MustTestLocales.itIT}
+      ${MustTestLocales.ptPT}
+      ${MustTestLocales.svSE}
+      ${MustTestLocales.isIS}
+      ${MustTestLocales.zhCN}
+      ${MustTestLocales.zhTW}
+      ${MustTestLocales.jaJP}
+      ${MustTestLocales.koKR}
+      ${MustTestLocales.arSA}
+      ${MustTestLocales.heIL}
+      ${MustTestLocales.trTR}
     `(
-      "resolves the format-context name for $locale (not ru-RU, which has its own rows) to month 03 (long $long, short $short)",
-      ({ locale, long, short }) => {
+      "resolves the format-context name for $locale (not ru-RU, which has its own rows) to month 03",
+      ({ locale }) => {
+        const long = marchName(locale, "long", "format");
+        const short = marchName(locale, "short", "format");
         expect(
           parseDateWithPattern(`15 ${long} 2024`, "d MMMM yyyy", locale),
         ).toBe("2024-03-15");
@@ -428,8 +488,7 @@ describe("parseDateWithPattern", () => {
   });
 
   describe("weekday name tokens (EEEE / EEE) — consumed, not cross-validated", () => {
-    // Weekday names are looked up live via getLocaleWeekdayNames (the
-    // same lookup parseDateWithPattern uses internally) rather than
+    // Weekday names are read live from Intl rather than
     // hardcoded, so this stays correct across ICU/CLDR wording
     // differences between Node versions.
     it.each`
@@ -454,8 +513,8 @@ describe("parseDateWithPattern", () => {
     `(
       "accepts any locale weekday name for $locale without checking it against the parsed date",
       ({ locale }) => {
-        const long = getLocaleWeekdayNames(locale, "long")[0];
-        const short = getLocaleWeekdayNames(locale, "short")[0];
+        const long = mondayName(locale, "long");
+        const short = mondayName(locale, "short");
         // 2024-03-15 is actually a Friday — using an arbitrary (possibly
         // mismatched) weekday name still parses successfully, proving
         // EEEE/EEE are consumed but not cross-validated.

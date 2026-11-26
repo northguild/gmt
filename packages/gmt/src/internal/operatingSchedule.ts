@@ -1,7 +1,7 @@
 import { Temporal } from "./temporal";
-import { resolveLocal } from "../instant/convert/resolveLocal";
-import { isValidDate } from "../plain/validate/isValidDate";
-import { isValidTime } from "../plain/validate/isValidTime";
+import { durationFrom } from "./durationFrom";
+import { resolveLocalInstant } from "./resolveLocalInstant";
+import { plainDateOf, plainTimeOf } from "./inputChecks";
 import type { Disambiguation } from "../types";
 import { parseBusinessCalendar, parseHolidays } from "./businessCalendar";
 import {
@@ -122,17 +122,12 @@ function parseWindow(value: unknown): ResolvedWindow | null {
 
   const { from, to } = value as { from?: unknown; to?: unknown };
 
-  if (
-    typeof from !== "string" ||
-    typeof to !== "string" ||
-    !isValidTime(from) ||
-    !isValidTime(to)
-  ) {
+  const fromTime = plainTimeOf(from);
+  const toTime = plainTimeOf(to);
+
+  if (fromTime === null || toTime === null) {
     return null;
   }
-
-  const fromTime = Temporal.PlainTime.from(from);
-  const toTime = Temporal.PlainTime.from(to);
 
   return {
     from: fromTime.toString(),
@@ -253,12 +248,14 @@ function parseOverride(candidate: unknown): [number, ResolvedWindow[]] | null {
 
   const { date, windows } = candidate as { date?: unknown; windows?: unknown };
 
-  if (typeof date !== "string" || !isValidDate(date)) {
+  const day = plainDateOf(date);
+
+  if (day === null) {
     return null;
   }
 
-  // `isValidDate` accepts only the ISO calendar, so the date has an epoch day.
-  const key = epochDayOfDate(Temporal.PlainDate.from(date));
+  // `plainDateOf` accepts only the ISO calendar, so the date has an epoch day.
+  const key = epochDayOfDate(day);
   const parsed = parseWindows(windows);
 
   return parsed === null ? null : [key, parsed];
@@ -365,7 +362,7 @@ export function parseSearchHorizon(
   let duration: Temporal.Duration;
 
   try {
-    duration = Temporal.Duration.from(text);
+    duration = durationFrom(text);
   } catch {
     return null;
   }
@@ -536,13 +533,16 @@ function resolveEdge(
   }
 
   const local = `${edge.date.toString()}T${edge.time}`;
-  const text = resolveLocal(local, timeZone, { disambiguation });
+  const text = resolveLocalInstant(local, timeZone, disambiguation);
 
   if (text !== "") {
     return { ns: Temporal.Instant.from(text).epochNanoseconds, text };
   }
 
-  if (disambiguation === "reject" && resolveLocal(local, timeZone) !== "") {
+  if (
+    disambiguation === "reject" &&
+    resolveLocalInstant(local, timeZone, "compatible") !== ""
+  ) {
     return undefined;
   }
 
@@ -1371,7 +1371,7 @@ export function parseOpenTimeAmount(value: unknown): bigint | null {
   }
 
   try {
-    const duration = Temporal.Duration.from(value);
+    const duration = durationFrom(value);
 
     if (
       duration.sign < 0 ||

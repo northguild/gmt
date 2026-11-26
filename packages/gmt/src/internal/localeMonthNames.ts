@@ -1,4 +1,4 @@
-import { getLocaleMonthNames } from "../plain/locale/getLocaleMonthNames";
+import { monthNamesFor } from "./localeNames";
 import { cachedFormatter } from "./formatterCache";
 import { Temporal } from "./temporal";
 
@@ -44,7 +44,7 @@ export function localeMonthNames(
   width: "long" | "short",
 ): LocaleMonthNames | null {
   try {
-    const standAlone = getLocaleMonthNames(locale, width);
+    const standAlone = monthNamesFor(locale, width);
     if (standAlone.length !== 12) return null;
 
     const formatter = cachedFormatter("DateTimeFormat", locale, {

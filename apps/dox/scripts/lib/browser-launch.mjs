@@ -6,7 +6,7 @@
  * connects to it instead and reaches the host's static server through Playwright's network
  * tunnel. Chromium and WebKit, and Firefox with the variable unset (CI), launch as before.
  *
- * The runbook is `context/dox/built.md` § Runbooks, "Firefox on macOS 27 (Docker route)". That
+ * The runbook is `context/dox/built/tier-6-runbooks.md`, "Firefox on macOS 27 (Docker route)". That
  * entry also says how to retire this route: delete `firefoxEndpoint` and the connect branch,
  * and keep `launchBrowser` as the single launch seam.
  */
@@ -44,7 +44,11 @@ export async function launchBrowser(name, options = {}, inject = {}) {
     );
   }
   const endpoint = name === "firefox" ? firefoxEndpoint(inject.env) : null;
-  if (endpoint === null) return engine.launch(options);
+  // Playwright's default SIGTERM handler closes the browsers and leaves the process running, so a
+  // runner that stops a gate at its deadline would watch it go on to record every page as a crash.
+  // Without it SIGTERM ends the gate, as the runner means it to.
+  if (endpoint === null)
+    return engine.launch({ handleSIGTERM: false, ...options });
   const browser = await engine.connect(endpoint, {
     exposeNetwork: LOOPBACK,
     timeout: 30_000,

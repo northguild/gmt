@@ -50,6 +50,7 @@ const html = renderFreeTimeLedgerTemplate("free-time-ledger").value;
   import { mountFreeTimeLedger } from "../lib/free-time-ledger-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=freetime&wa=` permalink seeds the widget with the clock it names;
@@ -63,5 +64,9 @@ const html = renderFreeTimeLedgerTemplate("free-time-ledger").value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "free-time-ledger",
+      () => import("../lib/webmcp/tools/free-time-ledger"),
+    );
   }
 </script>

@@ -1,41 +1,58 @@
+import { normalizeDateTime } from "../../internal";
 import { expectDateTimeEqual, MustTestLocales } from "../../test";
+import { hostDateTimeText, numericPartValues } from "../../test/hostIntl";
 import { formatDateTimeToParts } from "./formatDateTimeToParts";
 
 const OPTIONS = { dateStyle: "medium", timeStyle: "short" } as const;
 
 describe("formatDateTimeToParts", () => {
   describe("17-locale matrix — dateStyle/timeStyle", () => {
+    // The parts join to the host's text (its own wording; the bidi marks the
+    // parts keep are compared as the text normalises them) and carry the value:
+    // 2024-02-03 14:30, with the hour as 2 when the host's hour cycle adds a day period.
     it.each`
-      locale                  | expected
-      ${MustTestLocales.enUS} | ${[{ type: "month", value: "Feb" }, { type: "literal", value: " " }, { type: "day", value: "3" }, { type: "literal", value: ", " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "PM" }]}
-      ${MustTestLocales.enGB} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "Feb" }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.deDE} | ${[{ type: "day", value: "03" }, { type: "literal", value: "." }, { type: "month", value: "02" }, { type: "literal", value: "." }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.frFR} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "févr." }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.esES} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "feb" }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.itIT} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "feb" }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.ptPT} | ${[{ type: "day", value: "03" }, { type: "literal", value: "/" }, { type: "month", value: "02" }, { type: "literal", value: "/" }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.svSE} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "feb." }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: " " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.isIS} | ${[{ type: "day", value: "3" }, { type: "literal", value: ". " }, { type: "month", value: "feb." }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.zhCN} | ${[{ type: "year", value: "2024" }, { type: "literal", value: "年" }, { type: "month", value: "2" }, { type: "literal", value: "月" }, { type: "day", value: "3" }, { type: "literal", value: "日 " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.zhTW} | ${[{ type: "year", value: "2024" }, { type: "literal", value: "年" }, { type: "month", value: "2" }, { type: "literal", value: "月" }, { type: "day", value: "3" }, { type: "literal", value: "日 " }, { type: "dayPeriod", value: "下午" }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.jaJP} | ${[{ type: "year", value: "2024" }, { type: "literal", value: "/" }, { type: "month", value: "02" }, { type: "literal", value: "/" }, { type: "day", value: "03" }, { type: "literal", value: " " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.koKR} | ${[{ type: "year", value: "2024" }, { type: "literal", value: ". " }, { type: "month", value: "2" }, { type: "literal", value: ". " }, { type: "day", value: "3" }, { type: "literal", value: ". " }, { type: "dayPeriod", value: "오후" }, { type: "literal", value: " " }, { type: "hour", value: "2" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.arSA} | ${[{ type: "day", value: "٠٣" }, { type: "literal", value: "‏/" }, { type: "month", value: "٠٢" }, { type: "literal", value: "‏/" }, { type: "year", value: "٢٠٢٤" }, { type: "literal", value: "، " }, { type: "hour", value: "٢" }, { type: "literal", value: ":" }, { type: "minute", value: "٣٠" }, { type: "literal", value: " " }, { type: "dayPeriod", value: "م" }]}
-      ${MustTestLocales.heIL} | ${[{ type: "day", value: "3" }, { type: "literal", value: " ב" }, { type: "month", value: "פבר׳" }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: ", " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.ruRU} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "февр." }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: " г., " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-      ${MustTestLocales.trTR} | ${[{ type: "day", value: "3" }, { type: "literal", value: " " }, { type: "month", value: "Şub" }, { type: "literal", value: " " }, { type: "year", value: "2024" }, { type: "literal", value: " " }, { type: "hour", value: "14" }, { type: "literal", value: ":" }, { type: "minute", value: "30" }]}
-    `("returns exact parts for $locale", ({ locale, expected }) => {
-      const actual = formatDateTimeToParts(
-        "2024-02-03T14:30:00",
-        locale,
-        OPTIONS,
-      );
-      // Some CI runners' ICU/CLDR data renders CJK day-period markers as
-      // ASCII "AM"/"PM" instead of the native-script word (see
-      // test/icuVariants.ts) — compare through expectDateTimeEqual, which
-      // canonicalizes that variance, instead of a strict deep-equal.
-      expectDateTimeEqual(JSON.stringify(actual), JSON.stringify(expected));
-    });
+      locale
+      ${MustTestLocales.enUS}
+      ${MustTestLocales.enGB}
+      ${MustTestLocales.deDE}
+      ${MustTestLocales.frFR}
+      ${MustTestLocales.esES}
+      ${MustTestLocales.itIT}
+      ${MustTestLocales.ptPT}
+      ${MustTestLocales.svSE}
+      ${MustTestLocales.isIS}
+      ${MustTestLocales.zhCN}
+      ${MustTestLocales.zhTW}
+      ${MustTestLocales.jaJP}
+      ${MustTestLocales.koKR}
+      ${MustTestLocales.arSA}
+      ${MustTestLocales.heIL}
+      ${MustTestLocales.ruRU}
+      ${MustTestLocales.trTR}
+    `(
+      "returns parts for $locale that join to the host's text and carry 2024-02-03 14:30",
+      ({ locale }) => {
+        const parts = formatDateTimeToParts(
+          "2024-02-03T14:30:00",
+          locale,
+          OPTIONS,
+        );
+        expect(
+          normalizeDateTime(parts.map((part) => part.value).join("")),
+        ).toBe(hostDateTimeText(locale, OPTIONS, "2024-02-03T14:30:00"));
+        expect(parts.some((part) => part.type === "unknown")).toBe(false);
+        const twelveHour = parts.some((part) => part.type === "dayPeriod");
+        const values = numericPartValues(parts, locale);
+        expect(values).toMatchObject({
+          year: 2024,
+          day: 3,
+          hour: twelveHour ? 2 : 14,
+          minute: 30,
+        });
+        expect([undefined, 2]).toContain(values["month"]);
+        expect(parts.some((part) => part.type === "month")).toBe(true);
+      },
+    );
   });
 
   describe("no options — ECMA-402 GetDateTimeFormat(~any~, ~all~) defaults", () => {
@@ -317,26 +334,26 @@ describe("formatDateTimeToParts", () => {
   });
 
   // ECMA-402 CanonicalizeLocaleList: `locale` may be a preference list; the first tag with locale data
-  // is used, and a malformed tag anywhere in the list is invalid input. Expected strings from native
-  // Intl with the same list.
-  it.each`
-    locale                                          | expected
-    ${[MustTestLocales.frFR, MustTestLocales.enUS]} | ${"3 févr. 2024, 14:30"}
-    ${[MustTestLocales.frFR, "not a locale!!"]}     | ${""}
-  `(
-    "returns '$expected' (parts joined) for locale list $locale",
-    ({ locale, expected }) => {
-      const actual = formatDateTimeToParts("2024-02-03T14:30:45", locale, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
-      expect(
-        Array.isArray(actual)
-          ? actual.map((part) => part.value).join("")
-          : actual,
-      ).toEqual(expected);
-    },
-  );
+  // is used, and a malformed tag anywhere in the list is invalid input. The text is the host's for the
+  // same list.
+  it("returns the host's fr-FR text (parts joined) for locale list fr-FR, en-US", () => {
+    const locale = [MustTestLocales.frFR, MustTestLocales.enUS];
+    const options = { dateStyle: "medium", timeStyle: "short" } as const;
+    const parts = formatDateTimeToParts("2024-02-03T14:30:45", locale, options);
+    expect(normalizeDateTime(parts.map((part) => part.value).join(""))).toBe(
+      hostDateTimeText(locale, options, "2024-02-03T14:30:45"),
+    );
+  });
+
+  it("returns [] for locale list fr-FR, 'not a locale!!'", () => {
+    expect(
+      formatDateTimeToParts(
+        "2024-02-03T14:30:45",
+        [MustTestLocales.frFR, "not a locale!!"],
+        { dateStyle: "medium", timeStyle: "short" },
+      ),
+    ).toEqual([]);
+  });
 });
 
 // Plan #14: ECMA-402 CoerceOptionsToObject throws TypeError for null options and wraps any other
@@ -389,12 +406,11 @@ describe("formatDateTimeToParts with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDateTimeToParts with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -406,13 +422,6 @@ describe("formatDateTimeToParts with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({
-      out: [
-        { type: "month", value: "March" },
-        { type: "literal", value: " " },
-        { type: "day", value: "15" },
-      ],
-      coercions: 1,
-    });
+    expect({ out, coercions }).toEqual({ out: [], coercions: 0 });
   });
 });

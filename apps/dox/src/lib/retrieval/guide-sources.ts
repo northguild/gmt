@@ -1,6 +1,6 @@
 /**
  * Every guide file under `src/content/docs/guides/`, plus every top-level page
- * directly under `src/content/docs/` (Start here), loaded through Vite.
+ * directly under `src/content/docs/` (top-level pages), loaded through Vite.
  *
  * The parsing lives in `guide-source-parse.ts`; this module is only the glob
  * that feeds it. Keeping them apart is load-bearing, not tidiness: the glob is

@@ -1,6 +1,5 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
 
 /**
  * Return true when `value1` is strictly before `value2` for PlainDate values.
@@ -19,17 +18,14 @@ import { isValidDate } from "../validate";
  * @example isBeforeDate("2024-02-29", "invalid") // false
  */
 export function isBeforeDate(value1: string, value2: string): boolean {
-  if (!isValidDate(value1) || !isValidDate(value2)) {
+  const value1Parsed = plainDateOf(value1);
+  const value2Parsed = plainDateOf(value2);
+  if (value1Parsed === null || value2Parsed === null) {
     return false;
   }
 
   try {
-    return (
-      Temporal.PlainDate.compare(
-        Temporal.PlainDate.from(value1),
-        Temporal.PlainDate.from(value2),
-      ) === -1
-    );
+    return Temporal.PlainDate.compare(value1Parsed, value2Parsed) === -1;
   } catch {
     return false;
   }

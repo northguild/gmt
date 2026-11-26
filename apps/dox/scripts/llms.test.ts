@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { relative, resolve, sep } from "node:path";
 
 const outGen = resolve(
   import.meta.dirname,
@@ -21,12 +21,16 @@ const mdxExists = existsSync(refDir);
 // Import pure helpers (no Astro globals needed)
 import {
   isReferenceIndex,
-  referenceSections,
+  namespaceEntries,
+  namespaceIndexLinks,
+  namespaceSections,
+  namespaceTitle,
   withoutLinks,
   renderLlmsFull,
   renderLlmsTxt,
   type LlmsSection,
 } from "../src/lib/llms";
+import { namespaceSummary } from "../src/lib/namespace-summary";
 import type { CorpusEntry } from "../src/reference-types";
 
 const BASE = "https://northguild.dev/gmt";
@@ -36,6 +40,7 @@ function readCorpus(): CorpusEntry[] {
     readFileSync(resolve(outGen, "gmt-corpus.json"), "utf8"),
   ) as CorpusEntry[];
 }
+import { INDUSTRY_TAG_IDS, industryTag } from "../src/lib/industry-tags";
 import { stripFrontmatter, stripMdx } from "../src/lib/page-markdown";
 
 import { distDirOrSkip as distRootOrSkip } from "./dist-dir";
@@ -45,6 +50,54 @@ function distDirOrSkip(): string | null {
   const root = distRootOrSkip();
   return root === null ? null : resolve(root, "gmt");
 }
+
+/**
+ * The capitalised tags left in `text` outside code: a fenced block and an inline code span show
+ * markup, they do not carry it. SWIFT writes its date format as `<DATE2>`, and a code sample may
+ * show `<Foo />`; neither is a component that failed to render. A bare `<Foo />` in prose is.
+ *
+ * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>` is
+ * not a tag, and a `<` that follows an identifier character never opens one.
+ */
+function rawComponentTags(text: string): string[] {
+  const prose = text
+    .replace(/^[ \t]*(```|~~~)[\s\S]*?^[ \t]*\1[^\n]*$/gm, "")
+    // A code span never crosses a blank line (CommonMark: a paragraph boundary ends it).
+    .replace(/(`+)(?:(?!\n[ \t]*\n)[^`])*?\1/g, "");
+  return prose.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
+}
+
+describe("rawComponentTags", () => {
+  it("passes a backticked SWIFT format token", () => {
+    expect(
+      rawComponentTags("The date is `<DATE2>`, as SWIFT writes it."),
+    ).toEqual([]);
+  });
+
+  it("passes a fenced block holding a component tag", () => {
+    expect(
+      rawComponentTags("Before.\n\n```tsx\n<Foo />\n```\n\nAfter."),
+    ).toEqual([]);
+  });
+
+  it("still fails a bare component tag in prose", () => {
+    expect(rawComponentTags("Text.\n\n<Foo />\n")).toEqual(["<Foo"]);
+    expect(rawComponentTags("Text.\n\n<SwiftValueDateReader />\n")).toEqual([
+      "<SwiftValueDateReader",
+    ]);
+  });
+
+  it("fails a tag between two unclosed backticks that a blank line separates", () => {
+    expect(
+      rawComponentTags("Use the `a flag.\n\n<Foo />\n\nAnd `b flag."),
+    ).toEqual(["<Foo"]);
+  });
+
+  it("still fails a tag that follows a closed code span or fence", () => {
+    expect(rawComponentTags("`<DATE2>` then <Foo />")).toEqual(["<Foo"]);
+    expect(rawComponentTags("```\n<A />\n```\n<B />")).toEqual(["<B"]);
+  });
+});
 
 describe("llms.txt surface", () => {
   it("has a non-empty corpus to build sections from", () => {
@@ -132,7 +185,18 @@ describe("llms.txt surface", () => {
     const routes = mod.referenceRoutes as Set<string>;
 
     // The sections llms.txt.ts builds, from the function it builds them with.
-    const sections: LlmsSection[] = referenceSections(readCorpus(), BASE);
+    const namespaces = namespaceEntries(readCorpus());
+    // The namespace files' own URLs are not routes of the manifest; their entries are.
+    const sections: LlmsSection[] = [
+      {
+        heading: "Reference",
+        links: namespaceIndexLinks(namespaces, BASE, namespaceSummary).slice(
+          0,
+          1,
+        ),
+      },
+      ...namespaces.flatMap((ns) => namespaceSections(ns, BASE)),
+    ];
 
     // Build the same sections llms.txt.ts builds — derive guide links from
     // the same glob so the test validates the source's actual output.
@@ -215,23 +279,51 @@ describe("llms.txt surface", () => {
     }
   });
 
+  it("gives every corpus namespace its own one-sentence summary", () => {
+    const namespaces = namespaceEntries(readCorpus()).map((n) => n.namespace);
+    expect(namespaces.length).toBeGreaterThanOrEqual(18);
+    const boilerplate = /^The \S+ namespace of @northguild\/gmt, by module\.?$/;
+    for (const namespace of namespaces) {
+      const summary = namespaceSummary(namespace);
+      expect(summary, namespace).not.toMatch(boilerplate);
+      expect(summary.length, namespace).toBeGreaterThanOrEqual(30);
+      expect(summary.length, namespace).toBeLessThanOrEqual(160);
+      expect(summary.endsWith("."), namespace).toBe(true);
+    }
+    expect(new Set(namespaces.map(namespaceSummary)).size).toBe(
+      namespaces.length,
+    );
+  });
+
+  it("words an industry's namespace differently from the industry's own definition", () => {
+    for (const id of ["workforce", "transport", "intermodal", "gnss"]) {
+      expect(namespaceSummary(id), id).not.toBe(industryTag(id)!.definition);
+    }
+  });
+
+  it("fails for a namespace with no authored summary", () => {
+    expect(() => namespaceSummary("no-such-namespace")).toThrow(/no summary/);
+  });
+
   it("llms.txt format: H1, > summary, ## sections", () => {
     const corpus = readCorpus();
-    const sections: LlmsSection[] = referenceSections(corpus, BASE);
-    const referenceSectionCount = sections.length;
-    sections.push({
-      heading: "Guides",
-      links: [
-        {
-          title: "Install",
-          url: "https://northguild.dev/gmt/install.md",
-        },
-        {
-          title: "Core Rules",
-          url: "https://northguild.dev/gmt/core-rules.md",
-        },
-      ],
-    });
+    const namespaces = namespaceEntries(corpus);
+    const sections: LlmsSection[] = [
+      {
+        heading: "Reference",
+        links: namespaceIndexLinks(namespaces, BASE, namespaceSummary),
+      },
+      {
+        heading: "Guides",
+        links: [
+          { title: "Install", url: "https://northguild.dev/gmt/install.md" },
+        ],
+      },
+      {
+        heading: "Optional",
+        links: [{ title: "Changelog", url: `${BASE}/c.md` }],
+      },
+    ];
 
     const output = renderLlmsTxt({
       title: "@northguild/gmt",
@@ -239,23 +331,25 @@ describe("llms.txt surface", () => {
       sections,
     });
 
-    // H1
+    // Exactly one H1, then the blockquote summary (line index 2).
+    expect(output.match(/^# /gm)).toHaveLength(1);
     expect(output.startsWith("# @northguild/gmt")).toBe(true);
-    // Blockquote summary (line index 2: H1, blank, then >)
     expect(output.split("\n")[2]?.startsWith("> ")).toBe(true);
-    // The index link, one ## per namespace that has a page of its own, + Guides. A
-    // namespace whose only entries are types documented on a function's page has nothing
-    // to list.
-    const sectionHeadings = output.match(/^## /gm);
-    expect(referenceSectionCount).toBe(
-      1 +
-        new Set(
-          corpus
-            .filter((e) => e.inlineOn === undefined)
-            .map((e) => e.namespace),
-        ).size,
-    );
-    expect(sectionHeadings?.length).toBe(referenceSectionCount + 1);
+    // No namespace section in the root file; Optional is last.
+    expect(output).not.toMatch(/^## Reference — /m);
+    const headings = [...output.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+    expect(headings).toEqual(["Reference", "Guides", "Optional"]);
+    expect(headings.at(-1)).toBe("Optional");
+    // The Reference section holds reference.md plus one link per namespace that has a page.
+    const links = sections[0].links.map((l) => l.url);
+    expect(links).toEqual([
+      `${BASE}/reference.md`,
+      ...new Set(
+        corpus
+          .filter((e) => e.inlineOn === undefined)
+          .map((e) => `${BASE}/reference/${e.namespace}/llms.txt`),
+      ),
+    ]);
   });
 
   it("links each reference entry to the .md twin of its page, and skips types with no page", () => {
@@ -263,9 +357,10 @@ describe("llms.txt surface", () => {
     const inline = corpus.filter((e) => e.inlineOn !== undefined);
     expect(inline.length).toBeGreaterThan(0);
 
-    const [index, ...namespaces] = referenceSections(corpus, BASE);
-    expect(index.links.map((l) => l.url)).toEqual([`${BASE}/reference.md`]);
-    const links = namespaces.flatMap((s) => s.links);
+    const namespaces = namespaceEntries(corpus);
+    const links = namespaces.flatMap((ns) =>
+      namespaceSections(ns, BASE).flatMap((s) => s.links),
+    );
     expect(links).toHaveLength(corpus.length - inline.length);
     const urls = links.map((l) => l.url);
     // No fragment, and no file listed twice.
@@ -276,7 +371,7 @@ describe("llms.txt surface", () => {
     }
   });
 
-  it("referenceSections skips an inline type and links a shared one by its page", () => {
+  it("namespaceEntries skips an inline type and groups a shared one under Types", () => {
     const entry = (over: Partial<CorpusEntry>): CorpusEntry => ({
       url: "",
       page: "",
@@ -290,33 +385,31 @@ describe("llms.txt surface", () => {
       examples: [],
       ...over,
     });
-    const sections = referenceSections(
-      [
-        entry({
-          name: "dwellTime",
-          kind: "function",
-          url: "/reference/transport/calculate/dwellTime",
-          page: "/reference/transport/calculate/dwellTime",
-          description: "Measure a dwell.",
-        }),
-        entry({
-          name: "Dwell",
-          url: "/reference/transport/calculate/dwellTime#dwell",
-          page: "/reference/transport/calculate/dwellTime",
-          inlineOn: "dwellTime",
-        }),
-        entry({
-          name: "Interval",
-          namespace: "types",
-          url: "/reference/types/Interval",
-          page: "/reference/types/Interval",
-        }),
-      ],
-      "https://x.test",
-    );
-    expect(sections.slice(1)).toEqual([
+    const namespaces = namespaceEntries([
+      entry({
+        name: "dwellTime",
+        kind: "function",
+        url: "/reference/transport/calculate/dwellTime",
+        page: "/reference/transport/calculate/dwellTime",
+        description: "Measure a dwell.",
+      }),
+      entry({
+        name: "Dwell",
+        url: "/reference/transport/calculate/dwellTime#dwell",
+        page: "/reference/transport/calculate/dwellTime",
+        inlineOn: "dwellTime",
+      }),
+      entry({
+        name: "Interval",
+        namespace: "types",
+        url: "/reference/types/Interval",
+        page: "/reference/types/Interval",
+      }),
+    ]);
+    expect(namespaces.map((n) => n.namespace)).toEqual(["transport", "types"]);
+    expect(namespaceSections(namespaces[0], "https://x.test")).toEqual([
       {
-        heading: "Reference — transport",
+        heading: "calculate",
         links: [
           {
             title: "dwellTime",
@@ -325,8 +418,10 @@ describe("llms.txt surface", () => {
           },
         ],
       },
+    ]);
+    expect(namespaceSections(namespaces[1], "https://x.test")).toEqual([
       {
-        heading: "Reference — types",
+        heading: "Types",
         links: [
           {
             title: "Interval",
@@ -336,6 +431,8 @@ describe("llms.txt surface", () => {
         ],
       },
     ]);
+    expect(namespaceTitle("types")).toBe("@northguild/gmt shared types");
+    expect(namespaceTitle("zoned")).toBe("@northguild/gmt/zoned");
   });
 
   it("isReferenceIndex names the generated index pages and nothing else", () => {
@@ -399,7 +496,7 @@ Note about installation.
       const result = stripMdx(input, { gmtVersion: "1.0.0" }).trim();
       expect(result).not.toMatch(/<Icon|import/);
       expect(result.replace(/\s+/g, " ")).toBe(
-        "- [Transport](/gmt/reference/transport): Legs and dwell.",
+        "- [Transport](/gmt/reference/transport/): Legs and dwell.",
       );
     });
 
@@ -446,10 +543,7 @@ Note about installation.
         const { body } = stripFrontmatter(
           readFileSync(resolve(docsDir, name), "utf8"),
         );
-        const tags =
-          stripMdx(body, { gmtVersion: "1.0.0" }).match(
-            /(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g,
-          ) ?? [];
+        const tags = rawComponentTags(stripMdx(body, { gmtVersion: "1.0.0" }));
         return tags.length > 0 ? [{ file: name, tags }] : [];
       });
       expect(left).toEqual([]);
@@ -549,25 +643,189 @@ Body text here.`;
         return found;
       };
       const order = [
-        "Install",
-        "Tools",
-        "Checks",
         "Start here",
-        "Migrate",
         "Guides",
         "Reference",
         "Industries",
+        "Tools",
         "Scenarios",
         "Mistakes",
-        "Changelog",
+        "Migrate",
+        "Checks",
+        "Optional",
       ].map(at);
+      expect(headings).not.toContain("Install");
       expect(order).toEqual([...order].sort((a, b) => a - b));
-      // Every namespace section sits between the reference index and the industries.
-      for (const heading of headings.filter((h) =>
-        h.startsWith("Reference — "),
-      )) {
-        expect(at(heading)).toBeGreaterThan(at("Reference"));
-        expect(at(heading)).toBeLessThan(at("Industries"));
+      expect(headings.at(-1)).toBe("Optional");
+      expect(headings.filter((h) => h.startsWith("Reference — "))).toEqual([]);
+      expect(llms.match(/^# /gm)).toHaveLength(1);
+    });
+
+    /** The root file's size budget: the llmstxt.org rule that the file fits in context. Never raised; move detail into a subpath file instead. */
+    const ROOT_BUDGET = 64 * 1024;
+
+    /** The URLs a text file links, and the file in `dist/gmt` each names. */
+    const linkedFiles = (distDir: string, text: string) =>
+      [...text.matchAll(/\]\((https:\/\/[^)\s]+)\)/g)].map((m) => {
+        const url = m[1]!.replace(/#.*$/, "");
+        expect(url.startsWith(`${BASE}/`), url).toBe(true);
+        const path = url.slice(BASE.length + 1);
+        return {
+          url,
+          file: resolve(distDir, path === "" ? "index.html" : path),
+        };
+      });
+
+    const rootSize = (() => {
+      const distDir = distDirOrSkip();
+      const file = distDir && resolve(distDir, "llms.txt");
+      return file && existsSync(file) ? statSync(file).size : "not built";
+    })();
+
+    it(`llms.txt is at most 64 KiB (${rootSize} bytes now)`, () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      expect(statSync(resolve(distDir, "llms.txt")).size).toBeLessThanOrEqual(
+        ROOT_BUDGET,
+      );
+    });
+
+    it("every link in llms.txt and in each namespace llms.txt resolves to a file in dist/gmt", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const files = [
+        resolve(distDir, "llms.txt"),
+        ...namespaceEntries(readCorpus()).map(({ namespace }) =>
+          resolve(distDir, "reference", namespace, "llms.txt"),
+        ),
+      ];
+      const missing = files.flatMap((file) =>
+        linkedFiles(distDir, readFileSync(file, "utf8"))
+          .filter(({ file: target }) => !existsSync(target))
+          .map(({ url }) => `${relative(distDir, file)}: ${url}`),
+      );
+      expect(missing).toEqual([]);
+    });
+
+    it("each namespace llms.txt opens with an H1 and a blockquote that links the root file, and the root links every one", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const root = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      const section = root.slice(root.indexOf("\n## Reference\n"));
+      const rootLinks = new Set(
+        linkedFiles(
+          distDir,
+          section.slice(0, section.indexOf("\n## Industries")),
+        )
+          .map(({ url }) => url)
+          .filter((url) => url.endsWith("/llms.txt")),
+      );
+      const namespaces = namespaceEntries(readCorpus()).map((n) => n.namespace);
+      expect(namespaces.length).toBeGreaterThan(0);
+      // The directory holds exactly the corpus's namespaces, each linked once from the root.
+      expect(
+        readdirSync(resolve(distDir, "reference"), { withFileTypes: true })
+          .filter(
+            (d) =>
+              d.isDirectory() &&
+              existsSync(resolve(distDir, "reference", d.name, "llms.txt")),
+          )
+          .map((d) => d.name)
+          .sort(),
+      ).toEqual([...namespaces].sort());
+      expect([...rootLinks].sort()).toEqual(
+        namespaces.map((ns) => `${BASE}/reference/${ns}/llms.txt`).sort(),
+      );
+      for (const ns of namespaces) {
+        const lines = readFileSync(
+          resolve(distDir, "reference", ns, "llms.txt"),
+          "utf8",
+        ).split("\n");
+        expect(lines[0], ns).toBe(`# ${namespaceTitle(ns)}`);
+        expect(lines[2], ns).toMatch(/^> /);
+        expect(lines[2], ns).toContain(`(${BASE}/llms.txt)`);
+      }
+    });
+
+    it("lists each non-inline entry's .md twin in exactly one namespace llms.txt", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const corpus = readCorpus();
+      const listed = new Map<string, number>();
+      for (const { namespace } of namespaceEntries(corpus)) {
+        const text = readFileSync(
+          resolve(distDir, "reference", namespace, "llms.txt"),
+          "utf8",
+        );
+        for (const { url } of linkedFiles(distDir, text)) {
+          if (url.endsWith(".md")) listed.set(url, (listed.get(url) ?? 0) + 1);
+        }
+      }
+      const wrong = corpus
+        .filter((e) => e.inlineOn === undefined)
+        .map((e) => `${BASE}${e.page}.md`)
+        .filter((url) => listed.get(url) !== 1);
+      expect(wrong).toEqual([]);
+    });
+
+    it("llms.txt lists Install first and upstream and pulse under Start here, and compare and bundle-size under Migrate", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
+      const section = (heading: string): string[] => {
+        const start = llms.indexOf(`\n## ${heading}\n`);
+        expect(start, `${heading} is a section`).toBeGreaterThanOrEqual(0);
+        const rest = llms.slice(start + heading.length + 5);
+        const end = rest.search(/^## /m);
+        return (end < 0 ? rest : rest.slice(0, end))
+          .split("\n")
+          .filter((line) => line.startsWith("- ["));
+      };
+      const startHere = section("Start here");
+      expect(startHere[0]).toMatch(/\/install\.md\)/);
+      const migrate = section("Migrate");
+      for (const slug of ["upstream", "pulse"]) {
+        const link = new RegExp(`/${slug}\\.md\\)`);
+        expect(
+          startHere.some((line) => link.test(line)),
+          `${slug} is under Start here`,
+        ).toBe(true);
+        expect(
+          migrate.some((line) => link.test(line)),
+          `${slug} is not under Migrate`,
+        ).toBe(false);
+      }
+      for (const slug of ["compare", "bundle-size", "native-engines"]) {
+        const link = new RegExp(`/${slug}\\.md\\)`);
+        expect(
+          migrate.some((line) => link.test(line)),
+          `${slug} is under Migrate`,
+        ).toBe(true);
+        expect(
+          startHere.some((line) => link.test(line)),
+          `${slug} is not under Start here`,
+        ).toBe(false);
+      }
+    });
+
+    it("llms-full.txt follows the sidebar: a guide after the start pages, the migrate pages last", () => {
+      const distDir = distDirOrSkip();
+      if (distDir === null) return;
+      const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
+      const urls = [...full.matchAll(/^> source: (\S+)$/gm)].map((m) => m[1]!);
+      const path = (url: string) => url.replace(/^.*\/gmt\//, "");
+      expect(urls.length).toBeGreaterThan(0);
+      const lastStart = urls.findIndex((url) => path(url) === "pulse.md");
+      expect(lastStart).toBeGreaterThanOrEqual(0);
+      expect(path(urls[lastStart + 1]!)).toMatch(/^guides\//);
+      const firstMigrate = urls.findIndex((url) =>
+        url.endsWith("migrate/index.md"),
+      );
+      expect(firstMigrate).toBeGreaterThan(lastStart);
+      for (const url of urls.slice(firstMigrate)) {
+        expect(path(url), url).toMatch(
+          /^(migrate\/|compare\/behaviour\.md$|compare\.md$|bundle-size\.md$|native-engines\.md$)/,
+        );
       }
     });
 
@@ -575,27 +833,20 @@ Body text here.`;
       const distDir = distDirOrSkip();
       if (distDir === null) return;
       const llms = readFileSync(resolve(distDir, "llms.txt"), "utf8");
-      expect(llms).toMatch(/^## Changelog$/m);
-      const pages = readdirSync(
-        resolve(
-          import.meta.dirname,
-          "..",
-          "src",
-          "content",
-          "docs",
-          "changelog",
-        ),
-      ).filter((file) => file.endsWith(".md"));
-      expect(pages.length).toBeGreaterThanOrEqual(4);
-      for (const page of pages) {
-        const route =
-          page === "index.md"
-            ? "changelog/index"
-            : `changelog/${page.slice(0, -3)}`;
+      expect(llms).toMatch(/^## Optional$/m);
+      // Each package's index page is linked; its release-line pages are not (the index lists them).
+      const routes = [
+        "changelog/index",
+        "changelog/gmt-eslint/index",
+        "changelog/gmt-oxlint/index",
+        "changelog/gmt-biome/index",
+      ];
+      for (const route of routes) {
         expect(llms, `llms.txt links ${route}`).toMatch(
           new RegExp(`^- \\[[^\\]]*\\]\\(https://[^)]*/${route}\\.md\\)`, "m"),
         );
       }
+      expect(llms).not.toMatch(/\/changelog\/(?:[\w-]+\/)?\d+-\d+\.md/);
       const full = readFileSync(resolve(distDir, "llms-full.txt"), "utf8");
       expect(full).not.toContain("## @burglekitt/");
       const chunksPath = resolve(distDir, "retrieval-chunks.json");
@@ -623,6 +874,100 @@ Body text here.`;
         /\*\*In memoriam: @burglekitt\.\*\* .*\[install @northguild\/gmt\]\(\/gmt\/install\/\)/,
       );
       expect(twin).not.toContain("<div");
+    });
+
+    describe("the Industry line of a twin matches the tags its page shows", () => {
+      const docs = resolve(import.meta.dirname, "..", "src", "content", "docs");
+
+      /** The `industries` a generated page declares, as the labels its twin prints. */
+      const declared = (file: string): string[] =>
+        (/^industries: \[(.*)\]$/m.exec(readFileSync(file, "utf8"))?.[1] ?? "")
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+
+      /** The first line of a twin after its heading that starts `Industry:`, or undefined. */
+      const industryLine = (twin: string): string | undefined =>
+        twin.split("\n").find((line) => line.startsWith("Industry: "));
+
+      /** Every function page under one namespace, as `[file, twin path]`. */
+      const pagesOf = (namespace: string): [string, string][] => {
+        const root = resolve(docs, "reference", namespace);
+        return readdirSync(root, { recursive: true, withFileTypes: true })
+          .filter(
+            (f) =>
+              f.isFile() && f.name.endsWith(".mdx") && f.name !== "index.mdx",
+          )
+          .map((f): [string, string] => {
+            const file = resolve(f.parentPath, f.name);
+            const slug = /^slug: "(.*)"$/m.exec(
+              readFileSync(file, "utf8"),
+            )![1]!;
+            return [file, `${slug}.md`];
+          });
+      };
+
+      it("says Core on a general function and Workforce on a workforce one", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null || !mdxExists) return;
+        const [, plain] = pagesOf("plain")[0]!;
+        const [, workforce] = pagesOf("workforce")[0]!;
+        expect(
+          industryLine(readFileSync(resolve(distDir, plain), "utf8")),
+        ).toBe("Industry: Core");
+        expect(
+          industryLine(readFileSync(resolve(distDir, workforce), "utf8")),
+        ).toBe("Industry: Workforce");
+      });
+
+      it("says Core, Workforce on a shared type that general and workforce functions both reach", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null || !mdxExists) return;
+        const types = resolve(docs, "reference", "types");
+        const shared = readdirSync(types)
+          .filter((name) => name.endsWith(".mdx") && name !== "index.mdx")
+          .find((name) => {
+            const ids = declared(resolve(types, name));
+            return ids.includes("core") && ids.includes("workforce");
+          });
+        expect(
+          shared,
+          "a type that Core and workforce functions share",
+        ).toBeDefined();
+        const twin = readFileSync(
+          resolve(distDir, "reference", "types", `${shared!.slice(0, -4)}.md`),
+          "utf8",
+        );
+        expect(industryLine(twin)).toBe("Industry: Core, Workforce");
+      });
+
+      it("lists Core first on the tools index, then each industry a tool declares", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null) return;
+        const tools = resolve(docs, "tools");
+        const used = new Set(
+          readdirSync(tools)
+            .filter((name) => name.endsWith(".mdx") && name !== "index.mdx")
+            .flatMap((name) => declared(resolve(tools, name))),
+        );
+        const expected = INDUSTRY_TAG_IDS.filter((id) => used.has(id)).map(
+          (id) => industryTag(id)!.label,
+        );
+        expect(expected[0]).toBe("Core");
+        expect(
+          industryLine(
+            readFileSync(resolve(distDir, "tools", "index.md"), "utf8"),
+          ),
+        ).toBe(`Industry: ${expected.join(", ")}`);
+      });
+
+      it("gives the home page no Industry line", () => {
+        const distDir = distDirOrSkip();
+        if (distDir === null) return;
+        expect(
+          industryLine(readFileSync(resolve(distDir, "index.md"), "utf8")),
+        ).toBeUndefined();
+      });
     });
 
     it("no llms.txt line ends in a bare `>` or `: >`", () => {
@@ -844,21 +1189,10 @@ Body text here.`;
       }
     });
 
-    /**
-     * Any capitalised tag, not a list of the ones we remembered.
-     *
-     * This used to name nine components — exactly the nine `renderMdxComponents` handles — so it
-     * mirrored the handler list instead of checking it, and `<UpstreamDefects />` shipped raw into
-     * every text surface while the gate stayed green (CORE-8 review, #253). A lowercase HTML tag is
-     * fine in Markdown; an uppercase one is a component that never rendered.
-     *
-     * The lookbehind keeps TypeScript generics out: a signature like `RoundingOptions<DateUnit>`
-     * in a documented result is not a tag, and a `<` that follows an identifier character never
-     * opens one.
+    /*
+     * Any capitalised tag, not a list of the ones we remembered (CORE-8 review, #253): see
+     * `rawComponentTags`, which skips code spans and fences.
      */
-    const rawComponentTags = (text: string): string[] =>
-      text.match(/(?<![A-Za-z0-9_])<\/?[A-Z][A-Za-z0-9]*(?=[\s/>])/g) ?? [];
-
     it("no built text surface carries a raw component tag", () => {
       const distDir = distDirOrSkip();
       if (distDir === null) return;

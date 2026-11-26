@@ -1,12 +1,14 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
+import { roundingMembers } from "../../internal/typedOptions";
+import { isTimeUnitName } from "../../internal/unitNames";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
-  isObject,
+  isOptionsObject,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isValidTime, isValidTimeUnit } from "../validate";
 
 /**
  * Round an ISO 8601 time string to the specified time unit.
@@ -56,18 +58,18 @@ export function roundTime(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidTime(value) || !isValidTimeUnit(smallestUnit)) return "";
+    const source = plainTimeOf(value);
+    if (source === null || !isTimeUnitName(smallestUnit)) return "";
 
     try {
-      const source = Temporal.PlainTime.from(value);
       const result = source.round({
         smallestUnit,
         roundingIncrement,

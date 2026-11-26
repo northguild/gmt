@@ -1,0 +1,38 @@
+---
+title: "An HL7 Time Read as UTC"
+description: A lab observation time sent as an HL7 date-time with no offset, stored as a UTC instant the message never stated.
+industries: [healthcare]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="An HL7 Time Read as UTC"
+  description="A lab system in Helsinki sends an HL7 observation time, 20240615103000, with no offset. The receiving system stores an instant."
+  naiveCode={`// The naive approach: the digits of an HL7 time, read as UTC
+const value = "20240615103000"; // OBX-14 with no offset
+const iso = value.slice(0, 4) + "-" + value.slice(4, 6) + "-" + value.slice(6, 8) + "T" + value.slice(8, 10) + ":" + value.slice(10, 12) + ":" + value.slice(12, 14) + "Z";
+new Date(iso).toISOString();
+// "2024-06-15T10:30:00.000Z" — an instant the message never stated`}
+  explanation={`HL7 says a time with no offset is the local time of the sender. Appending Z invents UTC. In Helsinki in June the clocks are three hours ahead of UTC, so the event happened at 07:30 UTC, three hours earlier than the stored instant. parseHL7 returns a local time and no instant, so the zone has to come from you. A value sent with an offset names an instant, and parseHL7 reads it as one.`}
+  gmtCode={`import { parseHL7 } from "@northguild/gmt/healthcare/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+parseHL7("20240615103000");
+// { kind: "local", local: "2024-06-15T10:30:00", precision: "second" }
+
+// The lab is in Helsinki, so you say so.
+resolveLocal("2024-06-15T10:30:00", "Europe/Helsinki");
+// "2024-06-15T07:30:00Z"
+
+parseHL7("20240615103000+0300");
+// { kind: "instant", instant: "2024-06-15T07:30:00Z", offset: "+03:00",
+//   local: "2024-06-15T10:30:00", precision: "second" }`}
+  fixedSpecId="parseHL7"
+/>
+
+The widget opens on a value sent with `-0500`, which is an instant. Delete `-0500` and it becomes
+a local time with no instant, because the message no longer names a place. The full rules
+are in [Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/).
+
+To read a value of your own, use the [HL7 Timestamp Reader](/tools/hl7-timestamp-reader/).

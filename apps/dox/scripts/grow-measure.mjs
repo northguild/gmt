@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smooth-growth gate (context/dox/reference/design-system.md, "Smooth growth").
+ * Smooth-growth gate (context/dox/reference/design-system-widgets.md, "Smooth growth").
  *
  * Measures how a tool page's height changes frame by frame, so "result regions
  * ease instead of popping" is a number and not an impression. For each tool
@@ -11,7 +11,9 @@
  *                server-rendered empty sections;
  *   interaction  after the page rests: switch the preset (or another input),
  *                sample 2 s, drag a handle or range across ~60% of its track
- *                in ~20 pointer steps, sample 2 s.
+ *                in ~20 pointer steps, sample 2 s, then wait until the root has held its
+ *                height for 500 ms with nothing growing (at most 8 s), so the final height
+ *                is read at rest, not mid-ease on slow frames.
  *
  * Per run it reports total growth, the largest frame-to-frame jump, the number
  * of frames over 48 px, the final height, whether every `data-gate="grow"` section is at rest
@@ -73,6 +75,7 @@ import {
   dragProblem,
   emptyRunProblem,
   frameDiagnostic,
+  heldAtRest,
   withJumpDiagnostic,
   jumpProblems,
   locatorCountProblem,
@@ -94,6 +97,10 @@ const JUMP_LIMIT_PX = 48;
 const HEIGHT_MATCH_PX = 1;
 const LOAD_MS = 4000;
 const INTERACT_MS = 2000;
+/** The interaction pass reads its final height once the root has held it this long, growing nothing. */
+const REST_HOLD_MS = 500;
+/** The longest the interaction pass waits for that rest, after its last step. */
+const REST_CAP_MS = 8000;
 
 /* One row per page. `root` is the element whose height is sampled. `preset` is
    the select the interaction pass switches (to the next option); a tool with no
@@ -194,6 +201,16 @@ const PAGES = [
     drag: null,
   },
   {
+    slug: "hl7-timestamp-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "fhir-date-checker",
+    preset: PRESET,
+    drag: null,
+  },
+  {
     slug: "x12-time-reader",
     preset: { ...PRESET, nth: 0 },
     drag: null,
@@ -242,6 +259,41 @@ const PAGES = [
     drag: { role: "slider", name: "Move the date" },
   },
   {
+    slug: "terrestrial-time-stack",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the year" },
+  },
+  {
+    slug: "julian-day-counter",
+    preset: PRESET,
+    drag: null,
+    // The four plates ("hero") and the ruler lanes keep their boxes across every preset and
+    // while a Value is typed.
+    holdStill: {
+      parts: ["hero", "ruler"],
+      typing: {
+        field: { role: "textbox", name: "Value" },
+        text: "2026-01-01T12:00:00Z",
+        parts: ["hero", "ruler"],
+      },
+    },
+  },
+  {
+    slug: "double-precision-meter",
+    preset: PRESET,
+    drag: { role: "slider", name: "Move the year" },
+    // The four plates ("hero") and the drift plot keep their boxes across every preset and while
+    // an Instant is typed.
+    holdStill: {
+      parts: ["hero", "frame"],
+      typing: {
+        field: { role: "textbox", name: "Instant" },
+        text: "2026-06-15T13:47:12.345678912Z",
+        parts: ["hero", "frame"],
+      },
+    },
+  },
+  {
     slug: "elapsed-vs-clock-difference",
     preset: PRESET,
     drag: { role: "slider", name: "Move the end" },
@@ -250,6 +302,71 @@ const PAGES = [
     slug: "stored-time-audit",
     preset: PRESET,
     drag: null,
+  },
+  {
+    slug: "tai64n-log-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "fix-timestamp-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "ccsds-time-code-decoder",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "code-b-day-ruler",
+    preset: PRESET,
+    drag: { role: "slider", name: "Day of year" },
+  },
+  {
+    slug: "ssim-date-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "report-time-resolver",
+    preset: { role: "combobox", name: "METAR preset" },
+    drag: { role: "slider", name: "Move the reference" },
+  },
+  {
+    slug: "swift-value-date-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "gtfs-time-reader",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "gtfs-service-day-clock",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "gtfs-trip-board",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "ptp-clock-converter",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "operating-schedule-checker",
+    preset: PRESET,
+    drag: null,
+  },
+  {
+    slug: "opening-hours-board",
+    preset: PRESET,
+    drag: { role: "slider", name: "From" },
   },
   {
     slug: "holiday-rule-builder",
@@ -286,6 +403,14 @@ const PAGES = [
     preset: null,
     click: { role: "button", name: "Check again" },
     presetNote: "no preset; clicks Check again",
+    drag: null,
+  },
+  {
+    slug: "sunshine-protection-act",
+    path: "/check/us-sunshine-protection-act/",
+    preset: null,
+    click: { role: "radio", name: "Proposals" },
+    presetNote: "no preset; switches to the Proposals view",
     drag: null,
   },
   {
@@ -352,7 +477,7 @@ const PAGES = [
   root: `[data-widget="${WIDGET_OF[p.slug] ?? p.slug}"]`,
 }));
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: PAGES.map((p) => p.path),
 });
@@ -757,6 +882,20 @@ async function waitForRest(page, rootSelector, capMs = 8000) {
   return false;
 }
 
+/**
+ * Waits, polling from Node every 100 ms, until the sampled frames show the root held at rest for
+ * `REST_HOLD_MS`. Returns false once `REST_CAP_MS` of polls have passed; each poll's round trip
+ * adds to that, so the real cap is a little longer.
+ */
+async function waitForHeldRest(page) {
+  for (let waited = 0; ; waited += 100) {
+    const recent = await page.evaluate(() => window.__grow.frames.slice(-240));
+    if (heldAtRest(recent, REST_HOLD_MS)) return true;
+    if (waited >= REST_CAP_MS) return false;
+    await sleep(100);
+  }
+}
+
 /* True when every `data-gate="grow"` section is at rest. Polls up to 1 s so the timeout
    fallback (duration + 100 ms) has run. */
 async function growsAtRest(page) {
@@ -1053,6 +1192,8 @@ async function runOneUnguarded(
         frames = [];
         await page.evaluate(() => window.__grow.start());
         await sleep(INTERACT_MS);
+        if (!(await waitForHeldRest(page)))
+          problems.push("root not at rest 8 s after the interaction");
         frames = await page.evaluate(() => window.__grow.stop());
       } else {
         await page.evaluate(() => window.__grow.start());
@@ -1065,6 +1206,8 @@ async function runOneUnguarded(
           problems.push(...skippedProblem("the drag", skip2));
           await sleep(INTERACT_MS);
         } else notes.push("no drag handle");
+        if (!(await waitForHeldRest(page)))
+          problems.push("root not at rest 8 s after the interaction");
         frames = await page.evaluate(() => window.__grow.stop());
       }
       if (!reduce && def.holdStill) {

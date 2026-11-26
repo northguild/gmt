@@ -3,14 +3,13 @@ import { Temporal } from "../../internal/temporal";
 import {
   bandsByTier,
   frameZoned,
-  instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   parseTiers,
   walkFreeTime,
   zoneFrame,
 } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { FreeTimeBasis, FreeTimeOptions } from "../../types";
 
 /** A band of chargeable-day ordinals and how many of the charged days fell in it. */
@@ -132,9 +131,14 @@ export function chargeableDays(
     // Read after the terms, so a non-object `options` is never read from.
     const tiers = terms === null ? null : parseTiers(options.tiers);
     const frame = terms === null ? null : zoneFrame(terms.timeZone);
+    const startInstant = instantOf(clockStart);
+    if (startInstant === null) {
+      return null;
+    }
+
+    const endInstant = instantOf(clockEnd);
     if (
-      !isValidInstant(clockStart) ||
-      !isValidInstant(clockEnd) ||
+      endInstant === null ||
       terms === null ||
       frame === null ||
       allowed === null ||
@@ -143,8 +147,8 @@ export function chargeableDays(
       return null;
     }
 
-    const start = frameZoned(instantFrom(clockStart), frame);
-    const end = frameZoned(instantFrom(clockEnd), frame);
+    const start = frameZoned(startInstant, frame);
+    const end = frameZoned(endInstant, frame);
     if (Temporal.ZonedDateTime.compare(start, end) > 0) {
       return null;
     }

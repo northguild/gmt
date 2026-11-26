@@ -23,7 +23,7 @@ lines, links slices that exist and stay within 200 lines, and records the Dox de
 
 ## 2. Blocked by
 
-Read the story's `Blocked by` cell in `context/domination/tracker.md` (or `context/dox/tracker.md`).
+Read the story's `Blocked by` cell in `context/domination/tracker.md` (or `context/dox/tracker.md`, or `context/canary/tracker.md` for `CNRY-*`).
 A non-empty cell means something has to land first: say so instead of working around it. A
 `(parenthesised)` entry is not a blocker — it is a shared primitive this story builds itself, so
 fold it into the work and say so. `pnpm deps:ready` lists what is startable.
@@ -39,9 +39,10 @@ slice: `/pipeline` says who builds instead.
 
 `finalizer` flips the story's `Status` to `Done` and runs `pnpm deps:sync`. If the work changed
 what the story consumes, update its `## What gmt provides (do not re-implement)` section first —
-the `Blocked by` column is generated from it. It then folds and deletes the story's spec (see
-[finalizer step 10](../../finalizer.md), after `validate` passes): Decisions to `issues/<ID>.md` or `built.md`, inbound
-references rewritten, the spec folder and its index line removed.
+the `Blocked by` column is generated from it. It then deletes the story's planning files (see
+[finalizer step 10](../../finalizer.md), after `validate` passes): its issue file, spec folder and
+research, with any rule the code cannot show moved into a comment beside that code and every
+inbound reference rewritten.
 
 ## 5. Optimize
 

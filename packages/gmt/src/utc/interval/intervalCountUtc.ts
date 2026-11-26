@@ -1,8 +1,8 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
 import { countZonedBuckets, resolveDateTimeUnit } from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
-import { isValidUtc } from "../validate/isValidUtc";
+import { isDateTimeUnitName } from "../../internal/unitNames";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Count how many `unit` boundaries a UTC interval crosses.
@@ -39,7 +39,9 @@ export function intervalCountUtc(
     return null;
   }
 
-  if (!isValidUtc(start) || !isValidUtc(end)) {
+  const startInstant = utcInstantOf(start);
+  const endInstant = utcInstantOf(end);
+  if (startInstant === null || endInstant === null) {
     return null;
   }
 
@@ -49,13 +51,13 @@ export function intervalCountUtc(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
-    const startVal = Temporal.Instant.from(start).toZonedDateTimeISO("UTC");
-    const endVal = Temporal.Instant.from(end).toZonedDateTimeISO("UTC");
+    const startVal = startInstant.toZonedDateTimeISO("UTC");
+    const endVal = endInstant.toZonedDateTimeISO("UTC");
 
     const order = Temporal.ZonedDateTime.compare(startVal, endVal);
 

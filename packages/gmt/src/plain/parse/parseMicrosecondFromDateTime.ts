@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the microsecond (0-999) for a given ISO 8601 datetime string.
@@ -16,10 +15,10 @@ import { isValidDateTime } from "../validate";
  * @example parseMicrosecondFromDateTime("invalid") // ""
  */
 export function parseMicrosecondFromDateTime(value: string): string {
-  if (!isValidDateTime(value)) return "";
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return "";
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     return dateTime.microsecond.toString().padStart(3, "0");
   } catch {
     return "";

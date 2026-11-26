@@ -10,14 +10,19 @@ import userEvent from "@testing-library/user-event";
 import { renderHtml } from "~/widgets/test-fixture";
 import { installJsdomShims } from "../test/jsdom-shims";
 import { renderGlobeTemplate } from "./globe-mount";
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 
 installJsdomShims();
 
 const calls: string[] = [];
 let selectListener: ((reading: { id: string } | null) => void) | undefined;
 let interactListener: ((kind?: string) => void) | undefined;
+let zoomListener: ((dir: 1 | -1, closeness: number) => void) | undefined;
 /* What the stand-in globe has selected: a tap picks a zone, or clears the choice, before it reports. */
 let selected: string | null = "Europe/London";
+/* Whether the stand-in's `focusZone` reports a selection, as the real one does. Off by default, so
+   the wiring tests see only the selections they make. */
+let focusSelects = false;
 let engineOptions:
   | {
       framing: (
@@ -26,8 +31,23 @@ let engineOptions:
       ) => { cx: number; cy: number; radius: number };
       framingWatch: Element[];
       entrance?: string;
+      pauseWhenHidden?: Element;
+      pauseWhile?: (hold: (held: boolean) => void) => () => void;
     }
   | undefined;
+
+const cue = vi.fn();
+/** Locks the globe was asked for, each waiting for the globe to start it. */
+const locks: (() => void)[] = [];
+vi.mock("./sound/cue", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./sound/cue")>()),
+  cue: (...args: unknown[]) => cue(...args),
+}));
+
+const cueOnAppear = vi.fn();
+vi.mock("./sound/appear", () => ({
+  cueOnAppear: (...args: unknown[]) => cueOnAppear(...args),
+}));
 
 vi.mock("./globe", () => ({
   initGlobe: async (
@@ -40,14 +60,21 @@ vi.mock("./globe", () => ({
     return {
       getZones: () => [{ id: "Asia/Tokyo" }, { id: "Europe/London" }],
       getSelected: () => selected,
-      focusZone: (id: string) => calls.push(`focus ${id}`),
+      focusZone: (id: string) => {
+        calls.push(`focus ${id}`);
+        if (focusSelects) selectListener?.({ id });
+      },
       zoomBy: (factor: number) => calls.push(`zoomBy ${factor.toFixed(2)}`),
       setZoom: (value: number) => calls.push(`setZoom ${value}`),
       onSelect: (fn: typeof selectListener) => {
         selectListener = fn;
       },
+      lockOn: (onStart: () => void) => locks.push(onStart),
       onInteract: (fn: (kind?: string) => void) => {
         interactListener = fn;
+      },
+      onZoom: (fn: typeof zoomListener) => {
+        zoomListener = fn;
       },
       requestRender: () => calls.push("render"),
       destroy: () => calls.push("destroy"),
@@ -72,9 +99,14 @@ async function mount(
 
 beforeEach(() => {
   calls.length = 0;
+  cue.mockClear();
+  cueOnAppear.mockClear();
+  locks.length = 0;
   selectListener = undefined;
   interactListener = undefined;
+  zoomListener = undefined;
   selected = "Europe/London";
+  focusSelects = false;
   engineOptions = undefined;
   lifetime = new AbortController();
 });
@@ -111,6 +143,16 @@ describe("mountGlobe", () => {
     expect(calls).toEqual(["zoomBy 1.40", "zoomBy 0.71", "setZoom 1"]);
   });
 
+  it("plays the Lens servo for every zoom step, rising in and falling out, at the camera's closeness", async () => {
+    await mount();
+    zoomListener?.(1, 0.25);
+    zoomListener?.(-1, 0);
+    expect(cue.mock.calls).toEqual([
+      ["zoomIn", 0.25],
+      ["zoomOut", 0],
+    ]);
+  });
+
   it("follows a selection made on the globe", async () => {
     await mount();
     selectListener?.({ id: "Asia/Tokyo" });
@@ -123,6 +165,18 @@ describe("mountGlobe", () => {
     );
   });
 
+  it("locates a place the reader chooses, and not the zone it was seeded with", async () => {
+    focusSelects = true;
+    await mount({ zone: "Asia/Tokyo" });
+    expect(cue).not.toHaveBeenCalled();
+    selectListener?.({ id: "Europe/London" });
+    selectListener?.(null);
+    expect(cue).not.toHaveBeenCalled();
+    // The sound waits for the globe's lock on the pin, and plays once it starts.
+    for (const start of locks) start();
+    expect(cue.mock.calls).toEqual([["locate"]]);
+  });
+
   it("seeds the zone it was asked for and tears down", async () => {
     const { handle } = await mount({ zone: "Asia/Tokyo" });
     expect(calls).toContain("focus Asia/Tokyo");
@@ -131,10 +185,48 @@ describe("mountGlobe", () => {
   });
 });
 
+describe("every globe pauses", () => {
+  it("watches the framed globe's own surface and the cover, as the hero does", async () => {
+    await mount();
+    expect(engineOptions?.pauseWhenHidden).toBeInstanceOf(HTMLElement);
+    const holds: boolean[] = [];
+    const stop = engineOptions?.pauseWhile?.((held) => holds.push(held));
+    const menu = document.body;
+    menu.setAttribute("data-mobile-menu-expanded", "");
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(holds).toEqual([true]);
+    menu.removeAttribute("data-mobile-menu-expanded");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(holds).toEqual([true, false]);
+    stop?.();
+  });
+
+  it("gives the hero the same hold, on its whole stage", async () => {
+    await mount({}, { space: true });
+    expect(engineOptions?.pauseWhenHidden).toBeInstanceOf(HTMLElement);
+    expect(engineOptions?.pauseWhile).toBeTypeOf("function");
+  });
+});
+
 describe("mountGlobe in space mode", () => {
   const finder = () =>
     screen.getByRole("region", { name: "Zone finder", hidden: true });
   const magnifier = () => screen.getByRole("button", { name: "Find a zone" });
+
+  /* The landing's locked layout (a wide landscape screen) or the stacked one, read live. */
+  function layout(locked: boolean) {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === HOME_LOCKED_QUERY ? locked : false,
+          media: query,
+        }) as MediaQueryList,
+    );
+  }
+
+  /* The tests below run on the landing's locked layout, where a touch of the globe opens the finder. */
+  beforeEach(() => layout(true));
 
   it("keeps the zone finder shut until the globe is worked", async () => {
     await mount({}, { space: true });
@@ -153,6 +245,24 @@ describe("mountGlobe in space mode", () => {
     expect(before).toHaveFocus();
   });
 
+  it("opens from the magnifier without scrolling the page to the search", async () => {
+    await mount({}, { space: true });
+    const user = userEvent.setup();
+    const scrollY = window.scrollY;
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    await user.click(magnifier());
+    const search = screen.getByRole("combobox", { name: "Find a zone" });
+    expect(search).toHaveFocus();
+    const onSearch = focus.mock.contexts.flatMap((target, i) =>
+      target === search ? [focus.mock.calls[i]?.[0]] : [],
+    );
+    expect(onSearch.length).toBeGreaterThan(0);
+    for (const options of onSearch)
+      expect(options).toEqual({ preventScroll: true });
+    expect(window.scrollY).toBe(scrollY);
+    focus.mockRestore();
+  });
+
   it("stays shut after the reader closes it, until the magnifier reopens it", async () => {
     await mount({}, { space: true });
     const user = userEvent.setup();
@@ -165,6 +275,28 @@ describe("mountGlobe in space mode", () => {
     await user.click(magnifier());
     expect(finder()).not.toHaveAttribute("inert");
     expect(screen.getByRole("combobox", { name: "Find a zone" })).toHaveFocus();
+  });
+
+  describe("by layout", () => {
+    it("stacked, a tap that picks a zone leaves the sheet shut; the magnifier opens it", async () => {
+      layout(false);
+      await mount({}, { space: true });
+      interactListener?.("tap");
+      expect(finder()).toHaveAttribute("inert");
+      expect(magnifier()).toHaveAttribute("aria-expanded", "false");
+      interactListener?.();
+      expect(magnifier()).toHaveAttribute("aria-expanded", "false");
+
+      await userEvent.setup().click(magnifier());
+      expect(magnifier()).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("locked, a tap that picks a zone still opens the finder", async () => {
+      layout(true);
+      await mount({}, { space: true });
+      interactListener?.("tap");
+      expect(magnifier()).toHaveAttribute("aria-expanded", "true");
+    });
   });
 
   it("reopens for a tap that picks a zone, with focus on the zone list", async () => {
@@ -286,6 +418,24 @@ describe("mountGlobe in space mode", () => {
   it("asks the globe to open with the dawn", async () => {
     await mount({}, { space: true });
     expect(engineOptions?.entrance).toBe("dawn");
+  });
+
+  it("leaves the landing's arrival to its dawn sounds, where a page globe plays the Steel horizon", async () => {
+    await mount({}, { space: true });
+    expect(cueOnAppear).not.toHaveBeenCalled();
+    const { handle } = await mount();
+    expect(cueOnAppear).toHaveBeenCalledExactlyOnceWith(
+      expect.any(HTMLElement),
+      "appearGlobe",
+      expect.any(AbortSignal),
+    );
+    const [, , life] = cueOnAppear.mock.calls[0] as [
+      unknown,
+      unknown,
+      AbortSignal,
+    ];
+    handle.destroy();
+    expect(life.aborted).toBe(true);
   });
 
   it("leaves the page globe without a drawer or a magnifier", async () => {

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * CORE-81: files the canary issues. A thin shell around the pure decision in
+ * CORE-81: files the canary issue. A thin shell around the pure decision in
  * `scripts/lib/canary-issues.mjs`: it reads the verdict files a canary wrote, applies the dry-run
- * force flags, asks the planner what to do and runs that through the GitHub CLI.
+ * force flags, asks the planner what to do and runs that through the GitHub CLI. One run files one
+ * rolling issue per workflow: it opens, rewrites (with a comment) or closes it, and closes any
+ * per-finding issue left open from the earlier shape.
  *
- *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds>
+ *   node scripts/canary-report.mjs <temporal-oracle|leap-seconds|us-clock-watch>
  *        [--force-removable=<id>] [--force-mismatch] [--force-native-failure]
- *        [--force-swap-ready] [--force-leap-difference] [--print]
+ *        [--force-swap-ready] [--force-leap-difference] [--force-us-clock-difference] [--print]
  *
  * Exit 0 when it reported (or had nothing to report), 1 when a `gh` call failed, 2 on a usage
  * error (nothing is filed), on `--force-removable` naming an id the check did not list (nothing is
@@ -14,6 +16,10 @@
  * canary that could not run is a finding: so that force is dropped, said so on stderr and in the
  * summary, and the real findings are filed as usual before the exit 2. `--print` writes the
  * summary and the planned actions to stdout and calls no `gh`.
+ *
+ * Issues are filed only from `main`. A run on another branch (`GITHUB_REF_NAME`) calls no `gh`
+ * either: the job summary lists what it would have filed, so a branch or a dry-run dispatch can
+ * be checked without touching the issues that the weekly runs comment on.
  *
  * Node built-ins only and no `Date`: the workflows run it with no install and no build. `gh`
  * authenticates from `GH_TOKEN`. The job summary goes to `$GITHUB_STEP_SUMMARY`, or to stdout when
@@ -31,6 +37,7 @@ import {
   ISSUE_TYPE,
   expectedSources,
   applyForce,
+  foldedComment,
   planIssueActions,
 } from "./lib/canary-issues.mjs";
 import { summaryMarkdown } from "./lib/canary-summary.mjs";
@@ -39,9 +46,9 @@ import { summaryMarkdown } from "./lib/canary-summary.mjs";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
 const USAGE =
-  "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds> " +
+  "Usage: node scripts/canary-report.mjs <temporal-oracle|leap-seconds|us-clock-watch> " +
   "[--force-removable=<id>] [--force-mismatch] [--force-native-failure] " +
-  "[--force-swap-ready] [--swap-skipped] [--force-leap-difference] [--print]";
+  "[--force-swap-ready] [--swap-skipped] [--force-leap-difference] [--force-us-clock-difference] [--print]";
 
 /** Flags each workflow accepts besides `--print`. */
 const FORCE_FLAGS = {
@@ -53,6 +60,7 @@ const FORCE_FLAGS = {
     "--swap-skipped",
   ],
   "leap-seconds": ["--force-leap-difference"],
+  "us-clock-watch": ["--force-us-clock-difference"],
 };
 
 /** What `gh label create` gets for each label the canaries use. Existing labels are never edited. */
@@ -82,7 +90,7 @@ const LABEL_SPECS = {
 
 /**
  * @param {string[]} argv  the arguments after `node scripts/canary-report.mjs`
- * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds", force: Force, print: boolean, swapSkipped?: true }
+ * @returns {{ ok: true, workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", force: Force, print: boolean, swapSkipped?: true }
  *   | { ok: false, error: string }}
  */
 export function parseArgs(argv) {
@@ -92,7 +100,11 @@ export function parseArgs(argv) {
     error: `canary-report: ${detail}\n${USAGE}`,
   });
   const [workflow, ...flags] = args;
-  if (workflow !== "temporal-oracle" && workflow !== "leap-seconds") {
+  if (
+    workflow !== "temporal-oracle" &&
+    workflow !== "leap-seconds" &&
+    workflow !== "us-clock-watch"
+  ) {
     return fail(
       workflow === undefined
         ? "no workflow given"
@@ -124,8 +136,10 @@ export function parseArgs(argv) {
       force.swapReady = true;
     } else if (flag === "--swap-skipped") {
       swapSkipped = true;
-    } else {
+    } else if (flag === "--force-leap-difference") {
       force.leapDifference = true;
+    } else {
+      force.usClockDifference = true;
     }
   }
   return {
@@ -165,7 +179,7 @@ export function ensureLabels(gh, needed) {
 
 /**
  * @param {Gh} gh
- * @returns {{ number: number, body: string, labels: { name: string }[] }[]}
+ * @returns {{ number: number, url: string, body: string, labels: { name: string }[] }[]}
  */
 export function listOpenCanaryIssues(gh) {
   return JSON.parse(
@@ -179,19 +193,24 @@ export function listOpenCanaryIssues(gh) {
       "--limit",
       "1000",
       "--json",
-      "number,body,labels",
+      "number,url,body,labels",
     ]),
   );
 }
 
 /**
  * Runs every action in order. A failed call is recorded and the next action still runs; an action
- * already run stays done, and the next weekly run comments on it.
+ * already run stays done, and the next run plans from what is open then. A folded issue is closed
+ * with a pointer to its group's rolling issue, so it waits for that issue's number: the one just
+ * opened, or the one just rewritten. If the rolling issue was not filed, the folded issue stays
+ * open.
  * @param {Gh} gh
  * @param {Action[]} actions
  * @returns {ActionResult[]}
  */
 export function runActions(gh, actions) {
+  /** @type {Map<string, number>} */
+  const rolling = new Map();
   return actions.map((action) => {
     try {
       if (action.kind === "comment") {
@@ -199,6 +218,49 @@ export function runActions(gh, actions) {
           ["issue", "comment", String(action.issue), "--body-file", "-"],
           action.body,
         );
+        return { action, ok: true, issue: action.issue };
+      }
+      if (action.kind === "edit") {
+        gh(
+          [
+            "issue",
+            "edit",
+            String(action.issue),
+            "--title",
+            action.title,
+            ...action.labels.flatMap((label) => ["--add-label", label]),
+            ...action.removeLabels.flatMap((label) => [
+              "--remove-label",
+              label,
+            ]),
+            "--body-file",
+            "-",
+          ],
+          action.body,
+        );
+        rolling.set(action.key, action.issue);
+        return { action, ok: true, issue: action.issue };
+      }
+      if (action.kind === "close") {
+        const target = rolling.get(action.key);
+        if (action.reason === "folded" && target === undefined) {
+          return {
+            action,
+            ok: false,
+            error: `the rolling issue was not filed, so #${action.issue} stays open`,
+          };
+        }
+        gh([
+          "issue",
+          "close",
+          String(action.issue),
+          "--reason",
+          action.reason === "clean" ? "completed" : "not planned",
+          "--comment",
+          action.reason === "clean"
+            ? action.body
+            : foldedComment(/** @type {number} */ (target)),
+        ]);
         return { action, ok: true, issue: action.issue };
       }
       const output = gh(
@@ -224,11 +286,29 @@ export function runActions(gh, actions) {
           error: `could not read the new issue number from gh's output: ${output.trim()}`,
         };
       }
+      rolling.set(action.key, Number(number));
       return { action, ok: true, issue: Number(number) };
     } catch (error) {
       return { action, ok: false, error: messageOf(error) };
     }
   });
+}
+
+/**
+ * A failed action in words, for stderr.
+ * @param {Action} action
+ */
+function describeAction(action) {
+  switch (action.kind) {
+    case "open":
+      return `open "${action.title}"`;
+    case "edit":
+      return `rewrite #${action.issue}`;
+    case "comment":
+      return `comment on #${action.issue}`;
+    default:
+      return `close #${action.issue}`;
+  }
 }
 
 /** @param {unknown} error */
@@ -260,7 +340,7 @@ export function realGh(args, input) {
  * The verdict file of each source the workflow reads: a missing file is `null`, an unreadable one
  * a could-not-run verdict.
  * @param {string} root
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  * @param {boolean} swapSkipped  the swap legs were skipped on purpose: their files are not read
  */
 function readVerdicts(root, workflow, swapSkipped) {
@@ -361,6 +441,30 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
       : "(local run)";
   const context = { workflow, runUrl, swapSkipped };
 
+  const branch = env.GITHUB_REF_NAME;
+  if (!print && branch !== undefined && branch !== "main") {
+    const planned = planIssueActions(forced, [], context);
+    const reason =
+      planned.length === 0
+        ? `this run is on ${branch}; issues are filed only from main, and there was nothing to file.`
+        : `this run is on ${branch}; issues are filed only from main. It would have filed: ${planned
+            .map((a) => (a.kind === "open" ? a.title : a.key))
+            .join("; ")}.`;
+    emitSummary(
+      summaryMarkdown(
+        workflow,
+        verdicts,
+        force,
+        null,
+        reason,
+        skipped,
+        swapSkipped,
+      ),
+    );
+    stdout(`${JSON.stringify(planned, null, 2)}\n`);
+    return skippedCode;
+  }
+
   if (print) {
     emitSummary(
       summaryMarkdown(
@@ -385,34 +489,20 @@ export function main(argv, { root, env, gh, stdout, stderr }) {
   let notFiledReason;
   let code = skippedCode;
   try {
-    // With no open issues every finding plans as `open`, so this names every label that could be
-    // needed; with no finding at all, no `gh` call is made.
+    // With no open issues a run that has findings plans as `open`, so this names every label that
+    // could be needed. The open issues are listed on every run: a clean run closes them.
     const labels = new Set([CANARY_LABEL]);
     const planned = planIssueActions(forced, [], context);
     for (const action of planned) {
       if (action.kind === "open") action.labels.forEach((l) => labels.add(l));
     }
-    if (planned.length === 0) {
-      results = [];
-    } else {
-      ensureLabels(gh, [...labels]);
-      const actions = planIssueActions(
-        forced,
-        listOpenCanaryIssues(gh),
-        context,
-      );
-      results = runActions(gh, actions);
-      for (const { action, ok, error } of results) {
-        if (ok) continue;
-        code = 1;
-        stderr(
-          `canary-report: failed to ${
-            action.kind === "open"
-              ? `open "${action.title}"`
-              : `comment on #${action.issue}`
-          }: ${error}\n`,
-        );
-      }
+    if (planned.length > 0) ensureLabels(gh, [...labels]);
+    const openIssues = listOpenCanaryIssues(gh);
+    results = runActions(gh, planIssueActions(forced, openIssues, context));
+    for (const { action, ok, error } of results) {
+      if (ok) continue;
+      code = 1;
+      stderr(`canary-report: failed to ${describeAction(action)}: ${error}\n`);
     }
   } catch (error) {
     // Labels or the issue list failed: nothing was filed.

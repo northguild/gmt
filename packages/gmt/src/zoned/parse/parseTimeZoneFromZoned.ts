@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Extract the IANA timeZone identifier from an ISO 8601 zoned datetime string.
@@ -14,11 +13,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseTimeZoneFromZoned("invalid") // ""
  */
 export function parseTimeZoneFromZoned(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
   try {
-    return zonedDateTimeFrom(value).timeZoneId ?? "";
+    return zonedDateTime.timeZoneId ?? "";
   } catch {
     return "";
   }

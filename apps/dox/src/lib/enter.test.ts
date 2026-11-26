@@ -69,6 +69,26 @@ describe("enter", () => {
     expect(onEntered).not.toHaveBeenCalled();
   });
 
+  it("stops unfinished when its signal aborts: no timer, no late callback", () => {
+    const onEntered = vi.fn();
+    const life = new AbortController();
+    enter(el, { onEntered, signal: life.signal });
+    life.abort();
+    vi.advanceTimersByTime(1500);
+    animationEnd(el);
+    expect(onEntered).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does nothing under a signal that has already aborted", () => {
+    const onEntered = vi.fn();
+    const life = new AbortController();
+    life.abort();
+    enter(el, { onEntered, signal: life.signal });
+    vi.advanceTimersByTime(1500);
+    expect(onEntered).not.toHaveBeenCalled();
+  });
+
   it("finishes on its timer when animationend never comes, and only once", () => {
     const onEntered = vi.fn();
     enter(el, { delayMs: 80, onEntered });

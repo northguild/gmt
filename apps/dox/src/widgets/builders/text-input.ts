@@ -7,7 +7,8 @@
  * autofill behave: `inputMode` picks the keyboard, `autocomplete` and `spellcheck` quiet
  * the browser's help where it would mangle a code or a timestamp. `spellcheck: false`
  * marks such a value, so it also turns off the on-screen keyboard's capitals.
- * `maxLength` caps what can be typed; the tool's parser states the same cap.
+ * `maxLength` caps what can be typed; the tool's parser states the same cap. `masked` draws
+ * the value as dots (`type="password"`) for a value typed where others can see the screen.
  */
 import { gateAttr, type GateOption } from "./gate";
 import { html, type SafeHtml } from "./html";
@@ -37,6 +38,8 @@ export interface TextInputOptions extends GateOption {
   /** The most characters the field takes: a whole number, 1 or more. */
   maxLength?: number;
   placeholder?: string;
+  /** Only `true` is written: the value shows as dots (`type="password"`). */
+  masked?: true;
   /** The hint's id from `field()`. */
   describedBy?: string | undefined;
 }
@@ -52,7 +55,7 @@ export function textInput(o: TextInputOptions): SafeHtml {
   }
   return html`<input
     class="${styles.root}"
-    type="text"
+    type="${o.masked === true ? "password" : "text"}"
     id="${o.id}"
     ${o.value === undefined ? "" : html`value="${o.value}"`}
     ${o.inputMode === undefined ? "" : html`inputmode="${o.inputMode}"`}

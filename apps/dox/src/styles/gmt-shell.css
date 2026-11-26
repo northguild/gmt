@@ -237,6 +237,11 @@ header {
   padding-block-end: calc(var(--sl-nav-pad-y) + 1px);
 }
 
+/* On the landing the name is the page itself: an `<a>` with no `href` (SiteTitle.astro). */
+.site-title:not([href]) {
+  cursor: default;
+}
+
 /* "NorthGuild / gmt v1.21.0": the app name is set in the wordmark's type and
    gmt's theme colour, so it reads as one line with the NorthGuild link. */
 .site-title {
@@ -339,4 +344,39 @@ mobile-starlight-toc nav {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 0.15em;
+}
+
+/* Below 50rem the header's icon group shows only the Settings gear; Dox, GitHub and Discord are
+   in the mobile menu. The landing, which has no menu, shows two buttons and no eyebrow line: the
+   title and the tagline carry the page, and "Prompt" (copy the agent prompt) waits for a wider
+   screen. Here, in the shell layer, because the buttons' `display` is set in `gmt.base` and a
+   rule in Starlight's own layer would lose. */
+@media (width < 50rem) {
+  .header .social-icons > :not([data-settings-control]) {
+    display: none;
+  }
+
+  .gmt-hero-nav [data-copy-prompt],
+  .gmt-herostage .gmt-hero-eyebrow {
+    display: none;
+  }
+}
+
+/* The narrowest phones (320px): the title, the search button, the gear and the menu button must
+   all fit, so the bar's gaps (and the room kept for the menu button) shrink and its side padding
+   takes 12px. A classic 20px scrollbar gutter on a docs page takes 20px more, so the gaps take a
+   quarter, the mark is a little smaller and the wordmark sits at the 12px text floor. */
+@media (width < 24rem) {
+  :root {
+    --sl-nav-gap: 0.25rem;
+    --sl-nav-pad-x: 0.75rem;
+  }
+
+  .header {
+    --gmt-wordmark-size: var(--gmt-text-xs);
+  }
+
+  .gmt-ng-mark {
+    block-size: 1.5rem;
+  }
 }

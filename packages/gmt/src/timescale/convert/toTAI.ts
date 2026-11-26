@@ -19,7 +19,7 @@ import {
  * - "" before 1972-01-01, for a result past year 9999, and on invalid input.
  *
  * @param isoString ISO 8601 instant string
- * @returns the TAI time-scale string, or "" on invalid input or a date before 1972
+ * @returns the TAI time-scale string, or "" on invalid input, a date before 1972, or a TAI result past year 9999
  *
  * @example toTAI("2026-01-01T00:00:00Z") // "2026-01-01T00:00:37 TAI"
  * @example toTAI("2013-06-01T00:00:00Z") // "2013-06-01T00:00:35 TAI"

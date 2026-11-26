@@ -1,5 +1,5 @@
 /*
- * GMT accessibility gates (DOX-D1) — overview.md §3 / DOX-D.md Definition of Done.
+ * GMT accessibility gates (DOX-D1) — context/dox/reference/visual-design.md § "Corners, borders, focus".
  *
  * "Everything gated behind prefers-reduced-motion, prefers-reduced-transparency,
  * and prefers-contrast." Reduced motion is a token swap in gmt-tokens.css plus the
@@ -147,6 +147,13 @@
     forced-color-adjust: none;
   }
 
+  /* A calendar span on the EDI timeline: its edge is a system colour, and its fill is the canvas,
+     so the span reads as an outlined box and never as a solid block. */
+  [data-band="1"] {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+
   .gmt-ng-mark :is(.ng-mark-pane, .ng-mark-sheen) {
     fill: none;
   }
@@ -216,6 +223,17 @@
   .gmt-popover {
     background: Canvas;
     border: 1px solid CanvasText;
+  }
+
+  /* The Double Precision Meter's plot tells its lines apart by dash pattern, so every line is
+     CanvasText and the reader's year is Highlight. */
+  [data-widget="double-precision-meter"] svg :is(line, path) {
+    stroke: CanvasText;
+  }
+
+  [data-widget="double-precision-meter"] [data-gate="moving"] {
+    background: Highlight;
+    border-color: Highlight;
   }
 }
 

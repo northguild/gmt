@@ -4,7 +4,7 @@ import {
   MIN_FILE_TIME,
   NANOSECONDS_PER_TICK,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert a Windows `FILETIME` back to an ISO 8601 instant string.
@@ -44,7 +44,7 @@ export function fromFileTime(value: bigint): string {
     return "";
   }
 
-  return fromNanoseconds(
+  return zonedStringFromEpochNanoseconds(
     (value - FILE_TIME_EPOCH_OFFSET_TICKS) * NANOSECONDS_PER_TICK,
   );
 }

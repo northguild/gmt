@@ -68,6 +68,8 @@ export interface CallField {
   kind: PlaygroundArgKind;
   value?: string;
   unit?: string;
+  /** `enum` — choices that are number literals; the call writes them bare. */
+  numeric?: string[];
   /** `list` element type — numbers and `expr` render bare, everything else is quoted. */
   element?: "string" | "number" | "enum" | "expr";
   /** `list` current elements. */
@@ -144,8 +146,10 @@ export function formatArg(f: CallField): string {
       return formatListArg(f);
     case "intervals":
       return formatIntervalsArg(f);
+    case "enum":
+      return f.numeric?.includes(v) ? v : JSON.stringify(f.value ?? "");
     default:
-      // string + enum
+      // string
       return JSON.stringify(f.value ?? "");
   }
 }

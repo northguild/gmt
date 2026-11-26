@@ -9,30 +9,25 @@
  * moves nothing and no hold is needed.
  */
 import {
+  spanAria,
+  spanLayout,
   timelineAria,
   timelineLayout,
-  type TimelineInput,
   type TimelineLayout,
+  type TimelineSpec,
 } from "~/lib/edi-picture";
-import { durationText, type WidestGap } from "~/lib/edi-widgets";
+import { durationText } from "~/lib/edi-widgets";
+import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./edi-timeline.module.css";
-
-/** What the timeline draws. */
-type TimelineSpec =
-  | { kind: "empty"; text: string }
-  | { kind: "stated"; instant: string }
-  | {
-      kind: "marks";
-      rows: readonly TimelineInput[];
-      gap: WidestGap | null;
-    };
 
 function plot(
   layout: TimelineLayout,
   stated: boolean,
   gap: string,
   aria: string,
+  reference: { label: string } | null = null,
+  band = false,
 ): SafeHtml {
   const ticks = layout.ticks.map(
     (t) =>
@@ -50,16 +45,27 @@ function plot(
         ><span class="${styles.pin}">${stated ? "" : m.n}</span></span
       >`,
   );
+  const ref =
+    reference === null || layout.reference === null
+      ? ""
+      : html`<span class="${styles.reference}" data-side="${layout.reference.side}" style="--x:${layout.reference.at.toFixed(3)}%;--lane:${layout.reference.lane}${band ? `;--n:${layout.reference.at.toFixed(3)}` : ""}"
+          ><span class="${styles.referencePin}"></span
+          ><span class="${styles.referenceLabel}">${reference.label}</span></span
+        >`;
   const bracket =
     layout.span === null
       ? ""
       : html`<span class="${styles.bracket}" style="--from:${layout.span.from.toFixed(3)}%;--to:${layout.span.to.toFixed(3)}%"
           ><span class="${styles.gap}">${gap}</span></span
         >`;
+  const bandHtml =
+    !band || layout.span === null
+      ? ""
+      : html`<span class="${styles.band}" data-band="1" style="--from:${layout.span.from.toFixed(3)}%;--to:${layout.span.to.toFixed(3)}%"></span>`;
   return html`<div class="${styles.plot}" role="img" aria-label="${aria}"
     ><span class="${styles.axis}"></span
     ><span class="${styles.ticks}">${ticks}</span
-    ><span class="${styles.marks}">${marks}</span>${bracket}</div
+    ><span class="${styles.marks}">${marks}${ref}</span>${bracket}${bandHtml}</div
   >`;
 }
 
@@ -68,6 +74,19 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
   if (spec.kind === "empty") {
     return html`<div class="${styles.box}" data-state="empty"
       ><p class="${styles.empty}">${spec.text}</p></div
+    >`;
+  }
+  if (spec.kind === "span") {
+    const layout = spanLayout({
+      from: spec.from,
+      to: spec.to,
+      unit: spec.unit,
+      reference: spec.from,
+    });
+    return html`<div class="${styles.box}" data-state="span"
+      >${plot(layout, false, "", spanAria(spec.label, `${spec.from}T00:00:00Z`), spec.reference, true)}<p class="${styles.caption}"
+        ><span class="${styles.spanLabel}">${spec.label}</span>Calendar dates, no zone</p
+      ></div
     >`;
   }
   if (spec.kind === "stated") {
@@ -88,10 +107,14 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
           : "No chosen zone gives an instant.",
     });
   }
-  const layout = timelineLayout(placed)!;
+  const reference = spec.reference ?? null;
+  const layout = timelineLayout(
+    placed,
+    reference === null ? null : reference.instant,
+  )!;
   const gap = spec.gap === null ? "" : durationText(spec.gap.duration);
   return html`<div class="${styles.box}" data-state="marks"
-    >${plot(layout, false, gap, timelineAria(placed, spec.gap === null ? "" : spec.gap.text, ""))}<p class="${styles.caption}"
+    >${plot(layout, false, gap, timelineAria(placed, spec.gap === null ? "" : spec.gap.text, "", reference), reference)}<p class="${styles.caption}"
       >All times in UTC.</p
     ></div
   >`;
@@ -99,5 +122,5 @@ export function timelineContent(spec: TimelineSpec): SafeHtml {
 
 /** The timeline's slot: the mount writes `timelineContent` into the element with this id. */
 export function ediTimeline(o: { id: string; spec: TimelineSpec }): SafeHtml {
-  return html`<div id="${o.id}">${timelineContent(o.spec)}</div>`;
+  return html`<div id="${o.id}" ${gateAttr("drawn")}>${timelineContent(o.spec)}</div>`;
 }

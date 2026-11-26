@@ -13,6 +13,13 @@
   min-inline-size: 0;
 }
 
+/* The kit's text inputs and selects take the same bevel as the call line, the output and the
+   repeatable rows here; elsewhere they keep the kit's. */
+.body :is(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+}
+
 /* Free text, source text, amounts with a unit and repeatable rows take the whole line. */
 .wide {
   grid-column: 1 / -1;
@@ -69,7 +76,7 @@
   padding-block: 0.375rem;
   padding-inline: 0.625rem;
   border: 1px solid var(--gmt-hairline);
-  border-radius: var(--gmt-radius-sm);
+  border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background-color: var(--gmt-surface-2);
   color: var(--gmt-ice);
@@ -114,7 +121,7 @@
   min-inline-size: var(--gmt-target-min);
   min-block-size: var(--gmt-target-min);
   border: 1px solid var(--gmt-hairline);
-  border-radius: var(--gmt-radius-sm);
+  border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background-color: var(--gmt-surface-2);
   font: inherit;

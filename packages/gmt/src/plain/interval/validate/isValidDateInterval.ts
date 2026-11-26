@@ -1,6 +1,4 @@
-import { Temporal } from "../../../internal/temporal";
-import { parseCalendarDateValue } from "../../../internal";
-import { isValidCalendarDate } from "../../validate";
+import { dateIntervalOf } from "../../../internal/intervalChecks";
 
 /**
  * Return true if `start` and `end` form a valid date interval — both parseable as
@@ -25,22 +23,5 @@ import { isValidCalendarDate } from "../../validate";
  * @example isValidDateInterval("2024-10-03[u-ca=hebrew]", "2024-12-31") // true (mixed calendars — ordering is calendar-independent)
  */
 export function isValidDateInterval(start: string, end: string): boolean {
-  if (typeof start !== "string" || typeof end !== "string") {
-    return false;
-  }
-
-  if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
-    return false;
-  }
-
-  try {
-    return (
-      Temporal.PlainDate.compare(
-        parseCalendarDateValue(start),
-        parseCalendarDateValue(end),
-      ) <= 0
-    );
-  } catch {
-    return false;
-  }
+  return dateIntervalOf(start, end) !== null;
 }

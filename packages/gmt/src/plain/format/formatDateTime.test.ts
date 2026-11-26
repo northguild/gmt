@@ -6,50 +6,51 @@ import {
   MustTestLocales,
   oneOfIcu,
 } from "../../test";
+import { hostDateTimeText } from "../../test/hostIntl";
 import { mockTemporalPlainDateTimeFromThrow } from "../../test/mocks";
 import { formatDateTime } from "./formatDateTime";
 
 describe("formatDateTime", () => {
   // en-US
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"Saturday, February 3, 2024 at 2:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"February 3, 2024 at 2:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"Feb 3, 2024, 2:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2/3/24, 2:30 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"February 3, 2024 at 2:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"Feb 3, 2024, 2:30 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"02/03/2024, 02:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"02/03/2024, 02:30 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"02/03/2024, 02:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2/3/2024, 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for en-US with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.enUS, options)).toEqual(
-        expected,
+    "formats valid datetime $value for en-US with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.enUS, options)).toBe(
+        hostDateTimeText(MustTestLocales.enUS, options, value),
       );
     },
   );
 
   // en-GB
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"Saturday, 3 February 2024 at 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 February 2024 at 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 Feb 2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"03/02/2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 February 2024 at 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 Feb 2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03/02/2024, 02:30:45 pm"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03/02/2024, 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for en-GB with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.enGB, options)).toEqual(
-        expected,
+    "formats valid datetime $value for en-GB with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.enGB, options)).toBe(
+        hostDateTimeText(MustTestLocales.enGB, options, value),
       );
     },
   );
@@ -78,22 +79,22 @@ describe("formatDateTime", () => {
 
   // fr-FR
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"samedi 3 février 2024 à 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 février 2024 à 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 févr. 2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"03/02/2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 février 2024 à 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 févr. 2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03/02/2024 02:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03/02/2024 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for fr-FR with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.frFR, options)).toEqual(
-        expected,
+    "formats valid datetime $value for fr-FR with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.frFR, options)).toBe(
+        hostDateTimeText(MustTestLocales.frFR, options, value),
       );
     },
   );
@@ -158,105 +159,106 @@ describe("formatDateTime", () => {
 
   // pt-PT
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"sábado, 3 de fevereiro de 2024 às 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 de fevereiro de 2024 às 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"03/02/2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"03/02/24, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 de fevereiro de 2024 às 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3/02/2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03/02/2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03/02/2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03/02/2024, 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for pt-PT with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.ptPT, options)).toEqual(
-        expected,
+    "formats valid datetime $value for pt-PT with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.ptPT, options)).toBe(
+        hostDateTimeText(MustTestLocales.ptPT, options, value),
       );
     },
   );
 
-  // pt-PT 12-hour day period — CLDR changed the wording from "da tarde"
-  // (ICU 77 / Node 22.16–22.22) to "p.m." (ICU 78 / Node 22.23+, 24, 26).
-  it("formats valid datetime 2024-02-03T14:30:45 for pt-PT with 12-hour day period as one of the known ICU variants", () => {
-    expectOneOfIcu(
-      formatDateTime("2024-02-03T14:30:45", MustTestLocales.ptPT, {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }),
-      oneOfIcu("03/02/2024, 02:30:45 da tarde", "03/02/2024, 02:30:45 p.m."),
+  // pt-PT 12-hour day period: the wording is the host's ("da tarde" in ICU 77, "p.m." in
+  // ICU 78, "PM" in WebKit); the 14:30:45 value is the same on every host.
+  it("formats valid datetime 2024-02-03T14:30:45 for pt-PT with a 12-hour day period in the host's wording", () => {
+    const options = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    } as const;
+    expect(
+      formatDateTime("2024-02-03T14:30:45", MustTestLocales.ptPT, options),
+    ).toBe(
+      hostDateTimeText(MustTestLocales.ptPT, options, "2024-02-03T14:30:45"),
     );
   });
 
   // sv-SE
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"lördag 3 februari 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 februari 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 feb. 2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024-02-03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 februari 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 feb. 2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024-02-03 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024-02-03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024-02-03 02:30:45 em"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024-02-03 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for sv-SE with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.svSE, options)).toEqual(
-        expected,
+    "formats valid datetime $value for sv-SE with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.svSE, options)).toBe(
+        hostDateTimeText(MustTestLocales.svSE, options, value),
       );
     },
   );
 
   // is-IS
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"laugardagur, 3. febrúar 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3. febrúar 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3. feb. 2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3.2.2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3. febrúar 2024 kl. 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3. feb. 2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03.02.2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03.02.2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03.02.2024, 02:30:45 e.h."}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"3.2.2024, 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for is-IS with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.isIS, options)).toEqual(
-        expected,
+    "formats valid datetime $value for is-IS with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.isIS, options)).toBe(
+        hostDateTimeText(MustTestLocales.isIS, options, value),
       );
     },
   );
 
   // zh-CN
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"2024年2月3日星期六 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024年2月3日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/2/3 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 下午02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024/2/3 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for zh-CN with options $options to $expected",
-    ({ value, options, expected }) => {
-      expectDateTimeEqual(
-        formatDateTime(value, MustTestLocales.zhCN, options),
-        expected,
+    "formats valid datetime $value for zh-CN with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.zhCN, options)).toBe(
+        hostDateTimeText(MustTestLocales.zhCN, options, value),
       );
     },
   );
@@ -300,90 +302,88 @@ describe("formatDateTime", () => {
 
   // ja-JP
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"2024年2月3日土曜日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024年2月3日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024/02/03 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"2024/02/03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024年2月3日 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024年2月3日 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024/02/03 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024/02/03 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024/02/03 午後02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024/2/3 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for ja-JP with options $options to $expected",
-    ({ value, options, expected }) => {
-      expectDateTimeEqual(
-        formatDateTime(value, MustTestLocales.jaJP, options),
-        expected,
+    "formats valid datetime $value for ja-JP with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.jaJP, options)).toBe(
+        hostDateTimeText(MustTestLocales.jaJP, options, value),
       );
     },
   );
 
   // ko-KR
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"2024년 2월 3일 토요일 오후 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"2024년 2월 3일 오후 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"2024. 2. 3. 오후 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"24. 2. 3. 오후 2:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"2024년 2월 3일 오후 2:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"2024년 2월 3일 오후 2:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2024. 02. 03. 오후 02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2024. 02. 03. 오후 02:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2024. 02. 03. 오후 02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"2024. 2. 3. 14시 30분 45초"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for ko-KR with options $options to $expected",
-    ({ value, options, expected }) => {
-      expectDateTimeEqual(
-        formatDateTime(value, MustTestLocales.koKR, options),
-        expected,
+    "formats valid datetime $value for ko-KR with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.koKR, options)).toBe(
+        hostDateTimeText(MustTestLocales.koKR, options, value),
       );
     },
   );
 
   // ar-SA
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"السبت، ٣ فبراير ٢٠٢٤ في ٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"٣ فبراير ٢٠٢٤ في ٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"٠٣/٠٢/٢٠٢٤، ٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"٣/٢/٢٠٢٤، ٢:٣٠ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"٣ فبراير ٢٠٢٤ في ٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"٣ فبراير ٢٠٢٤، ٢:٣٠ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"٠٣/٠٢/٢٠٢٤، ٠٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"٠٣/٠٢/٢٠٢٤، ٠٢:٣٠ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"٠٣/٠٢/٢٠٢٤، ٠٢:٣٠:٤٥ م"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"٣/٢/٢٠٢٤، ١٤:٣٠:٤٥"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for ar-SA with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.arSA, options)).toEqual(
-        expected,
+    "formats valid datetime $value for ar-SA with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.arSA, options)).toBe(
+        hostDateTimeText(MustTestLocales.arSA, options, value),
       );
     },
   );
 
   // he-IL
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"יום שבת, 3 בפברואר 2024 בשעה 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 בפברואר 2024 בשעה 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 בפבר׳ 2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3.2.2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 בפברואר 2024 בשעה 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 בפבר׳ 2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03.02.2024, 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03.02.2024, 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03.02.2024, 02:30:45 PM"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"3.2.2024, 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for he-IL with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.heIL, options)).toEqual(
-        expected,
+    "formats valid datetime $value for he-IL with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.heIL, options)).toBe(
+        hostDateTimeText(MustTestLocales.heIL, options, value),
       );
     },
   );
@@ -412,22 +412,22 @@ describe("formatDateTime", () => {
 
   // tr-TR
   it.each`
-    value                    | options                                                                                                                        | expected
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"3 Şubat 2024 Cumartesi 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"3 Şubat 2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"3 Şub 2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"3.02.2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"3 Şubat 2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"3 Şub 2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"03.02.2024 14:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"03.02.2024 14:30"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"03.02.2024 ÖS 02:30:45"}
-    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"03.02.2024 14:30:45"}
+    value                    | options                                                                                                                        | label
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "full", timeStyle: "full" }}                                                                                    | ${"dateStyle full, timeStyle full"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "long", timeStyle: "long" }}                                                                                    | ${"dateStyle long, timeStyle long"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "medium", timeStyle: "medium" }}                                                                                | ${"dateStyle medium, timeStyle medium"}
+    ${"2024-02-03T14:30:45"} | ${{ dateStyle: "short", timeStyle: "short" }}                                                                                  | ${"dateStyle short, timeStyle short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }}                   | ${"numeric fields, month long, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "numeric" }}                                     | ${"numeric fields, month short"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }}                | ${"2-digit fields, seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }}                                   | ${"2-digit fields, no seconds"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }}  | ${"2-digit fields, seconds, hour12 true"}
+    ${"2024-02-03T14:30:45"} | ${{ year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false }} | ${"numeric fields, seconds, hour12 false"}
   `(
-    "formats valid datetime $value for tr-TR with options $options to $expected",
-    ({ value, options, expected }) => {
-      expect(formatDateTime(value, MustTestLocales.trTR, options)).toEqual(
-        expected,
+    "formats valid datetime $value for tr-TR with $label in the host's wording",
+    ({ value, options }) => {
+      expect(formatDateTime(value, MustTestLocales.trTR, options)).toBe(
+        hostDateTimeText(MustTestLocales.trTR, options, value),
       );
     },
   );
@@ -542,12 +542,11 @@ describe("formatDateTime with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDateTime with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -559,21 +558,25 @@ describe("formatDateTime with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });
 
-// A plain date-time has no zone, so a "full" timeStyle is written without one
-// (AdjustDateTimeStyleFormat removes the zone field): 20:05:00 in en-US is "8:05:00 PM". The option
-// is converted to the string "full" before it is looked at, so a String object is treated as the
-// string it holds; 1.17 compared the object itself, missed, and wrote
-// "8:05:00 PM Coordinated Universal Time".
+// A plain date-time has no zone, so a "full" timeStyle is written without one (AdjustDateTimeStyleFormat
+// removes the zone field): 20:05:00 in en-US is "8:05:00 PM". A String object is not the string
+// the type names, so it is refused with the sentinel, where 1.17 treated it as the string it holds.
 describe("formatDateTime with a timeStyle that is a String object", () => {
-  it('formats 2024-03-15T20:05:00 with timeStyle new String("full") as 8:05:00 PM, with no zone name', () => {
+  it('formats 2024-03-15T20:05:00 with timeStyle "full" as 8:05:00 PM, with no zone name', () => {
+    expect(
+      formatDateTime("2024-03-15T20:05:00", "en-US", { timeStyle: "full" }),
+    ).toBe("8:05:00 PM");
+  });
+
+  it('returns "" for 2024-03-15T20:05:00 with timeStyle new String("full")', () => {
     expect(
       formatDateTime("2024-03-15T20:05:00", "en-US", {
         timeStyle: new String("full"),
       } as never),
-    ).toBe("8:05:00 PM");
+    ).toBe("");
   });
 });

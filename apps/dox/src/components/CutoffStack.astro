@@ -47,6 +47,7 @@ const html = renderCutoffStackTemplate("cutoff-stack", {}).value;
   import { mountCutoffStack } from "../lib/cutoff-stack-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cutoffstack");
@@ -55,5 +56,9 @@ const html = renderCutoffStackTemplate("cutoff-stack", {}).value;
         showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "cutoff-stack",
+      () => import("../lib/webmcp/tools/cutoff-stack"),
+    );
   }
 </script>

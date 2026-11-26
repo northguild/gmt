@@ -395,6 +395,360 @@ export const INDUSTRY_OVERVIEWS: Readonly<Record<string, IndustryOverview>> = {
       },
     ],
   },
+  finance: {
+    about:
+      "Trading and payment messages carry timestamps in their own formats, not the ISO date-time format. A FIX timestamp states its precision by how many fraction digits it has, and may name a leap second. This layer reads and writes those values as standard instants, keeping what the digits say. A SWIFT value date has a two-digit year, and SWIFT states its century by rule, so it needs no window from you.",
+    guideTitle: "Finance: Message Timestamps",
+    solves: [
+      {
+        problem: "A trade stamp loses its precision.",
+        answer:
+          "{{parseFixUtcTimestamp}} reports the precision the digits state and keeps every digit sent, picoseconds included.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-millisecond-stamp-read-as-nanoseconds/",
+          },
+        ],
+      },
+      {
+        problem:
+          "A counterparty asks for a precision the clock does not match.",
+        answer:
+          "{{formatFixUtcTimestamp}} writes the width asked for, cutting the fraction rather than rounding it, so a stamp never moves into the next second.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          { label: "mistakes", href: "/mistakes/finance/" },
+        ],
+      },
+      {
+        problem: "A leap second is rejected, or accepted on the wrong day.",
+        answer:
+          "{{isValidFixUtcTimestamp}} accepts a second of sixty only for a leap second UTC really inserted.",
+        see: [
+          { label: "tool", href: "/tools/fix-timestamp-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/second-sixty-on-an-ordinary-day/",
+          },
+        ],
+      },
+      {
+        problem: "A two-digit value date lands in the wrong century.",
+        answer:
+          "{{parseSwiftDate}} applies SWIFT's own century rule, and refuses a year past the end of SWIFT's range, as SWIFT does.",
+        see: [
+          { label: "tool", href: "/tools/swift-value-date-reader/" },
+          {
+            label: "guide",
+            href: "/guides/industries/finance-message-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-value-date-in-the-wrong-century/",
+          },
+        ],
+      },
+    ],
+  },
+  healthcare: {
+    about:
+      'Healthcare is time in clinical messages. HL7 International calls version two of its HL7 messaging standard "one of the most widely implemented standards for healthcare information in the world". A date and time in an HL7 message says how precise it is by how many digits it carries, and leaves the place out unless the sender adds an offset. A FHIR date follows the ISO date format but can stop at a year or a month, and a FHIR time must carry a zone. This layer reads and writes both without guessing the place.',
+    guideTitle: "Healthcare: Clinical Timestamps",
+    solves: [
+      {
+        problem: "A message time with no offset is stored as UTC.",
+        answer:
+          "{{parseHL7}} returns it as a local time with no instant, so the sending facility's zone has to be named before it becomes one.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/an-hl7-time-read-as-utc/",
+          },
+          {
+            label: "HL7 Timestamp Reader",
+            href: "/tools/hl7-timestamp-reader/",
+          },
+        ],
+      },
+      {
+        problem: "A birth year is padded to midnight on the first of January.",
+        answer:
+          "{{parseHL7}} keeps a year, month, day or hour as a partial value with its precision and no instant, and {{parseFHIR}} does the same for a FHIR year, month or day.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/a-fhir-month-padded-to-midnight/",
+          },
+          {
+            label: "HL7 Timestamp Reader",
+            href: "/tools/hl7-timestamp-reader/",
+          },
+          {
+            label: "FHIR Date Checker",
+            href: "/tools/fhir-date-checker/",
+          },
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+      {
+        problem:
+          "An older time stamp whose precision code says it is a date is read as a time.",
+        answer:
+          "{{parseHL7}} reads the precision code and cuts the value to it, never past the digits sent.",
+        see: [
+          {
+            label: "scenario",
+            href: "/scenarios/a-ts-date-read-as-a-time/",
+          },
+        ],
+      },
+      {
+        problem:
+          "A message clears a stored time by sending the null value, and the reader drops it as empty.",
+        answer:
+          "{{isValidHL7}} accepts the null value and {{parseHL7}} returns it as its own kind, so it is never mistaken for a missing field.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+      {
+        problem: "An instant is written back with its offset lost or rounded.",
+        answer:
+          "{{formatHL7}} writes the offset the value has, cuts to the precision asked for and never rounds.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/healthcare-clinical-timestamps/",
+          },
+        ],
+      },
+    ],
+  },
+  aviation: {
+    about:
+      "Airlines exchange schedules in IATA's SSIM files, and their dates are not ISO. A date there is a day, three English month letters and a two-digit year. This layer reads and writes that date without the platform's language settings and without picking a century for you.",
+    guideTitle: "Aviation: Message Times",
+    solves: [
+      {
+        problem:
+          "A schedule date reads differently on a machine set to another language.",
+        answer:
+          "The month letters are a fixed English code. {{parseSsimDate}} reads them from a constant table and never asks the platform's language, so the same file gives the same date everywhere.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/an-ssim-month-read-in-the-wrong-language/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A two-digit year lands in the wrong century.",
+        answer:
+          "The format does not say which century it means. {{parseSsimDate}} and {{isValidSsimDate}} take the hundred-year window you state, a fixed start for an archive or a rolling one for a live feed, and give nothing without it.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A date written back reads as another year.",
+        answer:
+          "{{formatSsimDate}} writes upper-case letters and refuses a year outside your window, so reading its output back with the same window gives the same date.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem:
+          "A weather report names a day and no month, and the wrong month is chosen.",
+        answer:
+          "A METAR time needs a reference instant you state, and is never read against now. {{parseMetarTime}} chooses the nearest month that has the day, and {{isValidMetarTime}} is false when the reference is missing, so a stored report reads the same every month.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-metar-from-last-month/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+      {
+        problem: "A NOTAM end of PERM is stored as a date.",
+        answer:
+          "PERM is a state, not a far-future date, and EST keeps its instant. {{parseNotamValidity}} returns each as it is, and {{isValidNotamValidity}} checks an item against the window you state.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/aviation-message-times/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/perm-read-as-a-date/",
+          },
+          { label: "mistakes", href: "/mistakes/aviation/" },
+        ],
+      },
+    ],
+  },
+  rail: {
+    about:
+      "Transit agencies publish timetables as GTFS feeds. A stop time there can run past midnight, because a trip that leaves late in the evening still belongs to the day it began. This layer reads, writes and checks that time without folding it back into one day.",
+    guideTitle: "Rail: GTFS Service Days",
+    solves: [
+      {
+        problem: "A trip after midnight lands on the wrong day.",
+        answer:
+          "{{parseGtfsTime}} returns the whole days past the service day and the seconds left over as two numbers, so a stop after midnight stays with the trip that reaches it.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-gtfs-time-folded-into-one-day/",
+          },
+          { label: "tool", href: "/tools/gtfs-time-reader/" },
+        ],
+      },
+      {
+        problem: "A time written back loses its service day.",
+        answer:
+          "{{formatGtfsTime}} writes the hours past midnight as the feed wrote them, so reading its output back gives the same day and time.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          { label: "mistakes", href: "/mistakes/rail/" },
+        ],
+      },
+      {
+        problem: "A clock-time check refuses a valid stop time.",
+        answer:
+          "A time of day stops before midnight, and a stop time does not. {{isValidGtfsTime}} accepts any hour the format can hold and refuses minutes or seconds out of range.",
+        see: [
+          { label: "mistakes", href: "/mistakes/rail/" },
+          { label: "tool", href: "/tools/gtfs-time-reader/" },
+        ],
+      },
+      {
+        problem: "A stop time is anchored at midnight on a clock-change day.",
+        answer:
+          "A GTFS time counts from noon minus twelve hours of the service day, which is off midnight on a day the clocks change, by the size of the change, an hour in most zones. {{gtfsToInstant}} counts from that point in the agency's zone.",
+        see: [
+          {
+            label: "guide",
+            href: "/guides/industries/rail-gtfs-service-days/",
+          },
+          {
+            label: "scenario",
+            href: "/scenarios/a-gtfs-trip-anchored-at-midnight/",
+          },
+          { label: "tool", href: "/tools/gtfs-service-day-clock/" },
+        ],
+      },
+      {
+        problem: "A stop's or a printed time is read in the wrong zone.",
+        answer:
+          "Rail draws on the transport layer. GTFS reads every stop time against the agency's zone, so {{gtfsToInstant}} given a stop's own zone moves the instant by the difference between the two offsets that day, an hour from Madrid to Lisbon. {{scheduleDelivery}} reads a printed departure in the zone you name, and the timetable reader shows a repeated or skipped hour.",
+        see: [
+          { label: "mistakes", href: "/mistakes/rail/" },
+          { label: "tool", href: "/tools/gtfs-trip-board/" },
+          { label: "tool", href: "/tools/timetable-reader/" },
+        ],
+      },
+    ],
+  },
+  iot: {
+    about:
+      "Industrial sensors, lidar and broadcast gear share one clock over the Precision Time Protocol. Its timestamps count TAI, which has no leap seconds, so a receiver turns them into UTC with the offset its grandmaster announces. This layer applies that offset in both directions and checks the timestamp itself; it never picks an offset for you.",
+    guideTitle: "IoT: PTP Time",
+    solves: [
+      {
+        problem: "A sensor's time reads ahead of every other clock.",
+        answer:
+          "{{ptpToUtc}} subtracts the UTC offset the grandmaster announces, and takes no default, so a missing offset is a type error instead of a silent shift.",
+        see: [
+          { label: "guide", href: "/guides/industries/iot-ptp-time/" },
+          {
+            label: "scenario",
+            href: "/scenarios/a-ptp-stamp-37-seconds-ahead/",
+          },
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+        ],
+      },
+      {
+        problem: "A grandmaster announces the wrong offset.",
+        answer:
+          "{{taiMinusUtc}} gives TAI minus UTC from the leap-second table for the reading's date. Compare it with the announced offset before you trust a reading.",
+        see: [
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+          { label: "mistakes", href: "/mistakes/iot/" },
+        ],
+      },
+      {
+        problem: "A UTC time put back on the wire loses the offset.",
+        answer:
+          "{{utcToPtp}} adds the announced offset back and returns the seconds as a bigint, so a round trip gives the same timestamp.",
+        see: [
+          { label: "guide", href: "/guides/industries/iot-ptp-time/" },
+          { label: "tool", href: "/tools/ptp-clock-converter/" },
+        ],
+      },
+      {
+        problem: "A malformed timestamp converts without a complaint.",
+        answer:
+          "{{isValidPtpTimestamp}} checks the seconds and nanoseconds against the ranges the wire format allows.",
+        see: [{ label: "mistakes", href: "/mistakes/iot/" }],
+      },
+      {
+        problem: "Nanoseconds are lost on the way to milliseconds.",
+        answer:
+          "{{ptpToUtc}} writes every nanosecond the timestamp carries, and {{toNanoseconds}} reads the instant back as a whole count.",
+        see: [{ label: "guide", href: "/guides/industries/iot-ptp-time/" }],
+      },
+    ],
+  },
 };
 
 /** The `{{name}}` tokens in a pain point's text, in order. */

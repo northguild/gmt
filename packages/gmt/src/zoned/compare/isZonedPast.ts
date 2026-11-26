@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return true when `value` represents an instant strictly before now.
@@ -20,12 +19,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isZonedPast("invalid") // false
  */
 export function isZonedPast(value: string): boolean {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return false;
   }
 
   try {
-    const instant = zonedDateTimeFrom(value).toInstant();
+    const instant = zonedDateTime.toInstant();
     return Temporal.Instant.compare(instant, Temporal.Now.instant()) === -1;
   } catch {
     return false;

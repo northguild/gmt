@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { dateTimeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTimeInterval } from "./validate";
 import { divisionBoundary } from "../../internal/divisionBoundary";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
@@ -76,13 +76,13 @@ export function intervalDivideEquallyDateTime(
       return [];
     }
 
-    if (!isValidDateTimeInterval(start, end)) {
+    const bounds = dateTimeIntervalOf(start, end);
+    if (bounds === null) {
       return [];
     }
 
     try {
-      const startVal = Temporal.PlainDateTime.from(start);
-      const endVal = Temporal.PlainDateTime.from(end);
+      const [startVal, endVal] = bounds;
 
       if (startVal.equals(endVal)) {
         return Array.from({ length: n }, () => ({

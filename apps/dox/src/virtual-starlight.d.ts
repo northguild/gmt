@@ -11,8 +11,8 @@
  *
  * Deliberately NOT a direct `@astrojs/starlight/components/X.astro` import in
  * Header.astro instead — that would resolve to Starlight's *default*
- * component, silently bypassing this repo's own SocialIcons.astro and
- * ThemeSelect.astro overrides (see `astro.config.mjs`'s `components` map).
+ * component, silently bypassing this repo's own SocialIcons.astro
+ * override (see `astro.config.mjs`'s `components` map).
  * The virtual module path is what makes Header.astro compose the site's
  * actual configured overrides, matching how Starlight's own Header.astro
  * composes them.
@@ -36,8 +36,4 @@ declare module "virtual:starlight/components/SiteTitle" {
 declare module "virtual:starlight/components/SocialIcons" {
   const SocialIcons: typeof import("@astrojs/starlight/components/SocialIcons.astro").default;
   export default SocialIcons;
-}
-declare module "virtual:starlight/components/ThemeSelect" {
-  const ThemeSelect: typeof import("@astrojs/starlight/components/ThemeSelect.astro").default;
-  export default ThemeSelect;
 }

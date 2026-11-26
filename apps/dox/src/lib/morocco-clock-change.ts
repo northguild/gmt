@@ -13,6 +13,7 @@ import {
   nodeProbeCommand,
 } from "./clock-change-common";
 import type { Change, ProbeFact } from "./clock-change-common";
+import { offsetSeconds } from "./clock-change-common";
 import { helpMarkdown } from "./clock-change-help";
 import type {
   ProbeConfig,
@@ -24,6 +25,7 @@ import { REGION_KEY, classPhrase } from "./clock-change-tense";
 import type { Moment, TenseView } from "./clock-change-tense";
 import type { MapZone } from "./zone-map";
 import { withBase } from "./site";
+import { link } from "~/widgets/builders/link";
 
 /**
  * The two zones that stop changing their clocks, from tzdb 2026c (`africa`: `Zone
@@ -208,7 +210,7 @@ export function moroccoVerdict(where: VerdictPlace): VerdictText {
       ". It shows them an hour ahead for most of the year, and right only in the weeks the old rules gave +00:00.",
     more: [
       "<strong>For you:</strong> update your browser. If it is already up to date, its maker has not shipped the fix yet. Check again after the next update.",
-      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under <a href="${developersHref(where)}">What to do</a> in Key points.`,
+      `<strong>For developers:</strong> your users&rsquo; browsers can be the same. See step 2 under ${link({ href: developersHref(where), body: "What to do" })} in Key points.`,
     ],
     unknown: "Your browser cannot read these zones.",
     blindNote:
@@ -248,21 +250,26 @@ export const MOROCCO_PRESET: string = [
   "2026-10-25T01:30:00+00:00[Europe/Lisbon]",
 ].join("\n");
 
-/** A stated change's local wall time just before it, from its UTC instant and its `from` offset. */
+/**
+ * A stated change's local wall time just before it, from its UTC instant and its `from` offset:
+ * `HH:MM`, or `HH:MM:SS` when the offset or the instant is not a whole minute.
+ */
 export function localBefore(change: StatedChange): string {
-  const match = /^([+-])(\d{2}):(\d{2})$/.exec(change.from);
-  if (match === null) throw new Error(`Not an offset: ${change.from}`);
-  const minutes =
-    (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3]));
+  const shift = offsetSeconds(change.from);
+  if (shift === null || !Number.isInteger(shift)) {
+    throw new Error(`Not an offset: ${change.from}`);
+  }
   const total =
-    Number(change.at.slice(11, 13)) * 60 +
-    Number(change.at.slice(14, 16)) +
-    minutes;
-  if (total < 0 || total >= 24 * 60) {
+    Number(change.at.slice(11, 13)) * 3600 +
+    Number(change.at.slice(14, 16)) * 60 +
+    Number(change.at.slice(17, 19)) +
+    shift;
+  if (total < 0 || total >= 86_400) {
     throw new Error(`${change.at} crosses a date line at ${change.from}.`);
   }
   const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${change.at.slice(0, 10)} ${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+  const hm = `${change.at.slice(0, 10)} ${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}`;
+  return total % 60 === 0 ? hm : `${hm}:${pad(total % 60)}`;
 }
 
 /** The sentence that says which tzdb release recorded a stated change. */

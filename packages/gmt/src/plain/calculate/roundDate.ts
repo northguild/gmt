@@ -1,5 +1,8 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
+import { roundingMembers } from "../../internal/typedOptions";
+import { isDateUnitName } from "../../internal/unitNames";
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   addDateUnit,
@@ -11,8 +14,7 @@ import { measureNearRangeEnd } from "../../internal/measureNearRangeEnd";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateUnit } from "../../types";
-import { isValidDate, isValidDateUnit } from "../validate";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Round an ISO 8601 date string to the specified date unit.
@@ -73,19 +75,18 @@ export function roundDate(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidDate(value) || !isValidDateUnit(smallestUnit)) return "";
+    const source = plainDateOf(value);
+    if (source === null || !isDateUnitName(smallestUnit)) return "";
 
     try {
-      const source = Temporal.PlainDate.from(value);
-
       // Manual rounding for all date units (year, month, week, day)
       const resolved = resolveManualRoundingOptions(
         roundingIncrement,

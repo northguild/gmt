@@ -1,0 +1,37 @@
+---
+title: "A GTFS Time Folded into One Day"
+description: A feed import folds 25:35:00 into 01:35:00, and a night trip's last stops move to the start of its service day.
+industries: [rail]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A GTFS Time Folded into One Day"
+  description="A night trip's last stop is written 25:35:00 in stop_times.txt. A feed import reads it as a clock time. What does it store?"
+  naiveCode={`// The naive approach: check it as a clock time, then fold the hour into a day
+import { isValidTime } from "@northguild/gmt/plain/validate";
+
+isValidTime("25:35:00");
+// false — there is no 25th hour on a clock
+
+const [hours, minutes, seconds] = "25:35:00".split(":");
+const folded = [String(Number(hours) % 24).padStart(2, "0"), minutes, seconds].join(":");
+// "01:35:00" — a time at the start of the service day`}
+  explanation={`A GTFS time counts from the start of the service day, so a trip that runs through midnight keeps counting: 25:35:00 is 1 day past the service day, 01:35:00, and still part of the same service day. An import that refuses the value loses the stop. An import that folds it keeps the stop and loses the day. The trip's stops after midnight now sort before its evening stops, and each one's time no longer says it is past midnight. Nothing in the stored value shows that anything was lost, which is why the feed looks fine until a rider asks for the last train. parseGtfsTime keeps the days past the service day in a number of their own, and formatGtfsTime writes the same text back.`}
+  gmtCode={`import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+import { formatGtfsTime } from "@northguild/gmt/rail/format";
+
+const record = parseGtfsTime("25:35:00");
+// { seconds: 5700, dayOverflow: 1 }
+
+if (record !== null) formatGtfsTime(record);
+// "25:35:00"`}
+  fixedSpecId="parseGtfsTime"
+/>
+
+The fix is to keep the days past the service day. See
+[Rail: GTFS Service Days](/guides/industries/rail-gtfs-service-days/#why-the-overflow-is-kept-apart)
+for the rule, and [Rail mistakes](/mistakes/rail/) for the others that come with it.
+
+[Try it in the GTFS Time Reader](/tools/gtfs-time-reader/?w=gtfstime&wa=%7B%22preset%22%3A%22next-day%22%7D).

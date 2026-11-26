@@ -1,4 +1,5 @@
 ---
+import Link from "~/components/Link.astro";
 import { whyGmtFigures } from "../lib/why-gmt-figures";
 
 /**
@@ -12,10 +13,10 @@ import { whyGmtFigures } from "../lib/why-gmt-figures";
   {
     whyGmtFigures.map((f) => (
       <li>
-        <a href={f.href}>
+        <Link href={f.href}>
           <span class="gmt-why-figure-value">{f.value}</span>
           <span class="gmt-why-figure-label">{f.label}</span>
-        </a>
+        </Link>
       </li>
     ))
   }
@@ -36,10 +37,6 @@ import { whyGmtFigures } from "../lib/why-gmt-figures";
   .gmt-why-figures li {
     margin: 0;
     padding: 0;
-  }
-
-  .gmt-why-figures li::before {
-    display: none;
   }
 
   .gmt-why-figures a {

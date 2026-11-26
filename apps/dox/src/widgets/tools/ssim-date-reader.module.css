@@ -1,0 +1,143 @@
+/*
+ * SSIM Date Reader: what only this tool needs. The sections, preset, fields, chips, plates,
+ * badge, table, code frames and held lines are the kit's and the holiday family's; this sheet
+ * lays the controls out and sets the month table's cells.
+ *
+ * Amber is the sentinel's alone: a plate the library refused reads a bracketed NO SIGNAL. The
+ * pattern plate is neutral, because a missing date there is that function's right answer. The
+ * "differs" mark is a bottom edge with a hatch, never a left edge and never a colour alone.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset and the window chips. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.slot {
+  min-inline-size: 0;
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The badge always takes its room: a hidden twin sits in the same cell as the live one. */
+.differsHold {
+  display: grid;
+  justify-items: start;
+  min-inline-size: 0;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.differs {
+  padding-block-end: var(--gmt-space-1);
+  border-block-end: 2px solid var(--gmt-series-2);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 0,
+    color-mix(in srgb, var(--gmt-series-2) 30%, transparent) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+}
+
+.differsGhost {
+  padding-block-end: var(--gmt-space-1);
+  border-block-end: 2px solid transparent;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A month cell: letters or a name, in tabular figures with no wrap. */
+.cell {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Under 40rem the twelve rows become labelled blocks: each cell names its column from the
+   `data-col` the table wrote, and the header row is read by the labels instead. */
+.strip {
+  min-inline-size: 0;
+
+  @container (inline-size < 40rem) {
+    & table,
+    & caption,
+    & tbody,
+    & tr,
+    & th,
+    & td {
+      display: block;
+      inline-size: 100%;
+    }
+
+    & thead {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    & tr {
+      padding-block: var(--gmt-space-2);
+      border-block-end: 1px solid var(--gmt-hairline);
+    }
+
+    & th,
+    & td {
+      display: grid;
+      grid-template-columns: minmax(5rem, 7rem) minmax(0, 1fr);
+      gap: var(--gmt-space-2);
+      border-block-end: 0;
+      text-align: start;
+    }
+
+    & th::before,
+    & td::before {
+      content: attr(data-col);
+      color: var(--gmt-ice-dim);
+      font-weight: 600;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .differs {
+    background-image: none;
+    border-block-end-color: CanvasText;
+    border-block-end-style: double;
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .differs {
+    border-block-end-width: 3px;
+  }
+
+  .strip td::before,
+  .strip th::before {
+    color: var(--gmt-ice);
+  }
+}

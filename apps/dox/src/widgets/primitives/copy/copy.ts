@@ -6,12 +6,14 @@
  * the failure) goes to a polite live region this element owns, so it is spoken and
  * is never the only signal: the icon and colour change too. A missing Clipboard
  * API and a rejected write both end in "Copy failed", not silence. The message
- * clears after 1.5 s. With `reveal`, for text shown nowhere else on the page (a share
+ * clears after 1.5 s. A success plays the press ping (the Distant sonar) and a failure the Low double buzz; the
+ * button carries `data-cue` so the press ping stays out. With `reveal`, for text shown nowhere else on the page (a share
  * link), a failure also shows the text, and it stays until the next click, so it can be
  * selected and copied by hand.
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, raw, type SafeHtml } from "../../builders/html";
+import { cue } from "~/lib/sound/cue";
 import { KitElement } from "../base";
 import styles from "./copy.module.css";
 
@@ -47,7 +49,7 @@ const svg = (paths: string): SafeHtml =>
 
 export function copy(o: CopyOptions): SafeHtml {
   return html`<gmt-copy class="${styles.root}" text="${o.text}" ${o.reveal ? "data-reveal" : ""} ${gateAttr(o.gate)}
-    ><button class="${styles.button}" type="button" aria-label="${o.label}">${svg(COPY_ICON)}</button
+    ><button class="${styles.button}" type="button" aria-label="${o.label}" data-cue>${svg(COPY_ICON)}</button
     ><span class="${styles.status}" role="status"></span></gmt-copy
   >`;
 }
@@ -77,6 +79,8 @@ export class GmtCopy extends KitElement {
     const icon = button.querySelector("svg");
     if (icon) icon.innerHTML = state === "copied" ? CHECK_ICON : COPY_ICON;
     const reveal = state === "failed" && this.hasAttribute("data-reveal");
+    if (state === "copied") cue("copy");
+    else if (state === "failed") cue("error");
     status.textContent =
       state === "copied"
         ? COPIED_TEXT

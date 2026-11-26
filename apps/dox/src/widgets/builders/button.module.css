@@ -5,6 +5,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+
+  /* On a docs page the article's flow rule gives every sibling after the first a top margin. In a
+     row that stretches its items, the first button then stands taller than the rest; the row's gap
+     is the only space between them. */
+  & > * {
+    margin-block: 0;
+  }
 }
 
 .button {
@@ -39,6 +46,34 @@
   }
 }
 
+/* An icon sits before the label with a gap; an icon alone sits centred in a square. */
+.button:has(> .icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button.iconOnly {
+  padding: 0;
+  aspect-ratio: 1;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+/* A pressed toggle button is lit. */
+.button[aria-pressed="true"] {
+  border-color: var(--gmt-cyan);
+  background-color: color-mix(
+    in srgb,
+    var(--gmt-cyan) 22%,
+    var(--gmt-surface-2)
+  );
+}
+
 @media (forced-colors: active) {
   .button {
     border-color: ButtonText;
@@ -53,6 +88,12 @@
       border-color: GrayText;
       color: GrayText;
     }
+  }
+
+  .button[aria-pressed="true"] {
+    border-color: Highlight;
+    background-color: Highlight;
+    color: HighlightText;
   }
 }
 

@@ -1,6 +1,5 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { monthDayString } from "../../internal/monthDay";
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the month-day (`--MM-DD`) of an ISO 8601 date string.
@@ -18,10 +17,11 @@ import { isValidDate } from "../validate";
  * @example parseMonthDayFromDate("2024-12-25[u-ca=hebrew]") // ""
  */
 export function parseMonthDayFromDate(value: string): string {
-  if (!isValidDate(value)) return "";
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) return "";
 
   try {
-    return monthDayString(Temporal.PlainDate.from(value).toPlainMonthDay());
+    return monthDayString(valueParsed.toPlainMonthDay());
   } catch {
     return "";
   }

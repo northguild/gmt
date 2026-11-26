@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
+import { zonedInstantOf } from "../../internal/exactMoment";
 
 /**
  * Report whether a cut-off has passed.
@@ -9,38 +9,43 @@ import { isValidInstant } from "../../precision/validate/isValidInstant";
  * has closed, so `now` equal to `cutoff` is past. This matches the half-open rule GMT's
  * intervals follow, and `timeToCutoff`, which is `PT0S` there.
  *
- * - Both arguments are exact: an instant (`Z`/offset) or a zoned string, as `cutoffAt`
- *   returns one. They are compared as instants, so the zone each is written in does not
- *   matter, and the two passes of a repeated hour are told apart by their offsets.
- * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, so a cut-off `cutoffAt` wrote is the instant it
- *   computed, except a wall time repeated inside a sub-minute offset change, which reads as
- *   its first pass (see `isValidInstant`). Otherwise the bracket is not checked: a zone that does not exist, or that
- *   disagrees with the offset, changes nothing.
+ * - `now` is an exact instant (`Z`/offset) with no annotation of any kind. `cutoff` is the
+ *   zoned string `cutoffAt` returns, `<date>T<time>±HH:MM[Zone]`: an offset (or `Z`), then one
+ *   time zone bracket that agrees with it (the critical `[!Zone]` too), and nothing after. A
+ *   bare instant, an offset-less wall time, an offset bracket (`[+02:00]`) or any other
+ *   annotation is invalid. They are compared as instants, so the two passes of a repeated hour
+ *   are told apart by their offsets.
  * - `now` is the caller's: GMT does not read the clock here, so the answer is reproducible.
  * - Returns `false` on invalid input, including `cutoffAt`'s `""` sentinel — which reads as
  *   "not past". Check the cut-off is not `""` before trusting a `false`.
  *
- * @param now ISO 8601 instant or zoned datetime string of the moment asked about
- * @param cutoff ISO 8601 instant or zoned datetime string of the cut-off
+ * @param now ISO 8601 instant string of the moment asked about
+ * @param cutoff ISO 8601 zoned datetime string of the cut-off, exactly as `cutoffAt` returns it
  * @returns true when now is at or after the cut-off, false otherwise or on invalid input
  *
  * @example isPastCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // true
  * @example isPastCutoff("2024-06-12T14:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // false
  * @example isPastCutoff("2024-06-12T15:00:00Z", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // true (at the cut-off, the window has closed)
- * @example isPastCutoff("2024-04-07T02:30:00+10:00[Australia/Sydney]", "2024-04-07T02:30:00+11:00[Australia/Sydney]") // true (the second 02:30 is an hour after the first)
+ * @example isPastCutoff("2024-04-06T16:00:00Z", "2024-04-07T02:30:00+11:00[Australia/Sydney]") // true (the first 02:30 is 15:30Z, already gone)
+ * @example isPastCutoff("2024-04-06T16:00:00Z", "2024-04-07T02:30:00+10:00[Australia/Sydney]") // false (the second 02:30 is 16:30Z, half an hour away)
+ * @example isPastCutoff("2024-06-12T16:00:00Z", "2024-06-12T15:00:00Z") // false (a bare instant is not a zoned cut-off)
  * @example isPastCutoff("2024-06-12T16:00:00", "2024-06-12T17:00:00+02:00[Europe/Amsterdam]") // false (a zoneless now is not a moment)
+ * @example isPastCutoff("2024-06-12T16:00:00+02:00[Europe/Amsterdam]", "2024-06-12T15:00:00Z") // false (`now` takes no annotation)
  * @example isPastCutoff("2024-06-12T16:00:00Z", "") // false
  */
 export function isPastCutoff(now: string, cutoff: string): boolean {
   try {
-    if (!isValidInstant(now) || !isValidInstant(cutoff)) {
+    const nowInstant = instantOf(now);
+    if (nowInstant === null) {
       return false;
     }
 
-    return Temporal.Instant.compare(instantFrom(now), instantFrom(cutoff)) >= 0;
+    const cutoffInstant = zonedInstantOf(cutoff);
+    if (cutoffInstant === null) {
+      return false;
+    }
+
+    return Temporal.Instant.compare(nowInstant, cutoffInstant) >= 0;
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

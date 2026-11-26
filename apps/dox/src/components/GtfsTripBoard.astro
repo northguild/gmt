@@ -1,0 +1,66 @@
+---
+/**
+ * GTFS Trip Board widget (RAI-100).
+ *
+ * A pasted trip from `stop_times.txt`, a service date and the agency's zone: for each stop the
+ * instant `gtfsToInstant` gives, the clock on the platform, the reading a stop's own zone would
+ * give, and each leg's length.
+ *
+ * **The markup and the wiring both live in `lib/gtfs-trip-board-mount.ts`**,
+ * so the chat rail mounts the same widget this page server-renders.
+ */
+
+import { renderGtfsTripBoardTemplate } from "../lib/gtfs-trip-board-mount";
+
+/**
+ * `fullbleed` lets the page say the widget may use the whole main pane. It adds
+ * `data-tools-fullbleed`, the self-declaring marker that dox.css's two `:has()`
+ * rules read to widen `.main-pane` and drop the max-width of every
+ * `.sl-container` inside `main`. That is all the marker does: how the prose
+ * around the widget is laid out is ToolLayout.astro's job, not this one's.
+ *
+ * Default `false`, which is the safe direction: a page that embeds the widget
+ * in prose keeps the prose column. Only the tools page opts in. The marker goes
+ * on a wrapper here rather than inside `renderTemplate()`
+ * so the mount's markup stays byte-identical and `scripts/html-diff.mjs` sees
+ * the widget itself as unchanged.
+ */
+interface Props {
+  fullbleed?: boolean;
+}
+
+const { fullbleed = false } = Astro.props;
+const html = renderGtfsTripBoardTemplate("gtfs-trip-board", {}).value;
+---
+
+{
+  fullbleed ? (
+    <div data-tools-fullbleed set:html={html} />
+  ) : (
+    <Fragment set:html={html} />
+  )
+}
+
+<script>
+  import { mountGtfsTripBoard } from "../lib/gtfs-trip-board-mount";
+  import { showUnavailable } from "../lib/widget-mount";
+  import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
+
+  if (typeof window !== "undefined") {
+    /* A `?w=gtfstrip&wa=` permalink seeds the widget with the preset or the values it names;
+       see lib/widget-permalink.ts. Absent or malformed, the widget opens on its first preset. */
+    const seed = seedFromLocation("gtfstrip");
+    document
+      .querySelectorAll<HTMLElement>('[data-widget="gtfs-trip-board"]')
+      .forEach((el) => {
+        mountGtfsTripBoard(el, seed, new AbortController().signal).catch(
+          (error) => showUnavailable(el, error),
+        );
+      });
+    void offerPageTool(
+      "gtfs-trip-board",
+      () => import("../lib/webmcp/tools/gtfs-trip-board"),
+    );
+  }
+</script>

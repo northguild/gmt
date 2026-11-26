@@ -1,9 +1,9 @@
 import type { DateTimeUnit, DurationRoundTo, TotalUnit } from "./temporalTypes";
 import { Temporal } from "./temporal";
-import type { DurationRelativeTo } from "../types";
+import { durationFrom } from "./durationFrom";
+import type { ResolvedRelativeTo } from "./resolveDurationRelativeTo";
 import { assertMonthsInRange, timeZoneEquals } from "./temporalCompat";
 import { zonedDateTimeFrom } from "./zonedWallClock";
-import { isObject } from "./isObject";
 import {
   isDateUnit,
   largerUnit,
@@ -43,7 +43,7 @@ import type {
 
 /** The zoned `relativeTo` Temporal would resolve, or null when it is not zoned. */
 function zonedRelativeTo(
-  relativeTo: DurationRelativeTo | undefined,
+  relativeTo: ResolvedRelativeTo | undefined,
 ): Temporal.ZonedDateTime | null {
   if (relativeTo instanceof Temporal.ZonedDateTime) return relativeTo;
 
@@ -52,14 +52,6 @@ function zonedRelativeTo(
       return timeZoneAnnotation.test(relativeTo)
         ? zonedDateTimeFrom(relativeTo)
         : null;
-    }
-    if (
-      isObject(relativeTo) &&
-      !(relativeTo instanceof Temporal.PlainDateTime) &&
-      "timeZone" in relativeTo &&
-      relativeTo.timeZone !== undefined
-    ) {
-      return zonedDateTimeFrom(relativeTo);
     }
   } catch {
     // Not a valid zoned relativeTo: the polyfill call reports it.
@@ -170,7 +162,7 @@ function untilTakesSpecPath(
 export function durationTotal(
   duration: Temporal.Duration,
   unit: TotalUnit<DateTimeUnit>,
-  relativeTo?: DurationRelativeTo,
+  relativeTo?: ResolvedRelativeTo,
 ): number {
   if (relativeTo !== undefined) {
     assertMonthsInRange(duration.months); // D9: with a relativeTo the months are added to it
@@ -250,10 +242,10 @@ function hasEqualFields(a: Temporal.Duration, b: Temporal.Duration): boolean {
 export function durationCompare(
   one: Temporal.Duration | string,
   two: Temporal.Duration | string,
-  relativeTo?: DurationRelativeTo,
+  relativeTo?: ResolvedRelativeTo,
 ): number {
-  const first = Temporal.Duration.from(one);
-  const second = Temporal.Duration.from(two);
+  const first = durationFrom(one);
+  const second = durationFrom(two);
   if (hasEqualFields(first, second)) {
     // TC39 Temporal.Duration.compare: equal fields are +0 before relativeTo is read for arithmetic.
     return 0;

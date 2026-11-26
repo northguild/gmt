@@ -1,3 +1,5 @@
+import { dateIntervalOf } from "../../internal/intervalChecks";
+import { isDateUnitName } from "../../internal/unitNames";
 import type { Temporal } from "../../internal/temporal";
 import {
   durationTotal,
@@ -9,8 +11,6 @@ import {
   calendarDateAdd,
   calendarDateUntil,
 } from "../../internal/temporalCompat";
-import { isValidDateUnit } from "../validate";
-import { isValidDateInterval } from "./validate";
 
 const UNIT_FIELD = {
   year: "years",
@@ -88,11 +88,11 @@ export function intervalLengthDate(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateUnit(resolvedUnit)) {
+  if (!isDateUnitName(resolvedUnit)) {
     return null;
   }
 
-  if (!isValidDateInterval(start, end)) {
+  if (dateIntervalOf(start, end) === null) {
     return null;
   }
 

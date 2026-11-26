@@ -10,11 +10,12 @@
  */
 import { convertToModelMessages, type UIMessage } from "ai";
 import {
+  DOX_TOOL_DOCS,
   DOX_TOOL_NAMES,
   showCronInAZoneInput,
   showLeapDayBirthdayInput,
 } from "../src/lib/dox-tools";
-import { buildWorkerTools } from "./tools";
+import { buildWorkerTools, chatDocFor } from "./tools";
 
 /* Every defined tool, not only the offered ones: a pending tool's `execute` is
    worth testing before its widget lands, so enabling it is a one-line change
@@ -153,6 +154,34 @@ describe("worker tool execute", () => {
       widget: "morocco-clock-change",
     });
     expect(refused).toHaveProperty("note");
+  });
+
+  it("accepts the Sunshine Protection Act with no place or a listed one, and refuses any other", async () => {
+    const ok = { ok: true, widget: "sunshine-protection-act" };
+    expect(
+      await run("showUsSunshineProtectionAct", { view: { kind: "today" } }),
+    ).toEqual(ok);
+    expect(
+      await run("showUsSunshineProtectionAct", {
+        view: { kind: "today", zone: "America/Phoenix" },
+      }),
+    ).toEqual(ok);
+    expect(
+      await run("showUsSunshineProtectionAct", {
+        view: { kind: "proposals", state: "DE" },
+      }),
+    ).toEqual(ok);
+    for (const view of [
+      { kind: "today", zone: "Europe/Madrid" },
+      { kind: "proposals", state: "ZZ" },
+    ]) {
+      const refused = await run("showUsSunshineProtectionAct", { view });
+      expect(refused).toMatchObject({
+        ok: false,
+        widget: "sunshine-protection-act",
+      });
+      expect(refused).toHaveProperty("note");
+    }
   });
 
   it("rejects a whitespace-only stored-time list in the tool's own schema", () => {
@@ -373,6 +402,506 @@ describe("worker tool execute", () => {
     });
   });
 
+  describe("showTai64nLogReader", () => {
+    const schema = (
+      tools.showTai64nLogReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a log line with a label", async () => {
+      const input = { values: "@40000000659200a500000000 service started" };
+      expect(schema.safeParse(input).success).toBe(true);
+      expect(await run("showTai64nLogReader", input)).toMatchObject({
+        ok: true,
+        widget: "tai64n-log-reader",
+      });
+    });
+
+    it("refuses a whitespace-only list in the tool's own schema", () => {
+      for (const values of [" ", "\n", " \t\n "]) {
+        expect(schema.safeParse({ values }).success, values).toBe(false);
+      }
+    });
+  });
+
+  describe("showFixTimestampReader", () => {
+    const schema = (
+      tools.showFixTimestampReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a stamp, an instant, both or neither", async () => {
+      for (const input of [
+        { stamp: "20161231-23:59:60.500" },
+        { instant: "2024-06-15T14:30:00.123Z" },
+        { stamp: "20240615-14:30:00.100", instant: "2016-12-31T23:59:60Z" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showFixTimestampReader", input)).toMatchObject({
+          ok: true,
+          widget: "fix-timestamp-reader",
+        });
+      }
+    });
+
+    it("refuses a stamp or instant over 64 characters in the tool's own schema", () => {
+      expect(schema.safeParse({ stamp: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ stamp: "a".repeat(65) }).success).toBe(false);
+      expect(schema.safeParse({ instant: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
+  describe("showFhirDateChecker", () => {
+    const schema = (
+      tools.showFhirDateChecker as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value exactly as given, preset values included", async () => {
+      for (const value of [
+        "2024-06",
+        "2024-02-30",
+        "2015-02-07T13:28:17-05:00",
+      ]) {
+        expect(schema.safeParse({ value }).success).toBe(true);
+        expect(await run("showFhirDateChecker", { value })).toMatchObject({
+          ok: true,
+          widget: "fhir-date-checker",
+        });
+      }
+    });
+
+    it("refuses an empty value and one over 64 characters", () => {
+      expect(schema.safeParse({ value: "" }).success).toBe(false);
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ value: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
+  describe("showSwiftValueDateReader", () => {
+    const schema = (
+      tools.showSwiftValueDateReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, a date or both", async () => {
+      for (const input of [
+        { value: "350615" },
+        { date: "2024-06-15" },
+        { value: "350615", date: "2024-06-15" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showSwiftValueDateReader", input)).toMatchObject({
+          ok: true,
+          widget: "swift-value-date-reader",
+        });
+      }
+    });
+
+    it("needs a value or a date", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it("refuses a value over 16 characters and a date over 32", () => {
+      expect(schema.safeParse({ value: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ date: "x".repeat(33) }).success).toBe(false);
+    });
+  });
+
+  describe("showGtfsServiceDayClock", () => {
+    const schema = (
+      tools.showGtfsServiceDayClock as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a date, a time, a zone, a preset, or any mix, all as strings", async () => {
+      for (const input of [
+        {
+          serviceDate: "20260329",
+          time: "08:00:00",
+          timeZone: "Europe/Berlin",
+        },
+        { preset: "spring-forward" },
+        { time: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsServiceDayClock", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-service-day-clock",
+        });
+      }
+    });
+
+    it("needs at least one argument and knows only the page's presets", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ preset: "far-future" }).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument", () => {
+      expect(schema.safeParse({ serviceDate: 20260329 }).success).toBe(false);
+      expect(schema.safeParse({ serviceDate: "9".repeat(17) }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ time: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ timeZone: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ timeZone: "a".repeat(65) }).success).toBe(
+        false,
+      );
+    });
+  });
+
+  describe("showGtfsTripBoard", () => {
+    const schema = (
+      tools.showGtfsTripBoard as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+    const header = "stop_id,arrival_time,departure_time,stop_timezone";
+
+    it("accepts rows, a date, a zone, a preset, or any mix, all as strings", async () => {
+      for (const input of [
+        {
+          stopTimes: `${header}\na,08:00:00,08:00:00,`,
+          date: "20260615",
+          zone: "Europe/Madrid",
+        },
+        { preset: "border" },
+        { date: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsTripBoard", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-trip-board",
+        });
+      }
+    });
+
+    it("needs at least one argument and knows only the page's presets", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ preset: "far-future" }).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument", () => {
+      expect(schema.safeParse({ date: 20260615 }).success).toBe(false);
+      expect(schema.safeParse({ date: "9".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ zone: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ zone: "a".repeat(65) }).success).toBe(false);
+      expect(schema.safeParse({ stopTimes: "a".repeat(2000) }).success).toBe(
+        true,
+      );
+      expect(schema.safeParse({ stopTimes: "a".repeat(2001) }).success).toBe(
+        false,
+      );
+    });
+  });
+
+  describe("showGtfsTimeReader", () => {
+    const schema = (
+      tools.showGtfsTimeReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, seconds, days, or any mix, all as strings", async () => {
+      for (const input of [
+        { value: "25:35:00" },
+        { seconds: "5700", dayOverflow: "1" },
+        { value: "25:35:00", seconds: "0" },
+        { dayOverflow: "" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showGtfsTimeReader", input)).toMatchObject({
+          ok: true,
+          widget: "gtfs-time-reader",
+        });
+      }
+    });
+
+    it("needs at least one argument", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+    });
+
+    it("coerces nothing and caps each argument at 16 characters", () => {
+      expect(schema.safeParse({ seconds: 5700 }).success).toBe(false);
+      expect(schema.safeParse({ dayOverflow: 1 }).success).toBe(false);
+      for (const key of ["value", "seconds", "dayOverflow"]) {
+        expect(schema.safeParse({ [key]: "9".repeat(16) }).success).toBe(true);
+        expect(schema.safeParse({ [key]: "9".repeat(17) }).success).toBe(false);
+      }
+    });
+  });
+
+  describe("showPtpClockConverter", () => {
+    const schema = (
+      tools.showPtpClockConverter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a read triple or an instant, all as strings", async () => {
+      for (const input of [
+        { seconds: "1704067237", nanoseconds: "0", offset: "37" },
+        { instant: "2024-01-01T00:00:00Z", offset: "37" },
+        { instant: "2024-01-01T00:00:00Z" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showPtpClockConverter", input)).toMatchObject({
+          ok: true,
+          widget: "ptp-clock-converter",
+        });
+      }
+    });
+
+    it("needs a read triple or an instant", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ seconds: "1", offset: "37" }).success).toBe(
+        false,
+      );
+    });
+
+    it("coerces nothing and caps the numbers at 24 characters and the instant at 64", () => {
+      expect(
+        schema.safeParse({ seconds: 1, nanoseconds: "0", offset: "37" })
+          .success,
+      ).toBe(false);
+      const triple = { seconds: "1", nanoseconds: "0", offset: "37" };
+      for (const key of ["seconds", "nanoseconds", "offset"]) {
+        expect(
+          schema.safeParse({ ...triple, [key]: "9".repeat(24) }).success,
+        ).toBe(true);
+        expect(
+          schema.safeParse({ ...triple, [key]: "9".repeat(25) }).success,
+        ).toBe(false);
+      }
+      expect(schema.safeParse({ instant: "x".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ instant: "x".repeat(65) }).success).toBe(false);
+    });
+  });
+
+  describe("showSsimDateReader", () => {
+    const schema = (
+      tools.showSsimDateReader as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a value, a date or both, with a window as a year or rolling", async () => {
+      for (const input of [
+        { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
+        { value: "01JAN26", yearWindow: "rolling" },
+        { value: "01JAN26" },
+        { date: "2026-01-01", yearWindow: 2000 },
+        { value: "01jan26", date: "2026-01-01" },
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showSsimDateReader", input)).toMatchObject({
+          ok: true,
+          widget: "ssim-date-reader",
+        });
+      }
+    });
+
+    it("needs a value or a date", () => {
+      expect(schema.safeParse({}).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: 2000 }).success).toBe(false);
+    });
+
+    it("refuses a window that is not a year or rolling, and a value over 16 characters", () => {
+      expect(schema.safeParse({ value: "x", yearWindow: "now" }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "x", yearWindow: 1.5 }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "x", yearWindow: -1 }).success).toBe(
+        false,
+      );
+      expect(schema.safeParse({ value: "a".repeat(16) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(17) }).success).toBe(false);
+    });
+
+    it("caps the locale at 35 characters, as the Duration Parser Bench does", () => {
+      const withLocale = (locale: string) =>
+        schema.safeParse({ value: "01JAN26", locale }).success;
+      expect(withLocale("en")).toBe(true);
+      expect(withLocale("a".repeat(35))).toBe(true);
+      expect(withLocale("a".repeat(36))).toBe(false);
+      expect(withLocale("e")).toBe(false);
+    });
+
+    it("does not default the window", () => {
+      expect(schema.safeParse({ value: "01JAN26" }).data).toEqual({
+        value: "01JAN26",
+      });
+    });
+  });
+
+  describe("showReportTimeResolver", () => {
+    const schema = (
+      tools.showReportTimeResolver as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts either section, or both, with a window as a year or rolling", async () => {
+      for (const input of [
+        { group: "302350Z", reference: "2024-07-01T00:05:00Z" },
+        { group: "302350Z" },
+        { itemB: "2506151200", itemC: "PERM", yearWindow: 2000 },
+        { itemB: "2506151200", yearWindow: "rolling" },
+        { metarPreset: "month-end", notamPreset: "permanent" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showReportTimeResolver", input)).toMatchObject({
+          ok: true,
+          widget: "report-time-resolver",
+        });
+      }
+    });
+
+    it("refuses a window that is not a year or rolling, an unknown field and values over their caps", () => {
+      expect(schema.safeParse({ yearWindow: "now" }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: 1.5 }).success).toBe(false);
+      expect(schema.safeParse({ yearWindow: -1 }).success).toBe(false);
+      expect(schema.safeParse({ now: true }).success).toBe(false);
+      expect(schema.safeParse({ group: "a".repeat(16) }).success).toBe(true);
+      expect(schema.safeParse({ group: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemB: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ itemC: "a".repeat(17) }).success).toBe(false);
+      expect(schema.safeParse({ reference: "a".repeat(64) }).success).toBe(
+        true,
+      );
+      expect(schema.safeParse({ reference: "a".repeat(65) }).success).toBe(
+        false,
+      );
+    });
+
+    it("defaults nothing: no reference, no window", () => {
+      expect(schema.safeParse({ group: "302350Z" }).data).toEqual({
+        group: "302350Z",
+      });
+    });
+  });
+
+  describe("showTerrestrialTimeStack", () => {
+    const schema = (
+      tools.showTerrestrialTimeStack as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts a UTC instant, a scale label or no value", async () => {
+      for (const input of [
+        { value: "2026-01-01T00:00:00Z" },
+        { value: "2026-01-01T00:01:09.184 TT" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showTerrestrialTimeStack", input)).toMatchObject({
+          ok: true,
+          widget: "terrestrial-time-stack",
+        });
+      }
+    });
+
+    it("refuses a value over 64 characters in the tool's own schema", () => {
+      expect(schema.safeParse({ value: "a".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "a".repeat(65) }).success).toBe(false);
+    });
+  });
+
+  describe("showJulianDayCounter", () => {
+    const schema = (
+      tools.showJulianDayCounter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts an instant, a count, a read mode, a scale or nothing", async () => {
+      for (const input of [
+        { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
+        { value: "2461042 + 0.5", read: "jd", scale: "UTC" },
+        { scale: "TCG" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showJulianDayCounter", input)).toMatchObject({
+          ok: true,
+          widget: "julian-day-counter",
+        });
+      }
+    });
+
+    it("refuses TDB, an unknown read mode and a value over 64 characters", () => {
+      expect(schema.safeParse({ scale: "TDB" }).success).toBe(false);
+      expect(schema.safeParse({ read: "gps" }).success).toBe(false);
+      expect(schema.safeParse({ value: "1".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "1".repeat(65) }).success).toBe(false);
+    });
+  });
+
+  describe("showDoublePrecisionMeter", () => {
+    const schema = (
+      tools.showDoublePrecisionMeter as unknown as {
+        inputSchema: {
+          safeParse: (v: unknown) => { success: boolean; data?: unknown };
+        };
+      }
+    ).inputSchema;
+
+    it("accepts an instant, a scale or nothing", async () => {
+      for (const input of [
+        { value: "2026-06-15T13:47:12.345678912Z", scale: "TT" },
+        { scale: "TCG" },
+        {},
+      ]) {
+        expect(schema.safeParse(input).success).toBe(true);
+        expect(await run("showDoublePrecisionMeter", input)).toMatchObject({
+          ok: true,
+          widget: "double-precision-meter",
+        });
+      }
+    });
+
+    it("refuses TDB and a value over 64 characters", () => {
+      expect(schema.safeParse({ scale: "TDB" }).success).toBe(false);
+      expect(schema.safeParse({ value: "1".repeat(64) }).success).toBe(true);
+      expect(schema.safeParse({ value: "1".repeat(65) }).success).toBe(false);
+    });
+  });
+
   describe("showIdTimestampDecoder refusals", () => {
     it("accepts a real id", async () => {
       expect(
@@ -410,6 +939,7 @@ describe("worker tool execute", () => {
         {
           zone: "UTC",
           year: 2026,
+          view: { kind: "today" },
           value: "2026-01-01T00:00",
           from: "UTC",
           to: "UTC",
@@ -489,5 +1019,86 @@ describe("convertToModelMessages — why the tools carry an execute", () => {
       { ignoreIncompleteToolCalls: true },
     );
     expect(shape(converted)).toEqual(["user[text]", "assistant[text]"]);
+  });
+});
+
+describe("the DST inspector's server step", () => {
+  const dst = async (input: unknown) =>
+    (await run("showDstInspector", input)) as unknown as {
+      ok: boolean;
+      transitions: { instant: string }[];
+      check?: { kind: string; facts: string[] };
+    };
+
+  it("says a time inside a spring gap does not exist", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-03-28T03:30:00",
+    });
+    expect(result.check?.kind).toBe("nonexistent");
+    expect(result.check?.facts.join(" ")).toContain("does not exist");
+    expect(result.check?.facts.join(" ")).toContain(
+      "the clocks in Europe/Helsinki change from +02:00 to +03:00: when the clock reads 03:00 it moves to 04:00",
+    );
+    expect(result.transitions).toHaveLength(2);
+  });
+
+  it("says a time inside an autumn overlap happens twice, with both instants", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-10-31T03:30:00",
+    });
+    expect(result.check?.kind).toBe("ambiguous");
+    const text = result.check?.facts.join(" ") ?? "";
+    expect(text).toContain("when the clock reads 04:00 it moves to 03:00");
+    expect(text).toContain("2027-10-31T00:30:00Z (offset +03:00)");
+    expect(text).toContain("2027-10-31T01:30:00Z (offset +02:00)");
+  });
+
+  it("says an ordinary time happens once", async () => {
+    const result = await dst({
+      zone: "Europe/Helsinki",
+      year: 2027,
+      local: "2027-06-01T12:00:00",
+    });
+    expect(result.check?.kind).toBe("unique");
+  });
+
+  it("says a zone with no clock change never skips a time", async () => {
+    const result = await dst({
+      zone: "Asia/Tokyo",
+      year: 2027,
+      local: "2027-03-28T03:30:00",
+    });
+    expect(result.transitions).toEqual([]);
+    expect(result.check?.kind).toBe("unique");
+  });
+
+  it("adds no check when no wall time was asked about", async () => {
+    const result = await dst({ zone: "Europe/Helsinki", year: 2027 });
+    expect(result.check).toBeUndefined();
+    expect(result.transitions).toHaveLength(2);
+  });
+});
+
+describe("chatDocFor", () => {
+  const docs = DOX_TOOL_DOCS;
+  it("tells the chat to ask the DST inspector first and to pass the wall time", () => {
+    const doc = chatDocFor(docs.find((d) => d.name === "showDstInspector")!);
+    expect(doc.when).toContain("call this tool FIRST");
+    expect(doc.when).toContain(
+      "a question or a coding request that names a wall-clock time on a date in a zone",
+    );
+    expect(doc.args).toContain("local (");
+  });
+
+  it("leaves the page tool's own doc alone and every other tool as it is", () => {
+    const shared = docs.find((d) => d.name === "showDstInspector")!;
+    expect(shared.when).not.toContain("FIRST");
+    expect(shared.args).not.toContain("local (");
+    const globe = docs.find((d) => d.name === "showGlobe")!;
+    expect(chatDocFor(globe)).toBe(globe);
   });
 });

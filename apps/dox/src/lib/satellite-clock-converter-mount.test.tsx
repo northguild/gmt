@@ -417,6 +417,11 @@ describe("the sentinel sentences", () => {
 });
 
 describe("the form", () => {
+  it("opens on the named preset when the value is empty", async () => {
+    await open({ value: "", preset: "beidou-reading" });
+    expect(preset()).toHaveValue("beidou-reading");
+  });
+
   it("opens on the first preset", async () => {
     await open();
     expect(preset()).toHaveValue("utc-2024");

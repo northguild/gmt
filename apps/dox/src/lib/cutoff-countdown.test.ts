@@ -2,6 +2,7 @@
  * `cutoff-countdown.ts`'s pure helpers, against the real gmt modules. Every
  * expected literal is an appendix Z row (C1-C10).
  */
+import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import { Temporal } from "@northguild/gmt";
 import { isPastCutoff, timeToCutoff } from "@northguild/gmt/transport/compare";
 import { etaAtZone } from "@northguild/gmt/transport/convert";
@@ -23,6 +24,7 @@ import {
 import type { CutoffLib } from "./cutoff-widgets";
 
 const lib: CutoffLib = {
+  toInstant: (value: string) => toOffsetInstant(value)?.instant ?? "",
   cutoffAt: () => "",
   cutoffSchedule: () => [],
   isPastCutoff,
@@ -137,7 +139,7 @@ describe("collectCountdownFacts + verdict", () => {
   it("C8: filing at the departure-based deadline, 60 h late", () => {
     const state: CountdownState = {
       cutoff: "2024-06-09T16:00:00+08:00[Asia/Shanghai]",
-      now: "2024-06-12T04:00:00+08:00[Asia/Shanghai]",
+      now: "2024-06-12T04:00:00+08:00",
       timeZone: "Asia/Shanghai",
       mode: "pinned",
     };
@@ -226,7 +228,16 @@ describe("nowFromSlider", () => {
         20,
         "Europe/Amsterdam",
       ),
-    ).toBe("2024-06-12T17:20:00+02:00[Europe/Amsterdam]");
+    ).toBe("2024-06-12T17:20:00+02:00");
+  });
+  it("writes the zone's offset to the second, not rounded to the minute", () => {
+    const now = nowFromSlider(
+      "1960-06-01T11:00:00-00:44:30[Africa/Monrovia]",
+      15,
+      "Africa/Monrovia",
+    );
+    expect(now).toBe("1960-06-01T11:15:00-00:44:30");
+    expect(toOffsetInstant(now)?.instant).toBe("1960-06-01T11:59:30Z");
   });
 });
 

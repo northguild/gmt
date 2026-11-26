@@ -1,0 +1,35 @@
+---
+title: "An SSIM Month Read in the Wrong Language"
+description: A schedule import runs on a server set to Spanish, and a parser that reads month names through the locale rejects 01JAN26 and accepts 01ENE26.
+industries: [aviation]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="An SSIM Month Read in the Wrong Language"
+  description="A schedule import runs on a server whose default language is Spanish. The file says 01JAN26. What does the import read?"
+  naiveCode={`// The naive approach: read the month name through the locale
+import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+// The import asks the platform for its language, then hands it to the parser
+const locale = "es-ES"; // what the platform reports on this server
+
+parseDateWithPattern("01JAN26", "ddMMMyy", locale, { yearWindow: 2000 });
+// "" — JAN is not a Spanish month
+parseDateWithPattern("01ENE26", "ddMMMyy", locale, { yearWindow: 2000 });
+// "2026-01-01" — ENE is Spanish, and no SSIM file writes it`}
+  explanation={`The three letters of an SSIM month are a code in English, whatever the language of the machine reading the file. Code that hands the platform's language to a pattern parser gets Spanish month names on this server, so it rejects every January in the file and accepts a word the format never writes. On a server set to English the same code works, which is why it passes in testing. \`parseSsimDate\` reads the letters from a constant table and never asks for a language, so the answer does not depend on where it runs.`}
+  gmtCode={`import { parseSsimDate } from "@northguild/gmt/aviation/parse";
+
+parseSsimDate("01JAN26", { yearWindow: 2000 });
+// "2026-01-01"
+parseSsimDate("01ENE26", { yearWindow: 2000 });
+// ""`}
+  fixedSpecId="parseSsimDate"
+/>
+
+The fix is to treat the letters as a code, not a word. See [Aviation: Message
+Times](/guides/industries/aviation-message-times/#why-the-month-letters-bypass-the-locale) for the
+reasoning, and [Aviation mistakes](/mistakes/aviation/) for the others that come with it. The
+[SSIM Date Reader](/tools/ssim-date-reader/) shows the same text read both ways.

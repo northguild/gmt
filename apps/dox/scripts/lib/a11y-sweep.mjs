@@ -57,9 +57,9 @@ function opt(args, name, fallback) {
  * Parse the shared flags and answer the page contract. `pages` is the gate's own page list;
  * `defaults.widths` its widths when `--widths` is absent.
  */
-export function parseSweep({ gate, pages, defaults }) {
+export async function parseSweep({ gate, pages, defaults }) {
   const args = process.argv.slice(2);
-  const selected = applyPageContract({ gate, pages, argv: args });
+  const selected = await applyPageContract({ gate, pages, argv: args });
   const browsers = opt(args, "browsers", "chromium").split(",").filter(Boolean);
   for (const name of browsers) {
     if (!LAUNCHERS[name]) {

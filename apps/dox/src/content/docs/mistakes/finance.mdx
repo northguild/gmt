@@ -1,0 +1,178 @@
+---
+title: Finance mistakes
+description: Common mistakes with FIX UTC timestamps, the precision their digits state, rounding when narrowing, the second of sixty, and SWIFT value dates and the century they state, in GMT's Finance layer.
+industries: [finance]
+sidebar:
+  label: Finance
+---
+
+The Finance layer reads and writes the timestamps of trading and payment messages. The mistakes
+around them are the ones a quick conversion makes: treating the fraction as a decimal of any
+width, widening a stamp to digits nobody measured, rounding it into the next second, reading a
+second of sixty as the start of the next minute, accepting it on any day, and writing a local
+time as a UTC stamp. SWIFT value dates add three more: a century cut-off of your own, writing a
+year SWIFT cannot read back, and checking the digits without the century. Every output shown here
+is what the function returns.
+
+## Precision
+
+import Mistake from "../../../components/Mistake.astro";
+
+<Mistake
+  severity="high"
+  title="Treating the fraction as a decimal of any width"
+  description="A FIX fraction states its precision by its length: three digits are milliseconds, six microseconds, nine nanoseconds. Read as a decimal, .100 becomes .1, a tenth of a second, and .12 becomes a width FIX does not name. parseFixUtcTimestamp keeps the digits sent and returns null for a width with no precision."
+  wrongCode={`// the stamp reads "20240615-14:30:00.100"
+Number("0." + "100");
+// 0.1 — the three digits, and the precision they state, are gone`}
+  rightCode={`import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00.100");
+// { instant: "2024-06-15T14:30:00.100Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }
+parseFixUtcTimestamp("20240615-14:30:00.12");
+// null`}
+  rightSpecId="parseFixUtcTimestamp"
+/>
+
+<Mistake
+  severity="medium"
+  title="Widening a millisecond stamp to nanoseconds"
+  description="A standard instant holds nanoseconds, so writing a millisecond stamp at nine digits pads six zeros that look like a measurement. The precision of the stamp is a fact about the clock that made it. parseFixUtcTimestamp returns it, and formatFixUtcTimestamp writes the width you state."
+  wrongCode={`Temporal.Instant.from("2024-06-15T14:30:00.123Z").toString({ fractionalSecondDigits: 9 });
+// "2024-06-15T14:30:00.123000000Z" — six digits nobody measured`}
+  rightCode={`import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20240615-14:30:00.123");
+// { instant: "2024-06-15T14:30:00.123Z", precision: "millisecond", leapSecond: false, picoseconds: 0 }`}
+  rightSpecId="parseFixUtcTimestamp"
+/>
+
+See the same slip in [A Millisecond Stamp Read as
+Nanoseconds](/scenarios/a-millisecond-stamp-read-as-nanoseconds/).
+
+<Mistake
+  severity="high"
+  title="Rounding when narrowing"
+  description="Rounding a fraction can carry into the next second, minute or day. A trade stamped at 23:59:59.9996 and written at millisecond precision with rounding becomes the next day at 00:00:00.000, a moment that had not happened. formatFixUtcTimestamp cuts the fraction and never rounds it."
+  wrongCode={`// round to three digits
+Math.round(0.9996 * 1000) / 1000;
+// 1 — 23:59:59.9996 becomes 00:00:00.000 of the next day`}
+  rightCode={`import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+
+formatFixUtcTimestamp("2024-06-15T23:59:59.9996Z", "millisecond");
+// "20240615-23:59:59.999"
+formatFixUtcTimestamp("2024-06-15T23:59:59.9996Z", "second");
+// "20240615-23:59:59"`}
+  rightSpecId="formatFixUtcTimestamp"
+/>
+
+## Leap seconds
+
+<Mistake
+  severity="high"
+  title="Reading a 60 as 00 of the next minute"
+  description="A second of 60 is not a typo for 00 of the next minute. At the end of 2016 UTC inserted one, between 23:59:59 and 00:00:00, and it belongs to 2016-12-31. Shifting it forward writes a moment one second after the one that was sent. parseFixUtcTimestamp reads it as the inserted second and flags it."
+  wrongCode={`// the stamp reads "20161231-23:59:60"
+new Date(Date.UTC(2016, 11, 31, 23, 59, 60)).toISOString();
+// "2017-01-01T00:00:00.000Z" — the inserted second is now the first of the new year`}
+  rightCode={`import { parseFixUtcTimestamp } from "@northguild/gmt/finance/parse";
+
+parseFixUtcTimestamp("20161231-23:59:60");
+// { instant: "2016-12-31T23:59:60Z", precision: "second", leapSecond: true, picoseconds: 0 }`}
+  rightSpecId="parseFixUtcTimestamp"
+/>
+
+<Mistake
+  severity="high"
+  title="Accepting a 60 on any day"
+  description="FIX allows a second of 60 only for a UTC leap second, and UTC has inserted 27, the last at the end of 2016. A pattern that allows 60 passes every day, and Temporal clamps it to 59, so a second that never happened is stored as a real one. isValidFixUtcTimestamp checks the day."
+  wrongCode={`Temporal.Instant.from("2017-12-31T23:59:60Z").toString();
+// "2017-12-31T23:59:59Z" — a second that never happened, stored as a real one`}
+  rightCode={`import { isValidFixUtcTimestamp } from "@northguild/gmt/finance/validate";
+
+isValidFixUtcTimestamp("20171231-23:59:60");
+// false
+isValidFixUtcTimestamp("20161231-23:59:60");
+// true`}
+  rightSpecId="isValidFixUtcTimestamp"
+/>
+
+See [Second Sixty on an Ordinary Day](/scenarios/second-sixty-on-an-ordinary-day/).
+
+## Local time
+
+<Mistake
+  severity="high"
+  title="Writing a local time as a FIX stamp"
+  description="A FIX UTCTimestamp is UTC. A local date-time carries no offset, so relabelling its digits as UTC is wrong by the zone's offset, four hours in New York in June. formatFixUtcTimestamp refuses a value with no offset, and resolveLocal turns it into an instant first."
+  wrongCode={`// 14:30 in New York, with the digits relabelled as UTC
+"2024-06-15T14:30:00".replace(/^(\\d{4})-(\\d{2})-(\\d{2})T/, "$1$2$3-");
+// "20240615-14:30:00" — four hours before the moment it names`}
+  rightCode={`import { formatFixUtcTimestamp } from "@northguild/gmt/finance/format";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+
+formatFixUtcTimestamp("2024-06-15T14:30:00", "second");
+// ""
+formatFixUtcTimestamp(resolveLocal("2024-06-15T14:30:00", "America/New_York"), "second");
+// "20240615-18:30:00"`}
+  rightSpecId="formatFixUtcTimestamp"
+/>
+
+## Value dates
+
+<Mistake
+  severity="high"
+  title="A century cut-off of your own"
+  description="A SWIFT value date has two year digits, and SWIFT states the century: it reads 01 to 60 as 2001 to 2060 and refuses any other year with T50. A cut-off of your own is a choice, not that rule. With 1930 as the window, 350615 reads as 1935, a century early, and 750615 is accepted, though SWIFT refuses it. parseSwiftDate applies the SWIFT rule."
+  wrongCode={`import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("350615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1935-06-15"
+parseDateWithPattern("750615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1975-06-15" — accepted`}
+  rightCode={`import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+
+parseSwiftDate("350615");
+// "2035-06-15"
+parseSwiftDate("750615");
+// ""`}
+  rightSpecId="parseSwiftDate"
+/>
+
+<Mistake
+  severity="high"
+  title="Writing a year SWIFT cannot read back"
+  description="Keeping the last two digits of a year drops its century. SWIFT reads 24 as 2024, so a date in 1924 written that way comes back a century late. formatSwiftDate refuses a year outside 2001 to 2060, so everything it writes reads back as the same date."
+  wrongCode={`String(1924).slice(-2) + "0615";
+// "240615" — which SWIFT reads as 15 June 2024`}
+  rightCode={`import { formatSwiftDate } from "@northguild/gmt/finance/format";
+
+formatSwiftDate("1924-06-15");
+// ""
+formatSwiftDate("2060-12-31");
+// "601231"`}
+  rightSpecId="formatSwiftDate"
+/>
+
+<Mistake
+  severity="medium"
+  title="Checking the digits without the century"
+  description="Whether a value date exists depends on its year, and SWIFT states the year. 050229 has a valid month and a day from 1 to 31, but 2005 was not a leap year. 750101 has valid digits too, but 75 is not a year SWIFT reads, so it is refused. isValidSwiftDate applies the century first."
+  wrongCode={`/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test("050229");
+// true
+/^\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/.test("750101");
+// true`}
+  rightCode={`import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+isValidSwiftDate("040229");
+// true
+isValidSwiftDate("050229");
+// false
+isValidSwiftDate("750101");
+// false`}
+  rightSpecId="isValidSwiftDate"
+/>
+
+See [A Value Date in the Wrong Century](/scenarios/a-value-date-in-the-wrong-century/), the guide
+[Finance: Message Timestamps](/guides/industries/finance-message-timestamps/) and the [SWIFT Value
+Date Reader](/tools/swift-value-date-reader/).

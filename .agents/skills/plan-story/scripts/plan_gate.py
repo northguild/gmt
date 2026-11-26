@@ -23,6 +23,7 @@ INDEX_LINE_BUDGET = 150
 SLICE_LINE_BUDGET = 200
 LIB_SPECS = "context/domination/specs"
 DOX_SPECS = "context/dox/specs"
+CANARY_SPECS = "context/canary/specs"
 
 # <type>/<issue>-<story id>-...; a story id is letters, a dash, then a token holding a digit.
 BRANCH_RE = re.compile(r"^[a-z]+/\d+-([a-z]+-[a-z]*\d[a-z0-9]*)(?:-|$)")
@@ -82,7 +83,8 @@ def check(root: Path, story: str) -> list[str]:
     if story.startswith("DOX-"):
         found, _ = check_spec(root, root / DOX_SPECS / story.lower() / "index.md", story)
         return found
-    found, fields = check_spec(root, root / LIB_SPECS / story / "index.md", story)
+    specs = CANARY_SPECS if story.startswith("CNRY-") else LIB_SPECS
+    found, fields = check_spec(root, root / specs / story / "index.md", story)
     if not fields:
         return found
     dox = fields.get("dox", "")

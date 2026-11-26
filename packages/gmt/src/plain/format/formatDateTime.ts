@@ -1,8 +1,7 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -27,6 +26,11 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value ISO PlainDateTime string
  * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
@@ -48,7 +52,8 @@ export function formatDateTime(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidDateTime(value)) {
+  const valueParsed = plainDateTimeOf(value);
+  if (valueParsed === null) {
     return "";
   }
 
@@ -62,9 +67,7 @@ export function formatDateTime(
     const read = readDateTimeFormatOptions(options);
     checkFormatterArguments("DateTimeFormat", locale, read);
     const epochMilliseconds =
-      Temporal.PlainDateTime.from(value).toZonedDateTime(
-        "UTC",
-      ).epochMilliseconds;
+      valueParsed.toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
       cachedFormatter(
         "DateTimeFormat",

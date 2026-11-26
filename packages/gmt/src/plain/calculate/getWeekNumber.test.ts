@@ -39,16 +39,18 @@ describe("getWeekNumber", () => {
   );
 
   // Validate, then parse (isValidDate): each of these reads as week 11 or 24 if parsed loosely.
-  // isValidDate reads annotations as Temporal.PlainDate.from does (RFC 9557 §3.3): `[u-ca=iso8601]`
-  // names the ISO calendar and an elective annotation is ignored, so the week is the plain date's.
+  // CORE-113 (#528): a plain date matches its exact pattern over the whole string, so an annotation
+  // of any kind makes it invalid.
   it.each`
-    value                         | weekStartsOn | expected
-    ${"2024-06-15[u-ca=iso8601]"} | ${"monday"}  | ${24}
-    ${"2024-06-15[u-ca=iso8601]"} | ${"sunday"}  | ${24}
-    ${"2024-06-15[foo=bar]"}      | ${"monday"}  | ${24}
-    ${"2024-06-15[!foo=bar]"}     | ${"monday"}  | ${null}
+    value                                 | weekStartsOn | expected
+    ${"2024-06-15[u-ca=iso8601]"}         | ${"monday"}  | ${null}
+    ${"2024-06-15[u-ca=iso8601]"}         | ${"sunday"}  | ${null}
+    ${"2024-06-15[foo=bar]"}              | ${"monday"}  | ${null}
+    ${"2024-06-15[!foo=bar]"}             | ${"monday"}  | ${null}
+    ${"2024-06-15[Europe/Helsinkiddddd]"} | ${"monday"}  | ${null}
+    ${"2024-06-15[Europe/Helsinki]"}      | ${"monday"}  | ${null}
   `(
-    "reads the annotations of $value ($weekStartsOn) → $expected",
+    "rejects the annotated $value ($weekStartsOn) → $expected",
     ({ value, weekStartsOn, expected }) => {
       expect(getWeekNumber(value, weekStartsOn)).toBe(expected);
     },

@@ -5,6 +5,7 @@
  */
 
 import { Temporal } from "@northguild/gmt";
+import { OFFSET_SOURCE, offsetMinutes } from "./exact-offset";
 
 export interface DstTransition {
   instant: string;
@@ -17,14 +18,12 @@ export interface DstTransition {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse an ISO 8601 offset string ("+HH:MM" / "-HH:MM") into signed minutes.
- * Returns 0 for unrecognized input (never throws).
+ * Parse an ISO 8601 offset string (`±HH:MM`, or `±HH:MM:SS` as zones used
+ * before standard time: Monrovia's `-00:44:30`) into signed minutes, seconds
+ * kept as a fraction (-44.5). Returns 0 for unrecognized input (never throws).
  */
 export function parseOffsetMinutes(offset: string): number {
-  const m = offset.match(/^([+-])(\d{2}):(\d{2})$/);
-  if (!m) return 0;
-  const sign = m[1] === "+" ? 1 : -1;
-  return sign * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10));
+  return offsetMinutes(offset) ?? 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,11 +73,14 @@ export function localDateAtTransition(
 }
 
 /**
- * Get the local minute-of-day (0-1439) at which a transition occurs in the
- * given zone. Returns NaN for invalid input (never throws).
+ * Get the local minute-of-day (0 up to 1440) at which a transition occurs in
+ * the given zone, seconds kept as a fraction. Returns NaN for invalid input
+ * (never throws).
  *
  * Minute precision matters: not every zone shifts by a whole hour (Lord Howe
- * Island shifts 30 minutes), so the hour-only reading loses the boundary.
+ * Island shifts 30 minutes), so the hour-only reading loses the boundary. Nor
+ * by a whole minute: New York left local mean time (`-04:56:02`) for `-05:00`
+ * on 18 November 1883, so its repeated range ends at 12:03:58.
  */
 export function localMinuteOfDayAtTransition(
   t: DstTransition,
@@ -87,21 +89,32 @@ export function localMinuteOfDayAtTransition(
   try {
     const instant = Temporal.Instant.from(t.instant);
     const zdt = instant.toZonedDateTimeISO(timeZone);
-    return zdt.hour * 60 + zdt.minute;
+    return (
+      zdt.hour * 60 +
+      zdt.minute +
+      (zdt.second + zdt.millisecond / 1e3 + zdt.microsecond / 1e6) / 60 +
+      zdt.nanosecond / 6e10
+    );
   } catch {
     return NaN;
   }
 }
 
+/** Zero-padded 24-hour `HH:MM`, or `HH:MM:SS` when the time is not a whole minute. */
+function clockText(totalSeconds: number): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hm = `${pad(Math.floor(totalSeconds / 3600))}:${pad(Math.floor(totalSeconds / 60) % 60)}`;
+  return totalSeconds % 60 === 0 ? hm : `${hm}:${pad(totalSeconds % 60)}`;
+}
+
 /**
- * Format a minute-of-day as a zero-padded 24-hour "HH:MM" label.
+ * Format a minute-of-day as a zero-padded 24-hour "HH:MM" label, or
+ * "HH:MM:SS" for a fractional minute (12:03:58, where New York's 1883 change
+ * ended its repeated range), to the nearest second.
  */
 export function formatMinuteOfDay(minute: number): string {
   if (!Number.isFinite(minute)) return "--:--";
-  const clamped = Math.max(0, Math.min(1439, Math.round(minute)));
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return clockText(Math.max(0, Math.min(1439 * 60, Math.round(minute * 60))));
 }
 
 // ---------------------------------------------------------------------------
@@ -254,7 +267,9 @@ export function selectTickMinutes(
  * Build a startOfZoned value string from an explicit local date and
  * minute-of-day.
  *
- * Returns "" for a malformed date or an out-of-range minute.
+ * A fractional minute is written to the second (`12:03:58`), so a range
+ * that ends between minutes keeps its end. Returns "" for a malformed date or
+ * an out-of-range minute.
  */
 export function buildZonedValueFromMinutes(
   zone: string,
@@ -266,11 +281,12 @@ export function buildZonedValueFromMinutes(
     return "";
   }
 
-  const rounded = Math.round(minuteOfDay);
-  const h = String(Math.floor(rounded / 60)).padStart(2, "0");
-  const m = String(rounded % 60).padStart(2, "0");
-  return `${localDate}T${h}:${m}:00[${zone}]`;
+  const seconds = Math.min(1440 * 60 - 1, Math.round(minuteOfDay * 60));
+  const text = clockText(seconds);
+  return `${localDate}T${text.length === 5 ? `${text}:00` : text}[${zone}]`;
 }
+
+const TRAILING_OFFSET = new RegExp(`(?:Z|${OFFSET_SOURCE})$`);
 
 /**
  * Strip a `[zone]` suffix and any embedded UTC offset from a zoned value
@@ -284,7 +300,7 @@ export function buildZonedValueFromMinutes(
  */
 export function toPlainLocalDateTime(value: string): string {
   const withoutZone = value.replace(/\[[^\]]*\]$/, "");
-  return withoutZone.replace(/(?:Z|[+-]\d{2}:\d{2})$/, "");
+  return withoutZone.replace(TRAILING_OFFSET, "");
 }
 
 /**
@@ -302,11 +318,13 @@ export function probeContext(
   transitions: DstTransition[],
   zone: string,
 ): { onDate: DstTransition[]; probeHour: number } {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec(plainValue);
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(
+    plainValue,
+  );
   if (!m) return { onDate: [], probeHour: NaN };
   return {
     onDate: transitions.filter((t) => localDateAtTransition(t, zone) === m[1]),
-    probeHour: Number(m[2]) + Number(m[3]) / 60,
+    probeHour: Number(m[2]) + Number(m[3]) / 60 + Number(m[4] ?? 0) / 3600,
   };
 }
 
@@ -346,7 +364,8 @@ export function classifyProbeResult(
   zone: string,
   options?: { disambiguation?: string },
 ): ProbeClassification {
-  const probeMinute = Math.round(probeHour * 60);
+  // To the second: New York's 1883 repeated range ends at 12:03:58.
+  const probeMinute = Math.round(probeHour * 3600) / 60;
   const hit = transitions.find((t) => {
     const window = getTickerWindow(t, zone);
     return window !== null && isMinuteInZone(probeMinute, window);
@@ -541,4 +560,131 @@ export function buildValuePreset(
  */
 export function isSentinel(result: string): boolean {
   return result === "";
+}
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+/** What the inspector needs from gmt (`loadDstLib` in `zones-lib.ts`). */
+export interface DstLib {
+  getDstTransitions(zone: string, year: number): DstTransition[];
+  convertPlainDateTimeToZoned(
+    value: string,
+    timeZone: string,
+    options?: { disambiguation?: string },
+  ): string;
+}
+
+/** The strip's state: which transition it scrubs, its window and where the thumb sits. */
+export interface DstScrub {
+  activeTransition: DstTransition | null;
+  tickerWindow: TickerWindow | null;
+  handleMinuteOfDay: number | null;
+}
+
+/**
+ * Which transition the strip scrubs for a zone, year and preset, and where its thumb starts:
+ * the first gap for `gap`, the first overlap for `overlap`, and nothing for any other preset.
+ */
+export function dstScrubFor(
+  zone: string,
+  year: number,
+  preset: string,
+  lib: DstLib,
+): DstScrub {
+  const transitions = lib.getDstTransitions(zone, year);
+  const activeTransition =
+    preset === "gap"
+      ? (transitions.find(isGap) ?? null)
+      : preset === "overlap"
+        ? (transitions.find(isOverlap) ?? null)
+        : null;
+  let tickerWindow = activeTransition
+    ? getTickerWindow(activeTransition, zone)
+    : null;
+  // The thumb starts in the middle of the skipped or repeated range: the transition's
+  // own local reading is the range's end for a gap, which is outside it.
+  let handleMinuteOfDay =
+    activeTransition && tickerWindow ? zoneMidpointMinutes(tickerWindow) : null;
+  if (handleMinuteOfDay !== null && Number.isNaN(handleMinuteOfDay)) {
+    handleMinuteOfDay = null;
+    tickerWindow = null;
+  }
+  return { activeTransition, tickerWindow, handleMinuteOfDay };
+}
+
+export interface DstState {
+  zone: string;
+  year: number;
+  /** The preset's id; `ValuePreset` for the four the page offers. */
+  preset: string;
+  /** Already defaulted: `compatible` when the control reads empty. */
+  disambiguation: string;
+  scrub: DstScrub;
+}
+
+export interface DstFacts {
+  /** `getDstTransitions(zone, year)`. */
+  transitions: DstTransition[];
+  /** The zoned value the probe starts from; `""` when the zone has no transition to probe. */
+  value: string;
+  /** `value` with its zone and offset stripped; `""` when there is no value. */
+  plainValue: string;
+  /** `convertPlainDateTimeToZoned(plainValue, zone, { disambiguation })`; `""` when refused or not asked. */
+  result: string;
+  /** The transitions on the probe's own local date. */
+  onDate: DstTransition[];
+  /** The probe's local time in hours; NaN when there is no probe. */
+  probeHour: number;
+  classification: ProbeClassification;
+}
+
+/**
+ * Every library call the redraw makes: the year's transitions, the probe resolved with the
+ * disambiguation, and what that probe experienced. The mount draws from this and the WebMCP tool
+ * answers with it, so the two cannot disagree. No DOM and no gmt import: `DstLib` comes in from
+ * the caller.
+ */
+export function dstFacts(state: DstState, lib: DstLib): DstFacts {
+  const { zone, year, preset, disambiguation: dis, scrub } = state;
+  const transitions = lib.getDstTransitions(zone, year);
+
+  // Scrubbable presets take their value from the strip; fixed ones do not.
+  const scrubbable =
+    scrub.activeTransition !== null &&
+    scrub.tickerWindow !== null &&
+    scrub.handleMinuteOfDay !== null;
+  const value = scrubbable
+    ? buildZonedValueFromMinutes(
+        zone,
+        localDateAtTransition(scrub.activeTransition!, zone) ?? "",
+        scrub.handleMinuteOfDay!,
+      )
+    : buildValuePreset(preset as ValuePreset, zone, transitions);
+
+  // The call resolves the wall time, so the [zone] and any offset the "transition"
+  // preset embeds are stripped: an offset would answer the ambiguity `disambiguation`
+  // exists to resolve.
+  const plainValue = value ? toPlainLocalDateTime(value) : "";
+  const result = plainValue
+    ? lib.convertPlainDateTimeToZoned(plainValue, zone, { disambiguation: dis })
+    : "";
+
+  // A probe can sit inside a transition's range, so classify against the transitions on
+  // its own date. A fixed preset is not assumed normal: a southern zone's "Exact
+  // transition instant" is the start of the repeated hour.
+  const { onDate, probeHour } = probeContext(plainValue, transitions, zone);
+  const classification = classifyProbeResult(result, onDate, probeHour, zone, {
+    disambiguation: dis,
+  });
+  return {
+    transitions,
+    value,
+    plainValue,
+    result,
+    onDate,
+    probeHour,
+    classification,
+  };
 }

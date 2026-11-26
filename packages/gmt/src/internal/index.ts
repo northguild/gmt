@@ -87,15 +87,22 @@ export {
 export { dateCycleFieldBounds } from "./dateCycleFieldBounds";
 export { timeCycleFieldBounds } from "./timeCycleFieldBounds";
 export { durationUntilString } from "./durationUntilString";
-// The EDI readers (./ediDateTimeFields) and writers (./ediDateTimeWriter) are deliberately not
-// re-exported here: they import `instant/convert/toOffsetInstant`, which reads this barrel at
-// module top level, so a barrel entry would close a cycle. Import each from its own file
-// ("../../internal/ediDateTimeFields", "../../internal/ediDateTimeWriter").
 export {
   EDIFACT_DTM_FORMATS,
   X12_DATE_TIME_PERIOD_FORMATS,
   X12_TIME_CODES,
 } from "./ediGrammar";
+export {
+  HL7_DEGREE_OF_PRECISION,
+  HL7_NULL_VALUE,
+  HL7_PRECISIONS,
+  hl7DegreePrecision,
+  hl7PrecisionRank,
+  isoHl7Form,
+  isoHl7Precision,
+  readHl7Dtm,
+  splitHl7Ts,
+} from "./hl7DateTime";
 export {
   exactDurationNanoseconds,
   nonNegativeExactDurationNanoseconds,
@@ -104,6 +111,7 @@ export {
   type ExactMoment,
   readExactMoment,
   writeExactMoment,
+  zonedInstantOf,
 } from "./exactMoment";
 export { formatDateInCalendar } from "./formatDateInCalendar";
 export {
@@ -125,6 +133,17 @@ export {
   halfOpenXor,
 } from "./halfOpenIntervals";
 export { isoStringBody, TIME_ZONE_ANNOTATION } from "./isoStringBody";
+export {
+  readFormOffsetInstant,
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
+} from "./offsetInstant";
+export {
+  FHIR_PRECISIONS,
+  FHIR_TYPE_PRECISIONS,
+  fhirTypeAllows,
+  readFhirValue,
+} from "./fhirDateTime";
 export { formatHourDuration } from "./hourDurationString";
 export { canonicalInstantIntervals } from "./instantIntervalText";
 export { instantFrom, parseInstantNanoseconds } from "./instantNanoseconds";
@@ -141,7 +160,32 @@ export {
   parseUtcOffsetNanoseconds,
   writtenOffset,
 } from "./utcOffsetString";
-export { formatUtcReading, parseUtcReading } from "./utcReading";
+export {
+  CCSDS_ASCII_A,
+  CCSDS_ASCII_B,
+  ccsdsCodeAText,
+  ccsdsCodeBText,
+  ccsdsInstantText,
+  readCcsdsAsciiA,
+  readCcsdsAsciiB,
+  type CcsdsAsciiAFields,
+  type CcsdsAsciiBFields,
+  type CcsdsTimeFields,
+} from "./ccsdsAsciiTime";
+export {
+  FIX_FRACTION_DIGITS,
+  FIX_UTC_TIMESTAMP,
+  fixInstantText,
+  fixPrecisionOfDigits,
+  fixTimestampText,
+  readFixUtcFields,
+  resolveFixPrecision,
+} from "./fixUtcTimestamp";
+export {
+  formatUtcReading,
+  LAST_FOUR_DIGIT_UTC_NANOSECONDS,
+  parseUtcReading,
+} from "./utcReading";
 export {
   isGnssSystem,
   scaleLabelOfUtc,
@@ -161,17 +205,68 @@ export {
 export { isRinexWeekSystem, RINEX_WEEK_EPOCHS } from "./rinexWeek";
 export { formatTimeScaleString, parseTimeScaleString } from "./timeScaleString";
 export {
+  L_G_DENOMINATOR,
+  L_G_NUMERATOR,
+  TCG_TT_EPOCH_NANOSECONDS,
+  TT_MINUS_TAI_NANOSECONDS,
+  tcgMinusTtNanoseconds,
+  ttOfTcg,
+  ttOfUtc,
+  utcOfTt,
+} from "./terrestrialTime";
+export {
   ENGLISH_MONTH_NAMES,
   ENGLISH_WEEKDAY_NAMES,
 } from "./englishCalendarNames";
+export { readMetarTimeFields, type MetarTimeFields } from "./metarTime";
+export {
+  type GtfsTimeFields,
+  readGtfsTime,
+  readGtfsTimeFields,
+  writeGtfsTime,
+} from "./gtfsTime";
+export { gtfsServiceDateOf } from "./gtfsServiceDate";
+export {
+  readSsimDateFields,
+  SSIM_MONTH_LETTERS,
+  type SsimDateFields,
+  writeSsimDate,
+} from "./ssimDate";
+export {
+  type NotamDateTimeFields,
+  readNotamDateTimeFields,
+} from "./notamDateTime";
+export {
+  readSwiftDateFields,
+  SWIFT_VALUE_DATE_FIRST_YEAR,
+  SWIFT_VALUE_DATE_LAST_YEAR,
+  type SwiftDateFields,
+  swiftValueDateYear,
+  writeSwiftDate,
+} from "./swiftDate";
 export { defaultFractionalDigits } from "./defaultFractionalDigits";
 export { getLocaleFirstDayOfWeek } from "./getLocaleFirstDayOfWeek";
 export { resolveMinimalDaysInFirstWeek } from "./resolveMinimalDaysInFirstWeek";
 export { getLocaleWeekYearBounds } from "./getLocaleWeekYearBounds";
 export { getLocaleWeekendDays } from "./getLocaleWeekendDays";
 export { getUnitSpan } from "./intervalCountHelpers";
-export { isObject, isOptionsArgument } from "./isObject";
+export { isObject, isOptionsArgument, isOptionsObject } from "./isObject";
+export {
+  booleanOption,
+  numberOption,
+  fractionalDigitsOption,
+  fractionalDigitsOptionOrDefault,
+  stringOption,
+  stringOptionOrDefault,
+} from "./typedOptions";
 export { readProtoRecord } from "./protoRecord";
+export {
+  isPtpUtcOffset,
+  PTP_SECONDS_LIMIT,
+  PTP_UTC_OFFSET_MAX,
+  PTP_UTC_OFFSET_MIN,
+  readPtpTimestamp,
+} from "./ptpTimestamp";
 export { isValidAmount } from "./isValidAmount";
 export { joinDateTimeConnector } from "./joinDateTimeConnector";
 export {
@@ -179,8 +274,34 @@ export {
   nextStepIndex,
   stepReading,
   taiOfUtc,
+  utcDayLengthNanoseconds,
   utcOfTai,
 } from "./leapSeconds";
+export {
+  type DayPosition,
+  dayPositionOf,
+  dayPositionOfDays,
+  type EpochDays,
+  epochDaysOfJ2000Seconds,
+  epochDaysOfJulianDate,
+  epochDaysOfModifiedJulianDate,
+  exactDyadic,
+  isTimeScale,
+  J2000_EPOCH_DAY,
+  JD_OF_UNIX_EPOCH_MIDNIGHT_HALF_DAYS,
+  julianDatePartsOf,
+  MJD_OF_UNIX_EPOCH,
+  nearestDouble,
+  readingOfDayPosition,
+  readsBackInDomain,
+  UTC_JD_FLOOR_NANOSECONDS,
+} from "./julianDate";
+export {
+  formatTai64nLabel,
+  parseTai64Label,
+  TAI64_SECONDS_OFFSET,
+  tai64LabelText,
+} from "./tai64Label";
 export { isValidDayOfWeek } from "./isValidDayOfWeek";
 export { monthGridWeekRow } from "./monthGridWeekRow";
 export { normalizeDateTime } from "./normalizeDateTime";

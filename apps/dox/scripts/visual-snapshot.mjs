@@ -133,6 +133,8 @@ const PAGES = [
   { slug: "tool-eta-drift", path: "/tools/eta-drift/" },
   { slug: "tool-departure-board", path: "/tools/departure-board/" },
   { slug: "tool-dtm-decoder", path: "/tools/dtm-decoder/" },
+  { slug: "tool-hl7-timestamp-reader", path: "/tools/hl7-timestamp-reader/" },
+  { slug: "tool-fhir-date-checker", path: "/tools/fhir-date-checker/" },
   { slug: "tool-x12-time-reader", path: "/tools/x12-time-reader/" },
   { slug: "tool-demurrage-clock", path: "/tools/demurrage-clock/" },
   { slug: "tool-bl-date-stamp", path: "/tools/bl-date-stamp/" },
@@ -146,10 +148,53 @@ const PAGES = [
   { slug: "tool-gnss-rollover-checker", path: "/tools/gnss-rollover-checker/" },
   { slug: "tool-leap-second-timeline", path: "/tools/leap-second-timeline/" },
   {
+    slug: "tool-terrestrial-time-stack",
+    path: "/tools/terrestrial-time-stack/",
+  },
+  {
+    slug: "tool-julian-day-counter",
+    path: "/tools/julian-day-counter/",
+  },
+  {
+    slug: "tool-double-precision-meter",
+    path: "/tools/double-precision-meter/",
+  },
+  {
     slug: "tool-elapsed-vs-clock-difference",
     path: "/tools/elapsed-vs-clock-difference/",
   },
   { slug: "tool-stored-time-audit", path: "/tools/stored-time-audit/" },
+  { slug: "tool-tai64n-log-reader", path: "/tools/tai64n-log-reader/" },
+  { slug: "tool-fix-timestamp-reader", path: "/tools/fix-timestamp-reader/" },
+  {
+    slug: "tool-ccsds-time-code-decoder",
+    path: "/tools/ccsds-time-code-decoder/",
+  },
+  { slug: "tool-code-b-day-ruler", path: "/tools/code-b-day-ruler/" },
+  { slug: "tool-ssim-date-reader", path: "/tools/ssim-date-reader/" },
+  {
+    slug: "tool-report-time-resolver",
+    path: "/tools/report-time-resolver/",
+  },
+  {
+    slug: "tool-swift-value-date-reader",
+    path: "/tools/swift-value-date-reader/",
+  },
+  { slug: "tool-gtfs-time-reader", path: "/tools/gtfs-time-reader/" },
+  {
+    slug: "tool-gtfs-service-day-clock",
+    path: "/tools/gtfs-service-day-clock/",
+  },
+  {
+    slug: "tool-gtfs-trip-board",
+    path: "/tools/gtfs-trip-board/",
+  },
+  { slug: "tool-ptp-clock-converter", path: "/tools/ptp-clock-converter/" },
+  {
+    slug: "tool-operating-schedule-checker",
+    path: "/tools/operating-schedule-checker/",
+  },
+  { slug: "tool-opening-hours-board", path: "/tools/opening-hours-board/" },
   { slug: "tool-holiday-rule-builder", path: "/tools/holiday-rule-builder/" },
   {
     slug: "tool-observance-comparator",
@@ -178,6 +223,10 @@ const PAGES = [
     slug: "check-morocco-2026-clock-change",
     path: "/check/morocco-2026-clock-change/",
   },
+  {
+    slug: "check-us-sunshine-protection-act",
+    path: "/check/us-sunshine-protection-act/",
+  },
   { slug: "tool-cron-in-a-zone", path: "/tools/cron-in-a-zone/" },
   { slug: "tool-leap-day-birthday", path: "/tools/leap-day-birthday/" },
   { slug: "tool-expiry-calculator", path: "/tools/expiry-calculator/" },
@@ -193,9 +242,10 @@ const PAGES = [
      brain badge and the widget rail's collapsed-to-nothing layout are covered
      by nothing else. */
   { slug: "dox", path: "/dox/" },
+  { slug: "upstream", path: "/upstream/" },
 ];
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: [...new Set(PAGES.map((p) => p.path))],
 });
@@ -205,6 +255,7 @@ const LIVE_PAGES = new Set([
   "/",
   "/tools/zoned-earth/",
   "/tools/zone-planner/",
+  "/tools/ptp-clock-converter/",
 ]);
 
 /* `--resolve-only`: each page answers 200, the live pages carry `live` and the stage a canvas mask
@@ -299,7 +350,8 @@ const LIVE_CLOCK_SELECTORS = [
   /* Every region whose text or drawing is a function of the wall clock carries the `live` token
      of `data-gate` (the clock rows, the globe tooltip's time and date, a zone's DST badge and
      offset, and everything the Zone Planner draws from its reference time: the datetime field,
-     each pinned clock, the readout, the jump status and the marks on the slider track). The row
+     each pinned clock, the readout, the jump status and the marks on the slider track, and the
+     PTP Clock Converter's now plates and calls). The row
      that holds a clock's three texts is masked as well as the texts, because the masks follow each
      text's own box, whose width changes with the text ("Today" against "Tomorrow"), so the edges
      of the smaller boxes differ between captures; the row is a fixed width. */

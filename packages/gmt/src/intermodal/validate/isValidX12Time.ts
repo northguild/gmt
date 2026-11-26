@@ -1,5 +1,5 @@
 import type { X12TimeFormat } from "../../types/edi";
-import { parseX12Time } from "../parse/parseX12Time";
+import { x12TimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is an X12 time that states a real time of day: a data element 337
@@ -13,7 +13,7 @@ import { parseX12Time } from "../parse/parseX12Time";
  * | `TM` | 4 | `HHMM` | "Time Expressed in Format HHMM" |
  * | `TS` | 6 | `HHMMSS` | "Time Expressed in Format HHMMSS" |
  *
- * - True exactly when `parseX12Time` returns a time for the same arguments: the validator calls
+ * - True exactly when `parseX12Time` returns a time for the same arguments: the validator and the parser share
  *   the parser, so the two cannot disagree.
  * - Omit `format` for the time element of a freight segment (`AT7-06`, `G62-04`, `DTM-03`),
  *   which has no qualifier. Pass it for a time that arrives with one (`DTP-02` and `DTP-03`,
@@ -38,5 +38,5 @@ import { parseX12Time } from "../parse/parseX12Time";
  * @example isValidX12Time("14304") // false (five digits is not an element 337 form)
  */
 export function isValidX12Time(value: string, format?: X12TimeFormat): boolean {
-  return parseX12Time(value, format) !== "";
+  return x12TimeText(value, format) !== "";
 }

@@ -11,6 +11,7 @@
  * as `markPositions` always was.
  */
 import { Temporal } from "@northguild/gmt";
+import type { WidestGap } from "./edi-widgets";
 
 // ---------------------------------------------------------------------------
 // The layout of a code, read off the formatter's own output
@@ -246,6 +247,11 @@ export interface PicField {
   word: string;
   /** The words under its bracket, when they are not the group's name. */
   bracket?: string;
+  /**
+   * Fields of one group that sit under separate brackets name different runs; the figure
+   * splits where `run` changes. Absent for every code that draws one bracket per group.
+   */
+  run?: string;
 }
 
 /** One half of a value: a whole value, or one end of a period. */
@@ -343,15 +349,31 @@ interface TimelineMarkPos {
   lane: number;
 }
 
+/** Where the reference mark sits: along the axis, in a pin lane, and which side its label is on. */
+interface TimelineReferencePos {
+  at: number;
+  lane: number;
+  /** The side of the pin the label is written on: toward the nearer end of the axis' room. */
+  side: "start" | "end";
+}
+
 export interface TimelineLayout {
   ticks: TimelineTick[];
   marks: TimelineMarkPos[];
-  /** The outermost marks, as positions along the axis, when there are two. */
+  /** The outermost zone marks, as positions along the axis, when there are two. */
   span: { from: number; to: number } | null;
+  /** The reference mark, when the caller passed one. */
+  reference: TimelineReferencePos | null;
 }
 
 /** The marks nearer than this, in percent of the axis, share no lane. */
 const LANE_GAP = 8;
+
+/** The pin lanes the plot holds: the reference mark takes one of them and never a fifth. */
+const LANES = 4;
+
+/** The room, in percent of the axis, the reference mark's label needs beside its pin. */
+const REFERENCE_CLEAR = 30;
 
 /** How many tick labels the axis holds before it skips ticks. */
 const MAX_LABELS = 8;
@@ -371,18 +393,28 @@ function utcHour(ms: number): { hour: number; day: string } {
  * after the latest (a few more for one instant alone), with a tick on every whole
  * hour and a label on every n-th so the labels never touch. A mark takes the
  * first lane in which the one before it is far enough away.
+ *
+ * A `reference` instant (a value read some other way, drawn as its own mark) is part of the
+ * axis' domain, so the axis spans it. It takes no part in the zone marks' lanes, the span or
+ * the widest gap: it goes in the first lane with no zone mark near its label.
  */
 export function timelineLayout(
   inputs: readonly { n: number; instant: string }[],
+  reference: string | null = null,
 ): TimelineLayout | null {
   if (inputs.length === 0) return null;
   const ms = inputs.map(
     (i) => Temporal.Instant.from(i.instant).epochMilliseconds,
   );
-  const lowest = Math.min(...ms);
-  const highest = Math.max(...ms);
+  const referenceMs =
+    reference === null
+      ? null
+      : Temporal.Instant.from(reference).epochMilliseconds;
+  const everyMs = referenceMs === null ? ms : [...ms, referenceMs];
+  const lowest = Math.min(...everyMs);
+  const highest = Math.max(...everyMs);
   const hours = Math.max(0, Math.ceil((highest - lowest) / HOUR));
-  const pad = inputs.length === 1 ? 3 : Math.max(1, Math.ceil(hours / 10));
+  const pad = everyMs.length === 1 ? 3 : Math.max(1, Math.ceil(hours / 10));
   const from = Math.floor(lowest / HOUR) * HOUR - pad * HOUR;
   const to = Math.ceil(highest / HOUR) * HOUR + pad * HOUR;
   const total = to - from;
@@ -412,11 +444,178 @@ export function timelineLayout(
     laneEnds[lane] = m.at;
     return { n: m.n, at: m.at, lane };
   });
+  const zoneLowest = Math.min(...ms);
+  const zoneHighest = Math.max(...ms);
   const span =
-    inputs.length > 1 && highest > lowest
-      ? { from: at(lowest), to: at(highest) }
+    inputs.length > 1 && zoneHighest > zoneLowest
+      ? { from: at(zoneLowest), to: at(zoneHighest) }
       : null;
-  return { ticks, marks, span };
+  return {
+    ticks,
+    marks,
+    span,
+    reference:
+      referenceMs === null ? null : referencePos(at(referenceMs), marks),
+  };
+}
+
+/** The unit a calendar span is one of. */
+export type SpanUnit = "year" | "month" | "day";
+
+/** The least room, in percent of the axis, between two labels on a calendar axis. */
+const SPAN_LABEL_GAP = 11;
+
+type PlainDT = Temporal.PlainDateTime;
+
+/** Epoch milliseconds of a zone-free date-time read as UTC: drawing geometry only. */
+const planeMs = (d: PlainDT): number =>
+  d.toZonedDateTime("UTC").epochMilliseconds;
+
+/** One tick of a calendar axis: its date-time, its label (or ""), and whether it must keep it. */
+interface SpanCandidate {
+  when: PlainDT;
+  label: string;
+  day: string;
+  priority: boolean;
+}
+
+/** The ticks a calendar axis draws across [start, end], per unit. */
+function spanCandidates(
+  unit: SpanUnit,
+  start: PlainDT,
+  end: PlainDT,
+): SpanCandidate[] {
+  const out: SpanCandidate[] = [];
+  if (unit === "year") {
+    let t = start.with({ day: 1, hour: 0, minute: 0, second: 0 });
+    if (Temporal.PlainDateTime.compare(t, start) < 0) t = t.add({ months: 1 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ months: 1 })
+    ) {
+      out.push({
+        when: t,
+        label: t.month % 3 === 1 ? pad2(t.month) : "",
+        day: t.month === 1 ? String(t.year) : "",
+        priority: t.month === 1,
+      });
+    }
+  } else if (unit === "month") {
+    let t = start.with({ hour: 0, minute: 0, second: 0 });
+    if (Temporal.PlainDateTime.compare(t, start) < 0) t = t.add({ days: 1 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ days: 1 })
+    ) {
+      const first = t.day === 1;
+      out.push({
+        when: t,
+        label: first || t.dayOfWeek === 1 ? pad2(t.day) : "",
+        day: first ? `${t.year}-${pad2(t.month)}` : "",
+        priority: first,
+      });
+    }
+  } else {
+    let t = start.with({ hour: 0, minute: 0, second: 0 });
+    while (Temporal.PlainDateTime.compare(t, start) < 0)
+      t = t.add({ hours: 3 });
+    for (
+      ;
+      Temporal.PlainDateTime.compare(t, end) <= 0;
+      t = t.add({ hours: 3 })
+    ) {
+      out.push({
+        when: t,
+        label: t.hour % 6 === 0 ? `${pad2(t.hour)}:00` : "",
+        day: t.hour === 0 ? `${pad2(t.month)}-${pad2(t.day)}` : "",
+        priority: t.hour === 0,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * A calendar axis for one span of whole units: a year, a month or a day, `to` exclusive. The axis
+ * runs half the span before `from` to half the span after `to`, so the span fills the middle half.
+ * Arithmetic is zone-free (`PlainDateTime`): drawing geometry, no claim about the library.
+ * A label that must stay (January, the 1st, midnight) always does; the rest keep their room
+ * from every label already placed, and never more than `MAX_LABELS` in all.
+ */
+export function spanLayout(o: {
+  from: string;
+  to: string;
+  unit: SpanUnit;
+  reference: string | null;
+}): TimelineLayout {
+  const start = Temporal.PlainDate.from(o.from).toPlainDateTime();
+  const end = Temporal.PlainDate.from(o.to).toPlainDateTime();
+  const fromMs = planeMs(start);
+  const toMs = planeMs(end);
+  const pad = (toMs - fromMs) / 2;
+  const axisFrom = fromMs - pad;
+  const total = toMs + pad - axisFrom;
+  const at = (v: number): number => ((v - axisFrom) / total) * 100;
+  const plain = (ms: number): PlainDT =>
+    Temporal.Instant.fromEpochMilliseconds(ms)
+      .toZonedDateTimeISO("UTC")
+      .toPlainDateTime();
+  const axisStart = plain(axisFrom);
+  const axisEnd = plain(toMs + pad);
+
+  const inside = spanCandidates(o.unit, axisStart, axisEnd)
+    .map((c) => ({ ...c, pos: at(planeMs(c.when)) }))
+    .filter((c) => c.pos > 0 && c.pos < 100);
+  const kept: number[] = [];
+  const room = (pos: number): boolean =>
+    kept.every((k) => Math.abs(inside[k]!.pos - pos) >= SPAN_LABEL_GAP);
+  inside.forEach((c, i) => {
+    if (c.priority) kept.push(i);
+  });
+  inside.forEach((c, i) => {
+    if (!c.priority && c.label !== "" && room(c.pos)) kept.push(i);
+  });
+  const labelled = new Set(kept.sort((a, b) => a - b).slice(0, MAX_LABELS));
+  const ticks: TimelineTick[] = inside.map((c, i) => ({
+    at: c.pos,
+    label: labelled.has(i) ? c.label : "",
+    day: labelled.has(i) ? c.day : "",
+  }));
+
+  const here =
+    o.reference === null
+      ? null
+      : at(planeMs(Temporal.PlainDateTime.from(o.reference)));
+  return {
+    ticks,
+    marks: [],
+    span: { from: at(fromMs), to: at(toMs) },
+    reference: here === null ? null : referencePos(here, []),
+  };
+}
+
+/** The calendar span's spoken line, in words. */
+export function spanAria(label: string, padded: string): string {
+  return `Spans ${label}; padded reading at ${padded}. Calendar dates, no zone.`;
+}
+
+/** The first pin lane with no zone mark within the label's room, else the first lane. */
+function referencePos(
+  position: number,
+  marks: readonly TimelineMarkPos[],
+): TimelineReferencePos {
+  const free = Array.from({ length: LANES }, (_, lane) => lane).find((lane) =>
+    marks.every(
+      (m) => m.lane !== lane || Math.abs(m.at - position) >= REFERENCE_CLEAR,
+    ),
+  );
+  return {
+    at: position,
+    lane: free ?? 0,
+    side: position > 100 - REFERENCE_CLEAR ? "start" : "end",
+  };
 }
 
 /**
@@ -427,6 +626,7 @@ export function timelineAria(
   inputs: readonly TimelineInput[],
   gap: string,
   stated: string,
+  reference: { label: string; instant: string } | null = null,
 ): string {
   if (stated !== "")
     return `The instant the value states, ${stated}, on a UTC timeline.`;
@@ -434,7 +634,9 @@ export function timelineAria(
     .filter((i) => i.instant !== "")
     .map((i) => `${i.n}, ${i.zone}, ${i.instant}`)
     .join("; ");
-  return `A UTC timeline with ${inputs.length} ${inputs.length === 1 ? "zone" : "zones"} marked: ${marks}${gap === "" ? "" : `. ${gap}`}.`;
+  const read =
+    reference === null ? "" : ` ${reference.label}: ${reference.instant}.`;
+  return `A UTC timeline with ${inputs.length} ${inputs.length === 1 ? "zone" : "zones"} marked: ${marks}${gap === "" ? "" : `. ${gap}`}.${read}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -445,3 +647,27 @@ export function timelineAria(
 export function lit(text: string, mask: string, group: PicGroup): PicField {
   return { text, mask, group, word: "" };
 }
+
+/** What the timeline draws. */
+export type TimelineSpec =
+  | { kind: "empty"; text: string }
+  | {
+      kind: "span";
+      /** The first day, a `PlainDate`. */
+      from: string;
+      /** The day after the last, a `PlainDate`. */
+      to: string;
+      unit: SpanUnit;
+      /** The days it covers: the caption's first line. */
+      label: string;
+      /** The pin at `from`: the moment a padding parser invents. */
+      reference: { label: string };
+    }
+  | { kind: "stated"; instant: string }
+  | {
+      kind: "marks";
+      rows: readonly TimelineInput[];
+      gap: WidestGap | null;
+      /** A comparison instant drawn as a hollow pin: the value read as UTC. Absent draws none. */
+      reference?: { instant: string; label: string } | null;
+    };

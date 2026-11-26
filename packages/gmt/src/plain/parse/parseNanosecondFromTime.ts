@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "../validate";
+import { plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the nanosecond (0-999) for a given ISO 8601 time string.
@@ -16,10 +15,10 @@ import { isValidTime } from "../validate";
  * @example parseNanosecondFromTime("invalid") // ""
  */
 export function parseNanosecondFromTime(value: string): string {
-  if (!isValidTime(value)) return "";
+  const time = plainTimeOf(value);
+  if (time === null) return "";
 
   try {
-    const time = Temporal.PlainTime.from(value);
     return time.nanosecond.toString().padStart(3, "0");
   } catch {
     return "";

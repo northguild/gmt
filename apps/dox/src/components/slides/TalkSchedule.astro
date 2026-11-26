@@ -1,0 +1,82 @@
+---
+/**
+ * The talk's date as a schedule card: the Earth clock's calendar page (`calendar-page.ts`) with
+ * the day, beside the slot. The start time is the largest line; the doors time sits small under
+ * it, then the venue's zone, then the venue with a Google Maps link. Every time is read by gmt
+ * from the deck registry (`deckSchedule`). The page is a picture of the date, hidden from
+ * assistive technology; the slot says it all in words. With no fixed date the card is the
+ * registry's words alone.
+ */
+import Link from "~/components/Link.astro";
+import { CALENDAR_PAGE, calendarPage } from "~/lib/slides/calendar-page";
+import {
+  DATE_TO_BE_ANNOUNCED,
+  deckSchedule,
+  venueAddress,
+  venueMapUrl,
+  type DeckEntry,
+} from "~/slides/decks";
+
+interface Props {
+  deck: DeckEntry;
+}
+const { deck } = Astro.props;
+const slot = deckSchedule(deck);
+const leaf = calendarPage(0, 0);
+// A margin round the page so its outline's stroke is not cut at the edge of the drawing.
+const M = 0.2;
+const viewBox = `${-M} ${-M} ${CALENDAR_PAGE.w + 2 * M} ${CALENDAR_PAGE.h + 2 * M}`;
+---
+
+{
+  slot === null ? (
+    <p class="gmt-talk-schedule-tba">
+      {deck.event}, {DATE_TO_BE_ANNOUNCED}
+    </p>
+  ) : (
+    <div class="gmt-talk-schedule">
+      <svg class="gmt-talk-page" viewBox={viewBox} aria-hidden="true" data-calendar>
+        <polygon points={leaf.page} data-calendar-page />
+        <polygon points={leaf.strip} data-calendar-strip />
+        <text x={leaf.month.x} y={leaf.month.y} font-size={leaf.month.size} data-calendar-month>
+          {slot.monthShort.toUpperCase()}
+        </text>
+        <text x={leaf.day.x} y={leaf.day.y} font-size={leaf.day.size} data-calendar-day>
+          {slot.day}
+        </text>
+        <text
+          x={leaf.weekday.x}
+          y={leaf.weekday.y}
+          font-size={leaf.weekday.size}
+          data-calendar-weekday
+        >
+          {slot.weekdayShort.toUpperCase()}
+        </text>
+      </svg>
+      <div class="gmt-talk-slot">
+        <p class="gmt-talk-event">{deck.event}</p>
+        <p class="gmt-talk-date">
+          {slot.weekday} {slot.day} {slot.month} {slot.year}
+        </p>
+        <p class="gmt-talk-when">
+          <time datetime={slot.datetime}>{slot.start}</time>
+        </p>
+        {slot.doors && (
+          <p class="gmt-talk-doors">
+            Doors open <time datetime={slot.doors.datetime}>{slot.doors.time}</time>
+          </p>
+        )}
+        <p class="gmt-talk-zone">
+          {slot.zone} · {slot.offset}
+        </p>
+        {deck.venue && (
+          <address class="gmt-talk-venue">
+            <Link href={venueMapUrl(deck.venue)}>{deck.venue.name}</Link>
+            <br />
+            {venueAddress(deck.venue)}
+          </address>
+        )}
+      </div>
+    </div>
+  )
+}

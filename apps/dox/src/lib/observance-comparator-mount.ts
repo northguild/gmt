@@ -75,6 +75,7 @@ import {
 } from "./holiday-widgets";
 import { onWidthChange } from "./label-fit";
 import {
+  CLAMP_NOTE,
   COMPARATOR_LINKS,
   COMPARATOR_PRESETS,
   CUSTOM_OPTION,
@@ -91,6 +92,7 @@ import {
   clusterDates,
   columnText,
   compare,
+  holidayNoteOf,
   isSeeded,
   laneDates,
   laneMarks,
@@ -126,7 +128,7 @@ const NOTHING = "nothing to compare";
 const SPAN_NOTES = [
   NO_YEARS_REASON,
   `${NO_SIGNAL_TEXT}: ${NO_YEARS_REASON}`,
-  `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`,
+  CLAMP_NOTE,
   `${MAX_YEARS} years`,
 ];
 const HOLIDAY_NOTE_SIZERS = [
@@ -571,7 +573,7 @@ function setupWidget(
         holdOf(
           "Span note",
           model.clamped
-            ? `More than ${MAX_YEARS} years: showing the first ${MAX_YEARS}.`
+            ? CLAMP_NOTE
             : `${model.years.length} ${model.years.length === 1 ? "year" : "years"}`,
           model.clamped ? "note" : "ok",
           SPAN_NOTES,
@@ -585,7 +587,7 @@ function setupWidget(
         ? holdOf("Holiday note", "", "ok", HOLIDAY_NOTE_SIZERS)
         : holdOf(
             "Holiday note",
-            `${NO_SIGNAL_TEXT}: ${bad.length === 1 ? `holiday ${bad[0]} is` : `holidays ${bad.join(", ")} are`} not a date on the calendar (a month from 1 to 12 and a day that month has).`,
+            holidayNoteOf(bad),
             "sentinel",
             HOLIDAY_NOTE_SIZERS,
           ),

@@ -1,12 +1,12 @@
 import { Temporal } from "../../internal/temporal";
 import { durationTotal, readDurationUnits } from "../../internal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
-import { isValidTimeDurationUnit } from "../../plain/validate";
+import { isTimeDurationUnitName } from "../../internal/unitNames";
 import type { ExactDurationUnit, TimeUnit } from "../../types";
 
 /** Whether `unit` has an exact length: `"days"` (24 hours with no anchor) or a time unit. */
 const isExactDurationUnit = (unit: string): unit is ExactDurationUnit =>
-  unit === "days" || isValidTimeDurationUnit(unit);
+  unit === "days" || isTimeDurationUnitName(unit);
 
 /**
  * Express an amount written as a unit object, such as `{ minutes: 15 }`, as a single fractional

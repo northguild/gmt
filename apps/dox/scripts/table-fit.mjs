@@ -14,7 +14,9 @@
  * the content spills out of its cells: its own `scrollWidth` is measured against its `clientWidth`.
  * A table that is not drawn (`display: none` at this width) is not measured.
  * A second check, `lib/cell-overflow.mjs`, runs at `--width` and at 390 px: no cell's content reaches
- * outside its cell (a spill into the next cell, or a clip), whether or not the table scrolls.
+ * outside its cell (a spill into the next cell, or a clip), whether or not the table scrolls. The
+ * `--width` pass runs on the page the table check loaded; the 390 px pass loads the page afresh, so
+ * the page's width-dependent scripts run at that width.
  * Each page is settled first (`settle`: fonts, frames, and every widget's eased regions at rest), so a
  * table a widget fills in after `load` is measured with its rows.
  * A failure names the widest piece that cannot break (an element that holds its words together
@@ -23,22 +25,28 @@
  *
  * Usage (from apps/dox, after a build):
  *   node scripts/table-fit.mjs [--base http://127.0.0.1:48291/gmt] [--browsers chromium,webkit]
- *     [--width 1440] [--pages /a/,/b/] [--list-pages]
+ *     [--width 1440] [--pages /a/,/b/] [--list-pages] [--shard <i>/<n>]
  *
  * Without `--base` it serves `dist` itself on a free port. The runner's contract: `--list-pages`
  * prints the table pages and exits; with `GATE_REPORT` set every scrolling table is a finding.
+ * `--shard <i>/<n>` checks every n-th page of the sorted list, starting at the i-th, so n runners
+ * together check each page once.
  * Last line `table-fit: <pages> pages, <tables> tables, <n> scroll, <n> spill`. Exit 0 pass, 1 any finding
  * or no table measured at all, 2 usage or a missing build.
  */
 import { launchBrowser } from "./lib/browser-launch.mjs";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { blockOffSite } from "./gate-checks.mjs";
-import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { settle } from "./lib/a11y-sweep.mjs";
-import { serveStatic } from "./lib/static-server.mjs";
+import {
+  gateBase,
+  gateBrowsers,
+  gateOptions,
+  gatePages,
+  usageError,
+} from "./lib/gate-cli.mjs";
 import { measureCells } from "./lib/cell-overflow.mjs";
 import { listTablePages } from "./lib/table-pages.mjs";
 
@@ -46,7 +54,10 @@ const GATE = "table-fit";
 const HEIGHT = 900;
 const PHONE = 390;
 const AT_A_TIME = 8;
-const LAUNCHERS = { chromium: true, firefox: true, webkit: true };
+/* A readiness condition, not a budget: with eight pages loading at once, a CI runner takes longer
+   than Playwright's default 30 s to load the largest page (the changelog, about 28,000 elements),
+   and the check measures the page, not how fast it loaded. */
+const LOAD_TIMEOUT = 120_000;
 const DIST = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -54,59 +65,22 @@ const DIST = path.join(
 );
 
 const args = process.argv.slice(2);
-const opt = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i >= 0 && args[i + 1] && !args[i + 1].startsWith("--")
-    ? args[i + 1]
-    : fallback;
-};
-const FLAGS = new Set([
+const opt = gateOptions(GATE, args, [
   "--base",
   "--browsers",
   "--width",
   "--pages",
   "--list-pages",
+  "--shard",
 ]);
-const unknownFlag = args.find((a) => a.startsWith("--") && !FLAGS.has(a));
-if (unknownFlag) {
-  console.error(
-    `${GATE}: unknown option ${unknownFlag} (${[...FLAGS].join(", ")})`,
-  );
-  process.exit(2);
-}
 
-if (!existsSync(path.join(DIST, "gmt", "index.html"))) {
-  console.error(
-    `${GATE}: apps/dox/dist/gmt/index.html is missing; build the site first.`,
-  );
-  process.exit(2);
-}
-
-const all = listTablePages(DIST);
-const selected = applyPageContract({ gate: GATE, pages: all, argv: args });
-const pages = selected ?? all;
-const browsers = opt("browsers", "chromium").split(",").filter(Boolean);
-for (const name of browsers) {
-  if (!LAUNCHERS[name]) {
-    console.error(
-      `${GATE}: unknown browser "${name}" (chromium, webkit, firefox)`,
-    );
-    process.exit(2);
-  }
-}
+const pages = await gatePages(GATE, args, opt, DIST, listTablePages);
+const browsers = gateBrowsers(GATE, opt);
 const width = Number(opt("width", "1440"));
-if (!Number.isInteger(width) || width < 200) {
-  console.error(`${GATE}: --width takes a pixel width`);
-  process.exit(2);
-}
+if (!Number.isInteger(width) || width < 200)
+  usageError(GATE, `--width takes a pixel width`);
 
-let server = null;
-let base = opt("base", "");
-if (base === "") {
-  server = await serveStatic(DIST, 0);
-  base = `http://127.0.0.1:${server.address().port}/gmt`;
-}
-base = base.replace(/\/$/, "");
+const { base, server } = await gateBase(GATE, opt, DIST);
 
 /** Runs in the page: every table in `main`, with whether it scrolls and its widest fixed piece. */
 function measureTables() {
@@ -203,7 +177,27 @@ function measureTables() {
   });
 }
 
-/** Fails each cell of this page whose content reaches outside it, at one viewport width. */
+/** Reports each cell whose content reaches outside it, at one viewport width. */
+function reportCells(cells, browserName, pagePath, cellWidth) {
+  for (const c of cells) {
+    spilling += 1;
+    const message = `cell "${c.cell}" in table "${c.headers.join(" | ")}": ${c.reasons.join("; ")}`;
+    console.log(
+      `FAIL ${browserName} ${cellWidth}px ${pagePath}\n       ${message}`,
+    );
+    recordFinding({
+      gate: GATE,
+      rule: "cell-overflows",
+      page: pagePath,
+      target: `cell "${c.cell}"`,
+      browser: browserName,
+      width: cellWidth,
+      message,
+    });
+  }
+}
+
+/** Loads the page afresh at one viewport width and reports its overflowing cells. */
 async function checkCells(browser, browserName, pagePath, cellWidth) {
   const context = await browser.newContext({
     viewport: { width: cellWidth, height: HEIGHT },
@@ -211,25 +205,17 @@ async function checkCells(browser, browserName, pagePath, cellWidth) {
   try {
     await blockOffSite(context, base);
     const page = await context.newPage();
-    await page.goto(base + pagePath, { waitUntil: "load" });
+    await page.goto(base + pagePath, {
+      waitUntil: "load",
+      timeout: LOAD_TIMEOUT,
+    });
     await settle(page);
-    const cells = await page.evaluate(measureCells);
-    for (const c of cells) {
-      spilling += 1;
-      const message = `cell "${c.cell}" in table "${c.headers.join(" | ")}": ${c.reasons.join("; ")}`;
-      console.log(
-        `FAIL ${browserName} ${cellWidth}px ${pagePath}\n       ${message}`,
-      );
-      recordFinding({
-        gate: GATE,
-        rule: "cell-overflows",
-        page: pagePath,
-        target: `cell "${c.cell}"`,
-        browser: browserName,
-        width: cellWidth,
-        message,
-      });
-    }
+    reportCells(
+      await page.evaluate(measureCells),
+      browserName,
+      pagePath,
+      cellWidth,
+    );
   } finally {
     await context.close().catch(() => {});
   }
@@ -252,7 +238,10 @@ for (const browserName of browsers) {
       try {
         await blockOffSite(context, base);
         const page = await context.newPage();
-        const res = await page.goto(base + pagePath, { waitUntil: "load" });
+        const res = await page.goto(base + pagePath, {
+          waitUntil: "load",
+          timeout: LOAD_TIMEOUT,
+        });
         if (!res || res.status() !== 200) {
           throw new Error(
             `the page answered HTTP ${res ? res.status() : "none"}, not 200`,
@@ -260,7 +249,12 @@ for (const browserName of browsers) {
         }
         await settle(page);
         const found = await page.evaluate(measureTables);
-        await checkCells(browser, browserName, pagePath, width);
+        reportCells(
+          await page.evaluate(measureCells),
+          browserName,
+          pagePath,
+          width,
+        );
         if (width !== PHONE) {
           await checkCells(browser, browserName, pagePath, PHONE);
         }

@@ -138,12 +138,10 @@
       font-weight: 600;
     }
 
-    /* A held value keeps one line in the wide table, and its widest sample (23 characters)
-       is wider than the value column of a phone. Here the live text and every sample wrap
-       alike, so the widest still fixes the height and nothing is cut off the right edge. */
-    & .cell span {
+    /* The verdict is words: it wraps at its spaces, and the widest sample still fixes its height. */
+    & .verdictCell span {
       white-space: normal;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
     }
   }
 }

@@ -19,6 +19,10 @@ export type HeadScan = {
   ogTitle: string | undefined;
   /** The `href` of each `<link rel="alternate" type="text/markdown">`. */
   markdownAlternates: string[];
+  /** The `href` of each `<link rel="describedby" type="text/plain">`. */
+  describedBy: string[];
+  /** The `href` of each `<link rel="alternate" type="text/plain">`. The site carries none. */
+  textAlternates: string[];
   /** The text of each `<script type="application/ld+json">`. */
   jsonLd: string[];
   /** The `href` of each link to a file's edit page on GitHub. The site carries none. */
@@ -72,6 +76,8 @@ export function scanHead(html: string): HeadScan {
     twitterImage: undefined,
     ogTitle: undefined,
     markdownAlternates: [],
+    describedBy: [],
+    textAlternates: [],
     jsonLd: [],
     editLinks: [],
   };
@@ -97,6 +103,10 @@ export function scanHead(html: string): HeadScan {
     if (attrs.rel === "canonical") scan.canonical = attrs.href;
     else if (attrs.rel === "alternate" && attrs.type === "text/markdown") {
       if (attrs.href !== undefined) scan.markdownAlternates.push(attrs.href);
+    } else if (attrs.rel === "alternate" && attrs.type === "text/plain") {
+      scan.textAlternates.push(attrs.href ?? "");
+    } else if (attrs.rel === "describedby" && attrs.type === "text/plain") {
+      if (attrs.href !== undefined) scan.describedBy.push(attrs.href);
     }
   }
 

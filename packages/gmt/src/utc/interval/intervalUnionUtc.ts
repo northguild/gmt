@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { canonicalInstantIntervals } from "../../internal";
-import { mergeIntervals } from "../../interval/calculate";
-import { isValidUtc } from "../validate";
+import { coalesceIntervalNanoseconds } from "../../internal/intervalNanoseconds";
+import { utcIntervalRecordOf } from "../../internal/intervalChecks";
 
 /**
  * Return the combined span of two UTC intervals, or null when they are disjoint.
@@ -55,22 +54,19 @@ export function intervalUnionUtc(
     return null;
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const a = utcIntervalRecordOf(aStart, aEnd);
+  if (a === null) {
     return null;
   }
 
-  const runs = mergeIntervals([
-    { start: aStart, end: aEnd },
-    { start: bStart, end: bEnd },
-  ]);
+  const b = utcIntervalRecordOf(bStart, bEnd);
+  if (b === null) {
+    return null;
+  }
 
-  // mergeIntervals returns [] for an invalid (reversed) interval, so that also gives null.
+  const runs = coalesceIntervalNanoseconds([a, b]);
+
   return runs.length === 1
-    ? (canonicalInstantIntervals(runs)?.[0] ?? null)
+    ? { start: runs[0].startText, end: runs[0].endText }
     : null;
 }

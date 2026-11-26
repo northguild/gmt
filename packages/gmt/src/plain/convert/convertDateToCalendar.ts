@@ -1,10 +1,6 @@
-import {
-  canonicalCalendarSystem,
-  formatDateInCalendar,
-  parseCalendarDateValue,
-} from "../../internal";
+import { calendarDateOf } from "../../internal/calendarDateString";
+import { canonicalCalendarSystem, formatDateInCalendar } from "../../internal";
 import type { CalendarSystem } from "../../types";
-import { isValidCalendarDate } from "../validate";
 
 /**
  * Express a PlainDate in a calendar system: the RFC 9557 string
@@ -53,7 +49,8 @@ export function convertDateToCalendar(
   value: string,
   calendar: CalendarSystem,
 ): string {
-  if (!isValidCalendarDate(value)) {
+  const valueParsed = calendarDateOf(value);
+  if (valueParsed === null) {
     return "";
   }
   const target = canonicalCalendarSystem(calendar);
@@ -62,7 +59,7 @@ export function convertDateToCalendar(
   }
 
   try {
-    return formatDateInCalendar(parseCalendarDateValue(value), target);
+    return formatDateInCalendar(valueParsed, target);
   } catch {
     return "";
   }

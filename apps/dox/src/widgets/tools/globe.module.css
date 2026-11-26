@@ -104,6 +104,11 @@
     block-size: 100%;
     cursor: grab;
 
+    /* Text on a canvas takes its smoothing from the element, and a worker's OffscreenCanvas has none,
+       so the page's `antialiased` would thicken only the main-thread labels. `auto` makes both alike. */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+
     /* Drawn while hidden, then brought in by the shared entrance once the first frame is measured. */
     &:not([data-entered]) {
       opacity: 0;
@@ -271,7 +276,9 @@
 
 .clocks {
   block-size: 24rem;
-  padding: var(--gmt-space-1);
+
+  /* Room for a chosen row's sonar ping, which spreads 12px and the scroll box would clip. */
+  padding: var(--gmt-space-3);
   scroll-behavior: smooth;
   overflow: hidden auto;
 }
@@ -352,12 +359,18 @@
     inline-size: 100%;
     block-size: 100%;
 
+    /* Text on a canvas takes its smoothing from the element, and a worker's OffscreenCanvas has none,
+       so the page's `antialiased` would thicken only the main-thread labels. `auto` makes both alike. */
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+
     &:not([data-entered]) {
       opacity: 0;
     }
   }
 
-  & .tooltip {
+  & .tooltip,
+  & .lock {
     z-index: var(--gmt-z-float);
   }
 }
@@ -385,8 +398,7 @@
   }
 }
 
-/* When the hero stacks the area fills the hero's second row (HeroGlobe.astro): the frame takes
-   what the bay under it leaves. */
+/* When the hero stacks the area fills the hero's Earth row (gmt-home-stacked.css). */
 .root[data-space] .layout {
   position: relative;
   z-index: var(--gmt-z-float);
@@ -394,12 +406,11 @@
   flex-direction: column;
   min-block-size: 100%;
   align-items: stretch;
-  padding-block-end: var(--bay);
   pointer-events: none;
 
   /* One width for the slide-over, and the room the sheet takes below the Earth. */
   --drawer-size: clamp(18rem, 24vw, 22rem);
-  --bay: var(--gmt-hero-bay, 30rem);
+  --bay: 30rem;
 }
 
 .root[data-space] .frame {
@@ -409,11 +420,10 @@
 
 /* The stage is the Earth's box, never drawn: the zoom stack's corner and the framing's source.
    When the hero stacks (narrower than 64rem, or portrait) it spans the hero's width and the
-   rest of the first screen, so the Earth is as large as that leaves room for and the zoom
-   stack sits at the screen's right edge. It is never shorter than the square it used to be. */
+   rest of the first screen (gmt-home-stacked.css gives the area its row), so the Earth is as large
+   as that leaves room for and the zoom stack sits at the screen's right edge. */
 .root[data-space] .stage {
   inline-size: auto;
-  min-block-size: min(100vw, 44rem, 70dvh);
   max-inline-size: none;
   margin: 0;
   aspect-ratio: auto;
@@ -568,7 +578,6 @@
   /* The area fills the hero's second column; the Earth is framed in it. */
   .root[data-space] .layout {
     block-size: 100%;
-    padding-block-end: 0;
   }
 
   .root[data-space] .frame {
@@ -637,10 +646,58 @@
   visibility: hidden;
 }
 
+/* Lock ------------------------------------------------------------------
+   A chosen place's pin ripples a ring for every ping and echo of its Sonar lock (globe-lock.ts
+   sets each ring's start and brightness from the sound). Each starts on the pin's own selection
+   ring and fades as it widens. The box is the pin's point; globe.ts moves it there. */
+
+.lock {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 0;
+  block-size: 0;
+  pointer-events: none;
+  z-index: var(--gmt-z-over);
+
+  &[hidden] {
+    display: none;
+  }
+
+  & > span {
+    position: absolute;
+    inset-block-start: -8px;
+    inset-inline-start: -8px;
+    inline-size: 16px;
+    block-size: 16px;
+    border: 1.5px solid var(--gmt-globe-selected);
+    border-radius: 50%;
+    opacity: 0;
+    animation: gmt-globe-lock var(--gmt-duration-lock) var(--gmt-ease-sweep);
+    animation-delay: var(--gmt-lock-delay, 0ms);
+  }
+}
+
+@keyframes gmt-globe-lock {
+  from {
+    opacity: var(--gmt-lock-peak, 0.9);
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(3.5);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tooltip,
   .zoom {
     transition: none;
+  }
+
+  .lock {
+    display: none;
   }
 
   .clocks {

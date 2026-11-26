@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the second (0-59) from a zoned datetime string.
@@ -14,12 +13,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseSecondFromZoned("invalid") // ""
  */
 export function parseSecondFromZoned(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime.second.toString().padStart(2, "0");
   } catch {
     return "";

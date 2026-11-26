@@ -23,6 +23,7 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
+import { cue } from "~/lib/sound/cue";
 import { KitElement } from "../base";
 import styles from "./readout.module.css";
 
@@ -91,7 +92,14 @@ export class GmtReadout extends KitElement {
     this.#show(message, "empty");
   }
 
+  /** Whether `#show` has run; the first render is the initial answer, not a change the reader made. */
+  #shown = false;
+
   #show(text: string, state: State): void {
+    // Live to sentinel after the first render: the reader's input just stopped making sense.
+    if (this.#shown && this.state === "live" && state === "sentinel")
+      cue("error");
+    this.#shown = true;
     this.dataset["state"] = state;
     const output = this.#output;
     if (output) output.textContent = text;

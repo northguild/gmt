@@ -11,6 +11,7 @@ import {
 import { brainsPayload } from "./brains-payload";
 import { getUnixNow } from "@northguild/gmt/unix/get";
 import { handleCanadaClockChange } from "./canada-clock-change";
+import { handleSunshineProtectionAct } from "./sunshine-protection-act";
 import { handleMoroccoClockChange } from "./morocco-clock-change";
 import { createChatHandler } from "./chat-handler";
 import { CORE_RULES_CONTENT } from "./core-rules";
@@ -185,6 +186,9 @@ async function routeApi(
   }
   if (path === "/api/morocco-clock-change") {
     return handleMoroccoClockChange(request, env);
+  }
+  if (path === "/api/sunshine-protection-act") {
+    return handleSunshineProtectionAct(request, env);
   }
 
   if (path !== "/api/chat") return undefined;

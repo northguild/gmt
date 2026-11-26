@@ -1,15 +1,15 @@
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
 import { zonedNowUnitValue } from "../../internal/zonedNowUnitValue";
 import type { NowUnit } from "../../types";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
-import { parseWeekFromDate } from "../parse";
-import { isValidDateTimeUnit } from "../validate";
+import { systemTimeZone } from "../../internal/resolveLocale";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 export type { NowUnit };
 
 function isValidPlainNowUnit(unit: string): unit is NowUnit {
-  return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);
+  return isDateTimeUnitName(unit) || ["dayOfWeek"].includes(unit);
 }
 
 /**
@@ -48,7 +48,7 @@ export function getNowUnit(unit: NowUnit): string {
   const resolvedUnit = resolveDateTimeUnit(unit);
   if (!isValidPlainNowUnit(resolvedUnit)) return "";
 
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) return "";
 
   let now: Temporal.ZonedDateTime;
@@ -59,7 +59,7 @@ export function getNowUnit(unit: NowUnit): string {
   }
 
   return zonedNowUnitValue(now, resolvedUnit, (zdt) => {
-    const w = parseWeekFromDate(zdt.toPlainDate().toString());
+    const w = weekNumberOf(zdt.toPlainDate(), "monday");
     return w === null ? "" : w.toString();
   });
 }

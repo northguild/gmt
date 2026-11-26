@@ -1,8 +1,8 @@
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { normalizeDateTime } from "../../internal";
 import { plainTimeFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -44,7 +44,8 @@ export function formatTime(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidTime(value)) {
+  const valueParsed = plainTimeOf(value);
+  if (valueParsed === null) {
     return "";
   }
 
@@ -61,7 +62,7 @@ export function formatTime(
       return "";
     }
     const epochMilliseconds = Temporal.PlainDate.from("1970-01-01")
-      .toPlainDateTime(Temporal.PlainTime.from(value))
+      .toPlainDateTime(valueParsed)
       .toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
       cachedFormatter("DateTimeFormat", locale, resolved).format(

@@ -2,7 +2,8 @@ import type { APIRoute } from "astro";
 import { SITE_URL } from "~/lib/site";
 import { corpus } from "~/generated/reference/corpus";
 import {
-  referenceSections,
+  namespaceEntries,
+  namespaceIndexLinks,
   renderLlmsTxt,
   type LlmsLink,
   type LlmsSection,
@@ -14,6 +15,7 @@ import {
   migratePages,
   topLevelPages,
 } from "~/lib/top-level-pages";
+import { namespaceSummary } from "~/lib/namespace-summary";
 import { pageExpressionValues } from "~/lib/page-expression-values";
 
 /** The splash pages' figures, evaluated once per build. */
@@ -41,15 +43,23 @@ function linkTo(base: string, slug: string, source: string): LlmsLink {
   };
 }
 
-/** The pages of one directory of `content/docs/`, index page first, the rest by title. */
+/**
+ * The pages of one directory of `content/docs/`, index page first, the rest by title.
+ * `indexPagesOnly` keeps only the pages named `index` at any depth: the changelog has a page per
+ * release line next to each package's index, and that index lists them.
+ */
 function directoryLinks(
   base: string,
   directory: string,
-  { indexFirst }: { indexFirst: boolean },
+  {
+    indexFirst,
+    indexPagesOnly = false,
+  }: { indexFirst: boolean; indexPagesOnly?: boolean },
 ): LlmsLink[] {
   const pages = Object.entries(RAW)
     .map(([path, source]) => ({ slug: docsRelativePath(path), source }))
-    .filter(({ slug }) => slug.startsWith(`${directory}/`));
+    .filter(({ slug }) => slug.startsWith(`${directory}/`))
+    .filter(({ slug }) => !indexPagesOnly || slug.endsWith("/index"));
   const index = pages.filter(({ slug }) => slug === `${directory}/index`);
   const rest = pages
     .filter(({ slug }) => slug !== `${directory}/index`)
@@ -66,13 +76,15 @@ function directoryLinks(
 export const GET: APIRoute = () => {
   const base = SITE_URL;
 
-  // Top-level pages in sidebar order: Install leads on its own, the rest are "Start here".
+  // Top-level pages in sidebar order, all under "Start here"; Install is first among them.
   const top = topLevelPages(RAW).map(({ slug, source }) => ({
     slug,
     link: linkTo(base, slug, source),
   }));
-  const install = top.filter(({ slug }) => slug === "install");
-  const startHere = top.filter(({ slug }) => slug !== "install");
+  const startHere = [
+    ...top.filter(({ slug }) => slug === "install"),
+    ...top.filter(({ slug }) => slug !== "install"),
+  ];
 
   const migrateLinks = migratePages(RAW).map(({ slug, source }) =>
     linkTo(base, slug, source),
@@ -82,31 +94,27 @@ export const GET: APIRoute = () => {
     linkTo(base, slug, source),
   );
 
-  const [referenceIndex, ...referenceNamespaces] = referenceSections(
-    corpus,
-    base,
-  );
-
   const sections: LlmsSection[] = [
-    { heading: "Install", links: install.map(({ link }) => link) },
-    {
-      heading: "Tools",
-      links: directoryLinks(base, "tools", { indexFirst: true }),
-    },
-    {
-      heading: "Checks",
-      links: directoryLinks(base, "check", { indexFirst: true }),
-    },
     { heading: "Start here", links: startHere.map(({ link }) => link) },
-    { heading: "Migrate", links: migrateLinks },
     // The guides index is a list of the guides below it.
     {
       heading: "Guides",
       links: directoryLinks(base, "guides", { indexFirst: false }),
     },
-    referenceIndex,
-    ...referenceNamespaces,
+    // One file per namespace, so an agent reads only the namespace it needs.
+    {
+      heading: "Reference",
+      links: namespaceIndexLinks(
+        namespaceEntries(corpus),
+        base,
+        namespaceSummary,
+      ),
+    },
     { heading: "Industries", links: industryLinks },
+    {
+      heading: "Tools",
+      links: directoryLinks(base, "tools", { indexFirst: true }),
+    },
     {
       heading: "Scenarios",
       links: directoryLinks(base, "scenarios", { indexFirst: false }),
@@ -115,10 +123,19 @@ export const GET: APIRoute = () => {
       heading: "Mistakes",
       links: directoryLinks(base, "mistakes", { indexFirst: false }),
     },
-    // The release record, last as in the sidebar: linked here so an agent can fetch it, left out of llms-full.txt.
+    { heading: "Migrate", links: migrateLinks },
     {
-      heading: "Changelog",
-      links: directoryLinks(base, "changelog", { indexFirst: true }),
+      heading: "Checks",
+      links: directoryLinks(base, "check", { indexFirst: true }),
+    },
+    // The release record, last as in the sidebar: linked here so an agent can fetch it, left out of llms-full.txt.
+    // `Optional` is the llmstxt.org name for links a reader may skip when context is short.
+    {
+      heading: "Optional",
+      links: directoryLinks(base, "changelog", {
+        indexFirst: true,
+        indexPagesOnly: true,
+      }),
     },
   ];
 

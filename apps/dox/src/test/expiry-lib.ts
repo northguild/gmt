@@ -14,7 +14,7 @@ import {
   convertUtcToZoned,
 } from "@northguild/gmt/utc/convert";
 import { formatHttpDate } from "@northguild/gmt/utc/format";
-import { getUtcIn } from "@northguild/gmt/utc/get";
+import { getUtcIn, getUtcNow } from "@northguild/gmt/utc/get";
 import { isValidUtc } from "@northguild/gmt/utc/validate";
 import type { ExpiryLib } from "~/lib/expiry-lib";
 
@@ -28,5 +28,6 @@ export const expiryLib = {
   convertUtcToZoned,
   formatHttpDate,
   getUtcIn,
+  getUtcNow,
   isValidUtc,
 } as unknown as ExpiryLib;

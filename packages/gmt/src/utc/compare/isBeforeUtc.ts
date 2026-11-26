@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return whether `value1` represents an instant strictly before `value2`.
@@ -16,13 +16,17 @@ import { isValidUtc } from "../validate";
  * @example isBeforeUtc("2024-03-17T14:30:45Z", "invalid") // false
  */
 export function isBeforeUtc(value1: string, value2: string): boolean {
-  if (!isValidUtc(value1) || !isValidUtc(value2)) {
+  const instant1 = utcInstantOf(value1);
+  if (instant1 === null) {
+    return false;
+  }
+
+  const instant2 = utcInstantOf(value2);
+  if (instant2 === null) {
     return false;
   }
 
   try {
-    const instant1 = Temporal.Instant.from(value1);
-    const instant2 = Temporal.Instant.from(value2);
     return Temporal.Instant.compare(instant1, instant2) === -1;
   } catch {
     return false;

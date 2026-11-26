@@ -1,6 +1,5 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
 import { isoYearString } from "../../internal/isoYearString";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the year for a given ISO 8601 zoned datetime string.
@@ -17,12 +16,12 @@ import { isoYearString } from "../../internal/isoYearString";
  * @example parseYearFromZoned("invalid") // ""
  */
 export function parseYearFromZoned(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return isoYearString(zonedDateTime.year);
   } catch {
     return "";

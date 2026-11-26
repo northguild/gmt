@@ -1,4 +1,4 @@
-import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
+import { x12DateAndTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Read the date and the time of an X12 segment, sent as two elements, as one ISO 8601 local
@@ -24,7 +24,9 @@ import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
  *   `resolveLocal(parseX12DateAndTime("20240615", "1430"), x12TimeCodeOffset("20"))` is
  *   `"2024-06-15T19:30:00Z"`. For a code that names a zone (`x12TimeCodeZone`), pass the result
  *   and the IANA zone you map the name to, to `resolveLocal`.
- * - **Both elements are required.** A missing or empty date or time returns `""`: read a date
+ * - **Both elements are required.** The function returns one local date-time, which needs both.
+ *   X12 lets a segment carry one without the other (`G62`: "At least one of G62-01 or G62-03 is
+ *   required"). A missing or empty date or time returns `""`: read a date
  *   alone with `parseX12Date(value, "D8")` and a time alone with `parseX12Time`.
  * - The time is one of the four element 337 forms, 4, 6, 7 or 8 digits. Seconds are always
  *   written, `00` for `HHMM`. Tenths and hundredths become the fraction of the second exactly:
@@ -52,10 +54,5 @@ import { readX12DateAndTime } from "../../internal/ediDateTimeFields";
  * @example parseX12DateAndTime("240615", "1430") // "" (the date element has a four-digit year)
  */
 export function parseX12DateAndTime(date: string, time: string): string {
-  try {
-    return readX12DateAndTime(date, time);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return x12DateAndTimeText(date, time);
 }

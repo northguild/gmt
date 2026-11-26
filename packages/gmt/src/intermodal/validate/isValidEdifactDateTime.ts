@@ -1,5 +1,5 @@
 import type { EdifactDateTimeFormat } from "../../types/edi";
-import { parseEdifactDateTime } from "../parse/parseEdifactDateTime";
+import { edifactDateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a real
@@ -12,7 +12,7 @@ import { parseEdifactDateTime } from "../parse/parseEdifactDateTime";
  * | `204` | `CCYYMMDDHHMMSS` | "Calendar date including time with seconds" |
  *
  * - True exactly when `parseEdifactDateTime` returns a date-time for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - A value is valid only against its code: `"202406151430"` is a `203` value and not a `204`
  *   one.
  * - Checks the calendar as well as the shape: 31 June, 29 February 2023, hour 24 and second 60
@@ -33,5 +33,5 @@ export function isValidEdifactDateTime(
   value: string,
   format: EdifactDateTimeFormat,
 ): boolean {
-  return parseEdifactDateTime(value, format) !== "";
+  return edifactDateTimeText(value, format) !== "";
 }

@@ -13,14 +13,15 @@ import { join } from "node:path";
 import { Temporal as PolyfillTemporal } from "@northguild/gmt";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { passSetup } from "../../../../scripts/native-suite.mjs";
 import {
+  calendarSweep,
   ENTRY_CHECK,
   entryLoaded,
   main,
   runtime,
   sweep,
 } from "../../../../scripts/polyfill-swap.mjs";
-import { passSetup } from "../../../../scripts/native-suite.mjs";
 
 /**
  * The swap runner's command (`main`) with the Vitest runs, the sweep and the package replaced.
@@ -116,6 +117,7 @@ function setup(
   let err = "";
   const calls: Call[] = [];
   let swept = 0;
+  let calendarSwept = 0;
   const io = (spec: Spec | null, extra: Record<string, unknown> = {}) => ({
     root,
     stdout: (t: string) => (out += t),
@@ -164,6 +166,19 @@ function setup(
           differingTruncated: false,
         };
       },
+      calendarSweep: () => {
+        calendarSwept += 1;
+        return {
+          status: "ran",
+          from: "-003000-01-01",
+          through: "+005000-12-31",
+          calendars: 16,
+          years: 128_762,
+          differingCalendars: 0,
+          differing: [],
+          differingTruncated: false,
+        };
+      },
       today: () => RUN_DATE,
       ...extra,
     },
@@ -175,6 +190,7 @@ function setup(
     io,
     calls,
     swept: () => swept,
+    calendarSwept: () => calendarSwept,
     out: () => out,
     err: () => err,
     verdict: (leg: string) =>
@@ -317,7 +333,7 @@ describe("polyfill-swap judging", () => {
       failingTruncated: false,
     });
     expect(s.out()).toBe(
-      "polyfill-swap: node temporal-polyfill 1.0.7: 0 swap-only failures of 2 tests; sweep: 0 zones differ\n",
+      "polyfill-swap: node temporal-polyfill 1.0.7: 0 swap-only failures of 2 tests; sweep: 0 zones differ; calendar sweep: 0 calendars differ\n",
     );
   });
 
@@ -545,6 +561,167 @@ describe("polyfill-swap entry check", () => {
   });
 });
 
+describe("polyfill-swap calendar sweep", () => {
+  const passing = { control: one("passed"), swap: one("passed") };
+
+  it("the verdict of a node leg carries the calendar sweep, and the line counts the calendars", async () => {
+    const s = setup();
+    await main(["node", "--version=1.0.7"], s.io(passing));
+    expect(s.verdict("node").calendarSweep).toMatchObject({
+      status: "ran",
+      calendars: 16,
+      differingCalendars: 0,
+    });
+    expect(s.calendarSwept()).toBe(1);
+  });
+
+  it("gets the swap entry", async () => {
+    const s = setup();
+    const seen: unknown[][] = [];
+    await main(
+      ["node", "--version=1.0.7"],
+      s.io(passing, {
+        loadEntry: async () => ({ Temporal: { fake: "entry" } }),
+        calendarSweep: (...args: unknown[]) => {
+          seen.push(args);
+          return { status: "ran", differingCalendars: 0 };
+        },
+      }),
+    );
+    expect(seen).toEqual([[{ Temporal: { fake: "entry" } }]]);
+  });
+
+  it("finds 3 calendars: the line and the verdict carry the number", async () => {
+    const s = setup();
+    await main(
+      ["node", "--version=1.0.7"],
+      s.io(passing, {
+        calendarSweep: () => ({ status: "ran", differingCalendars: 3 }),
+      }),
+    );
+    expect(s.out()).toContain("; calendar sweep: 3 calendars differ");
+    expect(s.verdict("node").calendarSweep).toEqual({
+      status: "ran",
+      differingCalendars: 3,
+    });
+  });
+
+  it("throws on node: exit 0, calendar sweep could-not-run, both passes and the offset sweep still ran", async () => {
+    const s = setup();
+    const code = await main(
+      ["node", "--version=1.0.7"],
+      s.io(passing, {
+        calendarSweep: () => {
+          throw new Error("this host has no built-in Temporal to compare with");
+        },
+      }),
+    );
+    expect(code).toBe(0);
+    expect(s.verdict("node").calendarSweep).toEqual({
+      status: "could-not-run",
+      message: "this host has no built-in Temporal to compare with",
+    });
+    expect(s.verdict("node").sweep).toMatchObject({ status: "ran" });
+    expect(s.calls.map((c) => c.pass)).toEqual(["control", "swap"]);
+    expect(s.out()).not.toContain("calendar sweep:");
+  });
+
+  it("runs before either pass on node and is kept when a pass times out", async () => {
+    const s = setup();
+    const code = await main(
+      ["node", "--version=1.0.7"],
+      s.io(null, {
+        runPass: () => {
+          throw new Error("the control pass ran past its 18-minute limit");
+        },
+      }),
+    );
+    expect(code).toBe(2);
+    expect(s.verdict("node")).toMatchObject({
+      status: "could-not-run",
+      calendarSweep: { status: "ran", differingCalendars: 0 },
+    });
+    let out = "";
+    await main(["summary", "node"], {
+      root: s.root,
+      stdout: (t) => (out += t),
+      stderr: () => {},
+    });
+    expect(out).toContain(
+      "Calendar sweep: 0 calendars differ from Node's built-in Temporal, -003000-01-01 to +005000-12-31, 16 calendars.",
+    );
+  });
+
+  it("a node leg that stops before the sweeps has no calendar sweep, and a browser leg none", async () => {
+    const s = setup();
+    await main(
+      ["node", "--version=1.0.7"],
+      s.io(null, {
+        loadEntry: async () => {
+          throw new Error("cannot import temporal-polyfill");
+        },
+      }),
+    );
+    expect(s.calendarSwept()).toBe(0);
+    expect(s.verdict("node")).not.toHaveProperty("calendarSweep");
+    const b = setup();
+    await main(["chromium", "--version=1.0.7"], b.io(passing));
+    expect(b.calendarSwept()).toBe(0);
+    expect(b.verdict("chromium").calendarSweep).toBeNull();
+  });
+
+  it("summary prints a calendar sweep that could not run", async () => {
+    const s = setup();
+    await main(
+      ["node", "--version=1.0.7"],
+      s.io(passing, {
+        calendarSweep: () => {
+          throw new Error("no Temporal");
+        },
+      }),
+    );
+    let out = "";
+    await main(["summary", "node"], {
+      root: s.root,
+      stdout: (t) => (out += t),
+      stderr: () => {},
+    });
+    expect(out).toContain("Calendar sweep could not run: no Temporal");
+  });
+});
+
+describe("polyfill-swap calendar sweep, for real", () => {
+  const entry = { Temporal: PolyfillTemporal };
+
+  it("compares the entry with the host's Temporal over the fixed span", () => {
+    // The stand-in host Temporal is the same polyfill, so nothing differs.
+    vi.stubGlobal("Temporal", PolyfillTemporal);
+    try {
+      expect(calendarSweep(entry, ["iso8601"])).toMatchObject({
+        status: "ran",
+        from: "-003000-01-01",
+        through: "+005000-12-31",
+        calendars: 1,
+        years: 8001,
+        differingCalendars: 0,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("cannot run on a host with no built-in Temporal", () => {
+    vi.stubGlobal("Temporal", undefined);
+    try {
+      expect(() => calendarSweep(entry, ["iso8601"])).toThrow(
+        "this host has no built-in Temporal to compare with",
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 describe("polyfill-swap sweep and legs", () => {
   it("the sweep throws on node: exit 0, sweep could-not-run, both passes still ran", async () => {
     const s = setup();
@@ -567,7 +744,7 @@ describe("polyfill-swap sweep and legs", () => {
       message: 'Intl longOffset text for X is "?", which the sweep cannot read',
     });
     expect(s.calls.map((c) => c.pass)).toEqual(["control", "swap"]);
-    expect(s.out()).not.toContain("sweep:");
+    expect(s.out()).not.toContain("; sweep:");
   });
 
   it("a pass times out on node: exit 2, could-not-run, the sweep kept and printed by summary", async () => {
@@ -591,6 +768,10 @@ describe("polyfill-swap sweep and legs", () => {
         zones: 418,
         differingZones: 0,
       }),
+      calendarSweep: expect.objectContaining({
+        status: "ran",
+        differingCalendars: 0,
+      }),
     });
     let out = "";
     await main(["summary", "node"], {
@@ -604,6 +785,7 @@ describe("polyfill-swap sweep and legs", () => {
         "",
         `could not run: ${limit}`,
         "Offset sweep: 0 zones differ from Intl, 1970-01-01 to 2036-11-04, 418 zones, tz 2026e.",
+        "Calendar sweep: 0 calendars differ from Node's built-in Temporal, -003000-01-01 to +005000-12-31, 16 calendars.",
         "",
       ].join("\n"),
     );

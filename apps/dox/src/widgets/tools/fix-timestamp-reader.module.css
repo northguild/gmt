@@ -1,0 +1,77 @@
+/*
+ * FIX Timestamp Reader: what only this tool needs. The sections, preset, fields, plates, hero,
+ * verdict, code frames and links are the kit's and the EDI family's; this sheet places them.
+ * The reading and its calls sit side by side where the widget is wide and one under the other
+ * where it is not. The widget root is the container.
+ *
+ * Amber is the sentinel's alone, and nothing here has a single-sided accent edge.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A sentence of explanation under the controls. */
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+  line-height: 1.5;
+}
+
+/* The button sits under its field and keeps its own width. */
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-space-3);
+  align-items: center;
+  min-inline-size: 0;
+}
+
+/* A band: two panes, a column each when there is room for both. */
+.split,
+.pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+@container (inline-size >= 60rem) {
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--gmt-space-4);
+    align-items: stretch;
+  }
+}
+
+/* The box the reading sits in. */
+.panel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-space-3);
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  padding: var(--gmt-space-3) var(--gmt-space-4);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  background: var(--gmt-fill-subtle);
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-color: CanvasText;
+    background: Canvas;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel {
+    border-color: var(--gmt-ice);
+  }
+}

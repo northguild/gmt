@@ -72,13 +72,17 @@ describe("isValidDuration", () => {
   );
 
   it.each`
-    value     | expected
-    ${"p1d"}  | ${true}
-    ${"P1d"}  | ${true}
-    ${"p1D"}  | ${true}
-    ${"pt1h"} | ${true}
+    value       | expected
+    ${"p1d"}    | ${false}
+    ${"P1d"}    | ${false}
+    ${"p1D"}    | ${false}
+    ${"pt1h"}   | ${false}
+    ${"Pt1H"}   | ${false}
+    ${"PT1h"}   | ${false}
+    ${"PT0,5h"} | ${false}
+    ${"PT0,5H"} | ${true}
   `(
-    "returns $expected for lowercase-designator duration $value",
+    "returns $expected for duration $value with designators in lower case",
     ({ value, expected }) => {
       expect(isValidDuration(value)).toBe(expected);
     },

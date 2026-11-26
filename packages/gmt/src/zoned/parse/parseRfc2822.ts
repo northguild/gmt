@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { readRfc5322DateTime } from "../../internal/rfc5322DateTime";
+import { readRfc2822 } from "../../internal/rfc5322DateTime";
 
 /**
  * Parse an RFC 5322 (RFC 2822) date-time string — the fixed grammar email
@@ -47,33 +46,5 @@ import { readRfc5322DateTime } from "../../internal/rfc5322DateTime";
  * @example parseRfc2822("not a date") // ""
  */
 export function parseRfc2822(value: string): string {
-  if (typeof value !== "string") return "";
-
-  const fields = readRfc5322DateTime(value);
-  if (fields === null) return "";
-
-  try {
-    const plainDateTime = Temporal.PlainDateTime.from(
-      {
-        year: fields.year,
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-        second: fields.second,
-      },
-      { overflow: "reject" },
-    );
-    // "the day-of-week (if included) MUST be the day implied by the date"
-    if (
-      fields.dayOfWeek !== undefined &&
-      fields.dayOfWeek !== plainDateTime.dayOfWeek
-    ) {
-      return "";
-    }
-
-    return plainDateTime.toZonedDateTime(fields.offset).toString();
-  } catch {
-    return "";
-  }
+  return readRfc2822(value);
 }

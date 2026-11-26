@@ -22,111 +22,54 @@
  * fix it in GMT (a temporalCompat workaround for a polyfill defect), never tag it.
  */
 
-/** @typedef {"node" | "chromium" | "firefox" | "webkit"} Leg */
+/** @typedef {"node" | "chromium" | "firefox" | "webkit" | "webkit-macos"} Leg */
 
-const L_ANCHOR = "l-a-one-character-annotation-key-is-refused";
 const M_ANCHOR = "m-u-caislamic-is-accepted-instead-of-refused";
 const P_ANCHOR =
   "p-spidermonkey-accepts-a-zoned-string-whose-local-date-is-271821-04-19-firefox-only-engine";
-const ICU4X_8620 = "https://github.com/unicode-org/icu4x/issues/8620";
 const BOA_529 = "https://github.com/boa-dev/temporal/issues/529";
 const BUGZILLA_1998020 = "https://bugzilla.mozilla.org/show_bug.cgi?id=1998020";
 const S_ANCHOR =
   "s-webkit-adds-a-year-to-the-30th-of-dhu-al-hijjah-before-the-hijra-as-13-months-webkit-only-engine";
 const T_ANCHOR =
   "t-webkit-throws-adding-a-year-to-the-last-day-of-chaitra-in-far-past-indian-years-webkit-only-engine";
+const AE_ANCHOR =
+  "ae-icu4c-75-counts-every-persian-year-before-year-0-as-a-leap-year-webkit-engine";
+const ICU_23609 = "https://unicode-org.atlassian.net/browse/ICU-23609";
+const WEBKIT_331725 = "https://bugs.webkit.org/show_bug.cgi?id=331725";
+const WEBKIT_331726 = "https://bugs.webkit.org/show_bug.cgi?id=331726";
+const AD_ANCHOR =
+  "ad-node-26-adds-one-smallestunit-when-it-rounds-a-whole-number-of-years-months-or-weeks-node-only-engine";
+const NODE_67457 = "https://github.com/nodejs/node/issues/67457";
 
 /**
  * One test that fails natively and passes on the polyfill, for a known defect. `file` is
  * package-relative (`src/zoned/calculate/roundZoned.test.ts`); `test` is the Vitest `fullName`
- * exactly; `defect` is the heading anchor of the defect's record in
- * `context/domination/js-temporal-polyfill-bugs.md`; `upstream` is the filed report's URL, or
+ * exactly; `defect` is the heading anchor of the defect's record under
+ * `context/domination/polyfill-bugs/`; `upstream` is the filed report's URL, or
  * `null` until one is filed.
  *
- * The 13 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
- * polyfill. Ten are L (`ixdtf` rejects a one-character annotation key, fixed in unicode-org/icu4x#8623,
- * not yet in an `ixdtf` release or a V8 roll); three are M (`temporal_rs` reads `islamic` as a
- * calendar, boa-dev/temporal#529). The 12 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
+ * The 3 tests that fail on Node 26 and Chromium 153 (V8 on `temporal_rs`) and pass on the
+ * polyfill are M (`temporal_rs` reads `islamic` as a calendar, boa-dev/temporal#529). Two more fail
+ * on Node 26 alone and are AD: its `temporal_rs` 0.2.3 does
+ * not yet carry boa-dev/temporal#723, so it rounds `P7D` to weeks from a zoned origin as `P1W1D`
+ * (nodejs/node#67457); Chromium 153 has the fix. The 14 tests that fail on Firefox 155 (SpiderMonkey) and pass on the
  * polyfill are P: SpiderMonkey accepts a zoned string whose local date is -271821-04-19, where the
  * spec refuses it (Bugzilla 1998020). The 7 tests that fail on WebKit 26.6 (JavaScriptCore) and pass on
  * the polyfill are S (six: JavaScriptCore adds a year to Dhu al-Hijjah 30 of a year before the Hijra as
  * 13 months) and T (one: it throws adding a year to the last day of Chaitra in a far-past Indian year);
- * neither is filed yet. Evidence: the records.
+ * both fail on Playwright's Linux build and on the Mac build, so the rows name both WebKit legs. S is filed
+ * as WebKit 331725 and T as WebKit 331726; the ICU causes behind them are ICU-23626 and ICU-23627.
+ * Two more are AE, on both WebKit legs: ICU4C 75 or later (Apple's libicucore, and Ubuntu 26.04's ICU 78.2
+ * under the Linux build) counts every Persian year before year 0 as a leap year, so adding a month to day 30
+ * of Bahman, or subtracting one from day 30 of Farvardin, in a year before year 0 throws. Both are filed as
+ * ICU-23609.
+ * Evidence: the records.
  * Goose Bay day rounding is not here: it was a GMT defect and is fixed (temporalCompat D14).
  *
  * @type {ReadonlyArray<{ file: string, test: string, legs: Leg[], defect: string, upstream: string | null }>}
  */
 export const KNOWN_NATIVE_FAILURES = [
-  {
-    file: "src/internal/calendarDateString.test.ts",
-    test: "parseCalendarDateValue parses 2024-10-03[x=y][u-ca=roc] to ISO 2024-10-03 computed in roc, ignoring the other annotations",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/duration/calculate/totalDuration.test.ts",
-    test: "totalDuration totals P1D as 24 hours relativeTo 2024-01-01T00:00:00+00:00[UTC][x=T12346… (an annotation value is not a time of day)",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/plain/validate/isValidDate.test.ts",
-    test: "isValidDate returns true for a PlainDate with annotations Temporal reads and ignores: 2024-03-10[a=bc]",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/plain/validate/isValidDateTime.test.ts",
-    test: "isValidDateTime returns true for a PlainDateTime with annotations Temporal reads and ignores: 2024-03-10T12:30[a=bc]",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/plain/validate/isValidTime.test.ts",
-    test: "isValidTime returns true for a PlainTime with annotations Temporal reads and ignores: 12:30[a=bc]",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/span/calculate/spanNs.test.ts",
-    test: "spanNs returns 1000000000n nanoseconds from 2024-01-01T00:00:00Z[x=T123460Z] to 2024-01-01T00:00:01Z",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/precision/validate/isValidInstant.test.ts",
-    test: "isValidInstant returns true for 2024-01-01T00:00:00Z[x=T123460Z], whose annotation is not checked (elective annotation value shaped like a…)",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/precision/validate/isValidInstant.test.ts",
-    test: "isValidInstant returns true for 2024-01-01T00:00:00Z[x=t000060-y], whose annotation is not checked (elective annotation value shaped like a…)",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/utc/validate/isValidUtc.test.ts",
-    test: "isValidUtc returns true for a UTC instant with annotations Temporal reads and ignores: 2024-03-10T12:30Z[a=bc]",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
-  {
-    file: "src/zoned/get/getTimeZoneOffset.test.ts",
-    test: "getTimeZoneOffset still reads an instant whose elective annotation value looks like a leap second",
-    legs: ["node", "chromium"],
-    defect: L_ANCHOR,
-    upstream: ICU4X_8620,
-  },
   {
     file: "src/zoned/validate/isValidCalendarZonedDateTime.test.ts",
     test: "isValidCalendarZonedDateTime returns false for the unsupported calendar id islamic in 2024-01-10T12:00:00+00:00[UTC][u-ca=isl… (not in the proposal's calendar table)",
@@ -171,14 +114,28 @@ export const KNOWN_NATIVE_FAILURES = [
   },
   {
     file: "src/test/minuteRoundedOffsets.test.ts",
-    test: "instant readers read a zoned string written at the range limits zoned reads refuse -271821-04-19T23:59:00-00:01[Europe/Lon…, whose local date is before the ISO date range",
+    test: "zoned readers read a string written at the range limits zoned reads refuse -271821-04-19T23:59:00-00:01[Europe/Lon…, whose local date is before the ISO date range",
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
   },
   {
     file: "src/test/minuteRoundedOffsets.test.ts",
-    test: "instant readers read a zoned string written at the range limits zoned reads refuse -271821-04-19T19:04:13-04:56[America/Ne…, whose local date is before the ISO date range",
+    test: "zoned readers read a string written at the range limits zoned reads refuse -271821-04-19T23:58:45-00:01[Europe/Lon…, whose local date is before the ISO date range",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/internal/offsetInstantMinuteRounded.test.ts",
+    test: "readZonedOffsetInstant: a minute-rounded offset in a zoned string returns null at the low limit for -271821-04-19T23:58:45-00:01[Europe/Lon… (a wall date outside the ISO days range)",
+    legs: ["firefox"],
+    defect: P_ANCHOR,
+    upstream: BUGZILLA_1998020,
+  },
+  {
+    file: "src/test/minuteRoundedOffsets.test.ts",
+    test: "zoned readers read a string written at the range limits zoned reads refuse -271821-04-19T19:04:13-04:56[America/Ne…, whose local date is before the ISO date range",
     legs: ["firefox"],
     defect: P_ANCHOR,
     upstream: BUGZILLA_1998020,
@@ -236,51 +193,79 @@ export const KNOWN_NATIVE_FAILURES = [
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M23D in years from -271820-01-19[u-ca=islamic-civil] to -271819-06-27[u-ca=islamic-civil] (xscan islamic-civil min[275], 800 d ins…)",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M24D in years from -271820-01-18[u-ca=islamic-tbla] to -271819-06-27[u-ca=islamic-tbla] (xscan islamic-tbla min[274], 800 d insi…)",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P1Y5M23D in years from -271820-01-19[u-ca=islamic-umalqura] to -271819-06-27[u-ca=islamic-umalqura] (xscan islamic-umalqura min[275], 800 d …)",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/diffDateAsDuration.edges.test.ts",
     test: "diffDateAsDuration next to the range limits (CORE-6 §4.4) returns P2Y2M7D in years from -271821-04-20[u-ca=indian] to -271819-06-27[u-ca=indian] (xscan indian min[1], 800 d inside)",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: T_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331726,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-civil] as '-271819-01-07[u-ca=islamic-civil]' (xscan islamic-civil min[275])",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-18[u-ca=islamic-tbla] as '-271819-01-06[u-ca=islamic-tbla]' (xscan islamic-tbla min[274])",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
   },
   {
     file: "src/plain/calculate/addDate.edges.test.ts",
     test: "addDate next to the range limits (CORE-6 §4.4) adds { years: 1 } to -271820-01-19[u-ca=islamic-umalqura] as '-271819-01-07[u-ca=islamic-umalqura]' (xscan islamic-umalqura min[275])",
-    legs: ["webkit"],
+    legs: ["webkit", "webkit-macos"],
     defect: S_ANCHOR,
-    upstream: null,
+    upstream: WEBKIT_331725,
+  },
+  {
+    file: "src/plain/calculate/addDate.test.ts",
+    test: "addDate returns -271820-04-09[u-ca=persian] for -271820-03-11[u-ca=persian] + { months: 1 } (xscan persian min[327]: into the 29-day…)",
+    legs: ["webkit", "webkit-macos"],
+    defect: AE_ANCHOR,
+    upstream: ICU_23609,
+  },
+  {
+    file: "src/plain/calculate/subtractDate.test.ts",
+    test: "subtractDate returns '-271820-04-09[u-ca=persian]' for -271820-05-09[u-ca=persian] - { months: 1 } (D1-A persian (xscan min[386]))",
+    legs: ["webkit", "webkit-macos"],
+    defect: AE_ANCHOR,
+    upstream: ICU_23609,
+  },
+  {
+    file: "src/test/laterPassOrigin.test.ts",
+    test: "normalizeDuration from a repeated hour P7D with { largestUnit: 'week', …(1) } from 2024-11-01T00:00:00+00:00[UTC] is P1W",
+    legs: ["node"],
+    defect: AD_ANCHOR,
+    upstream: NODE_67457,
+  },
+  {
+    file: "src/test/laterPassOrigin.test.ts",
+    test: "normalizeDuration from a repeated hour P7D with { largestUnit: 'week', …(1) } from 2024-06-01T12:00:00-04:00[America/New_Y… is P1W",
+    legs: ["node"],
+    defect: AD_ANCHOR,
+    upstream: NODE_67457,
   },
 ];
 /**
@@ -293,15 +278,33 @@ export const KNOWN_NATIVE_FAILURES = [
  */
 export const KNOWN_HOST_FAILURES = [
   {
-    // Evidence, Chromium 153.0.8010.12 under Playwright: `Intl.DateTimeFormat.supportedLocalesOf(["is-IS"])`
-    // is `[]`, and `new Intl.DateTimeFormat("is-IS").resolvedOptions().locale` is "en-US", as is
-    // `Intl.RelativeTimeFormat`'s. The other nine locales GMT tests are all supported. Node 26 (ICU 78.3)
-    // supports `is-IS`.
-    id: "chromium-icelandic-locale-data",
+    // Evidence, Chromium 153.0.8010.12 under Playwright: `Intl.DateTimeFormat.supportedLocalesOf` is `[]`
+    // for is, yo, fur, brx, gd, gl, ksh, sc, my, lg, luy, sg and ksb, and
+    // `new Intl.DateTimeFormat("yo").resolvedOptions().locale` is "en-US" (as is `Intl.RelativeTimeFormat`'s),
+    // so a range or date in them prints in English, for example `Wed, 7/10/2024 - Thu, 7/11/2024` where yo
+    // gives `10/7/2024, Ọjọ́rú - 11/7/2024, Ọjọ́bọ`; `lg-u-ca-buddhist` resolves to en-US and gregory.
+    // kok is supported but its data is cut down: `kok-u-ca-roc` prints `ROC 113-07-10, Wed` where the
+    // full CLDR data gives `बुधवार, 10-7-113 ROC`. The locales GMT tests in other files are all supported.
+    // Node 26 (ICU 78.3) has all of them.
+    id: "chromium-reduced-locale-data",
     legs: ["chromium"],
     reason:
-      "Chromium ships no Icelandic (is) locale data, so is-IS formats fall back to English.",
-    test: /\bis-IS\b/,
+      "Chromium ships no locale data for Icelandic (is), Yoruba (yo), Friulian (fur), Bodo (brx), Scottish Gaelic (gd), Galician (gl), Colognian (ksh), Sardinian (sc), Burmese (my), Ganda (lg), Luyia (luy), Sango (sg) or Shambala (ksb) and only reduced Konkani (kok) data, so formats in them fall back to English or to the reduced patterns.",
+    test: /\bis-IS\b|(?:^|[\s'(])(?:yo|fur|brx|gd|gl|ksh|sc|my|lg|luy|sg|ksb|kok)(?:-[A-Za-z0-9-]+)?(?=[\s')]|$)|gives the calendar year from format|makes formatRangeToParts throw|prints the calendar year beside a zone name, in a child process/,
+  },
+  {
+    // Evidence, Firefox 155.0 (Playwright 1.63.0), CI run 43900915538, both engines: kok prints the
+    // numeric date with `/` (`18/11/5491 - 18/11/5493 AA`, `बुधवार, 10/7/113 - शुक्रार, 12/7/113`) where Node 26
+    // (ICU 78.3, CLDR 48) prints `-` (`18-11-5491 - 18-11-5493 AA`); ja prints the chinese and dangi year
+    // name in a numeric pattern (`甲辰/05/10(土)～乙巳/05/20(日)`) where Node prints `甲辰年5月10日(土)～乙巳年5月20日(日)`;
+    // ja's Gregorian-era range is `西暦1700年7月10日～12日` where Node prints `西暦1700/07/10～1700/07/12`;
+    // and en's range with a two-digit year prints `1:25 PM` where Node prints `1:25 in the afternoon`.
+    // These are the range and date patterns of Firefox's bundled locale data.
+    id: "firefox-locale-pattern-data",
+    legs: ["firefox"],
+    reason:
+      "Firefox's bundled locale data has other date and range patterns than CLDR 48 for Konkani (kok) numeric dates, Japanese chinese-calendar year names and Gregorian-era ranges, and English two-digit-year ranges.",
+    test: /(?:^|[\s'(])kok(?:-[A-Za-z0-9-]+)?(?=[\s')]|$)|'ja-u-ca-(?:chinese|dangi)'|in a ja japanese (?:date-time )?range before 1873|ja japanese range before 1873|a century apart that print the same two-digit year/,
   },
   {
     // Evidence, Chromium 153.0.8010.12 under Playwright: for America/New_York with
@@ -320,26 +323,18 @@ export const KNOWN_HOST_FAILURES = [
     test: /season-independent styles \(shortGeneric\/longGeneric\) returns the same name in January and July for /,
   },
   {
-    // Evidence, same browser: `new Intl.DateTimeFormat("ko-KR", { dateStyle: "long", timeZone: "UTC" })
-    // .formatRange(2024-02-03, 2024-02-05)` is "2024년 2월 3일 ~ 5일" (spaces around the tilde);
-    // Node 26 gives "2024년 2월 3일~5일". The range pattern differs between the two ICU data builds.
-    id: "chromium-korean-range-pattern",
-    legs: ["chromium"],
-    reason:
-      "Chromium's Korean date-range pattern puts spaces around the tilde (3일 ~ 5일) where Node's ICU data has none.",
-    file: /\/formatDateRange\.test\.ts$/,
-    test: /locale ko-KR with options \{ dateStyle: 'long' \}/,
-  },
-  {
     // Evidence: at 2026-11-15T17:00Z, Chromium 153.0.8010.12 under Playwright 1.63.0 gives
     // America/Vancouver -08:00 and America/Winnipeg -06:00 (tz data before 2026b), and Chromium
     // 156.0.8078.4 under Playwright 1.64.1 gives Vancouver -07:00 but Winnipeg -06:00 (before
     // 2026e). Firefox 155.0 under Playwright 1.63.0 fails the same 17 rows of this file: at
     // 2026-11-01T08:00Z it gives America/Edmonton -07:00 (Edmonton changed in 2026c, so its data
     // predates 2026c), and at 2026-11-01T07:00Z America/Winnipeg -06:00 (before 2026e). Node 26.12.1 (tz 2026e) gives -07:00 and -05:00.
-    // Playwright's Linux WebKit 26.6 (ubuntu-24.04, the runner's libicu74 74.2) fails all 37 rows of this
-    // file on both engines; Mac WebKit 26.6 gives America/Vancouver -07:00 at 2026-11-15T17:00Z. The
-    // group goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026e.
+    // Playwright's Linux WebKit 26.6 (ubuntu-26.04, the runner's libicu78 78.2) fails all 37 rows of this
+    // file on both engines. tzdb 2026e gives America/Winnipeg -05:00 at 2026-11-01T07:00Z (its NEWS:
+    // Manitoba's 2026-03-08 spring forward was its last foreseeable clock change, as it moved to permanent
+    // -05 thereafter; it temporarily models the change on 2026-11-01 at 02:00). Mac WebKit 26.6 on the
+    // macos-26-arm64 runner (image 20261117, macOS 26.7.2) passes every row.
+    // The group goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026e.
     id: "browser-canada-2026-tz-data",
     legs: ["chromium", "firefox", "webkit"],
     reason:
@@ -350,11 +345,12 @@ export const KNOWN_HOST_FAILURES = [
     // Evidence: under Playwright 1.63.0, Chromium 153.0.8010.12 gives Africa/Casablanca and
     // Africa/El_Aaiun +01:00 at 2026-09-20T01:00Z, 2026-11-02T12:00Z and 2027-06-01T12:00Z, and
     // +00:00 at 2027-02-22T12:00Z (tz data before 2026c). Chromium 156.0.8078.4 under Playwright
-    // 1.64.1, Mac WebKit 26.6 and Node 26.12.1 (tz 2026e) give +00:00 at all four. Firefox 155.0 under
-    // Playwright 1.63.0 fails the same 44 rows of this file: it gives Africa/Casablanca +01:00 at
-    // 2026-09-20T01:00Z, where tz data from 2026c gives +00:00. Playwright's Linux WebKit 26.6
-    // (ubuntu-24.04, the runner's libicu74 74.2) fails the same 44 rows on both engines. The group
-    // goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026c.
+    // 1.64.1, Mac WebKit 26.6 on macOS 27.0.1 and Node 26.12.1 (tz 2026e) give +00:00 at all four.
+    // Firefox 155.0 under Playwright 1.63.0 fails the same 44 rows of this file: it gives
+    // Africa/Casablanca +01:00 at 2026-09-20T01:00Z, where tz data from 2026c gives +00:00.
+    // Playwright's Linux WebKit 26.6 (ubuntu-26.04, the runner's libicu78 78.2) fails the same 44 rows
+    // on both engines. Mac WebKit 26.6 on the macos-26-arm64 runner (image 20261117, macOS 26.7.2) passes
+    // every row. The group goes stale once a Playwright Chromium, Firefox and Linux WebKit all carry 2026c.
     id: "browser-morocco-2026-tz-data",
     legs: ["chromium", "firefox", "webkit"],
     reason:
@@ -362,61 +358,224 @@ export const KNOWN_HOST_FAILURES = [
     file: /\/oh-morocco\.test\.ts$/,
   },
   {
-    // Evidence, Playwright's Linux WebKit 26.6 on ubuntu-24.04 (the runner's libicu74 74.2), both
-    // engines: Asia/Manila local mean time in December 1844 is -15:56:00, where tzdb 2024b corrected
-    // the Philippines before 1899 to -15:56:08 and moved the 1899 change from 1899-05-11 to
-    // 1899-09-06 (the rows read 1844-12-30T00:00:00-15:56 for 1844-12-30T00:00:08-15:56, count 62
-    // days for 61 and list the 1899 change at 1899-05-10T23:56:00+08:00); and Antarctica/Casey has
-    // no change on 2021-03-13, which tzdb 2023d added with Casey's other changes since 2020. Mac
-    // WebKit 26.6 has the Casey change (2021-03-13T21:00:00+08:00) and the same Manila -15:56:00.
-    // Node 26.12.1 (tz 2026e) passes every row. The group goes stale once a Playwright Linux WebKit
-    // carries 2024b.
-    id: "webkit-linux-tz-data",
-    legs: ["webkit"],
+    // Evidence, Mac WebKit 26.6 (the macos-26-arm64 runner from image 20261117, macOS 26.7.2; also macOS
+    // 27.0.1, and Safari there): `new Intl.DateTimeFormat("en", { timeZone: "EST5EDT" })` throws `RangeError: invalid
+    // time zone: EST5EDT`, and `Temporal.ZonedDateTime.from("2024-07-15T12:00:00-04:00[EST5EDT]")` throws
+    // `RangeError` too; the same for CST6CDT, MST7MDT and PST8PDT. Node 26.12.1, Chromium 153 and
+    // Firefox 155 accept all four. IANA's `backward` file (tzdb 2026e) defines them as zones
+    // (`Zone EST5EDT -5:00 USback E%sT`, and the same for CST6CDT, MST7MDT and PST8PDT), and ECMA-402
+    // § 6.5 makes each Zone of the IANA Time Zone Database a primary time zone identifier.
+    // Filed as https://bugs.webkit.org/show_bug.cgi?id=330688. Playwright's Linux WebKit 26.6 on
+    // ubuntu-26.04 (the runner's libicu78 78.2) accepts all four, so the group names the Mac leg only.
+    id: "webkit-posix-zone-ids",
+    legs: ["webkit-macos"],
     reason:
-      "Linux WebKit's time zone data predates tzdb 2023d and 2024b, so Asia/Manila's 1844 local mean time and 1899 change and Antarctica/Casey's 2021 change read as before those releases.",
-    test: /\bManila\b|Antarctica\/Casey/,
-  },
-  {
-    // Evidence, Playwright's Linux WebKit 26.6, both engines: `new Intl.DateTimeFormat("en", { timeZone:
-    // "CET" })` and `Temporal.ZonedDateTime.from("...[CET]")` throw `RangeError: invalid time zone: CET`,
-    // and the same for CST6CDT, EET, EST5EDT, MET, MST7MDT, PST8PDT and WET; tzdb 2024b made these
-    // ids links in `backward`. Mac WebKit 26.6 accepts CET and EST in Intl and Temporal and refuses
-    // EST5EDT in Temporal only (`contains an invalid time zone identifier`). Node 26.12.1 accepts all
-    // eight (CET resolves to Europe/Brussels), as do Chromium 153 and Firefox 155.
-    id: "webkit-legacy-zone-ids",
-    legs: ["webkit"],
-    reason:
-      "Linux WebKit refuses the tzdb legacy zone ids CET, CST6CDT, EET, EST5EDT, MET, MST7MDT, PST8PDT and WET as invalid time zones, so the rows that pass them through fail.",
+      "Mac WebKit refuses the tzdb legacy zone ids CST6CDT, EST5EDT, MST7MDT and PST8PDT as invalid time zones, so the rows that pass them through fail.",
     file: /\/(isValidTimeZone|toOffsetInstant|fromOffsetInstant|getTimeZoneOffset)\.test\.ts$/,
-    test: /\b(CET|CST6CDT|EET|EST5EDT|MET|MST7MDT|PST8PDT|WET)\b/,
+    test: /\b(CST6CDT|EST5EDT|MST7MDT|PST8PDT)\b/,
   },
   {
-    // Evidence, WebKit 26.6 (Mac and Playwright Linux alike), both engines:
+    // Evidence, Mac WebKit 26.6, both engines:
     // `new Intl.DateTimeFormat("ar-SA").resolvedOptions().calendar` is "islamic-umalqura" and
     // `{ dateStyle: "long" }` prints 2024-02-03 as "٢٢ رجب، ١٤٤٥ هـ". Node 26.12.1 (CLDR 48), Chromium 153
     // and Firefox 155 resolve "gregory" and print "٣ فبراير ٢٠٢٤", which the expected values carry.
+    // The lookahead leaves out the three ar-SA rows that are not about the calendar (relative tomorrow,
+    // the date and time connector, the weekday names): `webkit-macos-ar-sa-relative-connector` and
+    // `webkit-macos-ar-sa-weekday-names` explain them. Playwright's Linux WebKit 26.6 on ubuntu-26.04 (the
+    // runner's libicu78 78.2) resolves "gregory" and passes every row.
     id: "webkit-ar-sa-islamic-default-calendar",
-    legs: ["webkit"],
+    legs: ["webkit-macos"],
     reason:
-      "WebKit's default calendar for ar-SA is islamic-umalqura where Node, Chromium and Firefox use gregory, so ar-SA rows that name no calendar print Hijri dates.",
-    test: /\bar-SA\b/,
+      "Mac WebKit's default calendar for ar-SA is islamic-umalqura where Node, Chromium and Firefox use gregory, so ar-SA rows that name no calendar print Hijri dates.",
+    test: /^(?!.*(tomorrow for ar-SA|ar-SA's connector|getLocaleWeekdayNames)).*\bar-SA\b/,
   },
   {
-    // Evidence, Playwright's Linux WebKit 26.6 on ubuntu-24.04, which takes its locale data from the
-    // runner's libicu74 (74.2), both engines: he-IL prints the day period as "אחה״צ"/"לפנה״צ" and the
-    // duration unit first ("יום 1"), where Node 26.12.1 (ICU 78.3, CLDR 48) prints "PM"/"AM" and "1 יום";
-    // en-GB's full date has no comma ("Saturday 3 February 2024"); ru-RU's short range is
-    // "03.02.2024 - 05.02.2024" for "03.02.2024-05.02.2024"; ko-KR prints "오후 2:30:45" for
-    // "오후 2시 30분 45초" and zh-TW "清晨5時" for "清晨5"; and pt-PT, is-IS and en-US print the zone as
-    // "GMT" where Node prints "GMT+0" or "GMT+00:00". Mac WebKit 26.6 agrees with Node on the en-GB
-    // comma and prints the ru-RU range with an em dash, so these are the runner's ICU, not WebKit.
-    id: "webkit-linux-icu74-locale-data",
-    legs: ["webkit"],
+    // Evidence, Mac WebKit 26.6 (macOS 27.0.1, Apple's libicucore), the same call in Node 26.12.1 (ICU 78.3,
+    // CLDR 48.0) in brackets: `{ dateStyle: "medium", timeStyle: "medium", timeZone: "UTC" }` for
+    // 2024-02-03T14:30:45Z prints "Feb 3, 2024 at 2:30:45 PM" (en-US; "Feb 3, 2024, 2:30:45 PM"), "3 Feb 2024
+    // at 14:30:45" (en-GB) and "3 févr. 2024 à 14:30:45" (fr-FR; "3 févr. 2024, 14:30:45"). CLDR 48 en.xml
+    // (gregorian dateTimeFormats) gives medium and short `{1}, {0}` in all three variants and the "at" form
+    // `{1} 'at' {0}` only for full and long; fr.xml's medium standard pattern is `{1}, {0}` and en_GB.xml
+    // inherits en_001, which inherits en. The two formatUnix rows name no locale because they pass
+    // MustTestLocales.enUS with `{ dateStyle: "medium", timeStyle: "short" }` and fail on "Feb 29, 2024 at 12:00 AM".
+    id: "webkit-macos-medium-date-time-connector",
+    legs: ["webkit-macos"],
     reason:
-      "Linux WebKit formats with the runner's ICU 74 locale data, which differs from Node's ICU 78 in Hebrew day periods and unit order, the en-GB full date, the ru-RU range dash, the ko-KR and zh-TW time patterns and the GMT name without an offset for pt-PT, is-IS and en-US.",
-    file: /\/(formatDuration|formatDate|formatDateRange|formatDateTime|formatTime|getLocaleMeridiems|formatZonedDateTime|formatZonedRange)\.test\.ts$/,
-    test: /\b(he-IL|en-GB|ru-RU|pt-PT|is-IS|ko-KR|zh-TW)\b|keeps the requested timeZoneName style/,
+      "Mac WebKit joins a medium date and a time with the word at (à in French) where CLDR 48 uses a comma, in en-US, en-GB and fr-FR.",
+    file: /\/(formatDateTime|formatZonedDateTime|formatUtc|formatUnix|formatDateTimeToParts|formatZonedToParts)\.test\.ts$/,
+    test: /\b(en-US|en-GB|fr-FR)\b.*(dateStyle: 'medium'| to (Feb 3, 2024, 2:30 PM|3 Feb 2024, 14:30|3 févr\. 2024, 14:30)$)|medium\/short \(UTC\) formats for (en-US|en-GB|fr-FR)|style variants \(UTC\) formats \{ dateStyle: 'medium'|formatUnix (epochUnit: seconds formats a unix-seconds value identically to the ms equivalent|numeric string input accepts a numeric ms string)$|dateStyle\/timeStyle returns exact parts for (en-US|en-GB|fr-FR)|returns '3 févr\. 2024, 14:30' \(parts joined\)/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6: `{ dateStyle: "long", timeStyle: "long" }` in sv-SE prints "3 februari 2024
+    // 14:30:45" where Node 26.12.1 (CLDR 48.0) prints "3 februari 2024 kl. 14:30:45"; `Intl.RelativeTimeFormat
+    // ("sv-SE", { numeric: "auto" }).format(1, "day")` is "imorgon" where Node prints "i morgon". CLDR 48
+    // sv.xml has the atTime pattern `{1} 'kl'. {0}` for full and long dates and `<relative type="1">i morgon`.
+    id: "webkit-macos-sv-se-connector-and-tomorrow",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit leaves out kl. between a long Swedish date and the time, and spells tomorrow imorgon where CLDR 48 has i morgon.",
+    file: /\/(formatDateTime|formatZonedDateTime|formatCalendar|formatCalendarUnix|formatCalendarZoned|formatCalendarUtc)\.test\.ts$/,
+    test: /tomorrow for sv-SE|sv-SE's connector|for sv-SE with options \{ (dateStyle: '(full|long)'|year: 'numeric', month: 'long')/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6: `new Intl.DateTimeFormat("ar-SA", { dateStyle: "long", timeStyle: "short",
+    // timeZone: "UTC" })` keeps the Hijri calendar (`webkit-ar-sa-islamic-default-calendar`), and
+    // `Intl.RelativeTimeFormat` with `numeric: "auto"` plus a time prints tomorrow at 14:30 as "غدًا، ٢:٣٠ م"
+    // where Node 26.12.1 (CLDR 48.0) prints "غدًا في ٢:٣٠ م". CLDR 48 ar.xml has the atTime pattern
+    // `{1} في {0}` for full and long dates and `<relative type="1">غدًا`.
+    id: "webkit-macos-ar-sa-relative-connector",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit joins tomorrow and the time in Arabic with a comma where CLDR 48 has the word في.",
+    test: /tomorrow for ar-SA|ar-SA's connector/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 and Node 26.12.1 (CLDR 48.0): `new Intl.Locale("zh-CN").getWeekInfo()` is
+    // `{ firstDay: 7, weekend: [6, 7] }` on Mac WebKit and `{ firstDay: 1, weekend: [6, 7] }` in Node.
+    // CLDR 48 supplementalData.xml lists CN in `<firstDay day="mon" territories="001 AD AE ... CH CL CM CN CR ...">`,
+    // so weeks in zh-CN start on Monday.
+    id: "webkit-macos-zh-cn-week-start",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit starts the week on Sunday for zh-CN where CLDR 48 starts it on Monday.",
+    file: /\/(getLocaleFirstDayOfWeek|getLocaleStartOfWeek|getLocaleEndOfWeek|getLocaleZonedStartOfWeek|getLocaleZonedEndOfWeek|getLocaleWeekdayNames|isThisUnit|isZonedThisUnit|getWeekOfMonth|getWeeksInMonth)\.test\.ts$/,
+    test: /(\bin zh-CN( \(locale matrix\)| -> false)?|for locale zh-CN|for zh-CN in locale-first-day order)$/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0): ru-RU abbreviated weekdays print "Пн"
+    // (CLDR 48 ru.xml gregorian abbreviated format days: пн, вт, ср, чт, пт, сб, вс), en-GB's September
+    // abbreviation prints "Sep" (en_001.xml: `<month type="9">Sept</month>`, en_GB inherits it), and the
+    // ru-RU narrow relative day prints "-3 дн" (ru.xml day-narrow few: `-{0} дн.`).
+    id: "webkit-macos-ru-gb-short-names",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit capitalises the Russian short weekday names, drops the full stop of the Russian narrow day unit and spells September Sep in en-GB, where CLDR 48 has lower case, дн. and Sept.",
+    test: /getLocaleWeekdayNames returns 7 weekday names \(long\/short\/narrow\) for ru-RU|getLocaleMonthNames returns 12 Gregorian month names \(long\/short\/narrow\) for en-GB|formatRelativeDate formats 2024-03-\d\d for ru-RU with style narrow/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6: the short ar-SA weekday names come back as "أحد", "اثنين", "ثلاثاء", ...
+    // where Node 26.12.1 returns "الأحد", "الاثنين", "الثلاثاء", ...; the long width passes (the failing
+    // assertion is the short one). CLDR 48 ar.xml gregorian abbreviated format weekdays inherit the wide ones
+    // (`<day type="sun">↑↑↑</day>`; wide `<day type="sun">الأحد</day>`, mon `الاثنين`, tue `الثلاثاء`).
+    id: "webkit-macos-ar-sa-weekday-names",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit's short Arabic weekday names drop the article (أحد where CLDR 48 ar.xml has الأحد), so the short list differs from Node's.",
+    test: /getLocaleWeekdayNames returns 7 weekday names \(long\/short\/narrow\) for ar-SA/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 on the macos-26-arm64 runner (macOS 26.7.2): the pt-PT short weekday
+    // list fails `expected [ Array(7) ] to deeply equal [ 'domingo', 'segunda', 'terça', …(4) ]`; the
+    // runner's report does not print the names it got. Node 26.12.1 (CLDR 48.0) and Mac WebKit 26.6 on
+    // macOS 27.0.1 return domingo, segunda, terça, quarta, quinta, sexta, sábado. On the runner the long
+    // list passes and the short one fails (the narrow one is not reached), so this is the older macOS's
+    // locale data.
+    id: "webkit-macos-26-pt-pt-short-weekdays",
+    legs: ["webkit-macos"],
+    reason:
+      "The Mac runner's macOS 26 locale data gives other short Portuguese (pt-PT) weekday names than CLDR 48's domingo, segunda, terça.",
+    test: /getLocaleWeekdayNames returns 7 weekday names \(long\/short\/narrow\) for pt-PT/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0), 12-hour day periods: zh-CN and zh-TW at
+    // 03:30 and 00:30 print "凌晨" where Node prints "上午" (zh.xml gregorian abbreviated am "上午", pm "下午");
+    // he-IL prints "אח׳" for PM where Node prints "PM" (he.xml inherits root's `PM`); pt-PT prints "PM" where
+    // Node prints "p.m." (pt_PT.xml am "a.m.", pm "p.m.").
+    id: "webkit-macos-day-period-words",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit prints other day period words than CLDR 48 for zh-CN, zh-TW, he-IL and pt-PT: 凌晨 for the early morning, אח׳ for PM in Hebrew and PM for Portuguese.",
+    file: /\/(getLocaleMeridiems|formatDateTime|formatZonedDateTime|formatTime)\.test\.ts$/,
+    test: /getLocaleMeridiems (returns \[(上午, 下午|AM, PM|AM-label, PM-label)\] for (zh-CN|zh-TW|he-IL|pt-PT)|varies by locale)|for he-IL with options \{ (year: 'numeric'|hour: '2-digit'), .* to (03\.02\.2024, )?02:30:45 PM$|for (he-IL|pt-PT) with 12-hour day period|pt-PT with 12-hour day period/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6: `{ year: "numeric", month: "numeric", day: "numeric" }` in tr-TR prints
+    // "3.02.2024" where Node 26.12.1 (CLDR 48.0) prints "03.02.2024". CLDR 48 tr.xml `<dateFormatItem
+    // id="yMd">dd.MM.y</dateFormatItem>`.
+    id: "webkit-macos-tr-day-padding",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit leaves the day of a numeric Turkish date without its leading zero where CLDR 48 has dd.MM.y.",
+    file: /\/(formatDate|formatDateTime|formatZonedDateTime|formatDateToParts)\.test\.ts$/,
+    test: /for tr-TR with options (\{ year: 'numeric'|year (numeric|2-digit), month numeric)|returns exact parts for tr-TR$/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0): `{ dateStyle: "full" }` for 2024-02-03 in
+    // zh-CN prints "2024年2月3日 星期六" (a space before the weekday) and in ja-JP "2024年2月3日 土曜日"; Node
+    // prints "2024年2月3日星期六" and "2024年2月3日土曜日". CLDR 48 zh.xml and ja.xml: full date pattern
+    // `y年M月d日EEEE`, no space. The zh-CN zoned full/full row in formatZonedDateTime shows this cause and the
+    // one of `webkit-macos-zh-time-zone-name-position`: Mac prints "2024年2月3日 星期六 中国标准时间14:30:45"
+    // where Node prints "2024年2月3日星期六 中国标准时间 14:30:45".
+    id: "webkit-macos-zh-ja-full-date-weekday-space",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit puts a space before the weekday of a full zh-CN or ja-JP date where CLDR 48 has none.",
+    file: /\/(formatDate|formatDateTime|formatZonedDateTime)\.test\.ts$/,
+    test: /for (zh-CN|ja-JP) with options (\{ dateStyle: 'full'|dateStyle full)/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0): zh-CN `{ dateStyle: "long", timeStyle:
+    // "long", timeZone: "Asia/Shanghai" }` prints "2024年2月3日 GMT+814:30:45" (no space between the zone and
+    // the time) where Node prints "2024年2月3日 GMT+8 14:30:45" (zh.xml time long `z HH:mm:ss`); zh-TW prints the
+    // zone first ("GMT+8 下午2:30:45") where Node prints "下午2:30:45 [GMT+8]" (zh_Hant.xml time long
+    // `Bh:mm:ss [z]`, full `Bh:mm:ss [zzzz]`). The zh-CN zoned full/full row in formatZonedDateTime also
+    // shows the weekday space of `webkit-macos-zh-ja-full-date-weekday-space`: both causes are in its text.
+    id: "webkit-macos-zh-time-zone-name-position",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit puts the time zone name of a Chinese long or full time in another place or with another spacing than CLDR 48.",
+    file: /\/(formatZonedDateTime|formatZonedRange)\.test\.ts$/,
+    test: /for zh-(CN|TW) with options \{ dateStyle: '(full|long)', timeStyle|for zh-TW with \{ (dateStyle: 'long'|hour: 'numeric')/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0): `{ dateStyle: "short" }` for 2024-02-03 in
+    // ko-KR prints "2024. 2. 3." where Node prints "24. 2. 3.". CLDR 48 ko.xml short date `yy. M. d.`.
+    id: "webkit-macos-ko-short-date-year",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit prints the year of a short ko-KR date in four digits where CLDR 48 has two.",
+    file: /\/(formatDate|formatDateTime|formatZonedDateTime|formatDateRange|formatDateTimeRange|formatZonedRange)\.test\.ts$/,
+    test: /\bko-KR\b.*(dateStyle: 'short'|dateStyle short)|ko-KR with \{ dateStyle: 'short'/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (ICU 78.3, CLDR 48.0): `{ year: "numeric", month: "long" }`
+    // in ko-KR-u-ca-hebrew prints "AM 5784년 스밧월" where Node and Chromium print "AM 5784년 5월". CLDR 48 ko.xml
+    // has no hebrew availableFormats; root.xml aliases them to the generic calendar, whose `yyyyMMMM` is
+    // `G y년 M월` (a numeric month). Apple's ICU data for ko has generic `yyyyMMMM` `G y년 MMMM` and hebrew format
+    // wide month 5 `스밧월` where CLDR has `스밧`.
+    id: "webkit-macos-ko-hebrew-year-month",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit uses Apple's own ICU data for ko, which writes a Hebrew year and month with the month name where CLDR 48 has the month number (G y년 M월).",
+    test: /in ko-KR-u-ca-hebrew with \{ year: 'numeric', month: 'long' \}/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 against Node 26.12.1 (CLDR 48.0): zh-TW relative times print "30分鐘前"
+    // where Node prints "30 分鐘前" (zh_Hant.xml minute relativeTimePattern past `{0} 分鐘前`, with a space);
+    // zh-TW and ja-JP durations print "1天、2小時和30分鐘" and "1日、2時間、30分" where Node prints "1 天、2 小時和30 分鐘"
+    // and "1 日、2 時間、30 分"; he-IL prints "יום אחד" where Node prints "1 יום" (he.xml duration-day one
+    // `{0} יום`); tr-TR prints a narrow no-break space "1 gün" (U+202F) where Node prints "1 gün".
+    id: "webkit-macos-unit-spacing-and-words",
+    legs: ["webkit-macos"],
+    reason:
+      "Mac WebKit spaces relative times and durations differently from CLDR 48 in zh-TW, ja-JP and tr-TR, and writes one day in Hebrew as יום אחד where CLDR 48 has 1 יום.",
+    file: /\/(formatDuration|formatRelativeDate|formatRelativeDateTime|formatRelativeTime|formatRelativeUtc|formatRelativeUnix|formatRelativeZoned)\.test\.ts$/,
+    test: /for zh-TW|for locale (zh-TW|ja-JP|he-IL|tr-TR)/,
+  },
+  {
+    // Evidence, Mac WebKit 26.6 on the macos-26-arm64 runner from image 20261117 (macOS 26.7.2, Apple's
+    // libicucore 78.1), both engines: Europe/London in winter, en-GB, `{ dateStyle: "long", timeStyle:
+    // "long" }` prints "3 February 2024 at 14:30:45 GMT+0" for "… GMT", and the D16 range with
+    // `timeZoneName: "long"` prints "28/03/2026, 12:00 GMT+00:00 - …" for "… Greenwich Mean Time - …"; the
+    // full/full row differs at the zone name too. The runner's previous image (20261102), macOS 27.0.1 and
+    // Node 26.12.1 (ICU 78.3, CLDR 48.0) print "GMT" and "Greenwich Mean Time", the names of CLDR's GMT
+    // metazone.
+    id: "webkit-macos-london-zone-name-as-offset",
+    legs: ["webkit-macos"],
+    reason:
+      "The Mac runner names Europe/London's winter time in en-GB by its offset (GMT+0, GMT+00:00) where CLDR 48 has GMT and Greenwich Mean Time.",
+    file: /\/(formatZonedDateTime|formatZonedRangeBranches)\.test\.ts$/,
+    test: /\[Europe\/London\] for en-GB with options \{ dateStyle: '(full|long)', timeStyle: '(full|long)' \}|D16 alone writes each endpoint's long zone name/,
   },
 ];
 

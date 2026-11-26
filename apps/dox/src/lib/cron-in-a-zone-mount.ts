@@ -79,6 +79,7 @@ import { onWidthChange, thinTickLabels } from "./label-fit";
 import { formatValue } from "./punctuality-widgets";
 import { withBase } from "./site";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { link } from "~/widgets/builders/link";
 
 export type { CronInAZoneArgs } from "./cron-in-a-zone";
 
@@ -162,7 +163,7 @@ function fieldsSlot(view: CronView): SafeHtml {
   if (view.parsed && view.expr === null) {
     return cronNoSignal(
       NO_SIGNAL_TEXT,
-      html`${NO_SIGNAL_NOTE} <a href="${withBase(PARSE_PAGE)}">Read the grammar</a>.`,
+      html`${NO_SIGNAL_NOTE} ${link({ href: withBase(PARSE_PAGE), body: "Read the grammar" })}.`,
     );
   }
   return html``;

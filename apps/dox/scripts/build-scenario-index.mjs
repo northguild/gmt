@@ -8,18 +8,16 @@
  * Run as: node apps/dox/scripts/build-scenario-index.mjs
  */
 
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { lastUpdatedLine, newestCommit } from "./build-utils/commit-dates.mjs";
+import { writeIfChanged } from "./build-utils/generated-files.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, "..");
+const repoRoot = resolve(appRoot, "..", "..");
 const scenariosDir = resolve(appRoot, "src", "content", "docs", "scenarios");
 const indexPath = resolve(scenariosDir, "index.mdx");
 
@@ -40,30 +38,6 @@ function parseFrontmatter(content) {
   return fm;
 }
 
-function getMtime(path) {
-  try {
-    return statSync(path).mtime;
-  } catch {
-    return 0;
-  }
-}
-
-function shouldSkip() {
-  if (!existsSync(indexPath)) return false;
-  const entries = readdirSync(scenariosDir);
-  const latest = entries
-    .filter((f) => f.endsWith(".mdx") && f !== "index.mdx")
-    .map((f) => getMtime(resolve(scenariosDir, f)))
-    .concat(getMtime(indexPath))
-    .sort((a, b) => b - a)[0];
-  return getMtime(indexPath) >= latest;
-}
-
-if (shouldSkip()) {
-  console.log("[scenarios] up-to-date, skipping");
-  process.exit(0);
-}
-
 const files = readdirSync(scenariosDir)
   .filter((f) => f.endsWith(".mdx") && f !== "index.mdx")
   .sort();
@@ -72,12 +46,22 @@ const entries = files.map((file) => {
   const content = readFileSync(resolve(scenariosDir, file), "utf8");
   const fm = parseFrontmatter(content);
   const slug = file.replace(/\.mdx$/, "");
-  return { slug, title: fm.title || slug, description: fm.description || "" };
+  return {
+    slug,
+    title: fm.title || slug,
+    description: fm.description || "",
+    path: relative(repoRoot, resolve(scenariosDir, file)).split("\\").join("/"),
+  };
 });
+
+// The index is dated from the pages it lists. It is rebuilt on every run and written only when its
+// text changes, so a commit that moves a page's date moves the index's.
+const lastUpdated = lastUpdatedLine(newestCommit(entries.map((e) => e.path)));
 
 const frontmatter = `---
 title: Scenarios
 description: Live examples showing common date/time problems and how GMT solves them.
+${lastUpdated}
 ---
 
 `;
@@ -91,17 +75,8 @@ const body = entries
 
 const source = frontmatter + body;
 
-let previous = "";
-try {
-  previous = readFileSync(indexPath, "utf8");
-} catch {
-  previous = "";
-}
-
-if (previous === source) {
+if (writeIfChanged(indexPath, source)) {
+  console.log(`[scenarios] wrote index.mdx with ${entries.length} entries`);
+} else {
   console.log("[scenarios] up to date");
-  process.exit(0);
 }
-
-writeFileSync(indexPath, source);
-console.log(`[scenarios] wrote index.mdx with ${entries.length} entries`);

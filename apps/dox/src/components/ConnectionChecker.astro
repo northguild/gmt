@@ -47,6 +47,7 @@ const html = renderConnectionCheckerTemplate("connection-checker", {}).value;
   import { mountConnectionChecker } from "../lib/connection-checker-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("connection");
@@ -57,5 +58,9 @@ const html = renderConnectionCheckerTemplate("connection-checker", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "connection-checker",
+      () => import("../lib/webmcp/tools/connection-checker"),
+    );
   }
 </script>

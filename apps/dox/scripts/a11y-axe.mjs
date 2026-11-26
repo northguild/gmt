@@ -35,7 +35,7 @@ import {
 const GATE = "a11y-axe";
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-const run = parseSweep({
+const run = await parseSweep({
   gate: GATE,
   pages: distPages(GATE),
   defaults: { widths: "1440,390" },

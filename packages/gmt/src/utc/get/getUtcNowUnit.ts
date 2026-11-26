@@ -3,14 +3,14 @@ import {
   isoWeekOfYear,
   zonedNowUnitValue,
 } from "../../internal/zonedNowUnitValue";
-import { isValidDateTimeUnit } from "../../plain/validate";
+import { isDateTimeUnitName } from "../../internal/unitNames";
 import type { UtcNowUnit } from "../../types";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 export type { UtcNowUnit };
 
 function isValidUtcNowUnit(unit: string): unit is UtcNowUnit {
-  return isValidDateTimeUnit(unit) || ["dayOfWeek"].includes(unit);
+  return isDateTimeUnitName(unit) || ["dayOfWeek"].includes(unit);
 }
 
 /**

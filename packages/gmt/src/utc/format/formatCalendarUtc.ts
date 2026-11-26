@@ -1,14 +1,11 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { Temporal } from "../../internal/temporal";
 import { formatCalendarInstants } from "../../internal/formatCalendarDays";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
-import {
-  toInstantFromUtc,
-  toReferenceInstantFromUtc,
-} from "../../internal/toInstantFromUtc";
 import type { CalendarOptions } from "../../types";
-import { isValidUtc } from "../validate";
-import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { utcInstantOf } from "../../internal/utcInstant";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarUtc`: the instant the day label is measured from, the time zone the
@@ -46,6 +43,11 @@ export interface FormatCalendarUtcOptions extends CalendarOptions {
  *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
  *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
  *   Node, throw a RangeError exception"). Pass the IANA name.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -66,21 +68,26 @@ export function formatCalendarUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (!isObject(options)) return "";
-    if (!isValidUtc(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = utcInstantOf(value);
+    if (target === null) return "";
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const timeZone = normalizeTimeZone(options.timeZone);
     if (!timeZone) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidUtc(referenceOption))
-      return "";
+    const parsedReference =
+      referenceOption === undefined ? undefined : utcInstantOf(referenceOption);
+    if (parsedReference === null) return "";
 
-    const target = toInstantFromUtc(value);
-    if (target === null) return "";
-
-    const reference = toReferenceInstantFromUtc(referenceOption);
-    if (reference === null) return "";
+    let reference = parsedReference;
+    if (reference === undefined) {
+      try {
+        reference = Temporal.Now.instant();
+      } catch {
+        return "";
+      }
+    }
 
     try {
       return formatCalendarInstants(
@@ -88,7 +95,7 @@ export function formatCalendarUtc(
         reference,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

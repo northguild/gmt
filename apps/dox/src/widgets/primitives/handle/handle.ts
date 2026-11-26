@@ -18,6 +18,7 @@
  */
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
+import { cue } from "~/lib/sound/cue";
 import { KitElement, num } from "../base";
 import styles from "./handle.module.css";
 
@@ -221,6 +222,8 @@ export class GmtHandle extends KitElement {
     this.setAttribute("aria-valuenow", String(this.#clamp(next)));
     this.#render();
     if (this.value === before) return;
+    // A step the reader took; `value =` from code never comes through here.
+    cue("detent");
     this.#emit("input");
     if (final) this.#emit("change");
   }

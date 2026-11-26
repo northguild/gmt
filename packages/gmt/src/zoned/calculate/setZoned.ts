@@ -1,15 +1,10 @@
 import type { ZonedDateTimeFields } from "../../internal/temporalTypes";
-import {
-  DATE_TIME_FIELDS,
-  readSetFields,
-  resolveOverflow,
-  withZonedFields,
-  zonedDateTimeFrom,
-} from "../../internal";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { setZonedFields } from "../../internal/setZonedFields";
 import type { Disambiguation, Offset, Overflow } from "../../types";
-import { isValidZonedDateTime } from "../validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Return a zoned ISO 8601 datetime string with the given `fields` set on `value`.
@@ -94,29 +89,25 @@ export function setZoned(
       return "";
     }
 
-    if (!isValidZonedDateTime(value)) return "";
+    const zoned = zonedDateTimeOf(value);
+    if (zoned === null) return "";
 
     const overflow = resolveOverflow(options?.overflow);
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       options?.disambiguation,
       "compatible",
     );
     // Temporal ZonedDateTime#with's own default: keep the source offset while it is still valid.
-    const offset = optionOrDefault(options?.offset, "prefer");
+    const offset = stringOptionOrDefault(options?.offset, "prefer");
 
     try {
-      const zoned = zonedDateTimeFrom(value);
-      const set = readSetFields(fields, DATE_TIME_FIELDS);
-      if (set === null) return "";
-      // Only the values readSetFields checked reach Temporal, on both paths of withZonedFields. An
-      // empty result sets nothing: a no-op here, where Temporal's with() would throw.
-      if (Object.keys(set).length === 0) return zoned.toString();
-
-      return withZonedFields(zoned, set, {
-        overflow,
-        disambiguation,
-        offset,
-      }).toString();
+      return (
+        setZonedFields(zoned, fields, {
+          overflow,
+          disambiguation,
+          offset,
+        })?.toString() ?? ""
+      );
     } catch {
       return "";
     }

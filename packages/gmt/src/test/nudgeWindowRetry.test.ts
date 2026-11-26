@@ -16,7 +16,7 @@ import { diffUtc } from "../utc";
  * when the duration's own month count is one short of the truth, which is exactly when adding a month
  * constrains the day — a start on the 29th, 30th or 31st.
  *
- * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`5dd0b0d97ee1`, merged 2025-11-19);
+ * Upstream: tc39/proposal-temporal#3168, fixed by #3172 (`17e12be0af42`, merged 2025-11-19);
  * `temporal-polyfill` 1.0.8 carries the fix, so GMT has no workaround here.
  *
  * Every expected value below is `Temporal` in Chromium 153.0.8010.12 — native V8, never the polyfill

@@ -37,3 +37,13 @@ overrides:
   # on its own once upstream moves. Delete it once `pnpm why minimatch` shows nothing asking for a
   # version below 11.0.1.
   'minimatch@<11.0.1': 11.0.1
+audit:
+  ignore:
+    # GHSA-fc5q-39xc-vjpf: picomatch through 4.0.7 can hang on a glob with a repeated
+    # single-branch extglob. GitHub withdrew the advisory on 2026-11-18, but the npm registry
+    # still reports it, and no fixed version exists for an override to pin. Every path to
+    # picomatch is build and dev tooling (Astro, Vite, chokidar, anymatch) matching globs this repo
+    # writes; none reaches the published package or the deployed site. Delete this entry once
+    # `pnpm audit` passes without it, or once picomatch publishes a fixed version: `pnpm audit`
+    # then names the override to add.
+    - GHSA-fc5q-39xc-vjpf

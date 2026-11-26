@@ -1,6 +1,6 @@
+import { dateTimeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
-import { isValidDateTimeInterval } from "./validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -47,22 +47,25 @@ export function intervalXorAllDateTime(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          isValidDateTimeInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.PlainDateTime;
+      end: Temporal.PlainDateTime;
+    }> = [];
+    for (let index = 0; index < intervals.length; index++) {
+      if (!(index in intervals)) {
+        continue;
+      }
+      const interval = intervals[index];
+      const bounds = isObject(interval)
+        ? dateTimeIntervalOf(interval.start, interval.end)
+        : null;
+      if (bounds === null) {
+        return [];
+      }
+      parsed[index] = { start: bounds[0], end: bounds[1] };
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: Temporal.PlainDateTime.from(interval.start),
-        end: Temporal.PlainDateTime.from(interval.end),
-      }));
-
       return halfOpenXor(parsed, Temporal.PlainDateTime.compare).map(
         ({ start, end }) => ({
           start: start.toString(),

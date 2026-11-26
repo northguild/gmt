@@ -10,6 +10,7 @@ import { codeFrame } from "../../builders/code-frame";
 import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./info-card.module.css";
+import { link } from "~/widgets/builders/link";
 
 const infoIcon = (): SafeHtml =>
   html`<svg
@@ -77,15 +78,42 @@ export function serversCard(o: ServersCardOptions): SafeHtml {
   </section>`;
 }
 
+interface InfoCardOptions {
+  idPrefix: string;
+  /** Names the card's heading id, so two cards on a page never share one. */
+  name: string;
+  title: string;
+  /** One paragraph each. */
+  lines: readonly string[];
+  /** More markup after the lines (a dated line, a link). */
+  after?: SafeHtml;
+  /** The part name a browser gate finds the card by. */
+  gate?: string;
+}
+
+/** An info card of a title and a few plain lines, in the card style of the servers card. */
+export function infoCard(o: InfoCardOptions): SafeHtml {
+  const titleId = `${o.idPrefix}-${o.name}-title`;
+  return html`<section
+    class="${styles.card}"
+    ${gateAttr(o.gate)}
+    aria-labelledby="${titleId}"
+  >
+    ${infoIcon()}
+    <div class="${styles.body}">
+      <h4 class="${styles.title}" id="${titleId}">${o.title}</h4>
+      ${o.lines.map((line) => html`<p>${line}</p>`)}${o.after ?? ""}
+    </div>
+  </section>`;
+}
+
 /** The runtimes' minimum releases: one row to a line, each with its sources. */
 export function minimumsCard(idPrefix: string, text: MinimumsText): SafeHtml {
   const titleId = `${idPrefix}-minimums-title`;
   const rows = text.rows.map((row) => {
     const sources = row.sources.map(
       (s, i) =>
-        html`${i > 0 ? ", " : ""}<a href="${s.href}" rel="noopener noreferrer"
-          >${s.label}</a
-        >`,
+        html`${i > 0 ? ", " : ""}${link({ href: s.href, body: s.label })}`,
     );
     return html`<li>
       <strong>${row.name}</strong>

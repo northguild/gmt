@@ -14,8 +14,12 @@
  * always "now" — so those fall back to the calendar preset here
  * (`liveClockFormat`), while the reset chip keeps its "in 4 hours".
  *
- * Renders nothing until mount, for the same reason every date in the chat does:
- * the server's zone and locale are not the reader's (#418).
+ * Shows no time until mount, for the same reason every date in the chat does:
+ * the server's zone and locale are not the reader's (#418). Until then it
+ * renders a placeholder: the same element, unseen and hidden from assistive
+ * tech, holding text as wide as the default format's. The strip is then its
+ * full height from the first paint, and the chat under it does not move when
+ * the time arrives.
  */
 import { getUtcNow } from "@northguild/gmt/utc/get";
 import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
@@ -26,6 +30,21 @@ import { liveClockFormat } from "~/lib/reset-formats";
 
 /** Seconds show in several presets (local date-time, UTC, HTTP, Unix). */
 const TICK_MS = 1_000;
+
+/** The placeholder's text: as wide as the default (calendar) format reads. */
+const PLACEHOLDER = "today at 00:00";
+
+/**
+ * The clock's place before there is a time to show. A plain call, not a component: the same
+ * `<time>` node then carries on into the real reading, so it fades in.
+ */
+function placeholder() {
+  return (
+    <time className="gmt-hive-now" data-pending="" aria-hidden="true">
+      {PLACEHOLDER}
+    </time>
+  );
+}
 
 interface LocalClock {
   zone: string;
@@ -49,7 +68,7 @@ export function HeaderClock() {
     return () => window.clearInterval(timer);
   }, []);
 
-  if (!clock) return null;
+  if (!clock) return placeholder();
 
   const preset = liveClockFormat(formatId);
   const text = preset.format(clock.now, {
@@ -57,7 +76,7 @@ export function HeaderClock() {
     locale: clock.locale,
     now: clock.now,
   });
-  if (text === "") return null;
+  if (text === "") return placeholder();
 
   return (
     <time

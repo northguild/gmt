@@ -22,7 +22,7 @@ unstaged and report it ready; the user decides when it is committed.
 
 **`@js-temporal/polyfill`:** Every method that throws `RangeError` on invalid input (`.from()`, `.add()`, `.subtract()`, `.since()`, `.until()`, `.with()`, `.round()`, `.toString()`, …) is wrapped in try-catch. Duration field combinations, offset arithmetic, DST transitions (`getTimeZoneTransition`, `startOfDay()`, `hoursInDay`), and Temporal's immutable design.
 
-**Calendar & zone semantics:** TC39 is the authority — arithmetic clamps, parsers reject; zoned boundaries never truncate-and-re-resolve; repeated steps come from the anchor; exhausted loops return the sentinel. Read [coding-standards § Calendar & zone semantics](../context/coding-standards.md#calendar--zone-semantics) before touching any boundary, split or arithmetic function.
+**Calendar & zone semantics:** TC39 is the authority — arithmetic clamps, parsers reject; zoned boundaries never truncate-and-re-resolve; repeated steps come from the anchor; exhausted loops return the sentinel. Read [coding-standards § Calendar & zone semantics](../context/coding-standards/calendar-and-zones.md#calendar--zone-semantics) before touching any boundary, split or arithmetic function.
 
 **Testing patterns:** `it.each` template literals (never array syntax, never `forEach`). Each test gets a title no other test in the file shares; a string-only placeholder is written `'$value'` so an empty string prints `''`, and any other value is left bare or given a `label` column written as JavaScript literals ([test-name standards](../context/testing-standards/references/index.md#test-name-standards)). Pre-built mocks from `packages/gmt/src/test/mocks`. `battleTestTimeZones` / `MustTestDstTimeZones` from `packages/gmt/src/test/timeZoneMatrix.ts` (no literal zone tables). `MustTestLocales` named constants. `expectOneOfIcu` / `expectDateTimeEqual` / `expectOneOfDateTimeIcu` from `src/test/icuVariants.ts`. Canonical values from [test-matrix.md](../context/testing-standards/references/test-matrix.md), written inline — they are values, not exports. Test files share modules unless they call `vi.mock`, `vi.doMock`, `vi.stubGlobal` or `vi.stubEnv` ([shared modules](../context/testing-standards/references/index.md#shared-modules-and-isolated-files)). Full detail: [testing standards](../context/testing-standards/references/index.md).
 
@@ -58,16 +58,18 @@ unstaged and report it ready; the user decides when it is committed.
 - Early return on `amount === 0` where the function takes an amount.
 - `Temporal.*.from(value)` inside `try { … } catch { return sentinel }`.
 - Shared logic in `packages/gmt/src/internal/`, exported from `internal/index.ts`.
-- Sentinels per the [sentinel table](../context/coding-standards.md#api-contract).
+- Sentinels per the [sentinel table](../context/coding-standards/api-contract.md#api-contract).
 - A new workaround for a polyfill or ICU defect follows
   `packages/gmt/src/internal/temporalCompat/README.md`: a repro in `repros.ts` that imports
   only the polyfill, a lazy memoised probe in `capabilities.ts`, dormant when the probe passes,
   computing the spec's answer so removal changes no output, and a removal trigger naming the
-  upstream commit that retires it.
+  upstream commit that retires it. The approach is frozen:
+  [runtime-workarounds.md](../context/coding-standards/runtime-workarounds.md). A fix that
+  cannot follow it stops and goes back to the main session.
 
 ## Performance shape
 
-- Follow [§ Loop cost](../context/coding-standards.md#loop-cost) for every loop you write.
+- Follow [§ Loop cost](../context/coding-standards/design-rules.md#loop-cost) for every loop you write.
 - In the handoff, name what bounds each loop, and give the bench rows and the `pnpm size --files` delta it asks for.
 - An optimisation that changes any output is a defect, not a trade-off.
 - Tests follow [test cost](../context/testing-standards/references/index.md#test-cost): under 0.3 s each locally, and a slower test makes its work smaller before it gets a timeout.

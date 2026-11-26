@@ -1,0 +1,35 @@
+---
+title: "A Value Date in the Wrong Century"
+description: A ten-year swap leg settles on a value date sent as 350615, and a home-made century cut-off stores 1935 instead of 2035.
+industries: [finance]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A Value Date in the Wrong Century"
+  description="A ten-year swap leg settles on a value date sent as 350615. The receiving system stores a date."
+  naiveCode={`// The naive approach: a cut-off of 30 that someone chose, stated through the pattern parser
+import { parseDateWithPattern } from "@northguild/gmt/plain/parse";
+
+parseDateWithPattern("350615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1935-06-15" — a century before the settlement date
+parseDateWithPattern("750615", "yyMMdd", undefined, { yearWindow: 1930 });
+// "1975-06-15" — accepted, and SWIFT refuses it`}
+  explanation={`SWIFT states the century for a value date. It reads a two-digit year from 01 to 60 as 2001 to 2060, and refuses any other with error code T50. So 350615 is 15 June 2035. The cut-off above puts it in 1935, a century before the date the payment settles.
+
+The same cut-off accepts 750615 as 1975. SWIFT refuses that value, because 75 is not a year from 01 to 60. So the check passes the bad data and the system stores a date nobody sent.
+
+The cut-off is a choice someone made, not a rule SWIFT states. parseSwiftDate applies SWIFT's own rule, so there is no choice left to get wrong.`}
+  gmtCode={`import { parseSwiftDate } from "@northguild/gmt/finance/parse";
+import { isValidSwiftDate } from "@northguild/gmt/finance/validate";
+
+parseSwiftDate("350615"); // "2035-06-15"
+parseSwiftDate("750615"); // ""
+isValidSwiftDate("750615"); // false`}
+  fixedSpecId="parseSwiftDate"
+/>
+
+To see the same value in the tool, [open `350615` in the SWIFT Value Date
+Reader](/tools/swift-value-date-reader/?w=swiftdate&wa=%7B%22value%22%3A%22350615%22%7D). The full
+rule is in [Finance: Message Timestamps](/guides/industries/finance-message-timestamps/).

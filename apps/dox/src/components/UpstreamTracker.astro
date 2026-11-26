@@ -1,13 +1,13 @@
 ---
 /**
- * The /upstream/ tracker: one table per repository, built from `upstream-filings.ts` — the live
+ * The /upstream/ tracker: one table per repository or tracker, built from `upstream-filings.ts` — the live
  * refresh when GitHub is reachable, the committed snapshot otherwise. Nothing is fetched in the
- * browser. Sentences come from `lib/upstream-summary.ts`, styles in `upstream-table.css`.
+ * browser. Sentences come from `lib/upstream-summary.ts`, styles in `gmt-content-tables.css`.
  */
-import { filingRepos, filingsForRepo } from "../data/upstream-filings";
+import Link from "~/components/Link.astro";
+import { filingGroups, filingsForGroup } from "../data/upstream-filings";
 import { UPSTREAM_COLUMNS as COLUMNS } from "../lib/upstream-status";
 import { asDate } from "../lib/upstream-summary";
-import "./upstream-table.css";
 import UpstreamFilingRow from "./UpstreamFilingRow.astro";
 import UpstreamTrackerLegend from "./UpstreamTrackerLegend.astro";
 import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
@@ -17,18 +17,18 @@ import UpstreamTrackerSummary from "./UpstreamTrackerSummary.astro";
 <UpstreamTrackerSummary />
 
 {
-  filingRepos.map((repo) => (
+  filingGroups.map((group) => (
     <section class="gmt-upstream-repo">
       <h3>
-        <a href={`https://github.com/${repo}`}>{repo}</a>
+        <Link href={group.href}>{group.name}</Link>
       </h3>
-      <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label={`Filings to ${repo}`}>
+      <div class="gmt-ref-table" data-kind="content" data-layout="entries" data-label={`Filings: ${group.name}`}>
       <table class="gmt-upstream-table">
         <thead>
           <tr>{COLUMNS.map((column) => <th>{column}</th>)}</tr>
         </thead>
         <tbody>
-          {filingsForRepo(repo).map((f) => (
+          {filingsForGroup(group.id).map((f) => (
             <UpstreamFilingRow filing={f} formatDate={asDate} />
           ))}
         </tbody>

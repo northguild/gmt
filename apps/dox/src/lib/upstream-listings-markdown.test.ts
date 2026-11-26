@@ -18,6 +18,10 @@ describe("the /upstream/ twin", () => {
     expect(twin).toMatch(/^## Beyond Temporal$/m);
   });
 
+  it("starts the table with a Submission column", () => {
+    expect(twin).toMatch(/^\| Submission \| What it asks \|/m);
+  });
+
   it("has a table row for every listing, including You-Dont-Need-Momentjs#159", () => {
     expect(twin).toContain("you-dont-need/You-Dont-Need-Momentjs#159");
     for (const l of listings) {

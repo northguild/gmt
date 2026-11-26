@@ -11,7 +11,9 @@
  * summary (`flakyRows`) and never filed. A leg with no readable `summary.json` is sorted by its
  * sweep job (`missingSummary`): one whose `SUMMARY_STEP` passed wrote the file and lost it on the
  * way, and joins the one `dox-gate:not-uploaded:all:` issue; any other files
- * `dox-gate:could-not-run:<leg>`. A `FAIL` row with no structured finding files
+ * `dox-gate:could-not-run:<leg>`. A leg whose runner stopped at its `--deadline` (rows marked
+ * `outOfTime`) files `dox-gate:out-of-time:<leg>` with every gate's minutes; the structured
+ * findings it reached before the deadline still file. Any other `FAIL` row with no structured finding files
  * `<gate>:unstructured:all:` with its log tail. A run that would open more than `FLOOD_LIMIT` new
  * issues opens none and files one `dox-gate:flood` issue listing them, because that many at
  * once is one systemic cause for a person to triage.
@@ -62,8 +64,9 @@ const LOG_LINES = 10;
  * }} Finding
  * @typedef {{
  *   id: string, status: string, detail?: string, findings?: Finding[], logTail?: string[],
+ *   durationMs?: number, outOfTime?: boolean,
  * }} Row
- * @typedef {{ status: string, rows: Row[] }} Summary
+ * @typedef {{ status: string, rows: Row[], deadlineMinutes?: number | null }} Summary
  * @typedef {{ name: string, conclusion: string | null }} Step
  * @typedef {{ conclusion: string | null, steps: Step[] }} Job
  * @typedef {{ leg: string, summary: Summary | null, job?: Job | null }} LegSummary
@@ -193,6 +196,37 @@ export function missingSummary(leg, job) {
 }
 
 /**
+ * The issue for a leg whose runner reached its `--deadline`: which gate it stopped, which it never
+ * ran, and the minutes each gate took, so the leg can be split or a slow gate found.
+ * @param {string} leg
+ * @param {Summary} summary
+ * @returns {{ key: string, rule: string, page: string, message: string }}
+ */
+export function ranOutOfTime(leg, summary) {
+  const rows = summary.rows ?? [];
+  const minutes = (ms) =>
+    ms === undefined ? "-" : String(Math.round(ms / 60_000));
+  const deadline = summary.deadlineMinutes
+    ? `its ${summary.deadlineMinutes}-minute deadline`
+    : "its deadline";
+  const gates = table(
+    ["Gate", "Status", "Minutes", "Detail"],
+    rows.map((r) => [
+      cell(r.id),
+      cell(r.status),
+      minutes(r.durationMs),
+      cell(r.detail ?? ""),
+    ]),
+  );
+  return {
+    key: `dox-gate:out-of-time:${leg}`,
+    rule: "out-of-time",
+    page: leg,
+    message: `The ${leg} leg reached ${deadline} before every gate finished. The runner stopped the gate in flight and did not run the gates after it, so their pages went unchecked. Split the leg's work (more shards, or a slow gate made faster) so it fits.\n\n${gates}`,
+  };
+}
+
+/**
  * Every finding the legs reported, one entry per key, with every place it was seen.
  * @param {LegSummary[]} legs
  * @returns {{ key: string, gate: string, rule: string, page: string, target?: string, selector: string,
@@ -223,9 +257,18 @@ export function collect(legs) {
       );
       continue;
     }
+    if ((summary.rows ?? []).some((r) => r.outOfTime)) {
+      const { key, rule, page, message } = ranOutOfTime(leg, summary);
+      add(
+        key,
+        { gate: "dox-gate", rule, page, selector: "", message, tail: [] },
+        { leg, browser: browserOfLeg(leg), width: "", theme: "" },
+      );
+    }
     for (const row of summary.rows ?? []) {
       if (row.status !== "FAIL") continue;
       const structured = (row.findings ?? []).filter((f) => f.rule && f.page);
+      if (structured.length === 0 && row.outOfTime) continue;
       if (structured.length === 0) {
         add(
           `${row.id}:unstructured:all:`,
@@ -310,7 +353,9 @@ function planned(entry, context) {
       ? `Dox weekly could not run the ${entry.page} leg`
       : entry.rule === "not-uploaded"
         ? "Dox weekly: leg findings did not reach the report"
-        : `Dox gate: ${entry.rule} on ${entry.page} (${entry.gate})`;
+        : entry.rule === "out-of-time"
+          ? `Dox weekly: the ${entry.page} leg ran out of time`
+          : `Dox gate: ${entry.rule} on ${entry.page} (${entry.gate})`;
   const tail =
     entry.tail.length > 0
       ? `\n\nLog tail:\n\n\`\`\`text\n${entry.tail
@@ -426,7 +471,8 @@ function floodTable(groups) {
 function artifactLine(legs, context) {
   const names = legs
     .map(
-      (l) => `\`dox-gate-${l.leg}${context.runId ? `-${context.runId}` : ""}\``,
+      (l) =>
+        `\`dox-gates-${l.leg}${context.runId ? `-${context.runId}` : ""}\``,
     )
     .join(", ");
   return `Full findings: the run's artifacts ${names} (kept ${ARTIFACT_DAYS} days).`;

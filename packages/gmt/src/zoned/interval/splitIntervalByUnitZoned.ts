@@ -7,8 +7,8 @@ import {
   resolveDurationUnit,
   tileByUnit,
 } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
-import { isValidCalendarZonedDateTime } from "../validate/isValidCalendarZonedDateTime";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import { minSlicesForSpan } from "../../internal/splitStep";
 
@@ -95,10 +95,7 @@ export function splitIntervalByUnitZoned(
   end: string;
 }> {
   try {
-    if (
-      !isValidCalendarZonedDateTime(start) ||
-      !isValidCalendarZonedDateTime(end)
-    ) {
+    if (calendarZonedOf(start) === null || calendarZonedOf(end) === null) {
       return [];
     }
 
@@ -109,7 +106,7 @@ export function splitIntervalByUnitZoned(
     const resolvedUnit = resolveDurationUnit(unit);
 
     // An unknown unit is invalid whatever the span, a zero-length one included.
-    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+    if (!isDateTimeDurationUnitName(resolvedUnit)) {
       return [];
     }
 

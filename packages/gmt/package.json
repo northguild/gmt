@@ -1,6 +1,6 @@
 {
   "name": "@northguild/gmt",
-  "version": "1.21.0",
+  "version": "1.23.1",
   "description": "Date and time library for JavaScript and TypeScript, built on TC39 Temporal: time zones, DST, business days, ISO 8601 strings in and out. Never throws.",
   "keywords": [
     "business-days",
@@ -60,6 +60,18 @@
   "types": "./dist/index.d.ts",
   "typesVersions": {
     "*": {
+      "aviation": [
+        "./dist/aviation/index.d.ts"
+      ],
+      "aviation/format": [
+        "./dist/aviation/format/index.d.ts"
+      ],
+      "aviation/parse": [
+        "./dist/aviation/parse/index.d.ts"
+      ],
+      "aviation/validate": [
+        "./dist/aviation/validate/index.d.ts"
+      ],
       "calendar": [
         "./dist/calendar/index.d.ts"
       ],
@@ -99,11 +111,35 @@
       "duration/validate": [
         "./dist/duration/validate/index.d.ts"
       ],
+      "finance": [
+        "./dist/finance/index.d.ts"
+      ],
+      "finance/format": [
+        "./dist/finance/format/index.d.ts"
+      ],
+      "finance/parse": [
+        "./dist/finance/parse/index.d.ts"
+      ],
+      "finance/validate": [
+        "./dist/finance/validate/index.d.ts"
+      ],
       "gnss": [
         "./dist/gnss/index.d.ts"
       ],
       "gnss/convert": [
         "./dist/gnss/convert/index.d.ts"
+      ],
+      "healthcare": [
+        "./dist/healthcare/index.d.ts"
+      ],
+      "healthcare/format": [
+        "./dist/healthcare/format/index.d.ts"
+      ],
+      "healthcare/parse": [
+        "./dist/healthcare/parse/index.d.ts"
+      ],
+      "healthcare/validate": [
+        "./dist/healthcare/validate/index.d.ts"
       ],
       "instant": [
         "./dist/instant/index.d.ts"
@@ -143,6 +179,15 @@
       ],
       "interval/validate": [
         "./dist/interval/validate/index.d.ts"
+      ],
+      "iot": [
+        "./dist/iot/index.d.ts"
+      ],
+      "iot/convert": [
+        "./dist/iot/convert/index.d.ts"
+      ],
+      "iot/validate": [
+        "./dist/iot/validate/index.d.ts"
       ],
       "plain": [
         "./dist/plain/index.d.ts"
@@ -201,6 +246,21 @@
       "precision/validate": [
         "./dist/precision/validate/index.d.ts"
       ],
+      "rail": [
+        "./dist/rail/index.d.ts"
+      ],
+      "rail/convert": [
+        "./dist/rail/convert/index.d.ts"
+      ],
+      "rail/format": [
+        "./dist/rail/format/index.d.ts"
+      ],
+      "rail/parse": [
+        "./dist/rail/parse/index.d.ts"
+      ],
+      "rail/validate": [
+        "./dist/rail/validate/index.d.ts"
+      ],
       "recurrence": [
         "./dist/recurrence/index.d.ts"
       ],
@@ -230,6 +290,12 @@
       ],
       "timescale/convert": [
         "./dist/timescale/convert/index.d.ts"
+      ],
+      "timescale/format": [
+        "./dist/timescale/format/index.d.ts"
+      ],
+      "timescale/parse": [
+        "./dist/timescale/parse/index.d.ts"
       ],
       "timescale/validate": [
         "./dist/timescale/validate/index.d.ts"
@@ -358,6 +424,22 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./aviation": {
+      "types": "./dist/aviation/index.d.ts",
+      "default": "./dist/aviation/index.js"
+    },
+    "./aviation/format": {
+      "types": "./dist/aviation/format/index.d.ts",
+      "default": "./dist/aviation/format/index.js"
+    },
+    "./aviation/parse": {
+      "types": "./dist/aviation/parse/index.d.ts",
+      "default": "./dist/aviation/parse/index.js"
+    },
+    "./aviation/validate": {
+      "types": "./dist/aviation/validate/index.d.ts",
+      "default": "./dist/aviation/validate/index.js"
+    },
     "./calendar": {
       "types": "./dist/calendar/index.d.ts",
       "default": "./dist/calendar/index.js"
@@ -410,6 +492,22 @@
       "types": "./dist/duration/validate/index.d.ts",
       "default": "./dist/duration/validate/index.js"
     },
+    "./finance": {
+      "types": "./dist/finance/index.d.ts",
+      "default": "./dist/finance/index.js"
+    },
+    "./finance/format": {
+      "types": "./dist/finance/format/index.d.ts",
+      "default": "./dist/finance/format/index.js"
+    },
+    "./finance/parse": {
+      "types": "./dist/finance/parse/index.d.ts",
+      "default": "./dist/finance/parse/index.js"
+    },
+    "./finance/validate": {
+      "types": "./dist/finance/validate/index.d.ts",
+      "default": "./dist/finance/validate/index.js"
+    },
     "./gnss": {
       "types": "./dist/gnss/index.d.ts",
       "default": "./dist/gnss/index.js"
@@ -417,6 +515,22 @@
     "./gnss/convert": {
       "types": "./dist/gnss/convert/index.d.ts",
       "default": "./dist/gnss/convert/index.js"
+    },
+    "./healthcare": {
+      "types": "./dist/healthcare/index.d.ts",
+      "default": "./dist/healthcare/index.js"
+    },
+    "./healthcare/format": {
+      "types": "./dist/healthcare/format/index.d.ts",
+      "default": "./dist/healthcare/format/index.js"
+    },
+    "./healthcare/parse": {
+      "types": "./dist/healthcare/parse/index.d.ts",
+      "default": "./dist/healthcare/parse/index.js"
+    },
+    "./healthcare/validate": {
+      "types": "./dist/healthcare/validate/index.d.ts",
+      "default": "./dist/healthcare/validate/index.js"
     },
     "./instant": {
       "types": "./dist/instant/index.d.ts",
@@ -469,6 +583,18 @@
     "./interval/validate": {
       "types": "./dist/interval/validate/index.d.ts",
       "default": "./dist/interval/validate/index.js"
+    },
+    "./iot": {
+      "types": "./dist/iot/index.d.ts",
+      "default": "./dist/iot/index.js"
+    },
+    "./iot/convert": {
+      "types": "./dist/iot/convert/index.d.ts",
+      "default": "./dist/iot/convert/index.js"
+    },
+    "./iot/validate": {
+      "types": "./dist/iot/validate/index.d.ts",
+      "default": "./dist/iot/validate/index.js"
     },
     "./plain": {
       "types": "./dist/plain/index.d.ts",
@@ -546,6 +672,26 @@
       "types": "./dist/precision/validate/index.d.ts",
       "default": "./dist/precision/validate/index.js"
     },
+    "./rail": {
+      "types": "./dist/rail/index.d.ts",
+      "default": "./dist/rail/index.js"
+    },
+    "./rail/convert": {
+      "types": "./dist/rail/convert/index.d.ts",
+      "default": "./dist/rail/convert/index.js"
+    },
+    "./rail/format": {
+      "types": "./dist/rail/format/index.d.ts",
+      "default": "./dist/rail/format/index.js"
+    },
+    "./rail/parse": {
+      "types": "./dist/rail/parse/index.d.ts",
+      "default": "./dist/rail/parse/index.js"
+    },
+    "./rail/validate": {
+      "types": "./dist/rail/validate/index.d.ts",
+      "default": "./dist/rail/validate/index.js"
+    },
     "./recurrence": {
       "types": "./dist/recurrence/index.d.ts",
       "default": "./dist/recurrence/index.js"
@@ -585,6 +731,14 @@
     "./timescale/convert": {
       "types": "./dist/timescale/convert/index.d.ts",
       "default": "./dist/timescale/convert/index.js"
+    },
+    "./timescale/format": {
+      "types": "./dist/timescale/format/index.d.ts",
+      "default": "./dist/timescale/format/index.js"
+    },
+    "./timescale/parse": {
+      "types": "./dist/timescale/parse/index.d.ts",
+      "default": "./dist/timescale/parse/index.js"
     },
     "./timescale/validate": {
       "types": "./dist/timescale/validate/index.d.ts",

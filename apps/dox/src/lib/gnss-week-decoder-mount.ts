@@ -24,7 +24,6 @@
  * drag handle: the controls are typed fields, selects and two ranges (the week
  * and the time of week), each tied two ways to its typed field.
  */
-import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,
@@ -35,7 +34,6 @@ import {
   html,
   idScope,
   plates,
-  raw,
   section,
   select,
   setHtml,
@@ -84,6 +82,7 @@ import {
   MODE_LABELS,
   NO_RESULT_TEXT,
   SECONDS_PER_WEEK,
+  clockNow,
   decoderHandoffs,
   isSeeded,
   lanesAria,
@@ -104,10 +103,10 @@ import {
 import { BEFORE_FIRST_WEEK_NOTE, counterSystem } from "./gnss-widgets";
 import type { PlateSpec } from "./ledger-widgets";
 import type { EdiCall } from "./edi-widgets";
-import { callArgs, formatValue } from "./punctuality-widgets";
+import { callLines } from "~/widgets/families/gnss/call-lines";
+import { formatValue } from "./punctuality-widgets";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 import { handoffHref } from "./widget-permalink";
-import { codeSpan } from "./widget-ui";
 
 export type { GnssWeekDecoderArgs } from "./gnss-week-decoder";
 
@@ -353,23 +352,6 @@ function lanesEmpty(read: GnssRead | null): SafeHtml {
   return text === ""
     ? html``
     : html`<p class="${styles.lanesEmpty}" data-lost="${String(lost)}">${text}</p>`;
-}
-
-function callLines(calls: readonly EdiCall[]): {
-  code: SafeHtml;
-  plain: string;
-} {
-  const lines = calls.map((c) => {
-    const [argsHtml, plain] = callArgs(c.args);
-    return {
-      html: `${codeSpan("fn", c.fn)}(${argsHtml})`,
-      plain: `${c.fn}(${plain})`,
-    };
-  });
-  return {
-    code: raw(lines.map((l) => l.html).join("\n")),
-    plain: lines.map((l) => l.plain).join("\n"),
-  };
 }
 
 const refused = (call: EdiCall): boolean =>
@@ -793,7 +775,7 @@ function setupWidget(
   function render(): void {
     showFields();
     drawSliders();
-    const read = readGnss(lib, readState(), Temporal.Now.instant().toString());
+    const read = readGnss(lib, readState(), clockNow());
     last = read;
 
     setHtml(el("plates"), plates(plateList(read.plates)));

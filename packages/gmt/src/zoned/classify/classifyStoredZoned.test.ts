@@ -284,7 +284,7 @@ const zAndZero: Row[] = [
   ),
 ];
 
-// Minute-rounded offsets (rule 9) and offsets written with seconds.
+// Minute-rounded offsets and offsets written with seconds (D12).
 const subMinute: Row[] = [
   valid(
     "1960-01-01T00:20:00-00:45[Africa/Monrovia]",

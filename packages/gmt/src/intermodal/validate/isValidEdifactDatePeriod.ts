@@ -1,5 +1,5 @@
 import type { EdifactDatePeriodFormat } from "../../types/edi";
-import { parseEdifactDatePeriod } from "../parse/parseEdifactDatePeriod";
+import { edifactDatePeriodText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a period
@@ -11,7 +11,7 @@ import { parseEdifactDatePeriod } from "../parse/parseEdifactDatePeriod";
  * | `718` | `CCYYMMDD-CCYYMMDD` | "A period of time specified by giving the start date followed by the end date (both including century). Data is to be transmitted as consecutive characters without hyphen." |
  *
  * - True exactly when `parseEdifactDatePeriod` returns a period for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - A period is valid in its wire form only, with no hyphen: `"20240615-20240620"` is false.
  * - A period whose end precedes its start is false; an end equal to its start is true.
  * - Checks the calendar as well as the shape: 29 February 2023 in either date is false.
@@ -31,5 +31,5 @@ export function isValidEdifactDatePeriod(
   value: string,
   format: EdifactDatePeriodFormat,
 ): boolean {
-  return parseEdifactDatePeriod(value, format) !== null;
+  return edifactDatePeriodText(value, format) !== null;
 }

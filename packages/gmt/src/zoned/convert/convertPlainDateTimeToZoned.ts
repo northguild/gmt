@@ -1,10 +1,9 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../../plain/validate";
+import { isZoneId, plainDateTimeOf } from "../../internal/inputChecks";
 import type { Disambiguation } from "../../types";
-import { isValidTimeZone } from "../validate";
-import { isoStringBody, zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeFrom } from "../../internal";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
 
 /**
  * Attach the specified `timeZone` to a plain datetime string and return a zoned ISO 8601 datetime string.
@@ -60,24 +59,26 @@ export function convertPlainDateTimeToZoned(
       return "";
     }
 
-    if (!isValidDateTime(value) || !isValidTimeZone(timeZone)) {
+    if (plainDateTimeOf(value) === null || !isZoneId(timeZone)) {
       return "";
     }
 
-    const disambiguation = optionOrDefault(
+    const disambiguation = stringOptionOrDefault(
       optionsArg?.disambiguation,
       "compatible",
     );
 
     const options: Partial<Temporal.ZonedDateTimeToStringOptions> = {
-      smallestUnit: optionOrDefault(optionsArg?.smallestUnit, "milliseconds"),
+      smallestUnit: stringOptionOrDefault(
+        optionsArg?.smallestUnit,
+        "milliseconds",
+      ),
     };
 
     try {
-      const zonedDateTime = zonedDateTimeFrom(
-        `${isoStringBody(value)}[${timeZone}]`,
-        { disambiguation },
-      );
+      const zonedDateTime = zonedDateTimeFrom(`${value}[${timeZone}]`, {
+        disambiguation,
+      });
       return zonedDateTime.toString(options);
     } catch {
       return "";

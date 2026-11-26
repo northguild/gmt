@@ -42,6 +42,7 @@ import {
   IMAGERY_FADE_START_ZOOM,
   TWILIGHT_END,
 } from "../shading";
+import { G, P, RIM } from "../pinhole";
 import { uniformStructWgsl } from "./uniforms";
 
 /** Grid spacing, matching `d3.geoGraticule10()`. */
@@ -87,6 +88,12 @@ const IMAGERY_FADE_START_ZOOM: f32 = ${f32(IMAGERY_FADE_START_ZOOM)};
 const IMAGERY_FADE_END_ZOOM: f32 = ${f32(IMAGERY_FADE_END_ZOOM)};
 /* Share of its daylight brightness the imagery keeps on the night side. */
 const IMAGERY_AMBIENT: f32 = ${f32(IMAGERY_AMBIENT)};
+
+/* The pinhole camera from ../pinhole.ts: distance in Earth radii, f per pixel of
+   silhouette radius, and the camera-frame x of the silhouette. */
+const PINHOLE_P: f32 = ${f32(P)};
+const PINHOLE_G: f32 = ${f32(G)};
+const PINHOLE_RIM: f32 = ${f32(RIM)};
 
 const DEG_PER_RAD: f32 = 57.29577951308232;
 const RAD_PER_DEG: f32 = 0.017453292519943295;
@@ -162,9 +169,9 @@ fn over(dst: vec4<f32>, src: vec4<f32>) -> vec4<f32> {
 /**
  * Project a geographic point.
  *
- * Returns \`(screenX, screenY, towardsViewer)\` in device pixels, with the depth
- * positive on the near hemisphere. Same maths as \`rotatePoint\` and \`project\`
- * in ../camera.ts, which is checked against d3's \`geoOrthographic\`.
+ * Returns \`(screenX, screenY, depth)\` with the position in device pixels and the
+ * depth past the silhouette: positive on the visible cap, zero at the rim. Same
+ * maths as \`toView\` and \`projectPoint\` in ../pinhole.ts.
  */
 fn projectGeo(lngDeg: f32, latDeg: f32) -> vec3<f32> {
   let lambda = lngDeg * RAD_PER_DEG;
@@ -181,11 +188,9 @@ fn projectGeo(lngDeg: f32, latDeg: f32) -> vec3<f32> {
   let towardsViewer = x1 * g.cameraTrig.z - z1 * g.cameraTrig.w;
   let right = y1;
   let up = z1 * g.cameraTrig.z + x1 * g.cameraTrig.w;
-  return vec3<f32>(
-    g.view.x + g.viewport.z * right,
-    g.view.y - g.viewport.z * up,
-    towardsViewer,
-  );
+  let w = PINHOLE_P - towardsViewer;
+  let f = g.viewport.z * PINHOLE_G;
+  return vec3<f32>(g.view.x + f * right / w, g.view.y - f * up / w, towardsViewer - PINHOLE_RIM);
 }
 
 /** Geographic unit vector, for the marker day/night test. */
@@ -322,6 +327,18 @@ struct Geo {
 }
 
 /**
+ * The surface point under a pixel, which is also its unit normal, in the camera
+ * frame (towards the camera, right, up). \`u\` is screen right and \`v\` screen
+ * down, in silhouette radii; the same maths as \`rayHit\` in ../pinhole.ts.
+ */
+fn pinholeNormal(u: f32, v: f32) -> vec3<f32> {
+  let rho2 = u * u + v * v;
+  let w = sqrt(max(0.0, 1.0 - rho2));
+  let t = (PINHOLE_P - w) / (1.0 + rho2 / (PINHOLE_G * PINHOLE_G));
+  return vec3<f32>(PINHOLE_P - t, t * u / PINHOLE_G, -t * v / PINHOLE_G);
+}
+
+/**
  * Invert the projection for one pixel, and take the screen gradients
  * analytically.
  *
@@ -332,29 +349,39 @@ struct Geo {
  * across a quad would read a 360° jump as an enormous gradient and paint a bright
  * seam.
  */
-fn geoAt(u: f32, v: f32, radius: f32) -> Geo {
-  let z = sqrt(max(0.0, 1.0 - u * u - v * v));
-  let safeZ = max(z, 1e-4);
+fn geoAt(u: f32, v: f32, radius: f32, hit: vec3<f32>) -> Geo {
+  let rho2 = u * u + v * v;
+  let w = sqrt(max(0.0, 1.0 - rho2));
+  let safeW = max(w, 1e-4);
+  let D = 1.0 + rho2 / (PINHOLE_G * PINHOLE_G);
+  // \`hit\` is \`pinholeNormal(u, v)\`, computed once by the caller; its ray parameter is P - hit.x.
+  let t = PINHOLE_P - hit.x;
   let c = g.cameraTrig.z;
   let s = g.cameraTrig.w;
 
   // Undo the latitude rotation; see \`unproject\` in ../camera.ts.
-  let x1 = z * c - v * s;
-  let y1 = u;
-  let z1 = -v * c - z * s;
+  let x1 = hit.x * c + hit.z * s;
+  let y1 = hit.y;
+  let z1 = hit.z * c - hit.x * s;
 
   let latRad = asin(clamp(z1, -1.0, 1.0));
   let lngRad = atan2(y1, x1);
 
-  // d/du and d/dv of the sphere's depth, then of each rotated component.
-  let dzdu = -u / safeZ;
-  let dzdv = -v / safeZ;
-  let dx1du = dzdu * c;
-  let dx1dv = dzdv * c - s;
-  let dy1du = 1.0;
-  let dy1dv = 0.0;
-  let dz1du = -dzdu * s;
-  let dz1dv = -c - dzdv * s;
+  // d/du and d/dv of the ray parameter, then of the hit, then of each rotated component.
+  let dtdu = ((u / safeW) * D - (PINHOLE_P - w) * (2.0 * u / (PINHOLE_G * PINHOLE_G))) / (D * D);
+  let dtdv = ((v / safeW) * D - (PINHOLE_P - w) * (2.0 * v / (PINHOLE_G * PINHOLE_G))) / (D * D);
+  let dXdu = -dtdu;
+  let dXdv = -dtdv;
+  let dYdu = (dtdu * u + t) / PINHOLE_G;
+  let dYdv = dtdv * u / PINHOLE_G;
+  let dZdu = -dtdu * v / PINHOLE_G;
+  let dZdv = -(dtdv * v + t) / PINHOLE_G;
+  let dx1du = dXdu * c + dZdu * s;
+  let dx1dv = dXdv * c + dZdv * s;
+  let dy1du = dYdu;
+  let dy1dv = dYdv;
+  let dz1du = dZdu * c - dXdu * s;
+  let dz1dv = dZdv * c - dXdv * s;
 
   let horizontal = max(x1 * x1 + y1 * y1, 1e-9);
   let dLngdu = (x1 * dy1du - y1 * dx1du) / horizontal;
@@ -503,9 +530,10 @@ fn fs(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
     v = v0 / d0;
     d = 1.0;
   }
-  let z = sqrt(max(0.0, 1.0 - u * u - v * v));
-  let elevation = u * g.sun.x + v * g.sun.y + z * g.sun.z;
-  let geo = geoAt(u, v, radius);
+  /* Camera-frame (towards, right, up) to shading axes (right, down, towards). */
+  let normal = pinholeNormal(u, v);
+  let elevation = dot(vec3<f32>(normal.y, -normal.z, normal.x), g.sun.xyz);
+  let geo = geoAt(u, v, radius, normal);
   let imageryW = imageryWeight();
   /* How much of the vector land — fill and coastline — stays on top: all of
      it with no imagery, falling to the theme's vector overlay share
@@ -692,7 +720,7 @@ struct Layer {
  *
  * Triangles come from `earcut` on unwrapped, densified lng/lat rings, so a
  * vertex is a geographic point and the projection happens here. The
- * back-hemisphere test is per fragment because a triangle can straddle the limb.
+ * far-cap test is per fragment because a triangle can straddle the silhouette.
  */
 export function fillShader(): string {
   return /* wgsl */ `${common()}
@@ -715,7 +743,7 @@ fn vs(@location(0) lngLat: vec2<f32>) -> Out {
 
 @fragment
 fn fs(in: Out) -> @location(0) vec4<f32> {
-  // The far hemisphere projects onto the same disc as the near one.
+  // A point past the silhouette projects onto the same disc as one on the near cap.
   if (in.depth < 0.0) { discard; }
   return layer.mask;
 }

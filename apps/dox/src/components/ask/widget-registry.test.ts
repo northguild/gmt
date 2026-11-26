@@ -115,6 +115,38 @@ describe("resolveWidget", () => {
     });
   });
 
+  describe("showUsSunshineProtectionAct", () => {
+    const validate = async (input: unknown) => {
+      const result = resolveWidget("showUsSunshineProtectionAct", input);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return "unreachable";
+      return result.entry.validate?.(result.args);
+    };
+
+    it("passes a view with no place, a listed zone and a listed state", async () => {
+      expect(await validate({ view: { kind: "proposals" } })).toBeNull();
+      expect(
+        await validate({ view: { kind: "today", zone: "America/Phoenix" } }),
+      ).toBeNull();
+      expect(
+        await validate({ view: { kind: "proposals", state: "DE" } }),
+      ).toBeNull();
+    });
+
+    it("rejects a place the page does not list, with a reason", async () => {
+      expect(
+        await validate({ view: { kind: "today", zone: "Europe/Madrid" } }),
+      ).toContain("Europe/Madrid");
+      expect(
+        await validate({ view: { kind: "proposals", state: "ZZ" } }),
+      ).toContain("ZZ");
+    });
+
+    it("refuses a call with no view", () => {
+      expect(resolveWidget("showUsSunshineProtectionAct", {}).ok).toBe(false);
+    });
+  });
+
   describe("showZonePlanner", () => {
     const validate = async (input: unknown) => {
       const result = resolveWidget("showZonePlanner", input);

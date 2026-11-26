@@ -374,14 +374,14 @@ describe("getFiscalPeriod", () => {
     ).toEqual({ year: 2024, period: 5, week: 19 });
   });
 
-  // `[u-ca=iso8601]` names the ISO calendar, so the rule is NRF's (RFC 9557 §3.3).
-  it("reads yearEndsOn 2026-01-31[u-ca=iso8601] as the NRF rule", () => {
+  // yearEndsOn is a plain date: `[u-ca=iso8601]` is an annotation, so it is no date.
+  it("returns null for yearEndsOn 2026-01-31[u-ca=iso8601]", () => {
     expect(
       getFiscalPeriod("2024-06-15", {
         ...nrf,
         yearEndsOn: "2026-01-31[u-ca=iso8601]",
       }),
-    ).toEqual({ year: 2024, period: 5, week: 19 });
+    ).toBeNull();
   });
 });
 

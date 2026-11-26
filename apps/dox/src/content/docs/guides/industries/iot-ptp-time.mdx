@@ -1,0 +1,261 @@
+---
+title: "IoT: PTP Time"
+description: Convert a Precision Time Protocol timestamp, which counts TAI, to UTC with the offset the grandmaster announces, write a UTC instant back, check the record, and check the announced offset against the leap-second table.
+sidebar:
+  order: 14
+industries: [iot]
+---
+
+Sensors, lidar and broadcast gear can share one clock over the Precision Time Protocol (PTP,
+IEEE 1588). A device stamps each reading with a PTP timestamp. That timestamp counts TAI, which
+has no leap seconds, so it is not UTC. A receiver turns it into UTC by subtracting an offset that
+its grandmaster announces. If it skips that step, the data sits 37 seconds ahead of every other
+clock, and nothing raises an error.
+
+The functions here apply the announced offset in both directions and check the timestamp record.
+They take the offset from the caller and never pick one.
+
+```typescript
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+import { isValidPtpTimestamp } from "@northguild/gmt/iot/validate";
+```
+
+The functions live in `@northguild/gmt/iot/convert` and `@northguild/gmt/iot/validate`.
+
+## TAI on the wire
+
+RFC 8877 section 4.3 says PTP "uses an 80-bit timestamp format". The nanoseconds take 32 bits,
+so the 80-bit timestamp leaves 48 bits for the seconds. The RFC also says the timestamp is "not
+affected by leap seconds". The count starts at 1970-01-01T00:00:00 TAI.
+
+That is the same epoch value as Unix time, but a different time scale. UTC has stepped 27 times
+since 1972 to stay near the Earth's rotation, and TAI has not. As of 2024, TAI is 37 seconds ahead
+of UTC. Reading a PTP count as Unix seconds therefore gives a time 37 seconds ahead of the truth.
+
+GMT holds the record as `{ seconds, nanoseconds }`. The seconds come back as a `bigint`, and a
+safe-integer `number` is read too, because a 48-bit count fits in one.
+
+## The announced offset
+
+`currentUtcOffset` is TAI minus UTC, as a signed 16-bit integer. RFC 8575 defines it as the
+`current-utc-offset` leaf of `time-properties-ds`, which the grandmaster announces. Reading it
+out of an Announce message is IEEE 1588's job and is not reached here.
+
+[`ptpToUtc(record, offset)`](/reference/iot/convert/ptpToUtc/) subtracts the offset and returns a
+UTC instant string. [`utcToPtp(instant, offset)`](/reference/iot/convert/utcToPtp/) adds it back
+and returns the record, or `null`. The two are inverses for the same offset.
+
+```typescript
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
+// "2024-01-01T00:00:00Z"
+utcToPtp("2024-01-01T00:00:00Z", 37);
+// { seconds: 1704067237n, nanoseconds: 0 }
+utcToPtp("2024-01-01T02:00:00+02:00", 37);
+// { seconds: 1704067237n, nanoseconds: 0 } (a numeric offset in the input is read)
+utcToPtp("2024-01-01T00:00:00.5Z", 37);
+// { seconds: 1704067237n, nanoseconds: 500000000 }
+```
+
+The round trip gives the record it started with.
+
+```typescript
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+
+const utc = ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
+// "2024-01-01T00:00:00Z"
+
+utcToPtp(utc, 37);
+// { seconds: 1704067237n, nanoseconds: 0 }
+```
+
+## The 37-second error
+
+Pass `0` and the function reads the count as a receiver does that ignores the offset. The result
+is a valid instant, 37 seconds ahead.
+
+```typescript
+import { ptpToUtc } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
+// "2024-01-01T00:00:00Z" (the right reading)
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0);
+// "2024-01-01T00:00:37Z" (37 s ahead, and no error)
+```
+
+Nothing in the second result says it is wrong. The frames from a lidar that were stamped this way
+sit 37 seconds ahead of the camera's. See
+[A PTP Stamp 37 Seconds Ahead](/scenarios/a-ptp-stamp-37-seconds-ahead/).
+
+## No default, on purpose
+
+The offset has no default. In TypeScript, leaving it out is a type error. At run time, from
+JavaScript or an `any`, it returns the sentinel for invalid input, and never a guess.
+
+```typescript
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+
+ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 });
+// ""
+utcToPtp("2024-01-01T00:00:00Z");
+// null
+```
+
+A default of 37 would be right today and wrong for any grandmaster that announces another value.
+The offset must be an integer from -32768 to 32767, and `37.5` returns `""`.
+
+## The flags beside the offset
+
+RFC 8575's `time-properties-ds` announces three other values next to the offset.
+
+- `ptp-timescale` false means the arbitrary time scale (ARB). The offset then has no meaning.
+- `current-utc-offset-valid` false means the number is not valid.
+- `time-traceable` says whether the time can be traced to a primary reference, so whether to
+  trust the reading at all.
+
+The library reads none of the three. The record carries only the count, and the function receives
+only the offset, so it cannot see a flag. Check them before you call. If `ptpTimescale` is false or
+`currentUtcOffsetValid` is false, do not call `ptpToUtc` with the number. In that state the number
+may be stale, a default, or `0`, and passing a `0` through gives the 37-second error with no
+warning.
+
+## Checking a grandmaster against the table
+
+The functions apply the offset you give them and never look up the leap-second table. To check
+the grandmaster, compare the announced offset with what the table says for the reading, using
+[`taiMinusUtc`](/reference/timescale/calculate/taiMinusUtc/) from `timescale`.
+
+```typescript
+import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+const record = { seconds: 1704067237n, nanoseconds: 0 };
+
+const reading = ptpToUtc(record, 36);
+// "2024-01-01T00:00:01Z" (a grandmaster still announcing the 2016 value)
+taiMinusUtc(reading);
+// 37 (not the 36 it announced)
+```
+
+The announced `36` was right until the end of 2016. The table says `37` for this date, so the two
+disagree and the reading is 1 second out.
+
+[`fromTAI`](/reference/timescale/convert/fromTAI/) from `timescale` converts through the table
+and ignores the announcement. Use it when you want to know what UTC was, and use `ptpToUtc` when
+you want to know what the receiver read. They differ exactly when the grandmaster is wrong.
+
+```typescript
+import { fromTAI } from "@northguild/gmt/timescale/convert";
+
+fromTAI("2024-01-01T00:00:37 TAI");
+// "2024-01-01T00:00:00Z" (what UTC was, whatever the grandmaster announced)
+```
+
+See [Leap seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/) for the table.
+
+The lookup uses the announced reading, so within a second of a step it can be one second out. A
+record stamped during the inserted second of 2016-12-31, read with the correct offset of `36`,
+[shows it](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22leap-2016%22%7D).
+
+```typescript
+import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+const record = { seconds: 1483228836n, nanoseconds: 0 };
+
+const reading = ptpToUtc(record, 36);
+// "2017-01-01T00:00:00Z" (the function never writes a second of 60)
+taiMinusUtc(reading);
+// 37 (the table's answer for the next second, not the 36 announced)
+```
+
+## Before 1970, before 1972, and leap seconds
+
+- **Before 1970.** A count smaller than the offset gives a result before the epoch, and
+  `ptpToUtc` returns `""`. In practice this is a clock that was never set.
+- **Before 1972.** UTC had no whole-second offset from TAI before 1972. The IERS file
+  `Leap_Second.dat`, as of IERS Bulletin C 72, starts at 1972-01-01 with TAI − UTC at 10 seconds,
+  and ITU-R TF.460-6 defines UTC from 1972. So `taiMinusUtc` returns `null` there and no offset is
+  a true reading. The functions still do the arithmetic with the offset you pass.
+- **A leap second.** `utcToPtp` refuses `…23:59:60Z`, because one offset for the whole call gives
+  an inserted second no reading of its own. During an insertion, pass the newly announced offset.
+
+```typescript
+import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37);
+// "" (before 1970: an unset clock)
+ptpToUtc({ seconds: 37n, nanoseconds: 0 }, 37);
+// "1970-01-01T00:00:00Z"
+taiMinusUtc("1971-01-01T00:00:00Z");
+// null (before 1972)
+utcToPtp("2016-12-31T23:59:60Z", 37);
+// null (a second of 60)
+```
+
+## Checking a record
+
+[`isValidPtpTimestamp(value)`](/reference/iot/validate/isValidPtpTimestamp/) checks the record
+against the ranges of the wire format. The `seconds` member is a `bigint` or a safe-integer
+`number` from 0 to 2⁴⁸ − 1, and `nanoseconds` is an integer `number` from 0 to 999 999 999. Both
+members are required. It is a type predicate, so it narrows `unknown` to a record.
+
+```typescript
+import { isValidPtpTimestamp } from "@northguild/gmt/iot/validate";
+
+isValidPtpTimestamp({ seconds: 1704067237n, nanoseconds: 0 });
+// true
+isValidPtpTimestamp({ seconds: 1704067237, nanoseconds: 999999999 });
+// true (number seconds)
+isValidPtpTimestamp({ seconds: 281474976710656n, nanoseconds: 0 });
+// false (2⁴⁸)
+isValidPtpTimestamp({ seconds: 0n, nanoseconds: 1000000000 });
+// false
+isValidPtpTimestamp({ seconds: 0n });
+// false (no nanoseconds)
+isValidPtpTimestamp("2024-01-01T00:00:00Z");
+// false
+```
+
+A record that passes can still convert to something before 1970. It checks the record, not a
+conversion.
+
+```typescript
+import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { isValidPtpTimestamp } from "@northguild/gmt/iot/validate";
+
+isValidPtpTimestamp({ seconds: 0n, nanoseconds: 0 });
+// true
+ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37);
+// "" (the result would be before 1970)
+```
+
+## What this layer does not do
+
+- It does not parse an Announce message or any PTP message bytes. It starts from the seconds, the
+  nanoseconds and the offset you have already read.
+- It does not apply the rules of gPTP (IEEE 802.1AS). The same trap applies there, but its text
+  was not reached, so GMT claims nothing about it. IEC/IEEE 61588 itself was also not reached.
+- It does not look up the leap-second table inside `ptpToUtc` or `utcToPtp`. Checking the
+  announcement against the table is your call to `taiMinusUtc`.
+- It does not read `ptpTimescale`, `currentUtcOffsetValid` or `timeTraceable`. You check them.
+
+## See it break, then work
+
+- [A PTP Stamp 37 Seconds Ahead](/scenarios/a-ptp-stamp-37-seconds-ahead/)
+- [IoT mistakes](/mistakes/iot/)
+- [PTP Clock Converter](/tools/ptp-clock-converter/), a tool that reads a PTP timestamp as UTC, beside the same count with the offset ignored, and checks the offset against the table
+
+## Sources
+
+- IETF, [_RFC 8877_](https://www.rfc-editor.org/rfc/rfc8877), section 4.3: the 80-bit PTP
+  timestamp, the epoch, and "not affected by leap seconds".
+- IETF, [_RFC 8575_](https://www.rfc-editor.org/rfc/rfc8575), the `time-properties-ds` container:
+  `current-utc-offset`, `current-utc-offset-valid`, `ptp-timescale` and `time-traceable`.
+- IERS, `Leap_Second.dat`, and Bulletin C 72: TAI − UTC from 1972-01-01, the table `taiMinusUtc`
+  reads.
+- ITU-R Recommendation TF.460-6: UTC defined from 1972.
+- IEC/IEEE 61588 (IEEE 1588): not reached. Its text, including how the Announce message carries
+  the offset, is not cited.

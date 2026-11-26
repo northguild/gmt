@@ -1,5 +1,5 @@
 import type { EdifactOffsetDateTimeFormat } from "../../types/edi";
-import { parseEdifactOffsetDateTime } from "../parse/parseEdifactOffsetDateTime";
+import { edifactOffsetDateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a real
@@ -14,7 +14,7 @@ import { parseEdifactOffsetDateTime } from "../parse/parseEdifactOffsetDateTime"
  * | `304` | `CCYYMMDDHHMMSSZZZ` | "See 204 plus Z=Time zone." |
  *
  * - True exactly when `parseEdifactOffsetDateTime` returns a value for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - The three `ZZZ` characters of `303` and `304` are valid only as an offset: a signed hour
  *   from `00` to `23`, `UTC` or `GMT`. An abbreviation such as `CET`, a broken offset (`+24`)
  *   and a lone `Z` are false.
@@ -39,5 +39,5 @@ export function isValidEdifactOffsetDateTime(
   value: string,
   format: EdifactOffsetDateTimeFormat,
 ): boolean {
-  return parseEdifactOffsetDateTime(value, format) !== "";
+  return edifactOffsetDateTimeText(value, format) !== "";
 }

@@ -1,6 +1,6 @@
 /**
  * The `<head>` tags a docs page adds to Starlight's own: the title with its suffix, the share
- * tags, the link to the page's Markdown twin and the JSON-LD blocks.
+ * tags, the link to the page's Markdown twin, the link to the `llms.txt` that describes it and the JSON-LD blocks.
  *
  * Pure and free of `astro:` imports, so Vitest reads it. `src/route-data.ts` is the only caller:
  * Starlight's default `<Head>` renders `starlightRoute.head` and writes `og:type`, `og:title` and
@@ -33,11 +33,26 @@ const SITE_NAME = "GMT";
 /** Where the source of the package lives. */
 const CODE_REPOSITORY = "https://github.com/northguild/gmt";
 
+/** The value of `og:locale`. Open Graph writes it `language_TERRITORY`; Starlight writes the page language. */
+const OG_LOCALE = "en_US";
+
 /** The share image's size in pixels (`og:image:width`, `og:image:height`). */
 const OG_IMAGE_SIZE = { width: 1200, height: 630 } as const;
 
 /** The namespaces' reference pages get an image each; a function's page shares its namespace's. */
 const REFERENCE_NAMESPACE = /^(reference\/[^/]+)(?:\/|$)/;
+
+/** A page under `reference/<namespace>/`, the namespace index included. */
+const REFERENCE_NAMESPACE_FILE = /^reference\/([^/]+)(?:\/|$)/;
+
+/**
+ * The `llms.txt` file that describes a page: its namespace's for a page under `reference/<ns>/`,
+ * the root file for every other page, the reference index included.
+ */
+export function describedByPath(id: string): string {
+  const namespace = REFERENCE_NAMESPACE_FILE.exec(id);
+  return namespace ? `/reference/${namespace[1]}/llms.txt` : "/llms.txt";
+}
 
 /** The sections whose pages each have a share image of their own. */
 const OWN_IMAGE_SECTIONS = [
@@ -46,6 +61,7 @@ const OWN_IMAGE_SECTIONS = [
   "scenarios",
   "migrate",
   "compare",
+  "changelog",
 ] as const;
 
 /**
@@ -85,6 +101,8 @@ export type HeadInput = {
   hasEntry: (id: string) => EntryRef | undefined;
   /** The path of the page's Markdown twin without `.md`; undefined for a page that is not in the docs collection. */
   markdownSlug?: string;
+  /** What the page's share card shows (`ogImageAlt`), used as `og:image:alt` and `twitter:image:alt`. */
+  shareAlt: string;
   /** The site's address without a trailing slash. */
   siteUrl: string;
   /** The version of `@northguild/gmt`. */
@@ -135,7 +153,12 @@ export function headEntries(input: HeadInput): HeadEntry[] {
       tag: "meta",
       attrs: { property: "og:type", content: home ? "website" : "article" },
     },
+    { tag: "meta", attrs: { property: "og:locale", content: OG_LOCALE } },
     { tag: "meta", attrs: { property: "og:image", content: image } },
+    {
+      tag: "meta",
+      attrs: { property: "og:image:type", content: "image/png" },
+    },
     {
       tag: "meta",
       attrs: {
@@ -150,13 +173,29 @@ export function headEntries(input: HeadInput): HeadEntry[] {
         content: String(OG_IMAGE_SIZE.height),
       },
     },
-    { tag: "meta", attrs: { property: "og:image:alt", content: shareTitle } },
+    {
+      tag: "meta",
+      attrs: { property: "og:image:alt", content: input.shareAlt },
+    },
     { tag: "meta", attrs: { name: "twitter:image", content: image } },
+    {
+      tag: "meta",
+      attrs: { name: "twitter:image:alt", content: input.shareAlt },
+    },
     {
       tag: "meta",
       attrs: { name: "twitter:card", content: "summary_large_image" },
     },
   ];
+
+  entries.push({
+    tag: "link",
+    attrs: {
+      rel: "describedby",
+      type: "text/plain",
+      href: `${siteUrl}${describedByPath(id)}`,
+    },
+  });
 
   if (input.markdownSlug !== undefined) {
     entries.push({
@@ -232,6 +271,51 @@ export function headEntries(input: HeadInput): HeadEntry[] {
   return entries;
 }
 
+/** The route ids that are the tools index, not a tool page. */
+const TOOLS_INDEX_IDS: ReadonlySet<string> = new Set(["tools", "tools/index"]);
+
+/**
+ * The tags a tool page adds so an agent in the reader's browser can call its WebMCP tool: the
+ * marker that names the page (`offerPageTool` reads it) and one origin-trial meta per token.
+ * Every other page, the tools index included, gets none. A meta with `http-equiv` has no
+ * `replaceKey`, so `upsertHead` adds each token and replaces nothing.
+ */
+export function webmcpHeadEntries(
+  id: string,
+  tokens: readonly string[],
+): HeadEntry[] {
+  if (!id.startsWith("tools/") || TOOLS_INDEX_IDS.has(id)) return [];
+  const slug = id.slice("tools/".length);
+  if (slug === "" || slug.includes("/")) return [];
+  return [
+    { tag: "meta", attrs: { name: "gmt-webmcp", content: slug } },
+    ...tokens.map((token): HeadEntry => ({
+      tag: "meta",
+      attrs: { "http-equiv": "origin-trial", content: token },
+    })),
+  ];
+}
+
+/**
+ * The same marker and origin-trial metas for a deck's page, which carries its own head (a deck is
+ * not a content-collection route). `slug` is the deck's registry slug and the marker's content is
+ * `slides/<slug>`, so `offerPageTools` offers the deck's tools on that page and the presenter page,
+ * which gets none, offers nothing.
+ */
+export function deckWebmcpHeadEntries(
+  slug: string,
+  tokens: readonly string[],
+): HeadEntry[] {
+  if (slug === "" || slug.includes("/")) return [];
+  return [
+    { tag: "meta", attrs: { name: "gmt-webmcp", content: `slides/${slug}` } },
+    ...tokens.map((token): HeadEntry => ({
+      tag: "meta",
+      attrs: { "http-equiv": "origin-trial", content: token },
+    })),
+  ];
+}
+
 /** The key two entries share when one replaces the other, or undefined when an entry is only added. */
 function replaceKey(entry: HeadEntry): string | undefined {
   const attrs = entry.attrs ?? {};
@@ -268,4 +352,23 @@ export function upsertHead(head: HeadEntry[], entry: HeadEntry): HeadEntry[] {
 
 function sameEntry(a: HeadEntry, b: HeadEntry): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * `head` without the entries of `tag` whose attributes include every one in `attrs`:
+ * `removeHead(head, "link", { rel: "canonical" })` drops the canonical link and keeps the other
+ * links.
+ */
+export function removeHead(
+  head: HeadEntry[],
+  tag: HeadEntry["tag"],
+  attrs: Record<string, string>,
+): HeadEntry[] {
+  return head.filter(
+    (entry) =>
+      entry.tag !== tag ||
+      !Object.entries(attrs).every(
+        ([key, value]) => entry.attrs?.[key] === value,
+      ),
+  );
 }

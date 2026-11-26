@@ -5,7 +5,7 @@ description: >
   context, examples, and details that help maintainers understand and implement
   the requested feature.
 metadata:
-  library_version: 1.21.0
+  library_version: 1.23.1
 ---
 
 # Issue Creation
@@ -60,7 +60,7 @@ Specify what should happen with invalid inputs:
 - Object return (`{ ... } | null`): `null`
 - `bigint` return (precision converters/parsers): `0n`
 
-(Canonical table: `context/coding-standards.md` § API Contract in the gmt repository.)
+(Canonical table: `context/coding-standards/api-contract.md` § API Contract in the gmt repository.)
 
 ### 5. Locale Requirements
 

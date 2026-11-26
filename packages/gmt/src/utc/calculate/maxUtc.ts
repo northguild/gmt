@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return the latest (maximum) of the given UTC datetime values.
@@ -19,16 +19,17 @@ export function maxUtc(utcDateTimes: string[]): string | null {
   try {
     if (!Array.isArray(utcDateTimes) || !utcDateTimes.length) return null;
 
-    const valid = utcDateTimes.filter(isValidUtc);
+    const valid = utcDateTimes
+      .map((candidate) => utcInstantOf(candidate))
+      .filter((candidate) => candidate !== null);
     if (!valid.length) return null;
 
     try {
-      const max = valid.reduce((currentMax, candidateStr) => {
-        const candidate = Temporal.Instant.from(candidateStr);
+      const max = valid.reduce((currentMax, candidate) => {
         return Temporal.Instant.compare(candidate, currentMax) > 0
           ? candidate
           : currentMax;
-      }, Temporal.Instant.from(valid[0]));
+      }, valid[0]);
 
       return max.toString();
     } catch {

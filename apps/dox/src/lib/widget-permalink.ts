@@ -32,6 +32,7 @@
  * fixed object literal. See `widget-registry.ts`.
  */
 
+import { SCHEDULE_TEXT_MAX } from "./schedule-text-max";
 import { withBase } from "./site";
 
 export type WidgetKind =
@@ -54,6 +55,7 @@ export type WidgetKind =
   | "departure"
   | "planner"
   | "dtm"
+  | "hl7"
   | "xtime"
   | "demclock"
   | "bldate"
@@ -76,7 +78,25 @@ export type WidgetKind =
   | "cronzone"
   | "leapday"
   | "expiry"
-  | "dbstamp";
+  | "dbstamp"
+  | "tai64n"
+  | "fixstamp"
+  | "ssim"
+  | "reporttime"
+  | "fhir"
+  | "ttstack"
+  | "jdcount"
+  | "dpmeter"
+  | "ccsds"
+  | "dayruler"
+  | "swiftdate"
+  | "gtfstime"
+  | "gtfsday"
+  | "gtfstrip"
+  | "ptpclock"
+  | "schedule"
+  | "hours"
+  | "sunshineact";
 
 /**
  * Where each widget actually lives, so the encoder never guesses a route.
@@ -112,6 +132,7 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   departure: "/tools/departure-board/",
   planner: "/tools/zone-planner/",
   dtm: "/tools/dtm-decoder/",
+  hl7: "/tools/hl7-timestamp-reader/",
   xtime: "/tools/x12-time-reader/",
   demclock: "/tools/demurrage-clock/",
   bldate: "/tools/bl-date-stamp/",
@@ -135,10 +156,28 @@ export const WIDGET_PAGE_PATHS: Record<WidgetKind, string> = {
   iddecode: "/tools/id-timestamp-decoder/",
   colbridge: "/tools/column-timestamp-bridge/",
   moroccoclock: withBase("/check/morocco-2026-clock-change/"),
+  sunshineact: withBase("/check/us-sunshine-protection-act/"),
   cronzone: "/tools/cron-in-a-zone/",
   leapday: "/tools/leap-day-birthday/",
   expiry: "/tools/expiry-calculator/",
   dbstamp: "/tools/database-timestamp-reader/",
+  tai64n: "/tools/tai64n-log-reader/",
+  fixstamp: "/tools/fix-timestamp-reader/",
+  ssim: "/tools/ssim-date-reader/",
+  reporttime: "/tools/report-time-resolver/",
+  fhir: "/tools/fhir-date-checker/",
+  swiftdate: "/tools/swift-value-date-reader/",
+  gtfstime: "/tools/gtfs-time-reader/",
+  gtfsday: "/tools/gtfs-service-day-clock/",
+  gtfstrip: "/tools/gtfs-trip-board/",
+  ptpclock: "/tools/ptp-clock-converter/",
+  schedule: "/tools/operating-schedule-checker/",
+  hours: "/tools/opening-hours-board/",
+  ttstack: "/tools/terrestrial-time-stack/",
+  jdcount: "/tools/julian-day-counter/",
+  dpmeter: "/tools/double-precision-meter/",
+  ccsds: "/tools/ccsds-time-code-decoder/",
+  dayruler: "/tools/code-b-day-ruler/",
 };
 
 /** A tool to open and the permalink keys that seed it, for a cross-link. */
@@ -205,6 +244,11 @@ const LONG_STRING_KEYS: Readonly<Record<string, number>> = {
   // A calendar's dates (the Free Time Ledger and the Cut-off Stack read
   // `holidays` too: a year of closures runs past 64 characters, six dates).
   holidays: 1000,
+  // A trip's stop_times.txt rows (the GTFS Trip Board): 12 rows of up to 150 characters, and the
+  // reader and the chat schema refuse a paste over 2,000.
+  stopTimes: 2000,
+  // An OperatingSchedule's JSON text (the Operating Schedule Checker): the chat schema's own bound.
+  schedule: SCHEDULE_TEXT_MAX,
 };
 
 /**
@@ -240,7 +284,51 @@ const EMPTY_KEYS_BY_KIND: Readonly<
   expiry: new Set(["amount", "start"]),
   // A cleared field or zone is a state of its own: the form reads it, not the default.
   dbstamp: new Set(["value", "value2", "value3", "zone"]),
+  // A cleared stamp or instant is the empty state: the link must open cleared, not on the default.
+  fixstamp: new Set(["stamp", "write"]),
+  // A cleared value, window or date is a state of its own: a blank window is the no-date reason, and the link must open on it.
+  ssim: new Set(["value", "window", "date"]),
+  // A blank group, reference, item or window is a state of its own: a blank reference is the no-reference reason and a blank window the no-window reason.
+  reporttime: new Set(["group", "ref", "b", "c", "window"]),
+  // A cleared code or instant is the empty state: the link must open cleared, not on the default.
+  ccsds: new Set(["code", "instant"]),
+  // A cleared year is the empty state: the link must open on the empty year, not the default.
+  dayruler: new Set(["year", "compare"]),
+  // A cleared value or date is a real answer: the link must open cleared, not on the default preset.
+  swiftdate: new Set(["value", "date"]),
+  // A cleared time or seconds box is the empty state: the link must open cleared, not on the default preset.
+  gtfstime: new Set(["value", "seconds", "dayOverflow"]),
+  // A cleared box is the empty state: the link must open cleared, not on the default preset.
+  gtfsday: new Set(["serviceDate", "time", "timeZone"]),
+  // A cleared box is the empty state: the link must open cleared, not on the default preset.
+  gtfstrip: new Set(["stopTimes", "date", "zone"]),
+  ptpclock: new Set(["seconds", "nanoseconds", "offset", "instant"]),
 };
+
+/**
+ * The Sunshine Protection Act's one argument is a nested `view`, which the flat reader below
+ * would drop. A `view` that is not `today` or `proposals`, or whose place is not a short string,
+ * is a missing value: the page opens on Today, unpinned.
+ */
+function sunshineSeed(args: Record<string, unknown>): Record<string, unknown> {
+  const view = args["view"];
+  if (typeof view !== "object" || view === null || Array.isArray(view))
+    return {};
+  const { kind, zone, state } = view as Record<string, unknown>;
+  const place = (value: unknown): string | undefined =>
+    typeof value === "string" && value.length >= 1 && value.length <= 64
+      ? value
+      : undefined;
+  if (kind === "today") {
+    const id = place(zone);
+    return { view: id === undefined ? { kind } : { kind, zone: id } };
+  }
+  if (kind === "proposals") {
+    const id = place(state);
+    return { view: id === undefined ? { kind } : { kind, state: id } };
+  }
+  return {};
+}
 
 /**
  * Read this page's own permalink, if it carries one for `kind`.
@@ -272,6 +360,8 @@ export function seedFromLocation(
   const args = decoded.args;
   if (typeof args !== "object" || args === null || Array.isArray(args))
     return {};
+  if (kind === "sunshineact")
+    return sunshineSeed(args as Record<string, unknown>);
 
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(args as Record<string, unknown>)) {

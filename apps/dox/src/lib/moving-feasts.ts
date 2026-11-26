@@ -18,12 +18,8 @@ import { Temporal } from "@northguild/gmt";
 import type { HolidayRule, WeekdayOrdinal } from "@northguild/gmt";
 import type { FeastsLib } from "./feasts-lib";
 import { MAX_RULES, formatRuleLines } from "./holiday-codec";
-import {
-  NO_SIGNAL_TEXT,
-  YEAR_MAX,
-  YEAR_MIN,
-  literal,
-} from "./holiday-rule-builder";
+import { NO_SIGNAL_TEXT, YEAR_MAX, YEAR_MIN } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import { monthName, type CellMark, type SeriesNumber } from "./holiday-widgets";
 import { encodeWidgetPermalink } from "./widget-permalink";
 

@@ -280,6 +280,7 @@ describe("industriesUsing", () => {
     expect(industriesUsing("transport", "calculate")).toEqual([
       "transport",
       "intermodal",
+      "rail",
     ]);
   });
 });
@@ -312,10 +313,11 @@ describe("usedModules and allowedTags", () => {
 
   it("allows `core` only when no industry's own namespace is used", () => {
     expect(allowedTags([["plain", "calculate"]])).toEqual([CORE_INDUSTRY]);
-    // GNSS and Maritime draw on `timescale`, so they may tag a page that uses it.
+    // GNSS, Maritime and IoT draw on `timescale`, so they may tag a page that uses it.
     expect(allowedTags([["timescale", "convert"]])).toEqual([
       "gnss",
       "maritime",
+      "iot",
       CORE_INDUSTRY,
     ]);
     expect(allowedTags([["transport", "calculate"]])).not.toContain(

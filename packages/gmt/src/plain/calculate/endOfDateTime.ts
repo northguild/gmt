@@ -1,11 +1,12 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import type { DateTimeUnit, SmallestUnit } from "../../internal/temporalTypes";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import type { FractionalDigit } from "../../types";
-import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { fractionalDigitsOption } from "../../internal/typedOptions";
 
 const supported = [
   "year",
@@ -72,19 +73,21 @@ export function endOfDateTime(
     }
 
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
-    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const fractionalSecondDigits = fractionalDigitsOption(
+      optionsArg?.fractionalSecondDigits,
+    );
 
     const resolvedUnit = resolveDateTimeUnit(unit);
 
+    const source = plainDateTimeOf(value);
     if (
       weekStartsOn === null ||
-      !isValidDateTime(value) ||
+      source === null ||
       !supported.includes(resolvedUnit)
     )
       return "";
 
     try {
-      const source = Temporal.PlainDateTime.from(value);
       let result: Temporal.PlainDateTime;
 
       switch (resolvedUnit) {

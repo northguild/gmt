@@ -1,9 +1,8 @@
 import { cachedFormatter } from "../../internal/formatterCache";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the locale-formatted parts of a ZonedDateTime.
@@ -19,7 +18,13 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
  *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
  *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
- *   their absence.
+ *   their absence. This holds on a runtime that prints the observatory's Chinese or Dangi dates
+ *   (see the next item).
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `[]` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own parts. A format with only a time or weekday
+ *   field always returns its parts.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - With no date/time field and no `dateStyle`/`timeStyle`, year, month, day,
@@ -76,7 +81,8 @@ export function formatZonedToParts(
   if (options === null) {
     return [];
   }
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return [];
   }
 
@@ -85,7 +91,6 @@ export function formatZonedToParts(
     // pass its instant (epochMilliseconds) and its own IANA zone as the
     // formatter's timeZone, with the options ZonedDateTime#toLocaleString
     // resolves to (GetDateTimeFormat ~any~, ~zoned-date-time~, ~all~).
-    const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
       readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,

@@ -1,3 +1,4 @@
+import { isTimeCycleFieldName } from "../../internal/unitNames";
 import type { TimeCycleField } from "../../types";
 
 /**
@@ -17,16 +18,5 @@ import type { TimeCycleField } from "../../types";
  * @example isValidTimeCycleField(null) // false
  */
 export function isValidTimeCycleField(field: unknown): field is TimeCycleField {
-  if (typeof field !== "string") {
-    return false;
-  }
-
-  return (
-    field === "hour" ||
-    field === "minute" ||
-    field === "second" ||
-    field === "millisecond" ||
-    field === "microsecond" ||
-    field === "nanosecond"
-  );
+  return isTimeCycleFieldName(field);
 }

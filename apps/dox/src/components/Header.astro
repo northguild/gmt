@@ -5,26 +5,32 @@
 // link in the right-hand group, so the /dox chat is reachable from every page.
 // Both are plain links with no JavaScript: no page but /dox hydrates React.
 //
-// The bar is northguild.dev's: the NorthGuild link at the left and GitHub and
-// Discord at the far right sit on the same pixels on both sites, so going from
-// one to the other changes only what lies between them. The right-hand group
-// reads Dox, the theme, then GitHub and Discord.
+// The bar is northguild.dev's: the NorthGuild link at the left and GitHub, Discord and Settings
+// at the right sit on the same pixels on both sites, so going from one to the other changes only
+// what lies between them. The right-hand group reads the places first, from the nearest out: Dox
+// (this site), then GitHub and Discord (other sites). Settings comes last, at the edge, apart
+// from them: it goes nowhere and acts on every page.
+//
+// Settings is one gear button that opens a popover with the theme switch, the mute button and the
+// fader, and on the landing the Aura switch and the aura's track. It is the only item of the right group that shows
+// below 50rem, so the group stays in the bar at every width and the rest hides.
 //
 // Structure copied from @astrojs/starlight/components/Header.astro. The
 // NorthGuild link, the `<ButtonLink>` in `right-group`, the order of the
-// group and the search box's place at the right are ours; the social and
-// theme controls are Starlight's.
+// group, the settings control and the search box's place at the right are ours; the social
+// icons are Starlight's.
+import Link from "~/components/Link.astro";
 import config from "virtual:starlight/user-config";
 
 import LanguageSelect from "virtual:starlight/components/LanguageSelect";
 import Search from "virtual:starlight/components/Search";
 import SiteTitle from "virtual:starlight/components/SiteTitle";
 import SocialIcons from "virtual:starlight/components/SocialIcons";
-import ThemeSelect from "virtual:starlight/components/ThemeSelect";
 import ButtonLink from "./ButtonLink.astro";
 import DoxMark from "./DoxMark.astro";
 import EscLayers from "./EscLayers.astro";
 import NorthGuildMark from "./NorthGuildMark.astro";
+import SettingsControl from "./SettingsControl.astro";
 import { LANDING_URL, stripBase, withBase } from "~/lib/site";
 
 const onDox = stripBase(Astro.url.pathname).replace(/\/$/, "") === "/dox";
@@ -39,16 +45,22 @@ const shouldRenderSearch =
     {/* Same site, one level up, so a plain same-tab link, not `ButtonLink`
         (which opens an absolute URL in a new tab and draws a chip). */}
     {/* The name starts with the visible text (WCAG 2.2 SC 2.5.3). */}
-    <a href={LANDING_URL} class="gmt-ng-link gmt-sonar-focus" aria-label="NorthGuild home">
+    {/* The one external link that stays in the tab: the two sites share this bar, so it reads as home. */}
+    <Link
+      href={LANDING_URL}
+      isExternal={false}
+      class="gmt-ng-link gmt-sonar-focus"
+      aria-label="NorthGuild home"
+    >
       <NorthGuildMark />
       <span class="gmt-ng-wordmark">NorthGuild</span>
-    </a>
+    </Link>
     <SiteTitle />
   </div>
   <div class="sl-flex print:hidden search-slot">
     {shouldRenderSearch && <Search />}
   </div>
-  <div class="sl-hidden md:sl-flex print:hidden right-group">
+  <div class="sl-flex print:hidden right-group">
     <div class="sl-flex social-icons">
       {/* The Dox crystal itself is the button — same mark the chat uses for
           every Dox turn and for its empty state, so the thing you click is
@@ -61,13 +73,13 @@ const shouldRenderSearch =
         class="gmt-ask-dox-link"
         label="Chat with Dox"
         title="Chat with Dox"
-        aria-current={onDox ? "page" : undefined}
+        current={onDox}
       >
         <DoxMark id="header" />
       </ButtonLink>
-      <ThemeSelect />
       <LanguageSelect />
       <SocialIcons />
+      <SettingsControl />
     </div>
   </div>
 </div>
@@ -100,12 +112,6 @@ const shouldRenderSearch =
     .social-icons {
       gap: 1rem;
       align-items: center;
-    }
-
-    /* The theme toggle's wrapper is an inline element, which set the button on the text
-       baseline, 2 px above the row's centre. As a flex box it centres like its neighbours. */
-    .social-icons > :global(starlight-theme-select) {
-      display: flex;
     }
 
     /* On every page the search box sits at the right, just before the icons, at Starlight's

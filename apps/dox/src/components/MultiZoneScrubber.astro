@@ -32,6 +32,7 @@ const markup = renderScrubberTemplate("zone-planner").value;
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
   import { seededZones, type ZonePlannerArgs } from "../lib/zone-planner";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   const host = document.querySelector<HTMLElement>(
     '[data-widget="multi-zone-scrubber"]',
@@ -56,6 +57,10 @@ const markup = renderScrubberTemplate("zone-planner").value;
       }
     };
 
+    void offerPageTool(
+      "zone-planner",
+      () => import("../lib/webmcp/tools/zone-planner"),
+    );
     if ("IntersectionObserver" in window) {
       const observer = new IntersectionObserver(
         (entries) => {

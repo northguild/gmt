@@ -15,6 +15,7 @@
 // rather than by dropping the wrapper.
 import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
 import DoxPage from "~/components/ask/DoxPage";
+import { RAIL_PREPAINT } from "~/components/ask/rail-prepaint";
 ---
 
 <StarlightPage
@@ -42,6 +43,12 @@ import DoxPage from "~/components/ask/DoxPage";
         tag: "script",
         content:
           "document.documentElement.setAttribute('data-dox-shell','')",
+      },
+      {
+        // The reader's saved widget-rail width, painted on the first frame so
+        // the rail does not jump after hydration (`rail-prepaint.ts`).
+        tag: "script",
+        content: RAIL_PREPAINT,
       },
     ],
   }}

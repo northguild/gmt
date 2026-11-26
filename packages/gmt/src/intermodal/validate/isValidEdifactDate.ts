@@ -1,5 +1,5 @@
 import type { EdifactDateFormat } from "../../types/edi";
-import { parseEdifactDate } from "../parse/parseEdifactDate";
+import { edifactDateText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a real
@@ -11,7 +11,7 @@ import { parseEdifactDate } from "../parse/parseEdifactDate";
  * | `102` | `CCYYMMDD` | "Calendar date: C = Century ; Y = Year ; M = Month ; D = Day." |
  *
  * - True exactly when `parseEdifactDate` returns a date for the same arguments: the validator
- *   calls the parser, so the two cannot disagree.
+ *   shares the parser's core, so the two cannot disagree.
  * - Checks the calendar as well as the shape: 31 June and 29 February 2023 are false.
  * - False for any other code, a code of another kind included; check a code alone with
  *   `isValidEdifactDtmFormat`. False for a non-string argument.
@@ -29,5 +29,5 @@ export function isValidEdifactDate(
   value: string,
   format: EdifactDateFormat,
 ): boolean {
-  return parseEdifactDate(value, format) !== "";
+  return edifactDateText(value, format) !== "";
 }

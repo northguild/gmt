@@ -4,15 +4,14 @@ import { startOfYearMonth } from "./startOfYearMonth";
 
 describe("startOfYearMonth", () => {
   it.each`
-    value                      | expected           | why
-    ${"2026-10"}               | ${"2026-10-01"}    | ${"ordinary month"}
-    ${"2024-02"}               | ${"2024-02-01"}    | ${"leap-year February"}
-    ${"0000-01"}               | ${"0000-01-01"}    | ${"year 0"}
-    ${"-000001-12"}            | ${"-000001-12-01"} | ${"negative year"}
-    ${"+002026-10"}            | ${"2026-10-01"}    | ${"signed six-digit year"}
-    ${"2026-10[u-ca=ISO8601]"} | ${"2026-10-01"}    | ${"ISO calendar annotation"}
-    ${"+275760-09"}            | ${"+275760-09-01"} | ${"highest year-month, day 1 is in range"}
-    ${"-271821-05"}            | ${"-271821-05-01"} | ${"the month after the lowest is whole"}
+    value           | expected           | why
+    ${"2026-10"}    | ${"2026-10-01"}    | ${"ordinary month"}
+    ${"2024-02"}    | ${"2024-02-01"}    | ${"leap-year February"}
+    ${"0000-01"}    | ${"0000-01-01"}    | ${"year 0"}
+    ${"-000001-12"} | ${"-000001-12-01"} | ${"negative year"}
+    ${"+002026-10"} | ${"2026-10-01"}    | ${"signed six-digit year"}
+    ${"+275760-09"} | ${"+275760-09-01"} | ${"highest year-month, day 1 is in range"}
+    ${"-271821-05"} | ${"-271821-05-01"} | ${"the month after the lowest is whole"}
   `("returns $expected for '$value' ($why)", ({ value, expected }) => {
     expect(startOfYearMonth(value)).toBe(expected);
   });

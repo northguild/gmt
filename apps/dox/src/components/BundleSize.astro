@@ -24,7 +24,7 @@ const rows = bundleRows();
           return (
             <tr>
               <th scope="row"><code class={codeBreakClass(importLine)} set:html={codeBreakHtml(importLine)} /></th>
-              {figures.map((cell) => <td class="num">{cell}</td>)}
+              {figures.map((cell, i) => <td class="num" data-col={BUNDLE_COLUMNS[i + 1]}>{cell}</td>)}
             </tr>
           );
         })
@@ -33,31 +33,3 @@ const rows = bundleRows();
   </table>
 </div>
 
-<style>
-  .gmt-bundle {
-    inline-size: 100%;
-    table-layout: auto;
-    border-collapse: collapse;
-    font-size: var(--sl-text-sm);
-  }
-
-  .gmt-bundle :is(th, td) {
-    padding: var(--gmt-space-2) var(--gmt-space-3);
-    border-block-end: 1px solid var(--gmt-hairline);
-    text-align: start;
-    vertical-align: top;
-  }
-
-  .gmt-bundle th[scope="row"] {
-    font-weight: normal;
-  }
-
-  .gmt-bundle .num {
-    text-align: end;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .gmt-bundle tbody .num {
-    white-space: nowrap;
-  }
-</style>

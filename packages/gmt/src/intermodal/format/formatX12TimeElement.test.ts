@@ -337,17 +337,14 @@ describe("formatX12TimeElement", () => {
 
   describe("the value is a time, as isValidTime accepts it", () => {
     // Every spelling of a time `isValidTime` accepts is written, and Temporal reads its fields:
-    // ISO 8601's two decimal signs, up to nine digits of fraction, and an RFC 9557 annotation,
-    // which `isValidTime` reads and ignores as `Temporal.PlainTime.from` does (a bracketed zone
-    // with no offset names no instant, and a time has no calendar).
+    // ISO 8601's two decimal signs and up to nine digits of fraction. A plain time carries no
+    // annotation of any kind.
     it.each`
-      value                           | hhmm      | hhmmss      | tenths       | hundredths    | reads
-      ${"14:30:45,5"}                 | ${"1430"} | ${"143045"} | ${"1430455"} | ${"14304550"} | ${"a comma for the decimal sign"}
-      ${"14:30:45,129999999"}         | ${"1430"} | ${"143045"} | ${"1430451"} | ${"14304512"} | ${"a comma and nanoseconds"}
-      ${"14:30:45.50"}                | ${"1430"} | ${"143045"} | ${"1430455"} | ${"14304550"} | ${"a trailing zero in the fraction"}
-      ${"14:30:45.000000000"}         | ${"1430"} | ${"143045"} | ${"1430450"} | ${"14304500"} | ${"nine zeros of fraction"}
-      ${"14:30:45.12[Europe/Berlin]"} | ${"1430"} | ${"143045"} | ${"1430451"} | ${"14304512"} | ${"a bracketed zone and no offset: the annotation is ignored"}
-      ${"14:30:45.12[u-ca=hebrew]"}   | ${"1430"} | ${"143045"} | ${"1430451"} | ${"14304512"} | ${"a calendar annotation: a time has no calendar"}
+      value                   | hhmm      | hhmmss      | tenths       | hundredths    | reads
+      ${"14:30:45,5"}         | ${"1430"} | ${"143045"} | ${"1430455"} | ${"14304550"} | ${"a comma for the decimal sign"}
+      ${"14:30:45,129999999"} | ${"1430"} | ${"143045"} | ${"1430451"} | ${"14304512"} | ${"a comma and nanoseconds"}
+      ${"14:30:45.50"}        | ${"1430"} | ${"143045"} | ${"1430455"} | ${"14304550"} | ${"a trailing zero in the fraction"}
+      ${"14:30:45.000000000"} | ${"1430"} | ${"143045"} | ${"1430450"} | ${"14304500"} | ${"nine zeros of fraction"}
     `(
       "writes $value as $hhmm, $hhmmss, $tenths and $hundredths ($reads)",
       ({ value, ...row }) => {
@@ -367,6 +364,10 @@ describe("formatX12TimeElement", () => {
       ${"14:30:45.12+02:00[Europe/Berlin]"} | ${"an offset and a bracketed zone"}
       ${"14:30:45.12Z[Europe/London]"}      | ${"a UTC designator and a bracketed zone"}
       ${"14:30[!foo=bar]"}                  | ${"an unknown critical annotation"}
+      ${"14:30:45.12[Europe/Berlin]"}       | ${"a bracketed zone: a time has no annotation"}
+      ${"14:30:45.12[u-ca=hebrew]"}         | ${"a calendar annotation"}
+      ${"14:30:45.12[u-ca=iso8601]"}        | ${"the ISO calendar annotation"}
+      ${"14:30:45.12[foo=bar]"}             | ${"an elective annotation"}
       ${"T14:30"}                           | ${"a leading time designator"}
       ${"1430"}                             | ${"basic format: the input is extended ISO 8601"}
       ${"14300012"}                         | ${"the element's own digits: the input is ISO 8601"}

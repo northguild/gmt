@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../../zoned/validate";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Units `spanWallClock` measures a calendar distance in.
@@ -77,11 +77,15 @@ export function spanWallClock(
     return null;
   }
 
-  if (
-    !Object.hasOwn(WALL_CLOCK_SPAN_UNITS, unit) ||
-    !isValidZonedDateTime(start) ||
-    !isValidZonedDateTime(end)
-  ) {
+  if (!Object.hasOwn(WALL_CLOCK_SPAN_UNITS, unit)) {
+    return null;
+  }
+
+  if (zonedDateTimeOf(start) === null) {
+    return null;
+  }
+
+  if (zonedDateTimeOf(end) === null) {
     return null;
   }
 

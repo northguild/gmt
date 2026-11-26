@@ -1,6 +1,5 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-
-import { isValidDateTime } from "../validate";
 
 /**
  * Return true when `value1` is strictly after `value2` for PlainDateTime values.
@@ -19,17 +18,14 @@ import { isValidDateTime } from "../validate";
  * @example isAfterDateTime("2024-02-29T12:34:56", "invalid") // false
  */
 export function isAfterDateTime(value1: string, value2: string): boolean {
-  if (!isValidDateTime(value1) || !isValidDateTime(value2)) {
+  const value1Parsed = plainDateTimeOf(value1);
+  const value2Parsed = plainDateTimeOf(value2);
+  if (value1Parsed === null || value2Parsed === null) {
     return false;
   }
 
   try {
-    return (
-      Temporal.PlainDateTime.compare(
-        Temporal.PlainDateTime.from(value1),
-        Temporal.PlainDateTime.from(value2),
-      ) === 1
-    );
+    return Temporal.PlainDateTime.compare(value1Parsed, value2Parsed) === 1;
   } catch {
     return false;
   }

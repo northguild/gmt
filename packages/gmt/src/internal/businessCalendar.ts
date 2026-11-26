@@ -1,7 +1,6 @@
 import { Temporal } from "./temporal";
-import { isValidDate } from "../plain/validate/isValidDate";
+import { isZoneId, plainDateOf } from "./inputChecks";
 import type { BusinessCalendar } from "../types";
-import { isValidTimeZone } from "../zoned/validate/isValidTimeZone";
 import { isObject } from "./isObject";
 import {
   countWithin,
@@ -90,11 +89,13 @@ export function holidayEpochDay(holiday: unknown): number | null {
     return known;
   }
 
-  if (!isValidDate(holiday)) {
+  const date = plainDateOf(holiday);
+
+  if (date === null) {
     return null;
   }
 
-  const epochDay = epochDayOfDate(Temporal.PlainDate.from(holiday));
+  const epochDay = epochDayOfDate(date);
 
   if (holidayMemo.size >= HOLIDAY_MEMO_LIMIT) {
     holidayMemo.clear();
@@ -150,7 +151,7 @@ export function parseBusinessCalendar(
 
   const { weekend, holidays, timeZone } = calendar as Record<string, unknown>;
 
-  if (typeof timeZone !== "string" || !isValidTimeZone(timeZone)) {
+  if (typeof timeZone !== "string" || !isZoneId(timeZone)) {
     return null;
   }
 

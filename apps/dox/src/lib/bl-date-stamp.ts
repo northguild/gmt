@@ -459,7 +459,7 @@ export function blNullText(state: BlDateState, lib: BlDateLib): string {
     return `The library does not read ${zone} as a place. Use an IANA zone name such as Europe/London, or a UTC offset such as +08:00.`;
   }
   if (read(state.value.trim(), PROBE_EVENT, zone) === "") {
-    return "The value is not a moment. It needs a Z, an offset, or an offset with a bracketed zone.";
+    return "The value is not a moment. It needs a Z or an offset, with no zone name after it.";
   }
   if (read(PROBE_MOMENT, state.event.trim(), zone) === "") {
     const event = state.event.trim();

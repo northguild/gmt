@@ -24,15 +24,13 @@ import {
 } from "../src/lib/chat-types";
 import { observeOutput, Stopwatch } from "./timing";
 import { mapUpstreamError } from "./error-mapping";
-import { namespaceFromPageContext } from "./namespace-from-page";
 import { checkRateLimit, clientIdFromRequest } from "./rate-limit";
 import { ENABLED_TOOL_DOCS } from "../src/lib/dox-tools";
 import { brainsPayload, withRecordedRequest } from "./brains-payload";
-import { fitChunks } from "./fit-chunks";
-import { selectTools } from "./select-tools";
-import { selectVocabulary, type VocabularySkill } from "./select-vocabulary";
+import { prepareTurn } from "./prepare-turn";
+import { joinSkills, type VocabularySkill } from "./select-vocabulary";
 import { assembleSystemPrompt } from "./system-prompt";
-import { buildWorkerTools } from "./tools";
+import { buildWorkerTools, chatDocFor } from "./tools";
 import { validateChatRequest } from "./validation";
 import {
   chooseBrain,
@@ -239,42 +237,28 @@ export function createChatHandler(deps: ChatHandlerDeps) {
         fetchChunksImpl(origin, { fetchImpl, cache }),
       );
 
-      const lastUserMessage = [...messages]
-        .reverse()
-        .find((m) => m.role === "user");
-      const query = lastUserMessage
-        ? lastUserMessage.parts
-            .filter((part) => part.type === "text")
-            .map((part) => ("text" in part ? part.text : ""))
-            .join("")
-        : "";
+      const { retrieved, offered, chosen } = await prepareTurn({
+        messages,
+        pageContext,
+        search: (query, options) =>
+          watch.time("search", () => searchChunksImpl(chunks, query, options)),
+        skills: vocabulary,
+      });
 
-      // Capped before anything else reads it, so the prompt, the linking
-      // allowlist and the trace all describe the same chunks.
-      const retrieved = fitChunks(
-        await watch.time("search", () =>
-          searchChunksImpl(chunks, query, {
-            namespace: namespaceFromPageContext(pageContext),
-          }),
-        ),
-      );
-
-      /* Only the tools this question could use (see `select-tools.ts`), which
-         always include every tool the history already called. Built per
-         request. `streamText`, `convertToModelMessages` and
-         `toUIMessageStream` must all be handed the *same* set, or a tool part
-         is typed in one layer and opaque in the next. */
-      const offered = selectTools({ query, retrieved, messages });
+      /* `streamText`, `convertToModelMessages` and `toUIMessageStream` must
+         all be handed the *same* tool set, or a tool part is typed in one
+         layer and opaque in the next. Built per request. */
       const tools = buildWorkerTools(offered);
 
       const systemPrompt = assembleSystemPrompt({
         routeAllowlist: retrieved.map((c) => c.url),
         chunks: retrieved,
-        vocabulary: selectVocabulary(vocabulary, retrieved),
+        vocabulary: joinSkills(chosen),
         coreRules,
-        tools: offered.flatMap(
-          (name) => ENABLED_TOOL_DOCS.find((doc) => doc.name === name) ?? [],
-        ),
+        tools: offered.flatMap((name) => {
+          const doc = ENABLED_TOOL_DOCS.find((d) => d.name === name);
+          return doc ? chatDocFor(doc) : [];
+        }),
       });
 
       /* `ignoreIncompleteToolCalls` drops a tool part that never reached a

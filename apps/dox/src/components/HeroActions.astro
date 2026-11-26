@@ -7,6 +7,7 @@
  */
 import DoxMark from './DoxMark.astro';
 import LinkButton from './LinkButton.astro';
+import { linkTarget } from '~/lib/external-link';
 import { withBase } from '~/lib/site';
 
 export interface Action {
@@ -23,10 +24,6 @@ interface Props {
 
 const { actions } = Astro.props;
 
-function isExternal(href: string) {
-	return href.startsWith('http://') || href.startsWith('https://');
-}
-
 // Hero links are written base-less in the front matter; only a root-absolute
 // path gets the base (a `#` hash or an absolute URL stays as written).
 function withSiteBase(href: string) {
@@ -39,7 +36,7 @@ function withSiteBase(href: string) {
 		const href = withSiteBase(link);
 		// The entrance staggers the buttons by this number (gmt-entrance-freeze.css).
 		const order = `--ng-i: ${index}`;
-		const external = isExternal(href);
+		const opens = linkTarget(href);
 		// The Dox CTA carries the crystal itself rather than a Starlight
 		// icon name — same mark as the header button and the chat, so the
 		// three entry points to Dox are recognisably one thing.
@@ -87,8 +84,8 @@ function withSiteBase(href: string) {
 				style={order}
 				class:list={[className]}
 				{...attrs}
-				target={external ? '_blank' : undefined}
-				rel={external ? 'noopener noreferrer' : undefined}
+				target={opens.target}
+				rel={opens.rel}
 			>
 				{text}
 				{icon?.html && <Fragment set:html={icon.html} />}

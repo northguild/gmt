@@ -1,10 +1,10 @@
 import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { durationTotal } from "../../internal";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeDateUnit, RelativeTimeFormatOptions } from "../../types";
-import { isValidDate } from "../validate";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeDate`: the reference date, the display unit, the rounding and the
@@ -66,20 +66,19 @@ export function formatRelativeDate(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
-    if (!isValidDate(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = plainDateOf(value);
+    if (target === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidDate(referenceOption))
+    const referenceOptionParsed = plainDateOf(referenceOption);
+    if (referenceOption !== undefined && referenceOptionParsed === null)
       return "";
 
     try {
       const forcedUnit = resolveRelativeUnit(options.largestUnit, DATE_UNITS);
       const roundingMethod = options.roundingMethod;
-      const target = Temporal.PlainDate.from(value);
-      const reference = referenceOption
-        ? Temporal.PlainDate.from(referenceOption)
-        : Temporal.Now.plainDateISO();
+      const reference = referenceOptionParsed ?? Temporal.Now.plainDateISO();
 
       const diff = target.since(reference);
       const absDays = Math.abs(diff.total("day"));

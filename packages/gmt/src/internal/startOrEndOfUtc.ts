@@ -1,11 +1,12 @@
 import type { DateTimeUnit, SmallestUnit } from "./temporalTypes";
+import { fractionalDigitsOption } from "./typedOptions";
 import { Temporal } from "./temporal";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
-import { isValidDateTimeUnit } from "../plain";
+import { isDateTimeUnitName } from "./unitNames";
 import type { FractionalDigit } from "../types";
-import { isValidUtc } from "../utc/validate/isValidUtc";
+import { utcInstantOf } from "./utcInstant";
 
 /**
  * Internal shared implementation for `startOfUtc` / `endOfUtc`.
@@ -39,17 +40,19 @@ export function startOrEndOfUtc(
 ): string {
   const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
   const resolvedUnit = resolveDateTimeUnit(unit);
-  const fractionalSecondDigits = options.fractionalSecondDigits;
+  const fractionalSecondDigits = fractionalDigitsOption(
+    options.fractionalSecondDigits,
+  );
 
+  const instant = utcInstantOf(value);
   if (
-    !isValidUtc(value) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
+    instant === null ||
+    !isDateTimeUnitName(resolvedUnit) ||
     weekStartsOn === null
   )
     return "";
 
   try {
-    const instant = Temporal.Instant.from(value);
     const source = instant.toZonedDateTimeISO("UTC");
     let result: Temporal.ZonedDateTime;
 

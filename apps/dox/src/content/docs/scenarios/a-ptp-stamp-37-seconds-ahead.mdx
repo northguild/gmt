@@ -1,0 +1,37 @@
+---
+title: "A PTP Stamp 37 Seconds Ahead"
+description: An ingest job stores a lidar's PTP seconds as Unix time, and every frame sits 37 seconds ahead of the camera's.
+industries: [iot]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A PTP Stamp 37 Seconds Ahead"
+  description="A lidar stamps each frame with PTP seconds. An ingest job stores them as if they were Unix time. The camera's frames are on UTC. How far apart do the two streams sit?"
+  naiveCode={`// The naive approach: PTP seconds start at the same epoch value as Unix time
+const seconds = 1704067237n;
+
+new Date(Number(seconds) * 1000).toISOString();
+// "2024-01-01T00:00:37.000Z" — 37 s ahead of the camera, and no error`}
+  explanation={`A PTP timestamp counts TAI from 1970-01-01T00:00:00 TAI, and TAI has no leap seconds. Unix time is UTC, which has stepped 27 times since 1972. The epoch value is the same, but the two scales have drifted 37 seconds apart, so a PTP count read as Unix seconds is 37 seconds ahead. The result is a valid time, so nothing raises an error. The lidar and camera frames look 37 seconds apart, and a fusion step pairs the wrong ones. ptpToUtc subtracts the offset the grandmaster announces, which is 37 here. The offset has no default, because 37 is right only while the grandmaster agrees with it. taiMinusUtc gives what the leap-second table says for the reading, so a grandmaster that announces another value shows up as a difference.`}
+  gmtCode={`import { ptpToUtc } from "@northguild/gmt/iot/convert";
+import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
+
+const reading = ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37);
+// "2024-01-01T00:00:00Z"
+
+taiMinusUtc(reading);
+// 37 (the announced offset agrees with the table)`}
+  fixedSpecId="ptpToUtc"
+/>
+
+The widget starts at the lidar's frame with the announced offset of 37. Change the offset to `0`
+and the result moves 37 seconds ahead, the way the ingest job stored it. Change it to `36` and it
+is 1 second out.
+
+The fix is to apply the announced offset, and to check it. See
+[IoT: PTP Time](/guides/industries/iot-ptp-time/#the-37-second-error) for the rule, and
+[IoT mistakes](/mistakes/iot/) for the others that come with it.
+
+[Try it in the PTP Clock Converter](/tools/ptp-clock-converter/?w=ptpclock&wa=%7B%22preset%22%3A%22announced-0%22%7D).

@@ -20,6 +20,7 @@ import { defineElements } from "~/widgets/define";
 import {
   button,
   codeFrame,
+  paintCodeFrame,
   field,
   fieldGrid,
   findWidget,
@@ -66,16 +67,20 @@ import {
   INVALID_REASON,
   KIND_LABELS,
   NO_SIGNAL_TEXT,
+  ROW_NO_YEAR,
   RULE_KINDS,
   YEAR_MAX,
   YEAR_MIN,
+  YEAR_NOTE_INVALID,
+  YEAR_NOTE_NULL,
+  YEAR_RANGE,
   blankRow,
   callArgsText,
   easterLabel,
   hasPolicy,
+  holidayFacts,
   isSeeded,
   ledgerHandoff,
-  literal,
   matchPreset,
   movedCount,
   normaliseWeekend,
@@ -95,9 +100,9 @@ import {
   type RowState,
   type RuleKind,
 } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import {
   attributeRows,
-  attributeRules,
   marksFromAttribution,
   monthName,
   policySummary,
@@ -123,10 +128,6 @@ const RULE_CALL_SLICE_MS = 4;
 
 const HINT_ORDER =
   "Swap the two rows: the order decides which day each holiday lands on.";
-const YEAR_NOTE_NULL = `${NO_SIGNAL_TEXT}: the calendar cannot be built until every rule is valid.`;
-const YEAR_RANGE = `the year is not a whole number from ${YEAR_MIN} to ${YEAR_MAX}`;
-const YEAR_NOTE_INVALID = `${NO_SIGNAL_TEXT}: ${YEAR_RANGE}.`;
-const ROW_NO_YEAR = `${NO_SIGNAL_TEXT}: there is no year to place it in.`;
 
 const RESULT_SIZERS = [
   ...RULE_KINDS.map((k) => `${NO_SIGNAL_TEXT}: ${INVALID_REASON[k]}.`),
@@ -638,6 +639,8 @@ function setupWidget(
   /** A smaller answer found while the reader is in the widget; it waits for them to leave. */
   let ruleCallPending: typeof ruleCallReserve | null = null;
   let ruleCallText = "";
+  /** The reserve the frame on the page was drawn with; the same lines and width mean its text can change in place. */
+  let ruleCallDrawn: typeof ruleCallReserve | null = null;
   let ruleCallJob: ReturnType<typeof setTimeout> | undefined;
   signal.addEventListener("abort", () => clearTimeout(ruleCallJob), {
     once: true,
@@ -689,22 +692,17 @@ function setupWidget(
   }
 
   function recompute(): void {
-    const year = yearOf(state);
-    if (year === null) {
+    const facts = holidayFacts(state, lib);
+    if (!facts.ok) {
       yearEl.setAttribute("aria-invalid", "true");
       drawNoYear();
       return;
     }
+    const { year, rules, attribution } = facts;
     yearEl.removeAttribute("aria-invalid");
     lastYear = year;
     syncPreset();
 
-    const rules = rulesOf(state);
-    const attribution = attributeRules(
-      lib,
-      { timeZone: state.zone, weekend: state.weekend, rules },
-      year,
-    );
     drawRows(rules, attribution, year);
     drawYear(attribution, year);
     drawCall(rules, attribution, year);
@@ -758,10 +756,7 @@ function setupWidget(
     );
     setHtml(el("output"), outputOf("sentinel", NO_SIGNAL_TEXT));
     ruleCallText = "";
-    setHtml(
-      el("rule-calls"),
-      callFrame("Rule calls", "Copy rule calls", "", ruleCallReserve),
-    );
+    drawRuleCalls("");
     setToolLink(ledgerLink, null);
     setHtml(
       el("hint"),
@@ -908,9 +903,29 @@ function setupWidget(
   function redrawRuleCalls(): void {
     const frame = el("rule-calls");
     if (frame.contains(document.activeElement)) return;
+    ruleCallDrawn = null;
+    drawRuleCalls(ruleCallText);
+  }
+
+  /**
+   * Puts the text in the rule-call frame. The frame is drawn again only when its reserve changes;
+   * otherwise the text is written in place, so the scroll region the page gave the frame (its
+   * role, name and tab stop) is not taken away and given back on every keystroke.
+   */
+  function drawRuleCalls(text: string): void {
+    const frame = el("rule-calls");
+    if (
+      ruleCallDrawn?.lines === ruleCallReserve.lines &&
+      ruleCallDrawn.widest === ruleCallReserve.widest &&
+      frame.querySelector("code")
+    ) {
+      paintCodeFrame(frame, text);
+      return;
+    }
+    ruleCallDrawn = ruleCallReserve;
     setHtml(
       frame,
-      callFrame("Rule calls", "Copy rule calls", ruleCallText, ruleCallReserve),
+      callFrame("Rule calls", "Copy rule calls", text, ruleCallReserve),
     );
   }
 
@@ -950,10 +965,7 @@ function setupWidget(
     ).join("\n");
     reserveRuleCalls(rules, year);
     ruleCallText = lines;
-    setHtml(
-      el("rule-calls"),
-      callFrame("Rule calls", "Copy rule calls", lines, ruleCallReserve),
-    );
+    drawRuleCalls(lines);
     const handoff = ledgerHandoff(full, state.zone, state.weekend);
     setToolLink(ledgerLink, handoff.href);
     setHtml(

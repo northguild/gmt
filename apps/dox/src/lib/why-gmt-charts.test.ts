@@ -85,8 +85,14 @@ function tooltipOf(library: string) {
 
 describe("ciExecutionRows", () => {
   it("gives every library one bar equal to its total CI executions", () => {
-    expect(ciExecutionRows().map((r) => [r.comparison.id, r.value])).toEqual(
-      libraryComparisons.map((c) => [c.id, c.stats.executions]),
+    expect(
+      ciExecutionRows()
+        .map((r) => [r.comparison.id, r.value])
+        .toSorted(([a], [b]) => String(a).localeCompare(String(b))),
+    ).toEqual(
+      libraryComparisons
+        .map((c) => [c.id, c.stats.executions])
+        .toSorted(([a], [b]) => String(a).localeCompare(String(b))),
     );
   });
 
@@ -107,8 +113,14 @@ describe("ciExecutionRows", () => {
 
 describe("ciSuiteRows", () => {
   it("gives every library one bar equal to a single run of its tests", () => {
-    expect(ciSuiteRows().map((r) => [r.comparison.id, r.value])).toEqual(
-      libraryComparisons.map((c) => [c.id, c.stats.tests]),
+    expect(
+      ciSuiteRows()
+        .map((r) => [r.comparison.id, r.value])
+        .toSorted(([a], [b]) => String(a).localeCompare(String(b))),
+    ).toEqual(
+      libraryComparisons
+        .map((c) => [c.id, c.stats.tests])
+        .toSorted(([a], [b]) => String(a).localeCompare(String(b))),
     );
   });
 
@@ -116,6 +128,34 @@ describe("ciSuiteRows", () => {
     const gmt = ciSuiteRows().find((r) => r.comparison.isSubject);
     expect(gmt?.value).toBe(gmtStats.tests);
     expect(gmt?.value).toBeLessThan(gmtStats.executions);
+  });
+});
+
+describe("library bar order", () => {
+  it.each([
+    ["ciSuiteRows", ciSuiteRows],
+    ["ciExecutionRows", ciExecutionRows],
+  ] as const)(
+    "%s puts GMT first, then the other libraries from most to least",
+    (_, rows) => {
+      const [first, ...rest] = rows();
+      expect(first?.comparison.isSubject).toBe(true);
+      expect(rest.map((r) => r.value)).toEqual(
+        rest.map((r) => r.value).toSorted((a, b) => b - a),
+      );
+    },
+  );
+
+  it("ranks with the GMT bar first even when another library is larger", () => {
+    const [gmt, other] = libraryComparisons;
+    if (!gmt || !other) throw new Error("need two libraries");
+    const small = { ...gmt, stats: { ...gmt.stats, tests: 1 } };
+    const large = {
+      ...other,
+      isSubject: undefined,
+      stats: { ...other.stats, tests: 2 },
+    };
+    expect(ciSuiteRows([large, small]).map((r) => r.value)).toEqual([1, 2]);
   });
 });
 
@@ -150,10 +190,10 @@ describe("ciExecutionTooltip", () => {
     });
   });
 
-  it("reports Spacetime's known failures", () => {
-    expect(tooltipOf("spacetime").rows.at(-1)).toEqual({
+  it("reports Day.js's known failure", () => {
+    expect(tooltipOf("dayjs").rows.at(-1)).toEqual({
       label: "Known failures",
-      value: "41",
+      value: "1",
     });
   });
 
@@ -166,13 +206,22 @@ describe("ciExecutionTooltip", () => {
     ]);
   });
 
+  it("shows date-fns's Node and time-zone re-runs", () => {
+    expect(tooltipOf("date-fns").rows).toEqual([
+      { label: "Suite tests", value: formatCount(3167) },
+      { label: "Matrix re-runs", value: formatCount(1206627) },
+      { label: "Matrix", value: "4 Node versions + 378 time zones" },
+      { label: "CI executions", value: formatCount(1209794) },
+    ]);
+  });
+
   it("omits the matrix rows for a single-run library", () => {
-    expect(tooltipOf("date-fns")).toEqual({
-      title: "date-fns",
+    expect(tooltipOf("@internationalized/date")).toEqual({
+      title: "@internationalized/date",
       color: expect.any(String),
       rows: [
-        { label: "Suite tests", value: "3,213" },
-        { label: "CI executions", value: "3,213" },
+        { label: "Suite tests", value: "386" },
+        { label: "CI executions", value: "386" },
       ],
     });
   });

@@ -7,7 +7,7 @@ import type {
 } from "../types";
 import { normalizeDateTime } from "./normalizeDateTime";
 import { resolveRelativeRounding } from "./resolveRelativeRounding";
-import { optionOrDefault } from "./optionOrDefault";
+import { stringOptionOrDefault } from "./typedOptions";
 import { resolveRelativeUnit } from "./resolveRelativeUnit";
 
 /** A relative unit, singular or plural (`Intl.RelativeTimeFormat` and Temporal accept both). */
@@ -116,8 +116,8 @@ export function formatRelativeAmount(
 
   return normalizeDateTime(
     cachedFormatter("RelativeTimeFormat", locale, {
-      numeric: optionOrDefault(options.numeric, "auto"),
-      style: optionOrDefault(options.style, "long"),
+      numeric: stringOptionOrDefault(options.numeric, "auto"),
+      style: stringOptionOrDefault(options.style, "long"),
     }).format(amount, unit),
   );
 }

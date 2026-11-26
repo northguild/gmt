@@ -1,5 +1,6 @@
 import {
   isDefectPresent,
+  isLunisolarTextCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
   isNudgeOriginCompatNeeded,
@@ -64,7 +65,7 @@ describe("isDefectPresent", () => {
 
 describe("repro split", () => {
   // DefectId (D16, D17, D19, D22) is the type the shipped probes can ask about; the canary-only
-  // group is BoundedWorkDefectId (D9).
+  // groups are BoundedWorkDefectId (D9) and CanaryDefectId (D23 to D34).
   const probeDefects = new Set(["D16", "D17", "D19", "D22"]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
@@ -309,5 +310,48 @@ describe("D22 repeated-hour origin probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isNudgeOriginCompatNeeded()).toBe(isNudgeOriginCompatNeeded());
+  });
+});
+
+describe("D33 lunisolar text probe", () => {
+  // The probe reads the same four chinese and two dangi rows as the D33 repros (Intl era/monthCode
+  // section 1.1 Table 1), so it is needed for a calendar exactly when one of that calendar's repros
+  // fails on this host. The probe's own answer is never pinned: the canary reports the fix.
+  it.each`
+    calendar
+    ${"chinese"}
+    ${"dangi"}
+  `(
+    "is needed for $calendar exactly when a D33 text repro of $calendar fails",
+    ({ calendar }: { calendar: "chinese" | "dangi" }) => {
+      const rows = repros.filter(
+        (repro) => repro.defect === "D33" && repro.calendar === calendar,
+      );
+      expect(rows.length).toBeGreaterThan(0);
+      expect(isLunisolarTextCompatNeeded(calendar)).toBe(
+        rows.some((repro) => runRepro(repro) !== repro.expected),
+      );
+    },
+  );
+
+  it.each`
+    calendar     | count
+    ${"chinese"} | ${4}
+    ${"dangi"}   | ${2}
+  `(
+    "has $count text repros for $calendar and no fields or reverse repros",
+    ({ calendar, count }: { calendar: string; count: number }) => {
+      const rows = repros.filter(
+        (repro) => repro.defect === "D33" && repro.calendar === calendar,
+      );
+      expect(rows).toHaveLength(count);
+      expect(rows.every((repro) => repro.name.endsWith("Text"))).toBe(true);
+    },
+  );
+
+  it("answers the same on a second call", () => {
+    expect(isLunisolarTextCompatNeeded("dangi")).toBe(
+      isLunisolarTextCompatNeeded("dangi"),
+    );
   });
 });

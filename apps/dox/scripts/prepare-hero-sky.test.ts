@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { decodeStars } from "../src/lib/sky";
+import { toUnit } from "../src/lib/sky-math";
 import {
   COMMIT,
   LIST_BUDGET,
@@ -28,6 +29,14 @@ const list = decodeStars(
     bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer,
 );
+
+/** The angle, degrees, between star `i` of a decoded list and a unit vector. */
+const apart = (unit: Float64Array, i: number, [x, y, z]: number[]): number =>
+  (Math.acos(
+    Math.min(1, unit[i * 3]! * x + unit[i * 3 + 1]! * y + unit[i * 3 + 2]! * z),
+  ) *
+    180) /
+  Math.PI;
 
 describe("hero-sky.json", () => {
   it("names the catalogue, the pinned commit and its hash", () => {
@@ -86,7 +95,7 @@ describe("hero-sky.bin", () => {
       for (let i = 0; i < list.count; i++) {
         nearest = Math.min(
           nearest,
-          Math.hypot(list.ra[i]! - hours * 15, list.dec[i]! - dec),
+          apart(list.unit, i, toUnit(hours * 15, dec)),
         );
       }
       expect(nearest).toBeLessThan(0.01);

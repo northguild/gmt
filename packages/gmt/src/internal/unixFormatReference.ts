@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { isValidUtc } from "../utc/validate/isValidUtc";
+import { utcInstantOf } from "./utcInstant";
 import { type UnixEpochUnit, unixEpochToInstant } from "./unixEpochValue";
 
 /**
@@ -35,12 +35,5 @@ export function resolveUnixFormatReference(
   if (numericRef !== null) {
     return numericRef;
   }
-  if (!isValidUtc(reference)) {
-    return null;
-  }
-  try {
-    return Temporal.Instant.from(reference);
-  } catch {
-    return null;
-  }
+  return utcInstantOf(reference);
 }

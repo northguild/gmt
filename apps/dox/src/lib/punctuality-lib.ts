@@ -5,7 +5,8 @@
  *
  * `scheduleDeviation` and `classifyPunctuality` live in `transport/compare`;
  * `punctualityRate`, `bestAvailable`, `estimateDrift` and `nextDeparture` in
- * `transport/calculate`. Nothing else is loaded.
+ * `transport/calculate`; `toOffsetInstant` (instant/convert) turns a zoned time
+ * into the instant `scheduleDeviation` reads. Nothing else is loaded.
  *
  * A heavy module: it is never imported statically from the chat island. Only
  * each widget's mount reaches it, inside its own `try`, so a failed import
@@ -18,11 +19,16 @@ import { GMT_MODULES } from "./gmt-modules";
 import type { PunctualityLib } from "./punctuality-widgets";
 
 export async function loadPunctualityLib(): Promise<PunctualityLib> {
-  const [compare, calculate] = await Promise.all([
+  const [compare, calculate, instantConvert] = await Promise.all([
     GMT_MODULES["transport/compare"](),
     GMT_MODULES["transport/calculate"](),
+    GMT_MODULES["instant/convert"](),
   ]);
+  const toOffsetInstant = instantConvert["toOffsetInstant"] as (
+    value: string,
+  ) => { instant: string } | null;
   return {
+    toInstant: (value) => toOffsetInstant(value)?.instant ?? "",
     scheduleDeviation: compare[
       "scheduleDeviation"
     ] as PunctualityLib["scheduleDeviation"],

@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the quarter of the year (1-4) for a given ISO datetime.
@@ -19,12 +17,12 @@ import { isValidDateTime } from "../validate";
  * @example getQuarterForDateTime("invalid") // null
  */
 export function getQuarterForDateTime(value: string): number | null {
-  if (!isValidDateTime(value)) {
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) {
     return null;
   }
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     return Math.floor((dateTime.month - 1) / 3) + 1;
   } catch {
     return null;

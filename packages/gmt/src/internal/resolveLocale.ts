@@ -1,7 +1,48 @@
+import { isZoneId } from "./inputChecks";
+
 /**
  * A locale argument: one BCP 47 tag, or a preference list of tags (ECMA-402 `locales`).
  */
 export type LocalesArgument = string | string[];
+
+/**
+ * The canonical tags of a `locale` argument, read as the types say: an omitted locale, a string,
+ * or an array whose every entry is a primitive string. `Intl.getCanonicalLocales` would convert a
+ * boxed `String` or an object with a `toString` into a tag, and read a hole as `"undefined"`, so
+ * each entry is checked first. The array is read once, so the check and the canonical list see
+ * the same strings even for a Proxy.
+ *
+ * @param locales raw locale argument from caller input
+ * @returns the canonical tags (`[]` for an omitted locale or an empty list)
+ * @throws TypeError for a value that is not `undefined`, a string or an array of strings
+ *
+ * @example canonicalLocaleTags("EN-gb") // ["en-GB"]
+ * @example canonicalLocaleTags(["de-DE", "en"]) // ["de-DE", "en"]
+ * @example canonicalLocaleTags([new String("de-DE")]) // throws TypeError
+ */
+export function canonicalLocaleTags(locales: unknown): string[] {
+  if (locales === undefined) {
+    return [];
+  }
+  if (typeof locales === "string") {
+    return Intl.getCanonicalLocales(locales);
+  }
+  if (!Array.isArray(locales)) {
+    throw new TypeError("locale must be a string or an array of strings");
+  }
+  // ECMA-402 CanonicalizeLocaleList reads a list as HasProperty then Get for each index, once, so
+  // a hole is skipped and a Proxy trap that throws is heard; the snapshot is what gets checked.
+  const entries: unknown[] = [];
+  for (let index = 0; index < locales.length; index += 1) {
+    if (index in locales) {
+      entries.push((locales as unknown[])[index]);
+    }
+  }
+  if (!entries.every((entry) => typeof entry === "string")) {
+    throw new TypeError("every locale must be a string");
+  }
+  return Intl.getCanonicalLocales(entries as string[]);
+}
 
 /**
  * Resolve a `locale` argument to the single BCP 47 tag a locale-aware function reads.
@@ -19,18 +60,8 @@ export type LocalesArgument = string | string[];
  * @returns the resolved BCP 47 tag, or `null` when the argument is invalid
  */
 export function resolveLocale(locales: unknown): string | null {
-  if (
-    locales !== undefined &&
-    typeof locales !== "string" &&
-    !Array.isArray(locales)
-  ) {
-    return null;
-  }
-
   try {
-    const canonical = Intl.getCanonicalLocales(
-      locales as LocalesArgument | undefined,
-    );
+    const canonical = canonicalLocaleTags(locales);
     if (canonical.length === 0) {
       return new Intl.DateTimeFormat().resolvedOptions().locale;
     }
@@ -66,4 +97,21 @@ export function resolveRequiredLocale(locales: unknown): string | null {
   if (locales === undefined) return null;
   if (Array.isArray(locales) && locales.length === 0) return null;
   return resolveLocale(locales);
+}
+
+/**
+ * The host's default time zone identifier, read fresh on every call because it depends on a
+ * process default and is never remembered.
+ *
+ * @returns the IANA name or offset the host reports, or `""` when it reports none or an invalid one
+ *
+ * @example systemTimeZone() // "Europe/Berlin"
+ */
+export function systemTimeZone(): string {
+  try {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return isZoneId(timeZone) ? timeZone : "";
+  } catch {
+    return "";
+  }
 }

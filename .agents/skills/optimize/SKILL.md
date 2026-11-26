@@ -22,6 +22,9 @@ raw JSON into the session; the summary is the point. `--base REF` changes the br
 - `FAIL` — each listed finding is a file this branch touched, or a repo-wide problem.
   - **Caused or worsened by this branch** (a new spec over budget, a broken link, a missing
     symlink): fix it now, then re-run until `PASS` or only pre-existing findings remain.
+  - **`leftover:`** — a `Done` story still has its issue file, spec folder or research. Move any
+    rule the code cannot show into a comment beside that code, then delete the file, as
+    [finalizer](../../finalizer.md) step 10 does.
   - **Already there before this branch**: a size finding is listed only when this branch caused
     it (the file is new, or was within budget at the base). Older ones are counted as backlog
     automatically; leave them and never grow them further.

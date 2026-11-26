@@ -1,9 +1,9 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 
-import { isValidDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `dateTime` is between `start` and `end` (inclusive by default).
@@ -56,22 +56,20 @@ export function isBetweenDateTime(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
-    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
+    const inclusiveStart = booleanOption(options?.inclusiveStart, true);
+    const inclusiveEnd = booleanOption(options?.inclusiveEnd, true);
 
-    if (
-      !isValidDateTime(dateTime) ||
-      !isValidDateTime(start) ||
-      !isValidDateTime(end)
-    ) {
+    const d = plainDateTimeOf(dateTime);
+
+    const s = plainDateTimeOf(start);
+
+    const e = plainDateTimeOf(end);
+
+    if (d === null || s === null || e === null) {
       return false;
     }
 
     try {
-      const d = Temporal.PlainDateTime.from(dateTime);
-      const s = Temporal.PlainDateTime.from(start);
-      const e = Temporal.PlainDateTime.from(end);
-
       if (Temporal.PlainDateTime.compare(s, e) === 1) {
         return false;
       }

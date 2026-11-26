@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Readouts-hold-still gate (context/dox/reference/visual-design.md, "Layout stability",
- * and the Timetable Reader's rules in context/dox/built.md).
+ * and the Timetable Reader's rules in context/dox/built/tier-2-gates.md).
  *
- * Dragging a handle must move nothing except the values themselves. For each of
- * the seven tool pages (Departure Board, Punctuality Board, ETA Drift Chart,
- * Timetable Reader, Free Time Ledger, Dwell Ledger, B/L Date Stamp), every
+ * Dragging a handle must move nothing except the values themselves. For each
+ * tool page in `TOOLS` (the table below lists the handles of the first seven; a later
+ * entry names its own controls), every
  * preset, and each of these widths, the script takes every control the reader
  * drags:
  *
@@ -37,12 +37,14 @@
  *
  * Controls are found by ARIA role and accessible name inside the widget root
  * (`lib/locate.mjs`), never by a style class or a role attribute. The structural parts
- * that have no role or name are `data-gate` hooks, listed in `context/dox/built.md`,
+ * that have no role or name are `data-gate` hooks, listed in `context/dox/built/tier-2-platform.md`,
  * "Gate hooks".
  *
  * A `TOOLS` entry may carry optional fields:
  *
  *   presetName    the accessible name of the preset select (default "Preset");
+ *   frame         false: the tool draws no chart, so `--resolve-only` does not
+ *                 ask for its frame part;
  *   drawn         the parts whose insides move by design (default `["drawn"]`).
  *                 `"hold"` stands for the first child of a hold (the kit's hold
  *                 writes the live wrapper first), `"grid"` for a month grid;
@@ -62,7 +64,8 @@
  *                 handle's;
  *   textBoxes     the parts whose inline text boxes are as wide as their text:
  *                 `"codeframe"` (the call frame's `<code>` and its coloured
- *                 spans) and `"instant"` (an instant's unbreakable pieces).
+ *                 spans), `"instant"` (an instant's unbreakable pieces) and
+ *                 `"verdict"` (the verdict's title and detail words).
  *                 The frame and its `<pre>` are still measured, so a line added
  *                 or a frame resized is a move; only a span's own width is not;
  *   pointerSteps  steps in each pointer sweep (default 20). 48 steps are 30
@@ -81,6 +84,14 @@
  *                 strings to type (a text box) or `"options"` to choose every
  *                 option in turn (a select). Each value is set, and every box
  *                 must stay where it was; the first value is put back after;
+ *                 An entry with `chips: true` names a group of radio chips (a
+ *                 `group` role named by its legend) and clicks each radio in turn;
+ *   clock         a live clock to hold still. A switch that is the clock itself:
+ *                 `{ role: "switch", name, startsOn }`; `startsOn` says whether the page
+ *                 opens with it ticking. Or radios that start it, with the switch that
+ *                 pauses it: `{ radios: [on, off], pause: name }`. The script starts the
+ *                 clock, diffs three ticks against it, then pauses it and starts it
+ *                 again, diffing each, and leaves it as the page opened;
  *   value         per control, the role and name of the field the handle edits.
  *                 A ledger handle's `aria-valuenow` is its place on a canvas that
  *                 is refitted after each key, so the same number can mean
@@ -111,10 +122,16 @@
  * `extraWidths` on a TOOLS entry adds viewports for that tool alone: the Timetable
  * Reader's two-column band (1920 and 2000) is checked there and nowhere else.
  *
+ * `minutes` on every TOOLS entry is that tool's measured time for one WebKit run of this gate
+ * (`--browsers webkit --pages /tools/<slug>/`), the slowest engine. The weekly legs are dealt by it
+ * (`--list-page-costs`), so the heavy tools never share a leg; only the ratios matter, so measure
+ * a new tool on the same machine as the others, and measure again when a change makes its sweep
+ * much longer or shorter (more presets, controls or widths).
+ *
  * Widths: each `--widths` entry is a viewport width (default 1440,390). Each
  * widget root is also forced to 360 and 300 px wide at a 1440 viewport, the
  * widths of the /dox rail. With the default browsers (Chromium and WebKit) that
- * is the documented gate in context/dox/built.md: 1440, 390, 360 and 300 px.
+ * is the documented gate in context/dox/built/tier-2-gates.md: 1440, 390, 360 and 300 px.
  *
  * Serve a build statically first (never `astro dev` on 4321, never the owner's
  * dev server), for example:
@@ -132,8 +149,9 @@
  * sandbox on the author's machine.
  *
  * The runner's contract (`pnpm --filter dox gates`, `scripts/gates/`): `--list-pages` prints the
- * tool pages and exits; `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with
- * `GATE_REPORT` set, every failure is also a finding and the run ends with its measured count.
+ * tool pages and exits; `--list-page-costs` prints each one's `minutes` and exits;
+ * `--pages /tools/<slug>/,...` runs only those (an unknown path exits 2); with `GATE_REPORT` set,
+ * every failure is also a finding and the run ends with its measured count.
  */
 
 import { launchBrowser } from "./lib/browser-launch.mjs";
@@ -193,24 +211,41 @@ const DRAWN_PART = {
 };
 /** The selector of each part a tool names as moving by design: its own box moves with the
  *  slider and it is left out of the comparison, with everything inside it. It is a
- *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built.md). */
+ *  `data-gate="moving"` hook (see "Gate hooks" in context/dox/built/tier-2-platform.md). */
 const MOVING_PART = {
   // The leap-second chart's date cursor: the horizontal guide, the dot, the vertical pin and
   // the date tag (the leap-chart builder marks these four, not the band's own tag). The cursor
   // encodes the slider date by position, so it moves with the slider by design; the staircase,
   // marks, tick labels and axis stay measured.
   cursor: gate("moving"),
+  // The Report Time Resolver's NOTAM section: it has its own presets, badges, reasons and call
+  // lines, so its insides change by design (their element count differs from preset to preset).
+  // Its two hero plates are still measured, because heroes are collected before this part is
+  // left out, so a NOTAM preset is compared on section 1 and on the NOTAM plates.
+  notam: gate("notam"),
 };
 /** The selector of each kind of text box a tool names. */
 const TEXT_PART = {
   codeframe: `${gate("codeframe")} code, ${gate("codeframe")} code *`,
   instant: gate("instant"),
+  verdict: `${gate("verdict")} strong, ${gate("verdict")} span`,
 };
 const PRESET = { role: "combobox", name: "Preset" };
+/** The Trip Board's border preset, as pasted: six stops, three of them in Lisbon's zone. */
+const TRIP_BORDER = [
+  "stop_id,arrival_time,departure_time,stop_timezone",
+  "madrid-chamartin,08:00:00,08:00:00,",
+  "caceres,10:32:00,10:35:00,",
+  "badajoz,11:25:00,11:32:00,",
+  "elvas,11:52:00,11:54:00,Europe/Lisbon",
+  "entroncamento,13:20:00,13:22:00,Europe/Lisbon",
+  "lisboa-oriente,14:15:00,14:15:00,Europe/Lisbon",
+].join("\n");
 
 const TOOLS = [
   {
     slug: "departure-board",
+    minutes: 16.3,
     root: '[data-widget="departure-board"]',
     presets: [
       "shuttle-headway",
@@ -229,6 +264,7 @@ const TOOLS = [
   },
   {
     slug: "punctuality-board",
+    minutes: 3.9,
     root: '[data-widget="punctuality-board"]',
     presets: ["fifteen-minute", "sixty-and-120", "day-based", "fall-back"],
     // The early and second-late handles appear only in presets that use them;
@@ -252,6 +288,7 @@ const TOOLS = [
   },
   {
     slug: "eta-drift",
+    minutes: 2.5,
     root: '[data-widget="eta-drift"]',
     presets: ["vessel-slide", "est-after-act", "req-beats-est", "one-estimate"],
     controls: [{ role: "slider", name: "Drag the tolerance" }],
@@ -259,6 +296,7 @@ const TOOLS = [
   },
   {
     slug: "timetable-reader",
+    minutes: 12.0,
     root: '[data-widget="timetable-reader"]',
     presets: [
       "fall-back",
@@ -291,7 +329,37 @@ const TOOLS = [
     pointerSteps: 48,
   },
   {
+    // CORE-115. The From and To handles drag along the week lane; the readouts hold still
+    // by design (ghosts), the bars and gates move.
+    slug: "opening-hours-board",
+    minutes: 5,
+    root: '[data-widget="opening-hours-board"]',
+    presets: [
+      "tokyo-desk",
+      "johannesburg-holidays",
+      "kolkata-annotated-holiday",
+      "sao-paulo-two-overrides",
+      "sydney-night-curfew",
+    ],
+    controls: [
+      {
+        role: "slider",
+        name: "From",
+        value: { role: "textbox", name: "From (instant)" },
+      },
+      {
+        role: "slider",
+        name: "To",
+        value: { role: "textbox", name: "To (instant)" },
+      },
+    ],
+    track: "track",
+    drawn: ["drawn"],
+    maxKeys: 60,
+  },
+  {
     slug: "free-time-ledger",
+    minutes: 10.1,
     root: '[data-widget="free-time-ledger"]',
     presets: [
       "friday-three-days",
@@ -320,6 +388,7 @@ const TOOLS = [
   },
   {
     slug: "dwell-ledger",
+    minutes: 5.5,
     root: '[data-widget="dwell-ledger"]',
     // "no-zone" returns null, so it is left out; every other preset returns a
     // value.
@@ -347,6 +416,7 @@ const TOOLS = [
   },
   {
     slug: "bl-date-stamp",
+    minutes: 2.2,
     root: '[data-widget="bl-date-stamp"]',
     // "no-zone" returns no date, so it is left out; every other preset returns
     // a value.
@@ -364,11 +434,13 @@ const TOOLS = [
   },
   /* The GNSS and leap-second tools (MAR-16). Their frame is the `frame` part;
      what moves with the value by design is what they draw: the lanes, the
-     bars, the strip, the timeline and the rulers, and a hold's live wrapper.
+     bars, the strip, the timeline and the rulers, and, in the rollover checker alone (the one GNSS
+     tool that draws a `hold`), a hold's live wrapper.
      The ring's laps, hand and hub are drawn (they sit in `lanes`); the plates,
      the legend, the tables and the call frame are measured. */
   {
     slug: "gnss-week-decoder",
+    minutes: 2.4,
     root: '[data-widget="gnss-week-decoder"]',
     presets: ["galileo-2019", "lnav-2024", "same-reading-two-dates"],
     controls: [
@@ -376,24 +448,26 @@ const TOOLS = [
       { role: "slider", name: "Slide the time of week", optional: true },
     ],
     track: null,
-    scope: "widget",
+    scope: "above",
     drawn: ["drawn"],
     riders: true,
     textBoxes: ["codeframe"],
   },
   {
     slug: "satellite-clock-converter",
+    minutes: 1.4,
     root: '[data-widget="satellite-clock-converter"]',
     presets: ["utc-2024", "galileo-first-instant", "beidou-reading"],
     controls: [{ role: "slider", name: "Step through the leap seconds" }],
     track: null,
-    scope: "widget",
+    scope: "above",
     drawn: ["drawn"],
     riders: true,
     textBoxes: ["codeframe"],
   },
   {
     slug: "gnss-rollover-checker",
+    minutes: 1.7,
     root: '[data-widget="gnss-rollover-checker"]',
     // The presets that check on a stated date: the slider is live only there.
     presets: ["navic-built-2020", "navic-fixed-era", "galileo-built-2024"],
@@ -401,13 +475,14 @@ const TOOLS = [
       { role: "slider", name: "Slide the date through the firmware's window" },
     ],
     track: null,
-    scope: "widget",
-    drawn: ["drawn"],
+    scope: "above",
+    drawn: ["drawn", "hold"],
     riders: true,
-    textBoxes: ["codeframe"],
+    textBoxes: ["codeframe", "verdict"],
   },
   {
     slug: "leap-second-timeline",
+    minutes: 2.4,
     root: '[data-widget="leap-second-timeline"]',
     presets: ["from-2000", "last-insertion", "after-the-table"],
     controls: [{ role: "slider", name: "Move the date" }],
@@ -419,18 +494,55 @@ const TOOLS = [
     textBoxes: ["codeframe"],
   },
   {
+    slug: "terrestrial-time-stack",
+    minutes: 3.7,
+    root: '[data-widget="terrestrial-time-stack"]',
+    presets: [
+      "utc-2026",
+      "epoch",
+      "inside-leap-second",
+      "far-future",
+      "before-1972",
+    ],
+    controls: [{ role: "slider", name: "Move the year" }],
+    track: null,
+    scope: "widget",
+    // The sentence, footnote and table cells are holds: their live wrapper is left out.
+    drawn: ["drawn", "hold"],
+    moving: ["cursor"],
+    riders: true,
+    textBoxes: ["codeframe", "instant"],
+    extraWidths: [300],
+  },
+  {
+    slug: "double-precision-meter",
+    minutes: 2.7,
+    root: '[data-widget="double-precision-meter"]',
+    presets: ["mid-2026", "lost", "past-6771", "j2000", "far"],
+    controls: [{ role: "slider", name: "Move the year" }],
+    track: null,
+    scope: "widget",
+    // The sentence, footnote and plate cells are holds: their live wrapper is left out.
+    drawn: ["drawn", "hold"],
+    moving: ["cursor"],
+    riders: true,
+    extraWidths: [300],
+  },
+  {
     slug: "elapsed-vs-clock-difference",
+    minutes: 1.4,
     root: '[data-widget="elapsed-vs-clock"]',
     presets: ["across-2016", "twenty-four-years", "no-insertions"],
     controls: [{ role: "slider", name: "Move the end" }],
     track: null,
-    scope: "widget",
+    scope: "above",
     drawn: ["drawn"],
     riders: true,
     textBoxes: ["codeframe"],
   },
   {
     slug: "holiday-rule-builder",
+    minutes: 4.5,
     root: '[data-widget="holiday-rule-builder"]',
     presets: [
       "chain",
@@ -451,6 +563,7 @@ const TOOLS = [
   },
   {
     slug: "observance-comparator",
+    minutes: 0.8,
     root: '[data-widget="observance-comparator"]',
     presets: ["adjacent"],
     // The last year, stepped ten times each way: the plates and the table
@@ -464,6 +577,7 @@ const TOOLS = [
   },
   {
     slug: "moving-feasts",
+    minutes: 2.2,
     root: '[data-widget="moving-feasts"]',
     presets: ["third-wednesday", "last-sunday-march", "fifth-friday"],
     controls: [{ role: "slider", name: "Year slider" }],
@@ -475,6 +589,7 @@ const TOOLS = [
   },
   {
     slug: "cron-in-a-zone",
+    minutes: 0.5,
     root: '[data-widget="cron-in-a-zone"]',
     presets: ["london-spring", "sydney-every-five"],
     // The year field, stepped three times each way. Every row, plate and tick
@@ -489,6 +604,7 @@ const TOOLS = [
   },
   {
     slug: "leap-day-birthday",
+    minutes: 3.6,
     root: '[data-widget="leap-day-birthday"]',
     presets: [
       "leap-day-birth",
@@ -513,6 +629,7 @@ const TOOLS = [
   },
   {
     slug: "expiry-calculator",
+    minutes: 9.4,
     root: '[data-widget="expiry-calculator"]',
     presets: [
       "year-across-leap",
@@ -537,11 +654,477 @@ const TOOLS = [
       },
       { role: "combobox", name: "Unit", values: "options" },
     ],
-    clock: true,
+    // Now starts it, and the "Live clock" switch pauses it.
+    clock: { radios: ["Now", "A date"], pause: "Live clock" },
     track: null,
     scope: "widget",
     drawn: ["hold"],
     riders: true,
+    textBoxes: ["codeframe", "instant"],
+  },
+  {
+    // The "Drag now" slider by keyboard and pointer; the cut-off and Now are typed too. The
+    // zoneless-now preset has no window, so its slider is off and it is left out.
+    // The axis draws the bands and the now mark, so its insides move by design (`drawn`). The
+    // face, the verdict and the two outputs hold a slot each. The page opens pinned, so the
+    // "Live clock" switch starts off: the gate turns it on, diffs three ticks, then pauses and
+    // starts it again.
+    slug: "cutoff-countdown",
+    minutes: 6.0,
+    root: '[data-widget="cutoff-countdown"]',
+    presets: ["late", "on-time", "at-cutoff", "other-clock", "repeated-hour"],
+    controls: [{ role: "slider", name: "Drag now" }],
+    entries: [
+      {
+        role: "textbox",
+        name: "Cut-off",
+        values: [
+          "2024-06-12T17:00:00+02:00[Europe/Amsterdam]",
+          "2024-10-27T01:30:00+01:00[Europe/London]",
+          "x",
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Now",
+        values: [
+          "2024-06-12T17:20:00+02:00",
+          "2024-06-12T20:30:00+05:30",
+          "2024-06-12T17:20:00",
+          "x",
+          "",
+        ],
+      },
+    ],
+    clock: { role: "switch", name: "Live clock", startsOn: false },
+    track: null,
+    frame: false,
+    scope: "above",
+    drawn: ["drawn", "hold"],
+    riders: true,
+    textBoxes: ["codeframe", "verdict"],
+  },
+  {
+    // FIN-95. No handle: the reader types a stamp or an instant, or picks an instant preset.
+    // The first preset reads a stamp and the last is refused, so each value is typed from both.
+    slug: "fix-timestamp-reader",
+    minutes: 3.0,
+    root: '[data-widget="fix-timestamp-reader"]',
+    presets: ["milliseconds", "second-60-ordinary"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "UTCTimestamp",
+        values: [
+          "20240615-14:30:00",
+          "20240615-14:30:00.123456789012",
+          "20161231-23:59:60.500",
+          "20161231-23:58:60",
+          "20171231-23:59:60",
+          "20240615-14:30:00.12345678",
+          "2024-06-15",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Instant",
+        values: [
+          "2024-06-15T14:30:00Z",
+          "2016-12-31T23:59:60.123456789Z",
+          "2024-06-15T16:30:00.123456789+02:00",
+          "2024-06-15T14:30:00",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      { role: "combobox", name: "Instant preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    // The figure, the calls, the outputs, the verdict and the notes are holds: their live
+    // wrapper is left out, and the hold that reserves the space is measured.
+    drawn: ["hold"],
+    textBoxes: ["instant"],
+  },
+  {
+    // X12 time elements. No handle: the reader types the date, the time and the time code, picks a
+    // preset or a zone. The strip's third column holds an instant with an offset, up to
+    // `1900-06-15T14:30:00.12+05:21:10` (31 characters) for a zone's local mean time: the cell keeps
+    // two lines at 23 characters, so the longest value must not move it. The first date is a
+    // year-1900 one for that reason, and the first preset carries hundredths of a second.
+    slug: "x12-time-reader",
+    minutes: 6.0,
+    root: '[data-widget="x12-time-reader"]',
+    presets: ["hundredths", "status-et"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Date (373) (optional)",
+        values: ["19000615", "20240615", "20240115", "99999999", "abc", ""],
+      },
+      {
+        role: "textbox",
+        name: "Time (337) (optional)",
+        values: ["14300012", "1430", "143000", "2560", "x", ""],
+      },
+      {
+        role: "textbox",
+        name: "Time code (623) (optional)",
+        values: ["ET", "ED", "UTC", "ZZZZZZZZ", ""],
+      },
+      { role: "combobox", name: "Zone 1", values: "options" },
+      { role: "combobox", name: "DTP preset", values: "options" },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe", "instant"],
+  },
+  {
+    // SPA-52. No handle: the reader types a code or an instant, picks a preset or clicks a digit chip.
+    // The first preset reads a Code B and the second is refused, so each value is typed from both.
+    slug: "ccsds-time-code-decoder",
+    minutes: 4.2,
+    root: '[data-widget="ccsds-time-code-decoder"]',
+    presets: ["leap-2016-b", "minutes-only"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "CCSDS ASCII time code",
+        values: [
+          "2016-366T23:59:60.5Z",
+          "1988-01-18T17:20:43.123456Z",
+          "1988-018T17:20:43.123456Z",
+          "2024-001T00:00:00",
+          "2024-06-15T10:30:00.123456789012Z",
+          "2017-365T23:59:60Z",
+          "2023-366T00:00:00Z",
+          "2024-06-15T10:30Z",
+          "2024-06-15t10:30:00z",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Instant",
+        values: [
+          "2026-12-31T23:59:59.9999999Z",
+          "2016-12-31T23:59:60.999999999Z",
+          "2024-06-15T16:30:00.123456789+02:00",
+          "2024-06-15T14:30:00",
+          "9".repeat(64),
+          "",
+        ],
+      },
+      { role: "group", name: "Fraction digits", chips: true },
+      { role: "combobox", name: "Instant preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    // The figure, the calls, the outputs, the verdict and the notes are holds: their live
+    // wrapper is left out, and the hold that reserves the space is measured.
+    drawn: ["hold"],
+    textBoxes: ["instant"],
+  },
+  {
+    // SPA-52. The day slider by keyboard and by pointer, and each year typed from every kind of
+    // value: a leap year, a common year, a century year, one the library refuses, and blank. The
+    // lanes' marks and the cursor move by design, so each lane is `drawn`; the two readouts, the
+    // comparison line and every hold keep their boxes.
+    slug: "code-b-day-ruler",
+    minutes: 2.8,
+    root: '[data-widget="code-b-day-ruler"]',
+    presets: ["after-leap-day", "day-366", "century"],
+    controls: [{ role: "slider", name: "Day of year" }],
+    entries: [
+      {
+        role: "spinbutton",
+        name: "Year",
+        values: ["2016", "2017", "2100", "10000", "1", ""],
+      },
+      {
+        role: "spinbutton",
+        name: "Compare with",
+        values: ["2016", "2017", "2100", "10000", "1", ""],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    riders: true,
+    textBoxes: ["codeframe"],
+  },
+  {
+    // AV-98. The slider moves the reference one minute at a time across a month: no plate, card,
+    // table row or section moves or resizes, and only the marks on the two drawn lanes do. The
+    // second pass chooses every NOTAM preset and checks that section 1 and the two NOTAM plates
+    // (heroes) stay where they were; the rest of section 2 moves by design.
+    slug: "report-time-resolver",
+    minutes: 3.8,
+    root: '[data-widget="report-time-resolver"]',
+    presetName: "METAR preset",
+    presets: ["month-end", "february-31", "tie", "offset-reference"],
+    controls: [{ role: "slider", name: "Move the reference" }],
+    entries: [{ role: "combobox", name: "NOTAM preset", values: "options" }],
+    track: "track",
+    scope: "widget",
+    drawn: ["drawn", "hold", "grid"],
+    moving: ["notam"],
+    riders: true,
+    textBoxes: ["codeframe"],
+  },
+  {
+    // FIN-96. No handle: the reader types a value date or an ISO date, or picks a preset for each.
+    // The first read preset reads a date and the last is refused, so each value is typed from both.
+    slug: "swift-value-date-reader",
+    minutes: 2.8,
+    root: '[data-widget="swift-value-date-reader"]',
+    presets: ["twenty", "whole-subfield"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Value date (YYMMDD)",
+        values: [
+          "990615",
+          "240615",
+          "750101",
+          "050229",
+          "040229",
+          "2406",
+          "240615EUR1000,00",
+          "２４０６１５",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "ISO date",
+        values: [
+          "2024-06-15",
+          "2000-12-31",
+          "2061-01-01",
+          "2024-06-15T10:00:00",
+          "x".repeat(32),
+          "",
+        ],
+      },
+      { role: "combobox", name: "Date preset", values: "options" },
+    ],
+    track: null,
+    // It draws no chart, so it has no frame part.
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // RAI-99. No handle: the reader types a GTFS time, or seconds and days to write, or picks a preset.
+    // The first read preset reads a time and the last is refused, so each value is typed from both.
+    slug: "gtfs-time-reader",
+    minutes: 3.5,
+    root: '[data-widget="gtfs-time-reader"]',
+    presets: ["next-day", "space"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "GTFS time",
+        values: [
+          "25:35:00",
+          "9:05:00",
+          "999:59:59",
+          "24:60:00",
+          "1000:00:00",
+          "25:35",
+          "-01:00:00",
+          "25:35:00.5",
+          " 25:35:00",
+          "９:０５:００",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Seconds (less whole days)",
+        values: [
+          "5700",
+          "0",
+          "86399",
+          "86400",
+          "-1",
+          "1.5",
+          "x",
+          "9".repeat(16),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Days past the service day",
+        values: ["0", "1", "41", "42", "-1", "1.5", "x", "9".repeat(16), ""],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // RAI-100. No handle: the reader types a service date, a stop time and a zone, or picks a preset.
+    // The first preset reads a date and the second refuses it, so each box is typed from both.
+    slug: "gtfs-service-day-clock",
+    minutes: 2.2,
+    root: '[data-widget="gtfs-service-day-clock"]',
+    presets: ["spring-forward", "no-noon"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Service date (calendar.txt)",
+        values: ["20260329", "20260230", "2026-03-29", "9".repeat(16), ""],
+      },
+      {
+        role: "textbox",
+        name: "Stop time (stop_times.txt)",
+        values: ["08:00:00", "26:30:00", "25:60:00", "999:59:59", ""],
+      },
+      {
+        role: "textbox",
+        name: "Zone (agency.txt, agency_timezone)",
+        values: [
+          "Europe/Berlin",
+          "UTC",
+          "+05:30",
+          "Not/AZone",
+          "America/Argentina/Buenos_Aires",
+          "",
+        ],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "widget",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // RAI-100. No handle: the reader pastes a trip, types a service date and a zone, or picks a
+    // preset. The table and the calls grow with the trip by design (inside `grow()`), so the
+    // gate records what sits above them: the hero plates, and each value's hold. The pastes below
+    // all keep the border trip's six rows, so a cell is compared at the same row count.
+    slug: "gtfs-trip-board",
+    minutes: 2.9,
+    root: '[data-widget="gtfs-trip-board"]',
+    presets: ["border", "night-train", "no-noon"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Trip rows (stop_times.txt, with stop_timezone from stops.txt)",
+        values: [
+          TRIP_BORDER,
+          TRIP_BORDER.replace("10:32:00,10:35:00", "10:99:00,10:35:00"),
+          TRIP_BORDER.replace("Europe/Lisbon", "Europe/Wien"),
+          TRIP_BORDER.replace("11:25:00,11:32:00", "11:25:00,"),
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Service date (calendar.txt)",
+        values: ["20260615", "20260230", "2026-06-15", ""],
+      },
+      {
+        role: "textbox",
+        name: "Zone (agency.txt, agency_timezone)",
+        values: [
+          "Europe/Madrid",
+          "+05:30",
+          "Not/AZone",
+          "America/Argentina/Buenos_Aires",
+          "",
+        ],
+      },
+    ],
+    track: null,
+    frame: false,
+    scope: "above",
+    drawn: ["drawn", "hold"],
+    textBoxes: ["codeframe"],
+  },
+  {
+    // IOT-101. No handle: the reader types a PTP record and an offset, or an instant, or picks a
+    // preset. The ruler's marks move by design. The first read preset reads and the sixth is
+    // refused, so each value is typed from both.
+    slug: "ptp-clock-converter",
+    minutes: 4.5,
+    root: '[data-widget="ptp-clock-converter"]',
+    presets: ["announced-37", "out-of-range"],
+    controls: [],
+    entries: [
+      {
+        role: "textbox",
+        name: "Seconds",
+        values: [
+          "1704067237",
+          "0",
+          "-1",
+          "1.5",
+          "x",
+          "281474976710656",
+          "9".repeat(20),
+          "-" + "9".repeat(20),
+          "",
+        ],
+      },
+      {
+        role: "textbox",
+        name: "Nanoseconds",
+        values: ["0", "500000000", "-1", "1.5", "x", "9".repeat(11), ""],
+      },
+      {
+        role: "textbox",
+        name: "currentUtcOffset (s)",
+        values: ["37", "36", "0", "-1", "37.5", "x", "90", "9".repeat(11), ""],
+      },
+      {
+        role: "textbox",
+        name: "UTC instant",
+        values: [
+          "2024-01-01T02:00:00+02:00",
+          "2016-12-31T23:59:60Z",
+          "1969-12-31T23:59:59Z",
+          "+275760-09-12T23:59:59.999999999Z",
+          "x",
+          "9".repeat(64),
+          "",
+        ],
+      },
+    ],
+    // The "PTP now" section ticks on its own: the switch starts on, so the base is taken while
+    // the clock runs, each tick is diffed against it, then the switch is paused and started.
+    clock: { role: "switch", name: "Live clock", startsOn: true },
+    track: null,
+    moving: ["cursor"],
+    frame: false,
+    scope: "widget",
+    drawn: ["hold"],
     textBoxes: ["codeframe"],
   },
 ];
@@ -555,7 +1138,11 @@ const TOOLS = [
  */
 /** The pages this gate checks, as site paths. */
 const SITE_PAGES = TOOLS.map((t) => `/tools/${t.slug}/`);
-const PAGES_ARG = applyPageContract({ gate: GATE, pages: SITE_PAGES });
+const PAGES_ARG = await applyPageContract({
+  gate: GATE,
+  pages: SITE_PAGES,
+  costs: Object.fromEntries(TOOLS.map((t) => [`/tools/${t.slug}/`, t.minutes])),
+});
 /** The page, browser and width the measurement in progress belongs to, for its findings. */
 let current = { page: null, browser: null, width: null };
 /** The widget the measurement in progress belongs to, as a finding target when nothing finer is. */
@@ -643,7 +1230,9 @@ function snapshotInPage(
     });
   };
   widget.querySelectorAll(hero).forEach((el) => add("hero", el));
-  add("frame", widget.querySelector(frame));
+  // A tool that draws no chart has no frame (`frame: false` on its row, so `frame` is null). Any
+  // other tool must have one: a missing frame throws here rather than going unmeasured.
+  if (frame) add("frame", widget.querySelector(frame));
   add("control", control);
   const everything = scope === "widget";
   const within = everything ? widget : section;
@@ -698,7 +1287,7 @@ async function snapshot(page, ctl, tool) {
   );
   return ctl.evaluate(snapshotInPage, {
     hero: gate("hero"),
-    frame: gate("frame"),
+    frame: tool.frame === false ? null : gate("frame"),
     // A row with no drawn part matches nothing, and `:not(*)` is a selector that cannot match.
     drawn:
       (tool.drawn ?? ["drawn"]).map((p) => DRAWN_PART[p]).join(", ") ||
@@ -768,7 +1357,7 @@ async function run() {
     console.log(`FAIL ${id}: ${message}`);
   };
   if (RESOLVE_ONLY) {
-    const browser = await ENGINES.chromium.launch();
+    const browser = await launchBrowser("chromium");
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       colorScheme: "dark",
@@ -804,7 +1393,11 @@ async function run() {
           min: c.optional ? 0 : 1,
           max: 1,
         })),
-        { name: "frame part", sel: gate("frame"), min: 1 },
+        {
+          name: "frame part",
+          sel: gate("frame"),
+          min: tool.frame === false ? 0 : 1,
+        },
         ...(tool.track
           ? [{ name: "track part", sel: gate(tool.track), min: 1 }]
           : []),
@@ -1084,6 +1677,46 @@ async function run() {
               fail(id, "the field is not on the page");
               continue;
             }
+            if (entry.chips === true) {
+              // A group of radio chips: click each in turn, then put the first back.
+              const radios = ctl.first().getByRole("radio");
+              const names = await radios.evaluateAll((els) =>
+                els.map((el) => el.value),
+              );
+              const base = await snapshot(page, ctl, tool);
+              for (const value of names) {
+                await ctl
+                  .first()
+                  .locator(`input[value="${value}"]`)
+                  .evaluate((el) => el.click());
+                await page.waitForTimeout(60);
+                await settled(page, tool.root);
+                for (const p of diffSnapshots(
+                  base,
+                  await snapshot(page, ctl, tool),
+                  false,
+                )) {
+                  result.problems.push(`${JSON.stringify(value)}: ${p}`);
+                }
+                result.keyboard++;
+              }
+              await ctl
+                .first()
+                .locator(`input[value="${names[0]}"]`)
+                .evaluate((el) => el.click());
+              await settled(page, tool.root);
+              const ok = result.problems.length === 0;
+              if (!ok) failures++;
+              summary.push({ id, ...result, ok });
+              recordDragFindings(result, controlLabel(entry));
+              console.log(
+                `${ok ? "ok  " : "FAIL"} ${id}: ${result.keyboard} values` +
+                  (ok ? "" : `, ${result.problems.length} problem(s)`),
+              );
+              for (const p of result.problems.slice(0, 6))
+                console.log(`       ${p}`);
+              continue;
+            }
             const isSelect = await ctl.evaluate(
               (el) => el.tagName === "SELECT",
             );
@@ -1124,25 +1757,57 @@ async function run() {
               console.log(`       ${p}`);
           }
           if (tool.clock) {
-            // The Now switch: flip it, then let the clock tick three times. The flip and each
-            // tick must leave every box where it was, including the library's null refusal.
+            // The clock: start it (unless the page opens with it ticking), let it tick three
+            // times, then pause it and start it again. Every step must leave every box where it
+            // was, including the library's null refusal. `radios` are the Expiry Calculator's
+            // "Now" and "A date", with `pause` the switch that holds Now still; otherwise the
+            // clock is a switch (the PTP Clock Converter's and the Cutoff Countdown's "Live
+            // clock"). The pause and the restart are diffed against the ticking boxes.
+            const spec = tool.clock;
             const id = `${where} ${preset} Now`;
             const result = { keyboard: 0, pointer: 0, problems: [] };
             const ctl = control(page, tool.root, PRESET);
             const base = await snapshot(page, ctl, tool);
-            const chip = page
-              .locator(tool.root)
-              .getByRole("radio", { name: "Now", exact: true });
-            await chip.evaluate((el) => el.click());
-            await settled(page, tool.root);
-            for (const p of diffSnapshots(
-              base,
-              await snapshot(page, ctl, tool),
-              false,
-            )) {
-              result.problems.push(`flip to Now: ${p}`);
+            const root = page.locator(tool.root);
+            const radios = spec.radios !== undefined;
+            const clockSwitch = radios
+              ? { role: "switch", name: spec.pause }
+              : spec;
+            const setSwitch = (on) =>
+              root
+                .getByRole(clockSwitch.role, {
+                  name: clockSwitch.name,
+                  exact: true,
+                })
+                .evaluate((el, to) => {
+                  if (el.checked !== to) el.click();
+                }, on);
+            const turn = (to) =>
+              radios
+                ? root
+                    .getByRole("radio", {
+                      name: spec.radios[to ? 0 : 1],
+                      exact: true,
+                    })
+                    .evaluate((el) => el.click())
+                : setSwitch(to);
+            const holds = async (from, label) => {
+              await settled(page, tool.root);
+              for (const p of diffSnapshots(
+                from,
+                await snapshot(page, ctl, tool),
+                false,
+              )) {
+                result.problems.push(`${label}: ${p}`);
+              }
+            };
+            if (!spec.startsOn) {
+              await turn(true);
+              await holds(base, "flip to Now");
             }
-            const flipped = await snapshot(page, ctl, tool);
+            const flipped = spec.startsOn
+              ? base
+              : await snapshot(page, ctl, tool);
             for (let tick = 1; tick <= 3; tick++) {
               await page.waitForTimeout(1050);
               for (const p of diffSnapshots(
@@ -1154,11 +1819,14 @@ async function run() {
               }
               result.keyboard++;
             }
-            await page
-              .locator(tool.root)
-              .getByRole("radio", { name: "A date", exact: true })
-              .evaluate((el) => el.click());
-            await settled(page, tool.root);
+            await setSwitch(false);
+            await holds(flipped, "pause");
+            await setSwitch(true);
+            await holds(flipped, "resume");
+            if (!spec.startsOn) {
+              await turn(false);
+              await settled(page, tool.root);
+            }
             const ok = result.problems.length === 0;
             if (!ok) failures++;
             summary.push({ id, ...result, ok });

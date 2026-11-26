@@ -1,0 +1,121 @@
+name: CLDR sweep weekly
+
+# Pulse check: cldr-sweep
+#
+# The week-year and range-field defects (D23, D24, D29 in packages/gmt/src/internal/temporalCompat)
+# depend on the locale data inside each Node release, so no unit test can cover them. Once a week
+# this sweep runs both detectors over every `cldr-dates-full` locale and every calendar, on Node 22,
+# 24 and 26: scripts/canary/weekYear.mjs for week-of-year years and V8 aborts, and
+# scripts/canary/rangeFields.mjs for a range that drops, repeats or garbles a field of one date.
+# It is far too slow for ci.yml (about 160 CPU-minutes per Node), so it never runs there.
+#
+# A run fails only when a detector misses a defect the engine's own range parts confirm, or reports
+# one they do not. A locale that is still broken does not fail it. Each leg writes a report and
+# uploads it; the next run reads the report of the same leg from the previous run and lists, in the
+# job summary, the locales that newly break and the ones that are fixed. No issue is filed and no
+# token can write.
+#
+# Legs: rangeFields.mjs --shard i/n deals the sorted locales out round-robin, so the shards of one
+# Node share the work. weekYear.mjs runs once per Node, on shard 1. Adding or removing a shard
+# means changing the matrix.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 3 * * 6"
+
+concurrency:
+  group: cldr-sweep-weekly
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  # The job runs the Node it names, not the devEngines.runtime pin.
+  pnpm_config_verify_deps_before_run: "false"
+
+jobs:
+  sweep:
+    name: Sweep (${{ matrix.leg }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { leg: node22-1, node: 22, shard: "1/2" }
+          - { leg: node22-2, node: 22, shard: "2/2" }
+          - { leg: node24-1, node: 24, shard: "1/2" }
+          - { leg: node24-2, node: 24, shard: "2/2" }
+          - { leg: node26-1, node: 26, shard: "1/2" }
+          - { leg: node26-2, node: 26, shard: "2/2" }
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --no-runtime
+
+      - name: Build the library
+        run: pnpm --filter @northguild/gmt build
+
+      # The week-year sweep covers every locale in one pass, so only the first shard of each Node
+      # runs it.
+      - name: Week-year sweep
+        if: ${{ startsWith(matrix.shard, '1/') }}
+        run: node scripts/canary/weekYear.mjs
+
+      - name: Range-field sweep (shard ${{ matrix.shard }})
+        if: ${{ !cancelled() }}
+        run: >
+          node scripts/canary/rangeFields.mjs --shard ${{ matrix.shard }}
+          --out "$RUNNER_TEMP/range-fields-${{ matrix.leg }}.json"
+
+      - name: Upload the report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cldr-sweep-${{ matrix.leg }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/range-fields-${{ matrix.leg }}.json
+          if-no-files-found: ignore
+          retention-days: 35
+
+      # Finds the newest earlier run of this workflow that finished and kept a report for this leg,
+      # then lists what changed. No earlier report is a note, never a failure.
+      - name: Compare with the previous run
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEG: ${{ matrix.leg }}
+        run: |
+          current="$RUNNER_TEMP/range-fields-$LEG.json"
+          {
+            echo "## Range fields, $LEG"
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -f "$current" ]; then
+            echo "This run wrote no report." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          previous=""
+          for run in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/cldr-sweep-weekly.yml/runs?status=completed&per_page=10" \
+            --jq ".workflow_runs[] | select(.id != $GITHUB_RUN_ID and .conclusion != \"cancelled\") | .id" 2>/dev/null); do
+            if gh run download "$run" --repo "$GITHUB_REPOSITORY" --name "cldr-sweep-$LEG-$run" --dir "$RUNNER_TEMP/previous" 2>/dev/null; then
+              previous="$RUNNER_TEMP/previous/range-fields-$LEG.json"
+              break
+            fi
+          done
+          if [ -z "$previous" ] || [ ! -f "$previous" ]; then
+            echo "No earlier report for this leg, so there is nothing to compare." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          node scripts/canary/rangeFields.mjs --diff "$previous" "$current" >> "$GITHUB_STEP_SUMMARY"

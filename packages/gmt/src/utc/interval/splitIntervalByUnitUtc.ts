@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
-import { isValidUtc } from "../validate/isValidUtc";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { resolveDurationUnit, tileByUnit } from "../../internal";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import { minSlicesForSpan } from "../../internal/splitStep";
@@ -77,7 +77,9 @@ export function splitIntervalByUnitUtc(
       return [];
     }
 
-    if (!isValidUtc(start) || !isValidUtc(end)) {
+    const startInstant = utcInstantOf(start);
+    const endInstant = utcInstantOf(end);
+    if (startInstant === null || endInstant === null) {
       return [];
     }
 
@@ -88,7 +90,7 @@ export function splitIntervalByUnitUtc(
     const resolvedUnit = resolveDurationUnit(unit);
 
     // An unknown unit is invalid whatever the span, a zero-length one included.
-    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+    if (!isDateTimeDurationUnitName(resolvedUnit)) {
       return [];
     }
 
@@ -103,9 +105,6 @@ export function splitIntervalByUnitUtc(
     }
 
     try {
-      const startInstant = Temporal.Instant.from(start);
-      const endInstant = Temporal.Instant.from(end);
-
       if (Temporal.Instant.compare(startInstant, endInstant) > 0) {
         return [];
       }

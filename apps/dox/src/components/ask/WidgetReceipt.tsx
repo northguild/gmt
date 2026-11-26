@@ -16,6 +16,7 @@ import type { ToolUIPart } from "ai";
 import { getToolName } from "ai";
 import { encodeWidgetPermalink } from "~/lib/widget-permalink";
 import { resolveWidget } from "./widget-registry";
+import { Link } from "./Link";
 
 export function WidgetReceipt({
   part,
@@ -64,9 +65,9 @@ export function WidgetReceipt({
       {/* A real link, not a clipboard button: this one addresses the state Dox
           seeded, which is fixed, so it can simply be followed. The rail's copy
           button addresses live state, which cannot. */}
-      <a className="gmt-hive-receipt-link" href={permalink}>
+      <Link className="gmt-hive-receipt-link" href={permalink}>
         Open the full page
-      </a>
+      </Link>
     </div>
   );
 }

@@ -2,13 +2,12 @@ import { isoDateString } from "../../internal/epochDay";
 import { Temporal } from "../../internal/temporal";
 import {
   frameZoned,
-  instantFrom,
   parseFreeDays,
   parseFreeTimeTerms,
   walkFreeTime,
   zoneFrame,
 } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { FreeTimeOptions } from "../../types";
 
 /** What `freeTimeExpiry` returns: the free-time window as local dates, and the instant it ends. */
@@ -93,8 +92,9 @@ export function freeTimeExpiry(
     const terms = parseFreeTimeTerms(options);
     const allowed = parseFreeDays(freeDays, 1);
     const frame = terms === null ? null : zoneFrame(terms.timeZone);
+    const startInstant = instantOf(clockStart);
     if (
-      !isValidInstant(clockStart) ||
+      startInstant === null ||
       terms === null ||
       frame === null ||
       allowed === null
@@ -102,7 +102,7 @@ export function freeTimeExpiry(
       return null;
     }
 
-    const start = frameZoned(instantFrom(clockStart), frame);
+    const start = frameZoned(startInstant, frame);
     const ledger = walkFreeTime(start, allowed, terms);
     if (
       ledger === null ||

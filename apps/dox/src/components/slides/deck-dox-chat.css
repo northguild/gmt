@@ -1,0 +1,65 @@
+/*
+ * The chat inside the deck's Dox frame (`DeckDox`, whose frame carries `data-deck-dox`). The
+ * chat is the real one (gmt-hive.css); a slide is a short host, so its transcript, empty state
+ * and composer sit tighter here than on /dox/.
+ */
+
+/* At the site's spacing the transcript outgrows its scroller, which keeps to the bottom: the hub
+   and a turn's start scroll out of view. */
+[data-deck-dox] .gmt-hive-chat .gmt-hive {
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  gap: var(--gmt-space-4);
+}
+
+[data-deck-dox] .gmt-hive-chat .gmt-hive-empty {
+  padding-block: var(--gmt-space-2);
+  gap: var(--gmt-space-2);
+}
+
+/* The transcript is a size container, so the empty state fits the height it gets: in a slide that
+   keeps the right third for the clock the composer leaves it about 8rem, where the full hub
+   (crystal, status line and prompt) needs about 11rem and the scroller, which keeps to the
+   bottom, cut the crystal off. Below 12rem the status line goes and the crystal shrinks. */
+[data-deck-dox] .gmt-hive-chat .gmt-hive-scroll {
+  container: gmt-hive-short / size;
+}
+
+@container gmt-hive-short (height < 12rem) {
+  [data-deck-dox] .gmt-hive-chat .gmt-hive-empty {
+    padding-block: 0;
+  }
+
+  [data-deck-dox] .gmt-hive-chat .gmt-hive-hub {
+    --hex: 2.75rem;
+  }
+
+  [data-deck-dox] .gmt-hive-chat .gmt-hive-status {
+    display: none;
+  }
+}
+
+/* The site's smallest text is 12 px, 0.94cqi once the frame is scaled to the stage; the tools and
+   the hive in the frame are held to 1cqi (`data-fine-print`), so their small size is 13 px. */
+[data-deck-dox] {
+  --gmt-text-xs: 0.8125rem;
+}
+
+/* The accuracy note is a disclaimer the room must read: 1rem here is 1.25cqi on the stage. */
+[data-deck-dox] .gmt-hive-accuracy-note {
+  font-size: 1rem;
+}
+
+/* The deck's questions are one line; the field starts at two lines' height. */
+[data-deck-dox] .gmt-hive-chat .gmt-hive-composer textarea {
+  min-block-size: 2.5rem;
+}
+
+/* An instant or a duration in an answer breaks between words, never inside itself at a hyphen. */
+[data-deck-dox] .gmt-hive-chat .gmt-hive-turn :not(pre) > code {
+  white-space: nowrap;
+}
+
+[data-deck-dox] .gmt-hive-chat .gmt-hive-composer {
+  margin-block-start: 0;
+  padding-block: var(--gmt-space-2);
+}

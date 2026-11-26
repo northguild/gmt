@@ -12,7 +12,6 @@
  * not recorded. A file that leaves one of those methods, or `EventTarget.prototype`'s, replaced
  * is named too: every later file's listeners would pass through its wrapper.
  */
-import { afterAll, beforeAll } from "vitest";
 
 interface ListenerRecord {
   target: EventTarget;
@@ -64,21 +63,19 @@ function isPageLifetime(record: ListenerRecord): boolean {
  * Whether a package, not the test or the code under test, is adding the listener. User-event,
  * jsdom and React each register a few of their own once per document and never remove them, which
  * is not a leak of the test's. The stack is read only when a listener is added, which is rare.
+ *
+ * `renderWidget` puts its own recorder between the caller and this wrapper while a widget is
+ * live, so its frames are skipped too: the caller is whoever called the recorder.
  */
+const OWN_FRAMES = ["/leak-guard.ts", "/render-widget.ts"];
+
 function fromLibrary(): boolean {
   const frames = (new Error().stack ?? "").split("\n").slice(1);
   const caller = frames.find(
-    (line) => !PASS_THROUGH.some((file) => line.includes(file)),
+    (line) => !OWN_FRAMES.some((f) => line.includes(f)),
   );
   return caller?.includes("/node_modules/") ?? false;
 }
-
-/**
- * Test helpers whose wrappers sit on top of this one and pass every call through. The caller is
- * the frame past them: `render-widget.ts` records a widget's listeners while it is mounted, and
- * jsdom's own listeners reach this wrapper through it.
- */
-const PASS_THROUGH = ["/src/test/leak-guard.ts", "/src/test/render-widget.ts"];
 
 /** Wraps the listener methods of `window` and `document`, once per window. */
 function trackListeners(): ListenerRecord[] {

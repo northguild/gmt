@@ -12,8 +12,8 @@ import {
  * - Reads `YYYY-MM-DDTHH:MM:SS[.fraction] <token>` with the system's RINEX token. Any other token
  *   returns "".
  * - A continuous scale has no second 60; `GLO` has one exactly when UTC does.
- * - During an inserted leap second the result is `…T23:59:60Z`. Only this realm's functions read
- *   that string back; other GMT functions reject a second of 60.
+ * - During an inserted leap second the result is `…T23:59:60Z`. Only the `timescale/`, `gnss/` and
+ *   `finance/` functions read that string back; other GMT functions reject a second of 60.
  * - "" before the system's epoch and on invalid input.
  *
  * @param system satellite time scale: "GPS", "GAL", "BDT", "QZS", "GLO" or "IRN"

@@ -67,11 +67,11 @@ interface BoardPreset {
   compareLate?: string;
 }
 
-const LON = (t: string) => `2024-06-14T${t}+01:00[Europe/London]`;
-const AMS = (t: string) => `2024-06-15T${t}+02:00[Europe/Amsterdam]`;
-const SIN = (d: string, t: string) => `2024-06-${d}T${t}+08:00[Asia/Singapore]`;
-const AEDT = (t: string) => `2024-04-07T${t}+11:00[Australia/Sydney]`;
-const AEST = (t: string) => `2024-04-07T${t}+10:00[Australia/Sydney]`;
+const LON = (t: string) => `2024-06-14T${t}+01:00`;
+const AMS = (t: string) => `2024-06-15T${t}+02:00`;
+const SIN = (d: string, t: string) => `2024-06-${d}T${t}+08:00`;
+const AEDT = (t: string) => `2024-04-07T${t}+11:00`;
+const AEST = (t: string) => `2024-04-07T${t}+10:00`;
 
 const pair = (planned: string, actual: string): PlannedActual => ({
   planned,
@@ -452,7 +452,7 @@ export function boardReasonText(reason: BoardNullReason): string {
     case "invalid-compare":
       return `The second late tolerance is not an exact duration. ${DURATION_ADVICE}`;
     case "invalid-row":
-      return `Arrival ${reason.row}'s planned or actual time has no offset or zone, so it is not a moment. One invalid pair makes punctualityRate return null, never a rate over the rest.`;
+      return `Arrival ${reason.row}'s planned or actual time has no offset, or a zone name after it, so it is not an exact moment. Write each time as a UTC instant or with a numeric offset, like 2024-06-14T09:00:00+01:00. One invalid pair makes punctualityRate return null, never a rate over the rest.`;
   }
 }
 

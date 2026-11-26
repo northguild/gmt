@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { bucketRange } from "../src/calendar";
 import { bench, utcMidnight } from "./fixtures";
 

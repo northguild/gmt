@@ -6,6 +6,10 @@
  * `@import`, resolving relative paths and the `~/` alias (`src/`). Imports of
  * `@northguild/gmt/<namespace>/<module>` are kept apart as the library modules a page reaches.
  *
+ * A dynamic route (`[slug]`) has no site path of its own; `routes` names the paths one renders,
+ * and each becomes a page with the route file's closure. Without it the route is left out, so a
+ * change to what only it imports selects no page of it (a deck, `[slug]/index.astro`).
+ *
  * Every path is relative to the repository root, with forward slashes.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -72,9 +76,10 @@ export function sitePathOf(relativeToRoot) {
 
 /**
  * @param {string} repoRoot absolute path of the repository root
+ * @param {Record<string, string[]>} [routes] a dynamic route file's site paths, by its path
  * @returns {{ path: string, file: string, closure: string[], gmt: string[] }[]}
  */
-export function buildPages(repoRoot) {
+export function buildPages(repoRoot, routes = {}) {
   const dox = path.join(repoRoot, "apps/dox");
   const src = path.join(dox, "src");
   const rel = (abs) => path.relative(repoRoot, abs).split(path.sep).join("/");
@@ -120,8 +125,9 @@ export function buildPages(repoRoot) {
   ];
   const pages = [];
   for (const file of pageFiles.sort()) {
-    const sitePath = sitePathOf(rel(file));
-    if (!sitePath) continue;
+    const own = sitePathOf(rel(file));
+    const sitePaths = own ? [own] : (routes[rel(file)] ?? []);
+    if (sitePaths.length === 0) continue;
     const seen = new Set();
     const gmt = new Set();
     const stack = [file];
@@ -133,12 +139,15 @@ export function buildPages(repoRoot) {
       for (const m of edges.gmt) gmt.add(m);
       stack.push(...edges.files);
     }
-    pages.push({
-      path: sitePath,
-      file: rel(file),
-      closure: [...seen].map(rel).sort(),
-      gmt: [...gmt].sort(),
-    });
+    const closure = [...seen].map(rel).sort();
+    for (const sitePath of sitePaths) {
+      pages.push({
+        path: sitePath,
+        file: rel(file),
+        closure,
+        gmt: [...gmt].sort(),
+      });
+    }
   }
   return pages;
 }

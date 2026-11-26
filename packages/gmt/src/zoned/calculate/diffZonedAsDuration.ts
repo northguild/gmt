@@ -5,13 +5,13 @@ import {
   parseCalendarZonedPairForArithmetic,
 } from "../../internal";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type {
   DateTimeDurationUnit,
   DurationStringOptions,
   RoundingOptions,
 } from "../../types";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -68,11 +68,10 @@ export function diffZonedAsDuration(
     return "";
   }
   const validZonedDateTimes =
-    isValidCalendarZonedDateTime(value1) &&
-    isValidCalendarZonedDateTime(value2);
+    calendarZonedOf(value1) !== null && calendarZonedOf(value2) !== null;
   // Singular names resolve to their plural (Temporal §13.17).
   const resolvedUnit = resolveDurationUnit(unit);
-  const validUnit = isValidDateTimeDurationUnit(resolvedUnit);
+  const validUnit = isDateTimeDurationUnitName(resolvedUnit);
 
   if (!validZonedDateTimes || !validUnit) {
     return "";

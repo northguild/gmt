@@ -17,7 +17,7 @@ header {
   background:
     linear-gradient(var(--gmt-header-wash), var(--gmt-header-wash)),
     var(--gmt-header-backing);
-  box-shadow: inset 0 -1px 0 var(--gmt-header-edge);
+  box-shadow: inset 0 var(--gmt-under-edge-hair) 0 var(--gmt-header-edge);
   backdrop-filter: var(--gmt-header-blur);
 }
 
@@ -28,8 +28,10 @@ header::after {
 
 /* On the landing the hero runs under the bar, so the backing thins and the sky and the Earth show
    through the glass. The bar's text and icons carry the hero copy's dark halo, in both themes, which holds their
-   contrast over a bright Earth or over page text scrolled up under the bar. */
-:root:has([data-gate="hero-stage"]) header {
+   contrast over a bright Earth or over page text scrolled up under the bar. Keyed on Starlight's
+   `data-has-hero`, which only the landing sets, not on a `:has()` of the hero: see the hero
+   padding rule in dox.css. */
+:root[data-has-hero] header {
   --gmt-header-backing: color-mix(
     in srgb,
     var(--gmt-header-backdrop) 55%,

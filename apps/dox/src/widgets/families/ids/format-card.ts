@@ -106,8 +106,9 @@ export function formatCard(o: FormatCardOptions): SafeHtml {
         o.state === "sentinel"
           ? html`<span class="${styles.signal}"><span class="${styles.pill}">${NO_SIGNAL_PILL}</span><code class="${styles.literal}">${o.literal}</code></span>`
           : "",
-        [`${NO_SIGNAL_PILL} ${o.samples.literal}`],
-        { ghostClass: styles.signal },
+        [
+          html`<span class="${styles.signal}"><span class="${styles.pill}" data-sample="${NO_SIGNAL_PILL}"></span><code class="${styles.literal}" data-sample="${o.samples.literal}"></code></span>`,
+        ],
       )}
       ${hold(
         o.validator === null

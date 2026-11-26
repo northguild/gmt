@@ -1,4 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isDateDurationUnitName } from "../../internal/unitNames";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
 import {
   formatDateInCalendar,
@@ -8,7 +10,6 @@ import {
   resolveDurationUnit,
   tileByUnit,
 } from "../../internal";
-import { isValidCalendarDate, isValidDateDurationUnit } from "../validate";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 import { minSlicesForSpan } from "../../internal/splitStep";
 
@@ -90,7 +91,7 @@ export function splitIntervalByUnitDate(
       return [];
     }
 
-    if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
+    if (calendarDateOf(start) === null || calendarDateOf(end) === null) {
       return [];
     }
 
@@ -101,7 +102,7 @@ export function splitIntervalByUnitDate(
     const resolvedUnit = resolveDurationUnit(unit);
 
     // An unknown unit is invalid whatever the span, a zero-length one included.
-    if (!isValidDateDurationUnit(resolvedUnit)) {
+    if (!isDateDurationUnitName(resolvedUnit)) {
       return [];
     }
 

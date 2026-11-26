@@ -42,5 +42,50 @@
     "icon": "industry-maritime",
     "guide": "/guides/industries/maritime-gnss-time-and-week-rollover/",
     "drawsOn": ["gnss", "timescale"]
+  },
+  {
+    "id": "finance",
+    "label": "Finance",
+    "definition": "Timestamps in trading and payment messages: FIX UTC timestamps at the precision their digits state, leap seconds included.",
+    "icon": "industry-finance",
+    "guide": "/guides/industries/finance-message-timestamps/",
+    "namespace": "finance",
+    "drawsOn": []
+  },
+  {
+    "id": "healthcare",
+    "label": "Healthcare",
+    "definition": "Timestamps in HL7 and FHIR clinical data: a precision set by what is sent, and a time with no offset, which HL7 reads as local time and FHIR refuses.",
+    "icon": "industry-healthcare",
+    "guide": "/guides/industries/healthcare-clinical-timestamps/",
+    "namespace": "healthcare",
+    "drawsOn": []
+  },
+  {
+    "id": "aviation",
+    "label": "Aviation",
+    "definition": "Airline schedule dates in IATA SSIM files, METAR and TAF report times with no month, and NOTAM validity times.",
+    "icon": "industry-aviation",
+    "guide": "/guides/industries/aviation-message-times/",
+    "namespace": "aviation",
+    "drawsOn": []
+  },
+  {
+    "id": "rail",
+    "label": "Rail",
+    "definition": "Public transport timetables in GTFS feeds, where a stop time runs past midnight and still belongs to the service day its trip began on.",
+    "icon": "industry-rail",
+    "guide": "/guides/industries/rail-gtfs-service-days/",
+    "namespace": "rail",
+    "drawsOn": ["transport"]
+  },
+  {
+    "id": "iot",
+    "label": "IoT",
+    "definition": "Device and sensor time on industrial networks: Precision Time Protocol timestamps, which count TAI, and the UTC offset a grandmaster announces.",
+    "icon": "industry-iot",
+    "guide": "/guides/industries/iot-ptp-time/",
+    "namespace": "iot",
+    "drawsOn": ["timescale", "precision"]
   }
 ]

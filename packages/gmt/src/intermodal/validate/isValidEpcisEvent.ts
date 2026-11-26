@@ -1,6 +1,8 @@
 import { isObject } from "../../internal";
-import { isValidEpcisEventTime } from "./isValidEpcisEventTime";
-import { isValidEpcisTimeZoneOffset } from "./isValidEpcisTimeZoneOffset";
+import {
+  isEpcisEventTime,
+  isEpcisTimeZoneOffset,
+} from "../../internal/epcisTime";
 
 /**
  * Validate whether a value carries the two required time fields of a GS1 EPCIS 2.0 event, each in
@@ -52,8 +54,7 @@ export function isValidEpcisEvent(event: unknown): boolean {
     const { eventTime, eventTimeZoneOffset } = event as Record<string, unknown>;
 
     return (
-      isValidEpcisEventTime(eventTime as string) &&
-      isValidEpcisTimeZoneOffset(eventTimeZoneOffset as string)
+      isEpcisEventTime(eventTime) && isEpcisTimeZoneOffset(eventTimeZoneOffset)
     );
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.

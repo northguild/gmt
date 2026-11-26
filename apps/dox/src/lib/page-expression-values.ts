@@ -12,6 +12,11 @@
  */
 import { LIBRARY_IDS, checkedLine, matrix } from "../data/behaviour-matrix";
 import {
+  zoneMatrixLine,
+  zoneMatrixRange,
+  zoneMatrixSummary,
+} from "../data/zone-matrix";
+import {
   combinedCompetitorExecutions,
   competitorComparisons,
   competitorExecutionRange,
@@ -19,6 +24,7 @@ import {
   competitorStatRange,
   competitorTimeResolutionLabel,
   executionRatio,
+  fullSuiteZoneClauses,
   largestCompetitorSuite,
 } from "../data/library-comparison";
 import {
@@ -33,6 +39,8 @@ import {
 } from "../data/gmt-stats";
 import { nativeFailures } from "../data/native-engine-failures";
 import { polyfillFigures } from "./bundle-size-figures";
+import { syntaxFloor } from "../generated/syntax-floor";
+import { gmtNodeEngines } from "../generated/versions";
 import { measurementDateRange } from "./library-compare-tables";
 import { familyCounts, formatFamilyCounts } from "./locale-families";
 import { formatOffset, zoneOffsetRange } from "./timezone-offset-range";
@@ -61,6 +69,14 @@ export function pageExpressionValues(): Record<string, string> {
     LIBRARY_IDS.map((id) => [`checkedLine("${id}")`, checkedLine(id)]),
   );
 
+  // The zone-matrix line each Migrate page carries, one per library and per polyfill.
+  const zoneMatrixLines = Object.fromEntries(
+    [...LIBRARY_IDS, "js-temporal", "temporal-polyfill"].map((id) => [
+      `zoneMatrixLine("${id}")`,
+      zoneMatrixLine(id),
+    ]),
+  );
+
   return {
     ...checkedLines,
     // The /bundle-size figures: one entry per key, so a new key cannot be forgotten.
@@ -76,6 +92,10 @@ export function pageExpressionValues(): Record<string, string> {
         value,
       ]),
     ),
+    ...zoneMatrixLines,
+    "zoneMatrix.zones.length": String(zoneMatrixSummary.zones.length),
+    'zoneMatrix.nodes.join(", ")': zoneMatrixSummary.nodes.join(", "),
+    zoneMatrixRange,
     "matrix.measuredOn": matrix.measuredOn,
     "matrix.runtime.node": matrix.runtime.node,
     'matrix.runtime.hostZones.join(", ")': matrix.runtime.hostZones.join(", "),
@@ -86,6 +106,9 @@ export function pageExpressionValues(): Record<string, string> {
     "measurementDates.newest": measuredOn.newest,
     "gmtStats.tests": String(gmtStats.tests),
     "gmtStats.timezones": String(gmtStats.timezones),
+    fullSuiteZoneNote: fullSuiteZoneClauses()
+      .map((c) => `; ${c}`)
+      .join(""),
     "gmtStats.locales": String(gmtStats.locales),
     "gmtStats.patterns": String(gmtStats.patterns),
     "gmtStats.nodes.length": String(gmtStats.nodes.length),
@@ -142,6 +165,8 @@ export function pageExpressionValues(): Record<string, string> {
     "formatCount(largestSuite.stats.tests)": formatCount(
       largestSuite.stats.tests,
     ),
+    "syntaxFloor.edition": String(syntaxFloor.edition),
+    gmtNodeEngines,
     "competitorTimeResolutionLabel()": competitorTimeResolutionLabel(),
   };
 }

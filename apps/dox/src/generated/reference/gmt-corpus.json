@@ -1,5 +1,280 @@
 [
   {
+    "url": "/reference/aviation/format/formatSsimDate",
+    "page": "/reference/aviation/format/formatSsimDate",
+    "name": "formatSsimDate",
+    "namespace": "aviation",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatSsimDate(value: string, options: TwoDigitYearOptions): string",
+    "description": "Write an ISO 8601 date as an SSIM schedule date. The inverse of `parseSsimDate`.",
+    "sourcePath": "packages/gmt/src/aviation/format/formatSsimDate.ts",
+    "examples": [
+      {
+        "call": "formatSsimDate(\"2026-10-25\", { yearWindow: 2000 })",
+        "result": "\"25OCT26\""
+      },
+      {
+        "call": "formatSsimDate(\"2000-02-29\", { yearWindow: 2000 })",
+        "result": "\"29FEB00\""
+      },
+      {
+        "call": "formatSsimDate(\"2049-12-31\", { yearWindow: 1950 })",
+        "result": "\"31DEC49\""
+      },
+      {
+        "call": "formatSsimDate(\"1999-12-31\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25\", { yearWindow: \"rolling\" })",
+        "result": "\"25OCT26\" (while the current UTC year is 1977–2076)"
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25\", {})",
+        "result": "\"\""
+      },
+      {
+        "call": "formatSsimDate(\"2026-10-25T10:00\", { yearWindow: 2000 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseMetarTime",
+    "page": "/reference/aviation/parse/parseMetarTime",
+    "name": "parseMetarTime",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseMetarTime(value: string, referenceInstant: string): string",
+    "description": "Parse a METAR report-time group as an ISO 8601 UTC instant, read against a reference instant.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseMetarTime.ts",
+    "examples": [
+      {
+        "call": "parseMetarTime(\"251200Z\", \"2024-06-25T12:20:00Z\")",
+        "result": "\"2024-06-25T12:00:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"302350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "\"2024-06-30T23:50:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"312350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "\"2024-05-31T23:50:00Z\" (June has no 31st)"
+      },
+      {
+        "call": "parseMetarTime(\"312350Z\", \"2025-01-01T00:05:00Z\")",
+        "result": "\"2024-12-31T23:50:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"010010Z\", \"2024-06-30T23:55:00Z\")",
+        "result": "\"2024-07-01T00:10:00Z\""
+      },
+      {
+        "call": "parseMetarTime(\"151200Z\", \"2024-06-30T12:00:00Z\")",
+        "result": "\"2024-06-15T12:00:00Z\" (a tie: the earlier)"
+      },
+      {
+        "call": "parseMetarTime(\"251200\", \"2024-06-25T12:20:00Z\")",
+        "result": "\"\""
+      },
+      {
+        "call": "parseMetarTime(\"251200Z\", \"2024-06-25T12:20:00\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseNotamValidity",
+    "page": "/reference/aviation/parse/parseNotamValidity",
+    "name": "parseNotamValidity",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseNotamValidity(value: string, options: TwoDigitYearOptions): NotamValidity | null",
+    "description": "Parse a NOTAM item B) or C) value as a UTC instant, an estimate, or a permanent validity.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseNotamValidity.ts",
+    "examples": [
+      {
+        "call": "parseNotamValidity(\"2506151200\", { yearWindow: 2000 })",
+        "result": "{ kind: \"instant\", instant: \"2025-06-15T12:00:00Z\", estimated: false }"
+      },
+      {
+        "call": "parseNotamValidity(\"1407031230EST\", { yearWindow: 2000 })",
+        "result": "{ kind: \"instant\", instant: \"2014-07-03T12:30:00Z\", estimated: true }"
+      },
+      {
+        "call": "parseNotamValidity(\"PERM\", { yearWindow: 2000 })",
+        "result": "{ kind: \"permanent\" }"
+      },
+      {
+        "call": "parseNotamValidity(\"1407031230 EST\", { yearWindow: 2000 })",
+        "result": "null"
+      },
+      {
+        "call": "parseNotamValidity(\"2506152400\", { yearWindow: 2000 })",
+        "result": "null"
+      },
+      {
+        "call": "parseNotamValidity(\"2506151200\", {})",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/parse/parseSsimDate",
+    "page": "/reference/aviation/parse/parseSsimDate",
+    "name": "parseSsimDate",
+    "namespace": "aviation",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseSsimDate(value: string, options: TwoDigitYearOptions): string",
+    "description": "Parse an SSIM schedule date as an ISO 8601 date.",
+    "sourcePath": "packages/gmt/src/aviation/parse/parseSsimDate.ts",
+    "examples": [
+      {
+        "call": "parseSsimDate(\"01JAN26\", { yearWindow: 2000 })",
+        "result": "\"2026-01-01\""
+      },
+      {
+        "call": "parseSsimDate(\"29FEB00\", { yearWindow: 2000 })",
+        "result": "\"2000-02-29\""
+      },
+      {
+        "call": "parseSsimDate(\"29FEB00\", { yearWindow: 1900 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"16DEC09\", { yearWindow: 1950 })",
+        "result": "\"2009-12-16\""
+      },
+      {
+        "call": "parseSsimDate(\"01JAN26\", { yearWindow: \"rolling\" })",
+        "result": "\"2026-01-01\" (while the current UTC year is 1977–2076)"
+      },
+      {
+        "call": "parseSsimDate(\"01jan26\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"01ENE26\", { yearWindow: 2000 })",
+        "result": "\"\""
+      },
+      {
+        "call": "parseSsimDate(\"01JAN26\", {})",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidMetarTime",
+    "page": "/reference/aviation/validate/isValidMetarTime",
+    "name": "isValidMetarTime",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidMetarTime(value: string, referenceInstant: string): boolean",
+    "description": "Return true when `value` is a METAR, SPECI or TAF time group (`YYGGggZ`) that resolves against `referenceInstant`.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidMetarTime.ts",
+    "examples": [
+      {
+        "call": "isValidMetarTime(\"302350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidMetarTime(\"312350Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "true (resolves to 31 May)"
+      },
+      {
+        "call": "isValidMetarTime(\"321200Z\", \"2024-07-01T00:05:00Z\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidMetarTime(\"251200\", \"2024-06-25T12:20:00Z\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidMetarTime(\"251200Z\", \"2024-06-25T12:20:00\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidNotamValidity",
+    "page": "/reference/aviation/validate/isValidNotamValidity",
+    "name": "isValidNotamValidity",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidNotamValidity(value: string, options: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is a NOTAM item B) or C) value (`YYMMDDHHMM`, the same followed by `EST`, or `PERM`) in the stated hundred-year window.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidNotamValidity.ts",
+    "examples": [
+      {
+        "call": "isValidNotamValidity(\"2506151200\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"1407031230EST\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"PERM\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidNotamValidity(\"1407031230 EST\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidNotamValidity(\"2502301200\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidNotamValidity(\"2506151200\", {})",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/aviation/validate/isValidSsimDate",
+    "page": "/reference/aviation/validate/isValidSsimDate",
+    "name": "isValidSsimDate",
+    "namespace": "aviation",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSsimDate(value: string, options: TwoDigitYearOptions): boolean",
+    "description": "Return true when `value` is a real SSIM date (`DDMMMYY`) in the stated hundred-year window.",
+    "sourcePath": "packages/gmt/src/aviation/validate/isValidSsimDate.ts",
+    "examples": [
+      {
+        "call": "isValidSsimDate(\"01JAN26\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidSsimDate(\"29FEB00\", { yearWindow: 2000 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidSsimDate(\"29FEB00\", { yearWindow: 1900 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"01jan26\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"31APR26\", { yearWindow: 2000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidSsimDate(\"01JAN26\", {})",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/business/businessDaysBetween",
     "page": "/reference/calendar/business/businessDaysBetween",
     "name": "businessDaysBetween",
@@ -1161,6 +1436,55 @@
     ]
   },
   {
+    "url": "/reference/calendar/validate/isValidOperatingSchedule",
+    "page": "/reference/calendar/validate/isValidOperatingSchedule",
+    "name": "isValidOperatingSchedule",
+    "namespace": "calendar",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidOperatingSchedule(schedule: unknown): schedule is OperatingSchedule",
+    "description": "Return true when `schedule` is an `OperatingSchedule` the operating-hours functions accept.",
+    "sourcePath": "packages/gmt/src/calendar/validate/isValidOperatingSchedule.ts",
+    "examples": [
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"Europe/Paris\", weekly: { 1: [{ from: \"09:00\", to: \"17:00\" }] } })",
+        "result": "true"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 5: [{ from: \"23:00\", to: \"06:00\" }] }, holidays: [\"2024-11-20\"], overrides: [{ date: \"2024-11-19\", windows: [] }] })",
+        "result": "true — a window past midnight, a holiday and an override"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"-00:44:30\", weekly: {} })",
+        "result": "true — valid, closed every day"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 8: [] } })",
+        "result": "false — 8 is not an ISO weekday"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: { 1: [{ from: \"09:00\", to: \"24:00\" }] } })",
+        "result": "false — 24:00 is not a plain time"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: {}, holidays: [\"2024-05-15[u-ca=iso8601]\"] })",
+        "result": "false — a plain date takes no annotation"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"UTC\", weekly: {}, overrides: [{ date: \"2024-06-10\", windows: [] }, { date: \"+002024-06-10\", windows: [] }] })",
+        "result": "false — two overrides for one date"
+      },
+      {
+        "call": "isValidOperatingSchedule({ timeZone: \"Invalid/Zone\", weekly: {} })",
+        "result": "false"
+      },
+      {
+        "call": "isValidOperatingSchedule(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
     "url": "/reference/calendar/validate/isValidRollConvention",
     "page": "/reference/calendar/validate/isValidRollConvention",
     "name": "isValidRollConvention",
@@ -1540,7 +1864,7 @@
     "namespace": "duration",
     "module": "calculate",
     "kind": "function",
-    "signature": "totalDuration(value: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "totalDuration(value: string, unit: keyof DurationLikeObject | DateTimeUnit, options?: { relativeTo?: string; }): number | null",
     "description": "Express an ISO 8601 duration as a single fractional total in one unit.",
     "sourcePath": "packages/gmt/src/duration/calculate/totalDuration.ts",
     "examples": [
@@ -1783,7 +2107,7 @@
     "namespace": "duration",
     "module": "compare",
     "kind": "function",
-    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: DurationRelativeTo; }): number | null",
+    "signature": "compareDurations(a: string, b: string, options?: { relativeTo?: string; }): number | null",
     "description": "Compare two ISO 8601 duration strings by length.",
     "sourcePath": "packages/gmt/src/duration/compare/compareDurations.ts",
     "examples": [
@@ -1985,7 +2309,7 @@
     "namespace": "duration",
     "module": "normalize",
     "kind": "function",
-    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: DurationRelativeTo; }): string",
+    "signature": "normalizeDuration(value: string, options?: { largestUnit?: LargestUnit<DateTimeUnit>; smallestUnit?: SmallestUnit<DateTimeUnit>; roundingIncrement?: number; roundingMode?: RoundingMode; relativeTo?: string; }): string",
     "description": "Roll an ISO 8601 duration string's small units into larger ones.",
     "sourcePath": "packages/gmt/src/duration/normalize/normalizeDuration.ts",
     "examples": [
@@ -2162,6 +2486,244 @@
       },
       {
         "call": "isValidDuration(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/format/formatFixUtcTimestamp",
+    "page": "/reference/finance/format/formatFixUtcTimestamp",
+    "name": "formatFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatFixUtcTimestamp(value: string, precision: FixPrecision): string",
+    "description": "Write an instant as a FIX `UTCTimestamp` at the precision a counterparty asks for.",
+    "sourcePath": "packages/gmt/src/finance/format/formatFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"second\")",
+        "result": "\"20240615-14:30:00\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"millisecond\")",
+        "result": "\"20240615-14:30:00.123\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"microsecond\")",
+        "result": "\"20240615-14:30:00.123456\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"nanosecond\")",
+        "result": "\"20240615-14:30:00.123456789\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T16:30:00.123456789+02:00\", \"picosecond\")",
+        "result": "\"20240615-14:30:00.123456789000\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2016-12-31T23:59:60Z\", \"second\")",
+        "result": "\"20161231-23:59:60\""
+      },
+      {
+        "call": "formatFixUtcTimestamp(\"2024-06-15T14:30:00\", \"second\")",
+        "result": "\"\" (no offset: name the zone first, with resolveLocal)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/format/formatSwiftDate",
+    "page": "/reference/finance/format/formatSwiftDate",
+    "name": "formatSwiftDate",
+    "namespace": "finance",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatSwiftDate(value: string): string",
+    "description": "Write an ISO 8601 date as a SWIFT MT value date, `YYMMDD`. The inverse of `parseSwiftDate`.",
+    "sourcePath": "packages/gmt/src/finance/format/formatSwiftDate.ts",
+    "examples": [
+      {
+        "call": "formatSwiftDate(\"2024-06-15\")",
+        "result": "\"240615\""
+      },
+      {
+        "call": "formatSwiftDate(\"2001-01-01\")",
+        "result": "\"010101\""
+      },
+      {
+        "call": "formatSwiftDate(\"2060-12-31\")",
+        "result": "\"601231\""
+      },
+      {
+        "call": "formatSwiftDate(\"2004-02-29\")",
+        "result": "\"040229\""
+      },
+      {
+        "call": "formatSwiftDate(\"2000-12-31\")",
+        "result": "\"\" (before 2001)"
+      },
+      {
+        "call": "formatSwiftDate(\"2061-01-01\")",
+        "result": "\"\" (after 2060)"
+      },
+      {
+        "call": "formatSwiftDate(\"2024-06-15T10:00:00\")",
+        "result": "\"\" (a date-time: take the date first)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/parse/parseFixUtcTimestamp",
+    "page": "/reference/finance/parse/parseFixUtcTimestamp",
+    "name": "parseFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseFixUtcTimestamp(value: string): FixUtcTimestamp | null",
+    "description": "Read a FIX `UTCTimestamp` as a UTC instant and the precision its digits state.",
+    "sourcePath": "packages/gmt/src/finance/parse/parseFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.123456\")",
+        "result": "{ instant: \"2024-06-15T14:30:00.123456Z\", precision: \"microsecond\", leapSecond: false, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00\")",
+        "result": "{ instant: \"2024-06-15T14:30:00Z\", precision: \"second\", leapSecond: false, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.123456789012\")",
+        "result": "{ instant: \"2024-06-15T14:30:00.123456789Z\", precision: \"picosecond\", leapSecond: false, picoseconds: 12 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20161231-23:59:60\")",
+        "result": "{ instant: \"2016-12-31T23:59:60Z\", precision: \"second\", leapSecond: true, picoseconds: 0 }"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20171231-23:59:60\")",
+        "result": "null (no leap second was inserted on 2017-12-31)"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240615-14:30:00.12\")",
+        "result": "null (2 digits: FIX names no precision for it)"
+      },
+      {
+        "call": "parseFixUtcTimestamp(\"20240230-00:00:00\")",
+        "result": "null (2024 has no 30 February)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/parse/parseSwiftDate",
+    "page": "/reference/finance/parse/parseSwiftDate",
+    "name": "parseSwiftDate",
+    "namespace": "finance",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseSwiftDate(value: string): string",
+    "description": "Read the value date of a SWIFT MT message, `YYMMDD`, as an ISO 8601 date.",
+    "sourcePath": "packages/gmt/src/finance/parse/parseSwiftDate.ts",
+    "examples": [
+      {
+        "call": "parseSwiftDate(\"240615\")",
+        "result": "\"2024-06-15\""
+      },
+      {
+        "call": "parseSwiftDate(\"601231\")",
+        "result": "\"2060-12-31\""
+      },
+      {
+        "call": "parseSwiftDate(\"990615\")",
+        "result": "\"\" (YY 99 is outside 01 to 60: SWIFT error T50)"
+      },
+      {
+        "call": "parseSwiftDate(\"750101\")",
+        "result": "\"\" (YY 75 is outside 01 to 60: SWIFT error T50)"
+      },
+      {
+        "call": "parseSwiftDate(\"040229\")",
+        "result": "\"2004-02-29\""
+      },
+      {
+        "call": "parseSwiftDate(\"050229\")",
+        "result": "\"\" (2005 is not a leap year)"
+      },
+      {
+        "call": "parseSwiftDate(\"240615EUR1000,00\")",
+        "result": "\"\" (pass the date component alone)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/validate/isValidFixUtcTimestamp",
+    "page": "/reference/finance/validate/isValidFixUtcTimestamp",
+    "name": "isValidFixUtcTimestamp",
+    "namespace": "finance",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFixUtcTimestamp(value: string): boolean\nisValidFixUtcTimestamp(value: void | {} | null | undefined): boolean\nisValidFixUtcTimestamp(value: unknown): value is string",
+    "description": "Return true when `value` is a FIX `UTCTimestamp` that states a real UTC second.",
+    "sourcePath": "packages/gmt/src/finance/validate/isValidFixUtcTimestamp.ts",
+    "examples": [
+      {
+        "call": "isValidFixUtcTimestamp(\"20240615-14:30:00.123\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20161231-23:59:60\")",
+        "result": "true (an inserted leap second)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20171231-23:59:60\")",
+        "result": "false (no insertion that day)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"20240615-14:30:00.12\")",
+        "result": "false (2 digits: FIX names no precision)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(\"2024-06-15T14:30:00Z\")",
+        "result": "false (ISO 8601, not FIX)"
+      },
+      {
+        "call": "isValidFixUtcTimestamp(null)",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/finance/validate/isValidSwiftDate",
+    "page": "/reference/finance/validate/isValidSwiftDate",
+    "name": "isValidSwiftDate",
+    "namespace": "finance",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidSwiftDate(value: string): boolean",
+    "description": "Return true when `value` is a SWIFT MT value date, `YYMMDD`, that SWIFT accepts.",
+    "sourcePath": "packages/gmt/src/finance/validate/isValidSwiftDate.ts",
+    "examples": [
+      {
+        "call": "isValidSwiftDate(\"240615\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSwiftDate(\"040229\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidSwiftDate(\"990615\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"000229\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"241315\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidSwiftDate(\"050229\")",
         "result": "false"
       }
     ]
@@ -2449,6 +3011,264 @@
     ]
   },
   {
+    "url": "/reference/healthcare/format/formatFHIR",
+    "page": "/reference/healthcare/format/formatFHIR",
+    "name": "formatFHIR",
+    "namespace": "healthcare",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatFHIR(value: string, type: FhirDateType, options?: FhirFormatOptions): string",
+    "description": "Write an ISO 8601 string as a FHIR R4 `date`, `dateTime` or `instant`: the inverse of `parseFHIR`.",
+    "sourcePath": "packages/gmt/src/healthcare/format/formatFHIR.ts",
+    "examples": [
+      {
+        "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"date\")",
+        "result": "\"2024-06-15\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T23-05:00\", \"date\")",
+        "result": "\"2024-06-15\" (an hour with an offset)"
+      },
+      {
+        "call": "formatFHIR(\"2024-01-15T10:30:00Z[Europe/London]\", \"dateTime\")",
+        "result": "\"\" (an annotation)"
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T23:30:00-05:00\", \"instant\")",
+        "result": "\"2024-06-15T23:30:00-05:00\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T10:30:00\", \"instant\")",
+        "result": "\"\" (an instant needs a zone)"
+      },
+      {
+        "call": "formatFHIR(\"2024-06-15T10:30:00Z\", \"dateTime\", { precision: \"month\" })",
+        "result": "\"2024-06\""
+      },
+      {
+        "call": "formatFHIR(\"2024-06\", \"dateTime\", { precision: \"day\" })",
+        "result": "\"\" (finer than the value carries)"
+      },
+      {
+        "call": "formatFHIR(\"2016-12-31T23:59:60Z\", \"instant\")",
+        "result": "\"\" (a leap second)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/format/formatHL7",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "formatHL7",
+    "namespace": "healthcare",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatHL7(value: string, options?: Hl7FormatOptions): string",
+    "description": "Write an ISO 8601 string as an HL7 v2 date-time (`DTM`): the inverse of `parseHL7`.",
+    "sourcePath": "packages/gmt/src/healthcare/format/formatHL7.ts",
+    "examples": [
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00-05:00\")",
+        "result": "\"20240615103000-0500\""
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T15:30:00Z\")",
+        "result": "\"20240615153000+0000\""
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00\")",
+        "result": "\"20240615103000\" (the sender's local time)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:45.98765-05:00\")",
+        "result": "\"20240615103045.9876-0500\" (cut, not rounded)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:45.98765-05:00\", { precision: \"day\" })",
+        "result": "\"20240615-0500\""
+      },
+      {
+        "call": "formatHL7(\"2024-06\", { precision: \"day\" })",
+        "result": "\"\" (finer than the value carries)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10-05:00\")",
+        "result": "\"2024061510-0500\" (an hour with an offset)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15-05:00\")",
+        "result": "\"\" (not ISO 8601)"
+      },
+      {
+        "call": "formatHL7(\"2024-06-15T10:30:00Z[Europe/Helsinki]\")",
+        "result": "\"\" (an annotation)"
+      },
+      {
+        "call": "formatHL7(\"2024-02-30\")",
+        "result": "\"\" (no such day)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/parse/parseFHIR",
+    "page": "/reference/healthcare/parse/parseFHIR",
+    "name": "parseFHIR",
+    "namespace": "healthcare",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseFHIR(value: string): FhirDateTime | null",
+    "description": "Reads a FHIR R4 `date`, `dateTime` or `instant` string (R4 Datatypes §2.24.0.1) as it is written, and returns what it states: the input, its precision and its offset.",
+    "sourcePath": "packages/gmt/src/healthcare/parse/parseFHIR.ts",
+    "examples": [
+      {
+        "call": "parseFHIR(\"2024-06\")",
+        "result": "{ value: \"2024-06\", precision: \"month\", offset: \"\" }"
+      },
+      {
+        "call": "parseFHIR(\"2015-02-07T13:28:17-05:00\")",
+        "result": "{ value: \"2015-02-07T13:28:17-05:00\", precision: \"second\", offset: \"-05:00\" }"
+      },
+      {
+        "call": "parseFHIR(\"2017-01-01T00:00:00.000Z\")",
+        "result": "{ value: \"2017-01-01T00:00:00.000Z\", precision: \"fraction\", offset: \"+00:00\" }"
+      },
+      {
+        "call": "parseFHIR(\"2024-06-15T10:30:00\")",
+        "result": "null (a time needs a zone)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/parse/parseHL7",
+    "page": "/reference/healthcare/parse/parseHL7",
+    "name": "parseHL7",
+    "namespace": "healthcare",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseHL7(value: string): Hl7DateTime | null",
+    "description": "Read an HL7 v2 date-time (`DTM`, or the older `TS`) as what it states: a moment, the sender's local time, or a span.",
+    "sourcePath": "packages/gmt/src/healthcare/parse/parseHL7.ts",
+    "examples": [
+      {
+        "call": "parseHL7(\"20240615103000-0500\")",
+        "result": "{ kind: \"instant\", instant: \"2024-06-15T15:30:00Z\", offset: \"-05:00\", local: \"2024-06-15T10:30:00\", precision: \"second\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615103000\")",
+        "result": "{ kind: \"local\", local: \"2024-06-15T10:30:00\", precision: \"second\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615\")",
+        "result": "{ kind: \"partial\", local: \"2024-06-15\", offset: \"\", precision: \"day\" }"
+      },
+      {
+        "call": "parseHL7(\"199904011200^L\")",
+        "result": "{ kind: \"partial\", local: \"1999-04\", offset: \"\", precision: \"month\" }"
+      },
+      {
+        "call": "parseHL7(\"20240615^D^X\")",
+        "result": "{ kind: \"partial\", local: \"2024-06-15\", offset: \"\", precision: \"day\" }"
+      },
+      {
+        "call": "parseHL7('\"\"')",
+        "result": "{ kind: \"null\" }"
+      },
+      {
+        "call": "parseHL7(\"\")",
+        "result": "null"
+      },
+      {
+        "call": "parseHL7(\"20240615240000\")",
+        "result": "null (hour 24)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/validate/isValidFHIR",
+    "page": "/reference/healthcare/validate/isValidFHIR",
+    "name": "isValidFHIR",
+    "namespace": "healthcare",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidFHIR(value: string, type: FhirDateType): boolean\nisValidFHIR(value: void | {} | null | undefined, type: FhirDateType): boolean\nisValidFHIR(value: unknown, type: FhirDateType): value is string",
+    "description": "Return true when `value` is a real FHIR R4 `date`, `dateTime` or `instant`, as `type` names.",
+    "sourcePath": "packages/gmt/src/healthcare/validate/isValidFHIR.ts",
+    "examples": [
+      {
+        "call": "isValidFHIR(\"2024-06\", \"date\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15T10:30:00-05:00\", \"dateTime\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidFHIR(\"2016-12-31T23:59:60Z\", \"instant\")",
+        "result": "true (an inserted leap second)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15\", \"instant\")",
+        "result": "false (an instant is a second or finer)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-06-15T10:30:00\", \"dateTime\")",
+        "result": "false (a time needs a zone)"
+      },
+      {
+        "call": "isValidFHIR(\"2024-02-30\", \"date\")",
+        "result": "false (30 February; the fhirDate pattern matches it)"
+      },
+      {
+        "call": "isValidFHIR(20240615, \"date\")",
+        "result": "false (not a string)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/validate/isValidHL7",
+    "page": "/reference/healthcare/validate/isValidHL7",
+    "name": "isValidHL7",
+    "namespace": "healthcare",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidHL7(value: string): boolean",
+    "description": "Return true when `value` is an HL7 v2 `DTM`, or a `TS` with a degree of precision the digits carry, that `parseHL7` reads.",
+    "sourcePath": "packages/gmt/src/healthcare/validate/isValidHL7.ts",
+    "examples": [
+      {
+        "call": "isValidHL7(\"20240615103000-0500\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidHL7(\"2024\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidHL7('\"\"')",
+        "result": "true (the null value)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X\")",
+        "result": "true (the third component is ignored)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^D^X|Y\")",
+        "result": "false (the field separator cannot sit in a component)"
+      },
+      {
+        "call": "isValidHL7(\"20240615^S\")",
+        "result": "false (a degree finer than the digits)"
+      },
+      {
+        "call": "isValidHL7(\"20240230\")",
+        "result": "false (30 February)"
+      },
+      {
+        "call": "isValidHL7(\"\")",
+        "result": "false (not the null value)"
+      }
+    ]
+  },
+  {
     "url": "/reference/types/LocalTimeClassification",
     "page": "/reference/types/LocalTimeClassification",
     "name": "LocalTimeClassification",
@@ -2619,7 +3439,7 @@
       },
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00[foo=bar]\", \"Africa/Johannesburg\")",
-        "result": "\"2024-07-15T10:00:00Z\" (elective annotation ignored)"
+        "result": "\"\" (a plain wall time takes no annotation)"
       },
       {
         "call": "resolveLocal(\"2024-07-15T12:00:00\", \"Invalid/Zone\")",
@@ -2714,7 +3534,7 @@
       },
       {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00-04:00[foo=bar]\")",
-        "result": "{ instant: \"2024-07-15T16:00:00Z\", offset: \"-04:00\" } — an elective annotation is ignored"
+        "result": "null — only the time zone bracket is accepted"
       },
       {
         "call": "toOffsetInstant(\"2024-07-15T12:00:00-04:00[!foo=bar]\")",
@@ -3217,7 +4037,7 @@
       },
       {
         "name": "at",
-        "description": "The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone."
+        "description": "The instant it happened, as an ISO 8601 string: `Z` or an offset, with no annotation of any kind."
       }
     ]
   },
@@ -3327,8 +4147,8 @@
         "result": "{ start: \"2024-07-01T08:00:00Z\", end: \"2024-07-09T03:00:00Z\" }"
       },
       {
-        "call": "demurrageClock([{ type: \"gatedOut\", at: \"2024-06-20T10:30:00+02:00[Africa/Johannesburg]\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\", { direction: \"import\", startEvent: \"available\" })",
-        "result": "{ start: \"2024-06-20T10:30:00+02:00[Africa/Johannesburg]\", end: \"2024-06-27T09:00:00Z\" } (startEvent is not read for detention; strings are echoed as given)"
+        "call": "demurrageClock([{ type: \"gatedOut\", at: \"2024-06-20T10:30:00+02:00\" }, { type: \"emptyReturned\", at: \"2024-06-27T09:00:00Z\" }], \"detention\", { direction: \"import\", startEvent: \"available\" })",
+        "result": "{ start: \"2024-06-20T10:30:00+02:00\", end: \"2024-06-27T09:00:00Z\" } (startEvent is not read for detention; strings are echoed as given)"
       },
       {
         "call": "demurrageClock([{ type: \"discharged\", at: \"2024-06-14T19:00:00Z\" }, { type: \"gatedOut\", at: \"2024-06-20T14:30:00Z\" }], \"demurrage\")",
@@ -3580,8 +4400,8 @@
         "result": "\"2024-06-15\""
       },
       {
-        "call": "bolTimestamp(\"2024-06-16T09:00:00+08:00[Asia/Shanghai]\", \"issue\", { timeZone: \"America/Sao_Paulo\" })",
-        "result": "\"2024-06-15\" (the bracketed zone is not the zone the date is read in)"
+        "call": "bolTimestamp(\"2024-06-16T09:00:00+08:00\", \"issue\", { timeZone: \"America/Sao_Paulo\" })",
+        "result": "\"2024-06-15\" (the offset names the moment; `timeZone` is the zone the date is read in)"
       },
       {
         "call": "bolTimestamp(\"2024-06-16T01:00:00Z\", \"shippedOnBoard\", { timeZone: \"+08:00\" })",
@@ -5950,11 +6770,154 @@
       },
       {
         "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z[u-ca=iso8601]\", end: \"2024-01-01T17:00:00Z\" })",
-        "result": "true — calendar annotation ignored"
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidInterval({ start: \"2024-01-01T09:00:00Z[!foo=bar]\", end: \"2024-01-01T17:00:00Z\" })",
-        "result": "false — unknown critical annotation"
+        "result": "false — no annotation of any kind"
+      }
+    ]
+  },
+  {
+    "url": "/reference/iot/convert/ptpToUtc",
+    "page": "/reference/iot/convert/ptpToUtc",
+    "name": "ptpToUtc",
+    "namespace": "iot",
+    "module": "convert",
+    "kind": "function",
+    "signature": "ptpToUtc(timestamp: PtpTimestamp | { seconds: number; nanoseconds: number; }, currentUtcOffset: number): string",
+    "description": "Converts a PTP (IEEE 1588) timestamp to a UTC instant string ending in `Z`.",
+    "sourcePath": "packages/gmt/src/iot/convert/ptpToUtc.ts",
+    "examples": [
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37)",
+        "result": "\"2024-01-01T00:00:00Z\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0)",
+        "result": "\"2024-01-01T00:00:37Z\" — the offset ignored"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 36)",
+        "result": "\"2024-01-01T00:00:01Z\" — a grandmaster still on the 2016 offset"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237, nanoseconds: 500000000 }, 37)",
+        "result": "\"2024-01-01T00:00:00.5Z\" — number seconds"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 37n, nanoseconds: 0 }, 37)",
+        "result": "\"1970-01-01T00:00:00Z\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37)",
+        "result": "\"\" — before 1970: an unset clock"
+      },
+      {
+        "call": "ptpToUtc({ seconds: 0n, nanoseconds: 1000000000 }, 37)",
+        "result": "\"\""
+      },
+      {
+        "call": "ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37.5)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/iot/convert/utcToPtp",
+    "page": "/reference/iot/convert/utcToPtp",
+    "name": "utcToPtp",
+    "namespace": "iot",
+    "module": "convert",
+    "kind": "function",
+    "signature": "utcToPtp(value: string, currentUtcOffset: number): PtpTimestamp | null",
+    "description": "Converts a UTC instant to the PTP (IEEE 1588) timestamp a grandmaster announcing `currentUtcOffset` would send.",
+    "sourcePath": "packages/gmt/src/iot/convert/utcToPtp.ts",
+    "examples": [
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00Z\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 0 }"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T02:00:00+02:00\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 0 } — offset input"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00.5Z\", 37)",
+        "result": "{ seconds: 1704067237n, nanoseconds: 500000000 }"
+      },
+      {
+        "call": "utcToPtp(\"1970-01-01T00:00:00Z\", 37)",
+        "result": "{ seconds: 37n, nanoseconds: 0 }"
+      },
+      {
+        "call": "utcToPtp(\"2016-12-31T23:59:60Z\", 37)",
+        "result": "null — a leap second has no reading with one offset"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00\", 37)",
+        "result": "null — no designator"
+      },
+      {
+        "call": "utcToPtp(\"1969-12-31T23:59:59Z\", 37)",
+        "result": "null — before 1970"
+      },
+      {
+        "call": "utcToPtp(\"2024-01-01T00:00:00Z\", 37.5)",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/iot/validate/isValidPtpTimestamp",
+    "page": "/reference/iot/validate/isValidPtpTimestamp",
+    "name": "isValidPtpTimestamp",
+    "namespace": "iot",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidPtpTimestamp(value: unknown): value is PtpTimestamp | { seconds: number; nanoseconds: number; }",
+    "description": "Return true when `value` is a PTP timestamp record that `ptpToUtc` reads. It checks the ranges of the 80-bit PTP (IEEE 1588) timestamp: 32 bits of nanoseconds (RFC 8877 section 4.3) and the other 48 bits (80 - 32) of seconds, the nanoseconds in 0 to 10^9 - 1.",
+    "sourcePath": "packages/gmt/src/iot/validate/isValidPtpTimestamp.ts",
+    "examples": [
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1704067237n, nanoseconds: 0 })",
+        "result": "true"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1704067237, nanoseconds: 999999999 })",
+        "result": "true — number seconds"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n, nanoseconds: 0 })",
+        "result": "true — although ptpToUtc(…, 37) is \"\""
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 281474976710656n, nanoseconds: 0 })",
+        "result": "false — 2⁴⁸"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: -1n, nanoseconds: 0 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n, nanoseconds: 1000000000 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 1.5, nanoseconds: 0 })",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp({ seconds: 0n })",
+        "result": "false — missing nanoseconds"
+      },
+      {
+        "call": "isValidPtpTimestamp(null)",
+        "result": "false"
+      },
+      {
+        "call": "isValidPtpTimestamp(\"2024-01-01T00:00:00Z\")",
+        "result": "false"
       }
     ]
   },
@@ -12299,11 +13262,11 @@
       },
       {
         "call": "isValidDateTimeInterval(\"2024-01-01T09:00:00[u-ca=iso8601]\", \"2024-01-01T17:00:00[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTimeInterval(\"2024-01-01T09:00:00[u-ca=hebrew]\", \"2024-01-01T17:00:00\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       }
     ]
   },
@@ -12336,11 +13299,11 @@
       },
       {
         "call": "isValidTimeInterval(\"09:00:00[u-ca=iso8601]\", \"17:00:00[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTimeInterval(\"09:00:00[!foo=bar]\", \"17:00:00\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       }
     ]
   },
@@ -13017,7 +13980,7 @@
       },
       {
         "call": "parseMonthDay(\"--12-25[u-ca=ISO8601]\")",
-        "result": "\"--12-25\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseMonthDay(\"--02-30\")",
@@ -13087,7 +14050,7 @@
       },
       {
         "call": "parseMonthDayFromDateTime(\"2024-12-25T10:00:00[Europe/Paris]\")",
-        "result": "\"--12-25\""
+        "result": "\"\""
       }
     ]
   },
@@ -13640,7 +14603,7 @@
       },
       {
         "call": "parseYearMonth(\"2026-10[u-ca=ISO8601]\")",
-        "result": "\"2026-10\""
+        "result": "\"\" (no annotation of any kind)"
       },
       {
         "call": "parseYearMonth(\"+275760-10\")",
@@ -13715,6 +14678,10 @@
       {
         "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00Z\")",
         "result": "\"\""
+      },
+      {
+        "call": "parseYearMonthFromDateTime(\"2026-10-01T10:00:00[Europe/Paris]\")",
+        "result": "\"\""
       }
     ]
   },
@@ -13759,7 +14726,7 @@
     "module": "validate",
     "kind": "function",
     "signature": "hasSecond60(value: string): boolean",
-    "description": "Return true if the provided ISO 8601 date-time or time string has a second-60 field.",
+    "description": "Return true if the string is one of GMT's own kinds with a second-60 field.",
     "sourcePath": "packages/gmt/src/plain/validate/hasSecond60.ts",
     "examples": [
       {
@@ -13775,36 +14742,52 @@
         "result": "true"
       },
       {
-        "call": "hasSecond60(\"2016-12-31T23:59:60.123+00:00\")",
-        "result": "true"
-      },
-      {
-        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
-        "result": "true (lowercase t)"
-      },
-      {
-        "call": "hasSecond60(\"20161231 235960Z\")",
-        "result": "true (space separator, basic format)"
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[UTC]\")",
+        "result": "true (zoned)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:60\")",
-        "result": "true (no designator; PlainDateTime clamps it)"
+        "result": "true (plain date-time)"
       },
       {
         "call": "hasSecond60(\"23:59:60\")",
-        "result": "true (a time; PlainTime clamps it)"
+        "result": "true (plain time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60,5Z\")",
+        "result": "true (comma fraction)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=hebrew]\")",
+        "result": "true (calendar date-time)"
+      },
+      {
+        "call": "hasSecond60(\"2016-02-30T23:59:60\")",
+        "result": "false (no such day)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60+00:00[Not/AZone]\")",
+        "result": "false (unknown zone)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60[u-ca=notacal]\")",
+        "result": "false (unknown calendar)"
       },
       {
         "call": "hasSecond60(\"2016-12-31T23:59:59Z\")",
         "result": "false"
       },
       {
-        "call": "hasSecond60(\"2024-06-15T12:34:60Z\")",
-        "result": "true (syntactic: no leap second can occur here)"
+        "call": "hasSecond60(\"2016-12-31t23:59:60Z\")",
+        "result": "false (lower-case t is not a GMT shape)"
       },
       {
-        "call": "/T\\d{2}:\\d{2}:60(?:[.,]\\d+)?[-+Zz[]/.test(\"2016-12-31t23:59:60Z\")",
-        "result": "false (the earlier uppercase-T-only test)"
+        "call": "hasSecond60(\"20161231 235960Z\")",
+        "result": "false (space separator, basic format)"
+      },
+      {
+        "call": "hasSecond60(\"2016-12-31T23:59:60Z[foo=bar]\")",
+        "result": "false (an annotation GMT has no kind for)"
       }
     ]
   },
@@ -13870,7 +14853,7 @@
       },
       {
         "call": "isValidCalendarDate(\"2024-10-03[Asia/Tokyo][u-ca=hebrew]\")",
-        "result": "true (the time zone annotation is ignored)"
+        "result": "false (a time zone annotation)"
       },
       {
         "call": "isValidCalendarDate(\"2024-10-03T14:30:00[u-ca=hebrew]\")",
@@ -13935,11 +14918,11 @@
       },
       {
         "call": "isValidDate(\"2024-03-10[u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDate(\"2024-03-10[foo=bar]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidDate(\"2024-03-10[!foo=bar]\")",
@@ -14118,15 +15101,15 @@
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[Asia/Kolkata]\")",
-        "result": "true (time zone annotation ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[!foo=bar]\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T12:34:56[u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidDateTime(\"2024-02-29T24:00:00\")",
@@ -14352,11 +15335,11 @@
       },
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidIsoDateLike(\"2024-02-29[u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidIsoDateLike(null)",
@@ -14389,7 +15372,7 @@
       },
       {
         "call": "isValidMonthDay(\"--12-25[u-ca=ISO8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidMonthDay(\"--02-30\")",
@@ -14401,7 +15384,7 @@
       },
       {
         "call": "isValidMonthDay(\"--12-25[u-ca=gregory]\")",
-        "result": "false (only iso8601)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidMonthDay(\"2024-12-25\")",
@@ -14487,11 +15470,11 @@
       },
       {
         "call": "isValidTime(\"12:34:56[u-ca=hebrew]\")",
-        "result": "true (calendar annotation ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTime(\"12:34:56[!foo=bar]\")",
-        "result": "false (unknown critical annotation)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidTime(\"23:60:00\")",
@@ -14660,7 +15643,7 @@
       },
       {
         "call": "isValidYearMonth(\"2026-10[u-ca=ISO8601]\")",
-        "result": "true"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidYearMonth(\"+275760-10\")",
@@ -14680,7 +15663,7 @@
       },
       {
         "call": "isValidYearMonth(\"2026-10[u-ca=gregory]\")",
-        "result": "false (only iso8601)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidYearMonth(\"\")",
@@ -15294,7 +16277,7 @@
       },
       {
         "call": "toArrowLocalTimestamp(\"2024-01-01T00:00:00[Asia/Tokyo]\", \"second\")",
-        "result": "1704067200n — annotation ignored"
+        "result": "0n — no annotation of any kind"
       },
       {
         "call": "toArrowLocalTimestamp(\"1969-12-31T23:59:59.999999999\", \"second\")",
@@ -15342,8 +16325,12 @@
         "result": "1704067200000n"
       },
       {
-        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00\", \"second\")",
         "result": "1704067200n"
+      },
+      {
+        "call": "toArrowTimestamp(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\", \"second\")",
+        "result": "0n — a zone bracket"
       },
       {
         "call": "toArrowTimestamp(\"2024-01-01T00:00:00.123456789Z\", \"microsecond\")",
@@ -15546,16 +16533,16 @@
         "result": "-1000000000n"
       },
       {
-        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30\")",
         "result": "1710052200000000000n"
       },
       {
-        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:00[Asia/Kolkata]\")",
-        "result": "1710054000000000000n — the offset decides, the zone is not checked"
+        "call": "toNanoseconds(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "result": "0n — no annotation of any kind"
       },
       {
-        "call": "toNanoseconds(\"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "-315615330000000000n — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "toNanoseconds(\"1960-01-01T00:20:00-00:44:30\")",
+        "result": "-315615330000000000n — an offset with seconds is read exactly"
       },
       {
         "call": "toNanoseconds(\"2024-03-10T12:00:00\")",
@@ -15658,7 +16645,7 @@
         "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
       },
       {
-        "call": "toParquetInt96(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "call": "toParquetInt96(\"2024-03-10T13:34:56.789+01:00\")",
         "result": "{ julianDay: 2460380, nanosOfDay: 45296789000000n }"
       },
       {
@@ -15837,7 +16824,7 @@
         "result": "{ seconds: 1710074096n, nanos: 789000000 }"
       },
       {
-        "call": "toProtoTimestamp(\"2024-03-10T13:34:56.789+01:00[Europe/Paris]\")",
+        "call": "toProtoTimestamp(\"2024-03-10T13:34:56.789+01:00\")",
         "result": "{ seconds: 1710074096n, nanos: 789000000 }"
       },
       {
@@ -16195,8 +17182,12 @@
         "result": "\"01HK153X00\" — floors to the millisecond"
       },
       {
-        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"01HK153X00\""
+      },
+      {
+        "call": "ulidTimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "ulidTimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
@@ -16252,8 +17243,12 @@
         "result": "\"018cc251-f400\" — floors to the millisecond"
       },
       {
-        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00\")",
         "result": "\"018cc251-f400\""
+      },
+      {
+        "call": "uuidV7TimestampPrefix(\"2024-01-01T09:00:00+09:00[Asia/Tokyo]\")",
+        "result": "\"\" — a zone bracket"
       },
       {
         "call": "uuidV7TimestampPrefix(\"+010889-08-02T05:31:50.655Z\")",
@@ -16334,12 +17329,16 @@
         "result": "true — the epoch, where toNanoseconds returns 0n"
       },
       {
-        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30\")",
         "result": "true"
       },
       {
-        "call": "isValidInstant(\"2024-03-10T12:00:00Z[Not/AZone]\")",
-        "result": "true — the zone annotation is not checked"
+        "call": "isValidInstant(\"2024-03-10T12:00:00+05:30[Asia/Kolkata]\")",
+        "result": "false — no annotation of any kind"
+      },
+      {
+        "call": "isValidInstant(\"2024-03-10T12:00:00Z[u-ca=hebrew]\")",
+        "result": "false"
       },
       {
         "call": "isValidInstant(\"2024-03-10T12:00:00-05:00\")",
@@ -16527,6 +17526,154 @@
       },
       {
         "call": "isValidNanoseconds(\"0\")",
+        "result": "false"
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/convert/gtfsToInstant",
+    "page": "/reference/rail/convert/gtfsToInstant",
+    "name": "gtfsToInstant",
+    "namespace": "rail",
+    "module": "convert",
+    "kind": "function",
+    "signature": "gtfsToInstant(serviceDate: string, gtfsTime: string, timeZone: string): string",
+    "description": "The UTC instant a GTFS time names on its service day in the agency's time zone.",
+    "sourcePath": "packages/gmt/src/rail/convert/gtfsToInstant.ts",
+    "examples": [
+      {
+        "call": "gtfsToInstant(\"20240130\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"2024-01-31T09:35:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"2024-01-30\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"2024-01-31T09:35:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240331\", \"00:00:00\", \"Europe/Berlin\")",
+        "result": "\"2024-03-30T22:00:00Z\" (23:00 local)"
+      },
+      {
+        "call": "gtfsToInstant(\"20240407\", \"00:00:00\", \"Australia/Sydney\")",
+        "result": "\"2024-04-06T14:00:00Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240309\", \"26:30:00\", \"America/New_York\")",
+        "result": "\"2024-03-10T07:30:00Z\" (03:30 EDT)"
+      },
+      {
+        "call": "gtfsToInstant(\"20241102\", \"26:30:00\", \"America/New_York\")",
+        "result": "\"2024-11-03T06:30:00Z\" (second 01:30)"
+      },
+      {
+        "call": "gtfsToInstant(\"99991231\", \"999:59:59\", \"UTC\")",
+        "result": "\"+010000-02-10T15:59:59Z\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240230\", \"25:35:00\", \"America/Los_Angeles\")",
+        "result": "\"\""
+      },
+      {
+        "call": "gtfsToInstant(\"20240130\", \"25:35:00\", \"+05:30\")",
+        "result": "\"2024-01-30T20:05:00Z\" (an offset is read)"
+      },
+      {
+        "call": "gtfsToInstant(\"20000115\", \"00:00:00\", \"Africa/Khartoum\")",
+        "result": "\"\" (noon nonexistent)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/format/formatGtfsTime",
+    "page": "/reference/rail/format/formatGtfsTime",
+    "name": "formatGtfsTime",
+    "namespace": "rail",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatGtfsTime(value: GtfsTime): string",
+    "description": "Writes a GTFS Schedule `Time` value, keeping the days past the service day in the hour.",
+    "sourcePath": "packages/gmt/src/rail/format/formatGtfsTime.ts",
+    "examples": [
+      {
+        "call": "formatGtfsTime({ seconds: 5700, dayOverflow: 1 })",
+        "result": "\"25:35:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 29100, dayOverflow: 0 })",
+        "result": "\"08:05:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 0, dayOverflow: 1 })",
+        "result": "\"24:00:00\""
+      },
+      {
+        "call": "formatGtfsTime({ seconds: 86400, dayOverflow: 0 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/parse/parseGtfsTime",
+    "page": "/reference/rail/parse/parseGtfsTime",
+    "name": "parseGtfsTime",
+    "namespace": "rail",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseGtfsTime(value: string): GtfsTime | null",
+    "description": "Reads a GTFS Schedule `Time` value, keeping the days past the service day apart from the time of day.",
+    "sourcePath": "packages/gmt/src/rail/parse/parseGtfsTime.ts",
+    "examples": [
+      {
+        "call": "parseGtfsTime(\"25:35:00\")",
+        "result": "{ seconds: 5700, dayOverflow: 1 }"
+      },
+      {
+        "call": "parseGtfsTime(\"8:05:00\")",
+        "result": "{ seconds: 29100, dayOverflow: 0 }"
+      },
+      {
+        "call": "parseGtfsTime(\"24:00:00\")",
+        "result": "{ seconds: 0, dayOverflow: 1 }"
+      },
+      {
+        "call": "parseGtfsTime(\"25:60:00\")",
+        "result": "null"
+      },
+      {
+        "call": "parseGtfsTime(\" 25:35:00\")",
+        "result": "null"
+      }
+    ]
+  },
+  {
+    "url": "/reference/rail/validate/isValidGtfsTime",
+    "page": "/reference/rail/validate/isValidGtfsTime",
+    "name": "isValidGtfsTime",
+    "namespace": "rail",
+    "module": "validate",
+    "kind": "function",
+    "signature": "isValidGtfsTime(value: string): boolean",
+    "description": "Checks a GTFS Schedule `Time` value, including one past `24:00:00`.",
+    "sourcePath": "packages/gmt/src/rail/validate/isValidGtfsTime.ts",
+    "examples": [
+      {
+        "call": "isValidGtfsTime(\"25:35:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"8:05:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"110:29:00\")",
+        "result": "true"
+      },
+      {
+        "call": "isValidGtfsTime(\"25:60:00\")",
+        "result": "false"
+      },
+      {
+        "call": "isValidGtfsTime(\"1000:00:00\")",
         "result": "false"
       }
     ]
@@ -16981,6 +18128,105 @@
       {
         "call": "epcisEventTime.test(\"2024-06-15T14:30:00+15:00\")",
         "result": "false (offset past the range GS1 allows)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/fhir/fhirDate",
+    "page": "/reference/regex/fhir/fhirDate",
+    "name": "fhirDate",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `date`: the `regex` of the `date` StructureDefinition (https://hl7.org/fhir/R4/date.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirDate.test(\"2024-06-15\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDate.test(\"2024\")",
+        "result": "true (year precision)"
+      },
+      {
+        "call": "fhirDate.test(\"2024-06-15T10:30:00Z\")",
+        "result": "false (a date carries no time)"
+      },
+      {
+        "call": "fhirDate.test(\"0000-01-01\")",
+        "result": "false (year 0000 is not in the pattern)"
+      },
+      {
+        "call": "fhirDate.test(\"2023-02-29\")",
+        "result": "true (shape only; the day does not exist)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/fhir/fhirDateTime",
+    "page": "/reference/regex/fhir/fhirDateTime",
+    "name": "fhirDateTime",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `dateTime`: the `regex` of the `dateTime` StructureDefinition (https://hl7.org/fhir/R4/datetime.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirDateTime.test(\"2024-06\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDateTime.test(\"2015-02-07T13:28:17.239+02:00\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30:00\")",
+        "result": "false (a time needs a zone)"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30Z\")",
+        "result": "false (seconds are required)"
+      },
+      {
+        "call": "fhirDateTime.test(\"2024-06-15T10:30:00+14:30\")",
+        "result": "false (offset past 14:00)"
+      }
+    ]
+  },
+  {
+    "url": "/reference/regex/fhir/fhirInstant",
+    "page": "/reference/regex/fhir/fhirInstant",
+    "name": "fhirInstant",
+    "namespace": "regex",
+    "module": "fhir",
+    "kind": "regex",
+    "signature": "",
+    "description": "RegExp matching a FHIR R4 `instant`: the `regex` of the `instant` StructureDefinition (https://hl7.org/fhir/R4/instant.profile.json), verbatim and anchored.",
+    "sourcePath": "packages/gmt/src/regex/fhir.ts",
+    "examples": [
+      {
+        "call": "fhirInstant.test(\"2015-02-07T13:28:17.239+02:00\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00Z\")",
+        "result": "true"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15\")",
+        "result": "false (an instant needs a time)"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00\")",
+        "result": "false (a zone is required)"
+      },
+      {
+        "call": "fhirInstant.test(\"2024-06-15T10:30:00z\")",
+        "result": "false (upper-case Z only)"
       }
     ]
   },
@@ -17805,16 +19051,16 @@
         "result": "123.456789"
       },
       {
-        "call": "spanMs(\"2024-03-30T12:00:00+00:00[Europe/London]\", \"2024-03-31T12:00:00+01:00[Europe/London]\")",
+        "call": "spanMs(\"2024-03-30T12:00:00+00:00\", \"2024-03-31T12:00:00+01:00\")",
         "result": "82800000 — 23 hours, not 24"
       },
       {
-        "call": "spanMs(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00-04:00[Asia/Tokyo]\")",
-        "result": "32400000 — offsets decide, the zone is not checked"
+        "call": "spanMs(\"2024-03-10T12:00:00+05:00\", \"2024-03-10T12:00:00-04:00\")",
+        "result": "32400000 — the offsets decide"
       },
       {
-        "call": "spanMs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "0 — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "spanMs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:44:30\")",
+        "result": "0 — an offset with seconds is read exactly"
       },
       {
         "call": "spanMs(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -17854,16 +19100,16 @@
         "result": "1n"
       },
       {
-        "call": "spanNs(\"2024-03-10T07:00:00-05:00[America/Bogota]\", \"2024-03-10T12:00:00Z\")",
-        "result": "0n — same instant, different zones"
+        "call": "spanNs(\"2024-03-10T07:00:00-05:00\", \"2024-03-10T12:00:00Z\")",
+        "result": "0n — same instant, different offsets"
       },
       {
-        "call": "spanNs(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00-04:00[Asia/Tokyo]\")",
-        "result": "32400000000000n — offsets decide, the zone is not checked"
+        "call": "spanNs(\"2024-03-10T12:00:00+05:00\", \"2024-03-10T12:00:00-04:00\")",
+        "result": "32400000000000n — the offsets decide"
       },
       {
-        "call": "spanNs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:45[Africa/Monrovia]\")",
-        "result": "0n — the zone's −00:44:30, which `-00:45` rounds"
+        "call": "spanNs(\"1960-01-01T01:04:30Z\", \"1960-01-01T00:20:00-00:44:30\")",
+        "result": "0n — an offset with seconds is read exactly"
       },
       {
         "call": "spanNs(\"2024-03-10T12:00:00Z\", \"invalid\")",
@@ -17899,7 +19145,7 @@
         "result": "0"
       },
       {
-        "call": "spanSeconds(\"2026-03-28T12:00:00+01:00[Europe/Paris]\", \"2026-03-29T12:00:00+02:00[Europe/Paris]\")",
+        "call": "spanSeconds(\"2026-03-28T12:00:00+01:00\", \"2026-03-29T12:00:00+02:00\")",
         "result": "82800 — 23 hours, not 24"
       },
       {
@@ -17994,12 +19240,12 @@
         "result": "true — spans are signed"
       },
       {
-        "call": "isValidSpan(\"2024-03-10T07:00:00-05:00[America/Bogota]\", \"2024-03-10T12:00:00Z\")",
+        "call": "isValidSpan(\"2024-03-10T07:00:00-05:00\", \"2024-03-10T12:00:00Z\")",
         "result": "true"
       },
       {
-        "call": "isValidSpan(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00Z[Not/AZone]\")",
-        "result": "true — zone annotations are not checked"
+        "call": "isValidSpan(\"2024-03-10T12:00:00+05:00[Asia/Tokyo]\", \"2024-03-10T12:00:00Z\")",
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidSpan(\"-271821-04-20T00:00:00Z\", \"+275760-09-13T00:00:00Z\")",
@@ -18115,6 +19361,179 @@
     ]
   },
   {
+    "url": "/reference/timescale/calculate/tcgMinusTt",
+    "page": "/reference/timescale/calculate/tcgMinusTt",
+    "name": "tcgMinusTt",
+    "namespace": "timescale",
+    "module": "calculate",
+    "kind": "function",
+    "signature": "tcgMinusTt(isoString: string): number | null",
+    "description": "Return TCG − TT, in seconds, at a UTC instant.",
+    "sourcePath": "packages/gmt/src/timescale/calculate/tcgMinusTt.ts",
+    "examples": [
+      {
+        "call": "tcgMinusTt(\"2026-01-01T00:00:00Z\")",
+        "result": "1.077661917"
+      },
+      {
+        "call": "tcgMinusTt(\"2000-01-01T12:00:00Z\")",
+        "result": "0.50583333"
+      },
+      {
+        "call": "tcgMinusTt(\"1976-12-31T23:59:45Z\")",
+        "result": "0 — the epoch T₀"
+      },
+      {
+        "call": "tcgMinusTt(\"2016-12-31T23:59:60Z\")",
+        "result": "0.879736307 — the inserted second"
+      },
+      {
+        "call": "tcgMinusTt(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromJ2000Seconds",
+    "page": "/reference/timescale/convert/fromJ2000Seconds",
+    "name": "fromJ2000Seconds",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJ2000Seconds(seconds: number, scale?: TimeScale): string",
+    "description": "Convert seconds since J2000.0 on a time scale to a UTC instant string. **The scale defaults to `\"TT\"`, unlike the Julian Date and MJD functions, which default to `\"UTC\"`**: J2000.0 is defined as 2000-01-01T12:00:00 TT (IAU 1994 Resolution C7).",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJ2000Seconds.ts",
+    "examples": [
+      {
+        "call": "fromJ2000Seconds(0)",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(0, \"UTC\")",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(820497600, \"UTC\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromJ2000Seconds(-883656000.5, \"UTC\")",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJ2000Seconds(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromJulianDate",
+    "page": "/reference/timescale/convert/fromJulianDate",
+    "name": "fromJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJulianDate(jd: number, scale?: TimeScale): string",
+    "description": "Convert a single Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJulianDate.ts",
+    "examples": [
+      {
+        "call": "fromJulianDate(2451545)",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDate(2451545, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJulianDate(2451544.5)",
+        "result": "\"2000-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromJulianDate(2461042 + 2 ** -31)",
+        "result": "\"2026-01-01T12:00:00.000040233Z\""
+      },
+      {
+        "call": "fromJulianDate(2441317.4)",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJulianDate(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromJulianDateParts",
+    "page": "/reference/timescale/convert/fromJulianDateParts",
+    "name": "fromJulianDateParts",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromJulianDateParts(parts: JulianDateParts, scale?: TimeScale): string",
+    "description": "Convert a two-part Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromJulianDateParts.ts",
+    "examples": [
+      {
+        "call": "fromJulianDateParts({ jd1: 2451545, jd2: 0 })",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2451545, jd2: 0 }, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2400000.5, jd2: 51544.5 })",
+        "result": "\"2000-01-01T12:00:00Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2457754, jd2: 86399 / 172802 })",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: 2441317, jd2: 0.4999999 })",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromJulianDateParts({ jd1: NaN, jd2: 0 })",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromModifiedJulianDate",
+    "page": "/reference/timescale/convert/fromModifiedJulianDate",
+    "name": "fromModifiedJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromModifiedJulianDate(mjd: number, scale?: TimeScale): string",
+    "description": "Convert a Modified Julian Date on a time scale to a UTC instant string. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromModifiedJulianDate.ts",
+    "examples": [
+      {
+        "call": "fromModifiedJulianDate(51544)",
+        "result": "\"2000-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(51544.5, \"TT\")",
+        "result": "\"2000-01-01T11:58:55.816Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(57753.5)",
+        "result": "\"2016-12-31T12:00:00.5Z\""
+      },
+      {
+        "call": "fromModifiedJulianDate(41316.99)",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromModifiedJulianDate(NaN)",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
     "url": "/reference/timescale/convert/fromTAI",
     "page": "/reference/timescale/convert/fromTAI",
     "name": "fromTAI",
@@ -18148,6 +19567,249 @@
     ]
   },
   {
+    "url": "/reference/timescale/convert/fromTCG",
+    "page": "/reference/timescale/convert/fromTCG",
+    "name": "fromTCG",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTCG(tcgString: string): string",
+    "description": "Convert a Geocentric Coordinate Time string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTCG.ts",
+    "examples": [
+      {
+        "call": "fromTCG(\"2026-01-01T00:01:10.261661917 TCG\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromTCG(\"2017-01-01T00:01:09.063736307 TCG\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromTCG(\"1977-01-01T00:00:32.184 TCG\")",
+        "result": "\"1976-12-31T23:59:45Z\""
+      },
+      {
+        "call": "fromTCG(\"1972-01-01T00:00:42.073987809 TCG\")",
+        "result": "\"\" — before 1972"
+      },
+      {
+        "call": "fromTCG(\"2026-01-01T00:01:10.261661917 TT\")",
+        "result": "\"\" — wrong token"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromTT",
+    "page": "/reference/timescale/convert/fromTT",
+    "name": "fromTT",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTT(ttString: string): string",
+    "description": "Convert a Terrestrial Time string to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTT.ts",
+    "examples": [
+      {
+        "call": "fromTT(\"2026-01-01T00:01:09.184 TT\")",
+        "result": "\"2026-01-01T00:00:00Z\""
+      },
+      {
+        "call": "fromTT(\"2017-01-01T00:01:08.184 TT\")",
+        "result": "\"2016-12-31T23:59:60Z\""
+      },
+      {
+        "call": "fromTT(\"2017-01-01T00:01:08.684 TT\")",
+        "result": "\"2016-12-31T23:59:60.5Z\""
+      },
+      {
+        "call": "fromTT(\"2026-01-01T00:01:09.184 TAI\")",
+        "result": "\"\" — wrong token"
+      },
+      {
+        "call": "fromTT(\"2016-12-31T23:59:60 TT\")",
+        "result": "\"\" — TT has no second 60"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/fromTai64n",
+    "page": "/reference/timescale/convert/fromTai64n",
+    "name": "fromTai64n",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "fromTai64n(label: string): string",
+    "description": "Convert a TAI64, TAI64N or TAI64NA label in hex text to a UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/convert/fromTai64n.ts",
+    "examples": [
+      {
+        "call": "fromTai64n(\"@400000002a2b2c2d00000000\")",
+        "result": "\"1992-06-02T08:06:43Z\" — Bernstein's example"
+      },
+      {
+        "call": "fromTai64n(\"@4000000037c219bf2ef02e94\")",
+        "result": "\"1999-08-24T04:03:43.7874925Z\" — daemontools' example"
+      },
+      {
+        "call": "fromTai64n(\"400000002a2b2c2d\")",
+        "result": "\"1992-06-02T08:06:43Z\" — TAI64"
+      },
+      {
+        "call": "fromTai64n(\"@4000000037c219bf2ef02e943b9ac9ff\")",
+        "result": "\"1999-08-24T04:03:43.7874925Z\" — attoseconds dropped"
+      },
+      {
+        "call": "fromTai64n(\"@40000000586846a400000000\")",
+        "result": "\"2016-12-31T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "fromTai64n(\"@4000000000000000\")",
+        "result": "\"\" — 1970 TAI, before 1972"
+      },
+      {
+        "call": "fromTai64n(\"@400000002a2b2c2d0000000\")",
+        "result": "\"\" — 23 hex digits"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJ2000Seconds",
+    "page": "/reference/timescale/convert/toJ2000Seconds",
+    "name": "toJ2000Seconds",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJ2000Seconds(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to seconds since J2000.0 on a time scale. **The scale defaults to `\"TT\"`, unlike the Julian Date and MJD functions, which default to `\"UTC\"`**: J2000.0 is defined as 2000-01-01T12:00:00 TT (IAU 1994 Resolution C7).",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJ2000Seconds.ts",
+    "examples": [
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T11:58:55.816Z\")",
+        "result": "0 — J2000.0 itself"
+      },
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T12:00:00Z\")",
+        "result": "64.184"
+      },
+      {
+        "call": "toJ2000Seconds(\"2000-01-01T12:00:00Z\", \"UTC\")",
+        "result": "0"
+      },
+      {
+        "call": "toJ2000Seconds(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "820497637"
+      },
+      {
+        "call": "toJ2000Seconds(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJulianDate",
+    "page": "/reference/timescale/convert/toJulianDate",
+    "name": "toJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJulianDate(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to a single Julian Date on a time scale. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJulianDate.ts",
+    "examples": [
+      {
+        "call": "toJulianDate(\"2000-01-01T12:00:00Z\")",
+        "result": "2451545"
+      },
+      {
+        "call": "toJulianDate(\"2000-01-01T00:00:00Z\")",
+        "result": "2451544.5"
+      },
+      {
+        "call": "toJulianDate(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "2451545"
+      },
+      {
+        "call": "toJulianDate(\"2026-01-01T12:00:00.00002Z\")",
+        "result": "2461042 — a double there is 40.2 µs wide, so 20 µs past noon rounds back to noon"
+      },
+      {
+        "call": "toJulianDate(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toJulianDateParts",
+    "page": "/reference/timescale/convert/toJulianDateParts",
+    "name": "toJulianDateParts",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toJulianDateParts(isoString: string, scale?: TimeScale): JulianDateParts | null",
+    "description": "Convert a UTC instant to a two-part Julian Date `{ jd1, jd2 }` on a time scale, exact to the nanosecond. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toJulianDateParts.ts",
+    "examples": [
+      {
+        "call": "toJulianDateParts(\"2000-01-01T12:00:00Z\")",
+        "result": "{ jd1: 2451545, jd2: 0 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2000-01-01T00:00:00Z\")",
+        "result": "{ jd1: 2451544, jd2: 0.5 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "{ jd1: 2451545, jd2: 0 }"
+      },
+      {
+        "call": "toJulianDateParts(\"2016-12-31T23:59:60Z\")",
+        "result": "{ jd1: 2457754, jd2: 0.4999884260598836 } (86399 / 172802)"
+      },
+      {
+        "call": "toJulianDateParts(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "{ jd1: 2461041, jd2: 0.50042824... }"
+      },
+      {
+        "call": "toJulianDateParts(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toModifiedJulianDate",
+    "page": "/reference/timescale/convert/toModifiedJulianDate",
+    "name": "toModifiedJulianDate",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toModifiedJulianDate(isoString: string, scale?: TimeScale): number | null",
+    "description": "Convert a UTC instant to a Modified Julian Date on a time scale. The scale defaults to `\"UTC\"`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toModifiedJulianDate.ts",
+    "examples": [
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T00:00:00Z\")",
+        "result": "51544"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T12:00:00Z\")",
+        "result": "51544.5"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2000-01-01T11:58:55.816Z\", \"TT\")",
+        "result": "51544.5"
+      },
+      {
+        "call": "toModifiedJulianDate(\"2026-01-01T00:00:00Z\", \"TAI\")",
+        "result": "61041.00042824... (61041 + 37 / 86400)"
+      },
+      {
+        "call": "toModifiedJulianDate(\"1971-12-31T23:59:59Z\")",
+        "result": "null — before 1972"
+      }
+    ]
+  },
+  {
     "url": "/reference/timescale/convert/toTAI",
     "page": "/reference/timescale/convert/toTAI",
     "name": "toTAI",
@@ -18177,6 +19839,245 @@
       {
         "call": "toTAI(\"1971-12-31T00:00:00Z\")",
         "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTCG",
+    "page": "/reference/timescale/convert/toTCG",
+    "name": "toTCG",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTCG(isoString: string): string",
+    "description": "Convert a UTC instant to a Geocentric Coordinate Time string, `YYYY-MM-DDTHH:MM:SS[.fraction] TCG`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTCG.ts",
+    "examples": [
+      {
+        "call": "toTCG(\"2026-01-01T00:00:00Z\")",
+        "result": "\"2026-01-01T00:01:10.261661917 TCG\""
+      },
+      {
+        "call": "toTCG(\"2000-01-01T12:00:00Z\")",
+        "result": "\"2000-01-01T12:01:04.68983333 TCG\""
+      },
+      {
+        "call": "toTCG(\"1976-12-31T23:59:45Z\")",
+        "result": "\"1977-01-01T00:00:32.184 TCG\" — the epoch, TCG = TT"
+      },
+      {
+        "call": "toTCG(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2017-01-01T00:01:09.063736307 TCG\""
+      },
+      {
+        "call": "toTCG(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTCG(\"1971-12-31T23:59:59Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTT",
+    "page": "/reference/timescale/convert/toTT",
+    "name": "toTT",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTT(isoString: string): string",
+    "description": "Convert a UTC instant to a Terrestrial Time string, `YYYY-MM-DDTHH:MM:SS[.fraction] TT`.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTT.ts",
+    "examples": [
+      {
+        "call": "toTT(\"2026-01-01T00:00:00Z\")",
+        "result": "\"2026-01-01T00:01:09.184 TT\""
+      },
+      {
+        "call": "toTT(\"2013-06-01T00:00:00Z\")",
+        "result": "\"2013-06-01T00:01:07.184 TT\""
+      },
+      {
+        "call": "toTT(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2017-01-01T00:01:08.184 TT\""
+      },
+      {
+        "call": "toTT(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTT(\"1971-12-31T23:59:59Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/convert/toTai64n",
+    "page": "/reference/timescale/convert/toTai64n",
+    "name": "toTai64n",
+    "namespace": "timescale",
+    "module": "convert",
+    "kind": "function",
+    "signature": "toTai64n(isoString: string): string",
+    "description": "Convert a UTC instant to its TAI64N label in the daemontools text form, `@` and 24 lowercase hex digits.",
+    "sourcePath": "packages/gmt/src/timescale/convert/toTai64n.ts",
+    "examples": [
+      {
+        "call": "toTai64n(\"1992-06-02T08:06:43Z\")",
+        "result": "\"@400000002a2b2c2d00000000\" — Bernstein's example"
+      },
+      {
+        "call": "toTai64n(\"1999-08-24T04:03:43.7874925Z\")",
+        "result": "\"@4000000037c219bf2ef02e94\" — daemontools' example"
+      },
+      {
+        "call": "toTai64n(\"2026-01-01T00:00:00Z\")",
+        "result": "\"@400000006955b92500000000\""
+      },
+      {
+        "call": "toTai64n(\"2016-12-31T23:59:60Z\")",
+        "result": "\"@40000000586846a400000000\" — the inserted second"
+      },
+      {
+        "call": "toTai64n(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "toTai64n(\"1971-12-31T00:00:00Z\")",
+        "result": "\"\""
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/format/formatCcsdsAsciiA",
+    "page": "/reference/timescale/format/formatCcsdsAsciiA",
+    "name": "formatCcsdsAsciiA",
+    "namespace": "timescale",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatCcsdsAsciiA(isoString: string, fractionalSecondDigits?: FractionalDigit): string",
+    "description": "Write an instant as a CCSDS ASCII Time Code A string (`YYYY-MM-DDThh:mm:ss.d…dZ`).",
+    "sourcePath": "packages/gmt/src/timescale/format/formatCcsdsAsciiA.ts",
+    "examples": [
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\", 6)",
+        "result": "\"2024-06-15T10:30:00.123456Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\")",
+        "result": "\"2024-06-15T10:30:00.123456789Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T12:30:00.123456789+02:00\", 0)",
+        "result": "\"2024-06-15T10:30:00Z\""
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2016-12-31T23:59:60.5Z\", 3)",
+        "result": "\"2016-12-31T23:59:60.500Z\" — the inserted second"
+      },
+      {
+        "call": "formatCcsdsAsciiA(\"2024-06-15T10:30:00\")",
+        "result": "\"\" — no offset, so no instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/format/formatCcsdsAsciiB",
+    "page": "/reference/timescale/format/formatCcsdsAsciiB",
+    "name": "formatCcsdsAsciiB",
+    "namespace": "timescale",
+    "module": "format",
+    "kind": "function",
+    "signature": "formatCcsdsAsciiB(isoString: string, fractionalSecondDigits?: FractionalDigit): string",
+    "description": "Write an instant as a CCSDS ASCII Time Code B string (`YYYY-DDDThh:mm:ss.d…dZ`, day of year).",
+    "sourcePath": "packages/gmt/src/timescale/format/formatCcsdsAsciiB.ts",
+    "examples": [
+      {
+        "call": "formatCcsdsAsciiB(\"1988-01-18T17:20:43.123456Z\")",
+        "result": "\"1988-018T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-12-31T23:59:59Z\")",
+        "result": "\"2024-366T23:59:59Z\" — day 366"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-01-01T01:00:00+02:00\")",
+        "result": "\"2023-365T23:00:00Z\" — the UTC day"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2016-366T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "formatCcsdsAsciiB(\"2024-06-15T10:30:00\")",
+        "result": "\"\" — no offset, so no instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/parse/parseCcsdsAsciiA",
+    "page": "/reference/timescale/parse/parseCcsdsAsciiA",
+    "name": "parseCcsdsAsciiA",
+    "namespace": "timescale",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseCcsdsAsciiA(value: string): string",
+    "description": "Read a CCSDS ASCII Time Code A (`YYYY-MM-DDThh:mm:ss.d…dZ`) as an ISO 8601 UTC instant string.",
+    "sourcePath": "packages/gmt/src/timescale/parse/parseCcsdsAsciiA.ts",
+    "examples": [
+      {
+        "call": "parseCcsdsAsciiA(\"1988-01-18T17:20:43.123456Z\")",
+        "result": "\"1988-01-18T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2024-06-15T10:30:00\")",
+        "result": "\"2024-06-15T10:30:00Z\" — the Z is optional"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2016-12-31T23:59:60Z\")",
+        "result": "\"2016-12-31T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2017-12-31T23:59:60Z\")",
+        "result": "\"\" — no leap second that day"
+      },
+      {
+        "call": "parseCcsdsAsciiA(\"2024-06-15\")",
+        "result": "\"\" — a day, not an instant"
+      }
+    ]
+  },
+  {
+    "url": "/reference/timescale/parse/parseCcsdsAsciiB",
+    "page": "/reference/timescale/parse/parseCcsdsAsciiB",
+    "name": "parseCcsdsAsciiB",
+    "namespace": "timescale",
+    "module": "parse",
+    "kind": "function",
+    "signature": "parseCcsdsAsciiB(value: string): string",
+    "description": "Read a CCSDS ASCII Time Code B (`YYYY-DDDThh:mm:ss.d…dZ`, day of year) as an ISO 8601 UTC instant string in calendar form.",
+    "sourcePath": "packages/gmt/src/timescale/parse/parseCcsdsAsciiB.ts",
+    "examples": [
+      {
+        "call": "parseCcsdsAsciiB(\"1988-018T17:20:43.123456Z\")",
+        "result": "\"1988-01-18T17:20:43.123456Z\" — CCSDS's own example"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2024-366T12:00:00Z\")",
+        "result": "\"2024-12-31T12:00:00Z\" — day 366 of a leap year"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2023-366T12:00:00Z\")",
+        "result": "\"\" — 2023 has 365 days"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2016-366T23:59:60Z\")",
+        "result": "\"2016-12-31T23:59:60Z\" — the inserted second"
+      },
+      {
+        "call": "parseCcsdsAsciiB(\"2024-167\")",
+        "result": "\"\" — a day, not an instant"
       }
     ]
   },
@@ -18823,11 +20724,11 @@
     "members": [
       {
         "name": "planned",
-        "description": "The planned time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The planned time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       },
       {
         "name": "actual",
-        "description": "The actual time, as an ISO 8601 instant or zoned datetime string."
+        "description": "The actual time, as an ISO 8601 instant string (`Z` or `±HH:MM`); a zoned string is not one."
       }
     ]
   },
@@ -19111,7 +21012,7 @@
       },
       {
         "call": "transitTime(\"2024-06-15T10:00:00Z[foo=bar]\", \"PT1H\")",
-        "result": "\"2024-06-15T11:00:00Z\" (an elective unknown annotation is ignored)"
+        "result": "\"\" (only a time zone bracket is accepted)"
       },
       {
         "call": "transitTime(\"2024-06-15T12:30:00+09:00[Asia/Tokyo]\", \"-PT2H30M\")",
@@ -19183,7 +21084,7 @@
         "result": "\"early\" (exactly on the plan is on the early boundary, which is outside)"
       },
       {
-        "call": "classifyPunctuality(\"2024-10-27T01:30:00+01:00[Europe/London]\", \"2024-10-27T01:30:00+00:00[Europe/London]\", { late: \"PT15M\" })",
+        "call": "classifyPunctuality(\"2024-10-27T01:30:00+01:00\", \"2024-10-27T01:30:00+00:00\", { late: \"PT15M\" })",
         "result": "\"late\" (the same wall time an hour later, across the fall-back)"
       },
       {
@@ -19220,12 +21121,24 @@
         "result": "true (at the cut-off, the window has closed)"
       },
       {
-        "call": "isPastCutoff(\"2024-04-07T02:30:00+10:00[Australia/Sydney]\", \"2024-04-07T02:30:00+11:00[Australia/Sydney]\")",
-        "result": "true (the second 02:30 is an hour after the first)"
+        "call": "isPastCutoff(\"2024-04-06T16:00:00Z\", \"2024-04-07T02:30:00+11:00[Australia/Sydney]\")",
+        "result": "true (the first 02:30 is 15:30Z, already gone)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-04-06T16:00:00Z\", \"2024-04-07T02:30:00+10:00[Australia/Sydney]\")",
+        "result": "false (the second 02:30 is 16:30Z, half an hour away)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T15:00:00Z\")",
+        "result": "false (a bare instant is not a zoned cut-off)"
       },
       {
         "call": "isPastCutoff(\"2024-06-12T16:00:00\", \"2024-06-12T17:00:00+02:00[Europe/Amsterdam]\")",
         "result": "false (a zoneless now is not a moment)"
+      },
+      {
+        "call": "isPastCutoff(\"2024-06-12T16:00:00+02:00[Europe/Amsterdam]\", \"2024-06-12T15:00:00Z\")",
+        "result": "false (`now` takes no annotation)"
       },
       {
         "call": "isPastCutoff(\"2024-06-12T16:00:00Z\", \"\")",
@@ -19262,11 +21175,11 @@
       },
       {
         "call": "scheduleDeviation(\"2024-04-07T02:30:00+11:00[Australia/Sydney]\", \"2024-04-07T02:30:00+10:00[Australia/Sydney]\")",
-        "result": "\"PT1H\" (the same wall time, one hour later across the fall-back)"
+        "result": "\"\" (a zoned string is not an instant; write the offsets: \"2024-04-07T02:30:00+11:00\" to \"2024-04-07T02:30:00+10:00\" is \"PT1H\" across the fall-back)"
       },
       {
-        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00[Europe/Amsterdam]\")",
-        "result": "\"PT14M\" (the zone it is written in does not matter)"
+        "call": "scheduleDeviation(\"2024-06-15T10:00:00Z\", \"2024-06-15T12:14:00+02:00\")",
+        "result": "\"PT14M\" (the offset it is written in does not matter)"
       },
       {
         "call": "scheduleDeviation(\"2024-06-15T10:00:00\", \"2024-06-15T10:14:00Z\")",
@@ -19302,8 +21215,12 @@
         "result": "\"PT0S\""
       },
       {
-        "call": "timeToCutoff(\"2024-10-26T17:00:00+01:00[Europe/London]\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
+        "call": "timeToCutoff(\"2024-10-26T16:00:00Z\", \"2024-10-27T17:00:00+00:00[Europe/London]\")",
         "result": "\"PT25H\" (across the fall-back)"
+      },
+      {
+        "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"2024-06-12T15:00:00Z\")",
+        "result": "\"\" (a bare instant is not a zoned cut-off)"
       },
       {
         "call": "timeToCutoff(\"2024-06-12T16:00:00Z\", \"\")",
@@ -21088,6 +23005,76 @@
     "inlineOn": "totalUnits"
   },
   {
+    "url": "/reference/types/FhirDateType",
+    "page": "/reference/types/FhirDateType",
+    "name": "FhirDateType",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "The three FHIR R4 primitive types that carry a date (R4 Datatypes §2.24.0.1).",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/FhirPrecision",
+    "page": "/reference/types/FhirPrecision",
+    "name": "FhirPrecision",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "How much of a FHIR value is written, coarsest first. FHIR has no hour or minute precision: a time always carries seconds.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/healthcare/parse/parseFHIR#fhirdatetime",
+    "page": "/reference/healthcare/parse/parseFHIR",
+    "name": "FhirDateTime",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "A FHIR `date`, `dateTime` or `instant` value, read as sent.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": [],
+    "inlineOn": "parseFHIR",
+    "members": [
+      {
+        "name": "value",
+        "description": "The input, unchanged: nothing is padded and the offset is spelled as sent."
+      },
+      {
+        "name": "precision",
+        "description": "The finest field the value writes."
+      },
+      {
+        "name": "offset",
+        "description": "`±HH:MM` (`Z` and `-00:00` read as `+00:00`), or `\"\"` for a year, month or day."
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/format/formatFHIR#fhirformatoptions",
+    "page": "/reference/healthcare/format/formatFHIR",
+    "name": "FhirFormatOptions",
+    "namespace": "types",
+    "module": "fhir",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `formatFHIR`.",
+    "sourcePath": "packages/gmt/src/types/fhir.ts",
+    "examples": [],
+    "inlineOn": "formatFHIR",
+    "members": [
+      {
+        "name": "precision",
+        "description": "The precision to write, no finer than the input's."
+      }
+    ]
+  },
+  {
     "url": "/reference/types/FiscalPattern",
     "page": "/reference/types/FiscalPattern",
     "name": "FiscalPattern",
@@ -21150,6 +23137,49 @@
       {
         "name": "yearLabel",
         "description": "The calendar year that names a fiscal year."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/FixPrecision",
+    "page": "/reference/types/FixPrecision",
+    "name": "FixPrecision",
+    "namespace": "types",
+    "module": "fix",
+    "kind": "type",
+    "signature": "",
+    "description": "How many fraction digits a FIX `UTCTimestamp` states. FIX Latest, `UTCTimestamp`: \"3 digits to convey milliseconds, 6 digits to convey microseconds, 9 digits to convey nanoseconds, 12 digits to convey picoseconds\"; whole seconds carry no period.",
+    "sourcePath": "packages/gmt/src/types/fix.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/finance/parse/parseFixUtcTimestamp#fixutctimestamp",
+    "page": "/reference/finance/parse/parseFixUtcTimestamp",
+    "name": "FixUtcTimestamp",
+    "namespace": "types",
+    "module": "fix",
+    "kind": "type",
+    "signature": "",
+    "description": "A FIX `UTCTimestamp` (`YYYYMMDD-HH:MM:SS[.fraction]`) read as an instant plus what the digits stated. Returned by `parseFixUtcTimestamp`.",
+    "sourcePath": "packages/gmt/src/types/fix.ts",
+    "examples": [],
+    "inlineOn": "parseFixUtcTimestamp",
+    "members": [
+      {
+        "name": "instant",
+        "description": "The moment as an ISO 8601 instant string ending in `Z`, with the fraction digits that were sent, up to the ninth. It keeps the digits sent, so `.100` stays `.100Z`; it is therefore not always the string `Temporal.Instant#toString()` writes. In a leap second it is `…T23:59:60…Z`, which only the `timescale/`, `gnss/` and `finance/` functions read back."
+      },
+      {
+        "name": "precision",
+        "description": "The precision the digit count stated: 0, 3, 6, 9 or 12 fraction digits."
+      },
+      {
+        "name": "leapSecond",
+        "description": "Whether the second was `60`, an inserted leap second."
+      },
+      {
+        "name": "picoseconds",
+        "description": "Digits 10 to 12 of a 12-digit fraction, 0 to 999. `0` for every other precision. Temporal holds nanoseconds, so these are returned apart from `instant`."
       }
     ]
   },
@@ -21227,7 +23257,7 @@
     "module": "gnss",
     "kind": "type",
     "signature": "",
-    "description": "A satellite navigation system's time scale, by its RINEX 4.02 time-system identifier: GPS time, Galileo time, BeiDou time, QZSS time, GLONASS time (in UTC hours, as RINEX and BIPM report it), NavIC time. The six are peers: IMO recognises GPS, GLONASS, BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation System (resolution A.1046(27), annex revised by MSC.599(111)).",
+    "description": "A satellite navigation system's time scale, by its RINEX 4.02 time-system identifier: GPS time, Galileo time, BeiDou time, QZSS time, GLONASS time (in UTC hours, as RINEX and BIPM report it), NavIC time. The six are peers: IMO recognises GPS, GLONASS, BeiDou, Galileo, NavIC (IRNSS) and QZSS as components of the Worldwide Radionavigation System (resolution A.1046(27), annex revised by MSC.599(111)). Each system's own recognition: GPS and GLONASS A.860(20) (1997), BeiDou SN.1/Circ.329 (2014), Galileo SN.1/Circ.334 (2016), IRNSS SN.1/Circ.340 (2020), QZSS SN.1/Circ.341 (2021). BeiDou's and IRNSS's are for ocean waters, and IRNSS's is regional (55°E to 110°E, 5°S to 50°N); GMT converts each system's time everywhere.",
     "sourcePath": "packages/gmt/src/types/gnss.ts",
     "examples": []
   },
@@ -21315,6 +23345,97 @@
       {
         "name": "timeOfWeekSeconds",
         "description": "Seconds since the start of the week, from 0 up to but not including 604 800."
+      }
+    ]
+  },
+  {
+    "url": "/reference/types/GtfsTime",
+    "page": "/reference/types/GtfsTime",
+    "name": "GtfsTime",
+    "namespace": "types",
+    "module": "gtfs",
+    "kind": "type",
+    "signature": "",
+    "description": "A GTFS Schedule `Time` value split into the whole days past the service day and the seconds left over.",
+    "sourcePath": "packages/gmt/src/types/gtfs.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "The written time less whole 24-hour blocks: an integer from 0 to 86399."
+      },
+      {
+        "name": "dayOverflow",
+        "description": "The whole days past the service day: 0 up to `23:59:59`, 1 from `24:00:00`, and so on."
+      }
+    ]
+  },
+  {
+    "url": "/reference/healthcare/format/formatHL7#hl7precision",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "Hl7Precision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of an HL7 v2 date-time, coarsest first. HL7 v2.5.1 ch. 2A 2.A.22 (headed 2.A.1.22 in the [hl7.eu v2.5.1 copy](https://www.hl7.eu/HL7v2x/v251/std251/ch02a.html)): \"The number of characters populated (excluding the time zone specification) specifies the precision\". The characters before the offset, per member:",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "formatHL7"
+  },
+  {
+    "url": "/reference/types/Hl7PartialPrecision",
+    "page": "/reference/types/Hl7PartialPrecision",
+    "name": "Hl7PartialPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a span: a year, month, day or hour, which names no single moment (`Hl7Precision` lists the characters each one takes).",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/Hl7MomentPrecision",
+    "page": "/reference/types/Hl7MomentPrecision",
+    "name": "Hl7MomentPrecision",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "The precision of a moment: a minute or finer (`Hl7Precision` lists the characters each one takes).",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/healthcare/parse/parseHL7#hl7datetime",
+    "page": "/reference/healthcare/parse/parseHL7",
+    "name": "Hl7DateTime",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "An HL7 v2 date-time (`DTM`, 2.A.22; or `TS`, 2.A.77) read as what it states. What the sender did not send is not invented: a value with no offset has no instant, and a year or a day has no moment.",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "parseHL7"
+  },
+  {
+    "url": "/reference/healthcare/format/formatHL7#hl7formatoptions",
+    "page": "/reference/healthcare/format/formatHL7",
+    "name": "Hl7FormatOptions",
+    "namespace": "types",
+    "module": "hl7",
+    "kind": "type",
+    "signature": "",
+    "description": "Options for `formatHL7`.",
+    "sourcePath": "packages/gmt/src/types/hl7.ts",
+    "examples": [],
+    "inlineOn": "formatHL7",
+    "members": [
+      {
+        "name": "precision",
+        "description": "Lowers the precision written; never raises it. The precision is read from the form the input is written in, and a value lower than that cuts the digits (never rounds)."
       }
     ]
   },
@@ -21445,6 +23566,19 @@
     ]
   },
   {
+    "url": "/reference/aviation/parse/parseNotamValidity#notamvalidity",
+    "page": "/reference/aviation/parse/parseNotamValidity",
+    "name": "NotamValidity",
+    "namespace": "types",
+    "module": "notam",
+    "kind": "type",
+    "signature": "",
+    "description": "A NOTAM validity value: item B) (when the NOTAM comes into force) or item C) (when it ceases), as read by `parseNotamValidity`. ICAO PANS-AIM (Doc 10066), Appendix 3 §5 and §6; EUROCONTROL-GUID-121, _OPADD_ Ed. 4.1, §2.3.16 and §2.3.17, as the multinational peer.",
+    "sourcePath": "packages/gmt/src/types/notam.ts",
+    "examples": [],
+    "inlineOn": "parseNotamValidity"
+  },
+  {
     "url": "/reference/plain/get/getNowUnit#nowunit",
     "page": "/reference/plain/get/getNowUnit",
     "name": "NowUnit",
@@ -21571,7 +23705,7 @@
       },
       {
         "name": "holidays",
-        "description": "The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed directly: its `holidays` are read, and its `weekend` and `timeZone` are not, because `weekly` already says which weekdays open and `timeZone` above is the zone."
+        "description": "The local dates that are closed, as ISO PlainDate strings. A `BusinessCalendar` can be passed directly: only its `holidays` are read, because `weekly` already says which weekdays open and `timeZone` above is the zone. The calendar must itself pass `isValidBusinessCalendar`, so a bad `weekend` or `timeZone` refuses the schedule."
       },
       {
         "name": "overrides",
@@ -21590,6 +23724,28 @@
     "description": "What to do when a date or time field is out of range, as Temporal's `overflow` option (`Temporal.PlainDate.prototype.add(item, { overflow })`). `\"constrain\"` clamps the field to the nearest valid value, so January 31 plus one month is the last day of February; `\"reject\"` refuses the value.",
     "sourcePath": "packages/gmt/src/types/overflow.ts",
     "examples": []
+  },
+  {
+    "url": "/reference/types/PtpTimestamp",
+    "page": "/reference/types/PtpTimestamp",
+    "name": "PtpTimestamp",
+    "namespace": "types",
+    "module": "ptp",
+    "kind": "type",
+    "signature": "",
+    "description": "A PTP (IEEE 1588) timestamp: 32 bits of nanoseconds and 48 bits (80 - 32) of whole seconds, 80 bits in all (RFC 8877 section 4.3).",
+    "sourcePath": "packages/gmt/src/types/ptp.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "seconds",
+        "description": "Whole TAI seconds since 1970-01-01T00:00:00 TAI: an integer from 0 to 2^48 - 1."
+      },
+      {
+        "name": "nanoseconds",
+        "description": "Nanoseconds past `seconds`: an integer from 0 to 999 999 999."
+      }
+    ]
   },
   {
     "url": "/reference/types/RecurrenceFrequency",
@@ -21942,6 +24098,40 @@
     "examples": []
   },
   {
+    "url": "/reference/types/TimeScale",
+    "page": "/reference/types/TimeScale",
+    "name": "TimeScale",
+    "namespace": "types",
+    "module": "time-scale",
+    "kind": "type",
+    "signature": "",
+    "description": "A time scale a Julian Date, Modified Julian Date or J2000 count can be taken on: UTC, TAI, Terrestrial Time or Geocentric Coordinate Time. TDB is not one: GMT does not provide it.",
+    "sourcePath": "packages/gmt/src/types/time-scale.ts",
+    "examples": []
+  },
+  {
+    "url": "/reference/types/JulianDateParts",
+    "page": "/reference/types/JulianDateParts",
+    "name": "JulianDateParts",
+    "namespace": "types",
+    "module": "time-scale",
+    "kind": "type",
+    "signature": "",
+    "description": "A Julian Date in two parts, whose sum is the JD (ERFA `jd2cal.c` Note 2: the date \"is apportioned in any convenient way between the arguments\").",
+    "sourcePath": "packages/gmt/src/types/time-scale.ts",
+    "examples": [],
+    "members": [
+      {
+        "name": "jd1",
+        "description": "Whole days. `to*` writes a whole number; `from*` accepts any finite number."
+      },
+      {
+        "name": "jd2",
+        "description": "The rest of the day. `to*` writes a value from 0 up to but not including 1."
+      }
+    ]
+  },
+  {
     "url": "/reference/types/TimeUnit",
     "page": "/reference/types/TimeUnit",
     "name": "TimeUnit",
@@ -21983,11 +24173,11 @@
       },
       {
         "name": "at",
-        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) or zoned string. Functions that return it echo it exactly as written."
+        "description": "The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) with no annotation. Functions that return it echo it exactly as written."
       },
       {
         "name": "recordedAt",
-        "description": "When the timestamp was recorded or received, as an ISO 8601 instant or zoned string. It orders revisions of the same class: the latest recorded is the current one."
+        "description": "When the timestamp was recorded or received, as an ISO 8601 instant with no annotation. It orders revisions of the same class: the latest recorded is the current one."
       }
     ]
   },
@@ -25297,7 +27487,7 @@
       },
       {
         "call": "chopUtc(\"2024-03-10T12:00:00Z[foo=bar]\")",
-        "result": "\"2024-03-10T12:00:00\""
+        "result": "\"\" (annotation)"
       }
     ]
   },
@@ -26667,7 +28857,7 @@
       },
       {
         "call": "isValidUtcInterval(\"2024-01-01T10:00:00Z[u-ca=hebrew]\", \"2024-12-31T23:59:59Z[foo=bar]\")",
-        "result": "true (annotations ignored)"
+        "result": "false (no annotation of any kind)"
       },
       {
         "call": "isValidUtcInterval(\"2024-01-01T10:00:00Z[!foo=bar]\", \"2024-12-31T23:59:59Z\")",
@@ -27213,7 +29403,7 @@
       },
       {
         "call": "isValidUtc(\"2024-03-17T14:30:45Z[Europe/Paris]\")",
-        "result": "true — the annotation is ignored"
+        "result": "false — no annotation of any kind"
       },
       {
         "call": "isValidUtc(\"2024-03-17T14:30:45Z[!foo=bar]\")",
@@ -30772,11 +32962,11 @@
       },
       {
         "call": "isValidZonedInterval(\"2024-01-01T10:00:00+00:00[UTC][u-ca=iso8601]\", \"2024-12-31T23:59:59+00:00[UTC][foo=bar]\")",
-        "result": "true (ISO calendar and elective annotations)"
+        "result": "false (only the zone bracket is accepted)"
       },
       {
         "call": "isValidZonedInterval(\"2024-01-01T10:00:00+00:00[UTC][u-ca=hebrew]\", \"2024-12-31T23:59:59+00:00[UTC]\")",
-        "result": "false (non-ISO calendar: use isValidCalendarZonedInterval)"
+        "result": "false (a calendar: use isValidCalendarZonedInterval)"
       },
       {
         "call": "isValidZonedInterval(\"invalid\", \"2024-12-31T23:59:59+00:00[UTC]\")",
@@ -31490,7 +33680,7 @@
       },
       {
         "call": "isValidCalendarZonedDateTime(\"2024-02-24T14:30:00+02:00[Africa/Johannesburg][foo=bar][u-ca=hebrew]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidCalendarZonedDateTime(\"2024-02-24T14:30:00+02:00[u-ca=hebrew][Africa/Johannesburg]\")",
@@ -31698,15 +33888,15 @@
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]\")",
-        "result": "false (non-ISO calendar: use isValidCalendarZonedDateTime)"
+        "result": "false (a calendar: use isValidCalendarZonedDateTime)"
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]\")",
-        "result": "true"
+        "result": "false (a calendar: use isValidCalendarZonedDateTime)"
       },
       {
         "call": "isValidZonedDateTime(\"2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]\")",
-        "result": "true (elective annotation ignored)"
+        "result": "false (elective annotation)"
       },
       {
         "call": "isValidZonedDateTime(\"20241003T143000+0530[Asia/Kolkata]\")",
@@ -31779,7 +33969,7 @@
       },
       {
         "call": "isValidZonedRange({ value1: \"2024-01-01T00:00:00+00:00[UTC][u-ca=iso8601]\", value2: \"2024-02-01T00:00:00+00:00[UTC]\" })",
-        "result": "true"
+        "result": "false (a calendar annotation)"
       },
       {
         "call": "isValidZonedRange({ value1: \"2024-01-01 10:00:00+00:00[UTC]\", value2: \"2024-12-31T23:59:59+00:00[UTC]\" })",

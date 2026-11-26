@@ -10,9 +10,23 @@ describe("resolveDurationRelativeTo", () => {
     expect(resolveDurationRelativeTo("2024-02-10")).toBe("2024-02-10");
   });
 
-  it("passes a Temporal.PlainDateTime object through unchanged", () => {
-    const pdt = Temporal.PlainDateTime.from("2024-02-10T00:00:00");
-    expect(resolveDurationRelativeTo(pdt)).toBe(pdt);
+  // `relativeTo` is an ISO 8601 string (AGENTS.md Core Rule 2). An object or a property bag would
+  // reach Temporal, which clamps `{ year: 2024, month: 2, day: 30 }` to 29 February and reads
+  // `{ year: "2024" }` as 2024; the string "2024-02-30" is an invalid date.
+  it.each`
+    value                                                      | label
+    ${Temporal.PlainDateTime.from("2024-02-10T00:00:00")}      | ${"a Temporal.PlainDateTime"}
+    ${Temporal.ZonedDateTime.from("2024-02-10T00:00:00[UTC]")} | ${"a Temporal.ZonedDateTime"}
+    ${{ year: 2024, month: 2, day: 30 }}                       | ${"a property bag with a day to clamp"}
+    ${{ year: 2024, month: 13, day: 1 }}                       | ${"a property bag with month 13"}
+    ${{ year: "2024", month: 2, day: 1 }}                      | ${"a property bag with a string field"}
+    ${{ year: 2024, month: 2, day: 1, hour: 0, second: 60 }}   | ${"a property bag with second 60"}
+    ${{ year: 2024, month: 2, day: 1, timeZone: "UTC" }}       | ${"a zoned property bag"}
+    ${42}                                                      | ${"a number"}
+    ${null}                                                    | ${"null"}
+    ${true}                                                    | ${"a boolean"}
+  `("throws for $label", ({ value }) => {
+    expect(() => resolveDurationRelativeTo(value)).toThrow(TypeError);
   });
 
   it("passes a non-calendar-annotated string through unchanged even if it superficially resembles one", () => {
@@ -52,9 +66,7 @@ describe("resolveDurationRelativeTo", () => {
     ${"2024-02-24[u-ca=coptic]"}                                    | ${Temporal.PlainDateTime} | ${"coptic"}
     ${"2024-02-24T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${Temporal.ZonedDateTime} | ${"hebrew"}
     ${"2024-02-24T00:00:00-05:00[America/New_York][u-ca=ethiopic]"} | ${Temporal.ZonedDateTime} | ${"ethiopic"}
-    ${"2024-02-24[u-ca=hebrew][foo=bar]"}                           | ${Temporal.PlainDateTime} | ${"hebrew"}
     ${"2024-02-24T00:00:00[u-ca=hebrew]"}                           | ${Temporal.PlainDateTime} | ${"hebrew"}
-    ${"2024-02-24T00:00:00+00:00[UTC][foo=bar][u-ca=hebrew]"}       | ${Temporal.ZonedDateTime} | ${"hebrew"}
   `(
     "resolves $value to a $type.name computing in $calendarId",
     ({ value, type, calendarId }) => {
@@ -65,16 +77,21 @@ describe("resolveDurationRelativeTo", () => {
   );
 
   it.each`
-    value                                            | reason
-    ${"2024-02-24[!foo=bar][u-ca=hebrew]"}           | ${"unknown critical annotation"}
-    ${"2024-02-24[u-ca=hebrew][!u-ca=roc]"}          | ${"critical second calendar annotation"}
-    ${"2024-02-24T00:00:00Z[u-ca=hebrew]"}           | ${"UTC designator without a time zone annotation"}
-    ${"2024-02-24T00:00:00+00:00[u-ca=hebrew][UTC]"} | ${"calendar before zone (not RFC 9557)"}
-    ${"2024-02-24[U-CA=hebrew]"}                     | ${"upper-case annotation key"}
-    ${"2024-02-24[u-ca=chinese]"}                    | ${"calendar GMT does not support"}
-    ${"0006-02-01[u-ca=japanese;era=reiwa]"}         | ${"';era=' is not RFC 9557 syntax"}
-    ${"2016-12-31t23:59:60+00:00[UTC]"}              | ${"leap second, lowercase t"}
-    ${"2016-12-31T23:59:60"}                         | ${"leap second, PlainDateTime"}
+    value                                                     | reason
+    ${"2024-02-24[!foo=bar][u-ca=hebrew]"}                    | ${"unknown critical annotation"}
+    ${"2024-02-24[u-ca=hebrew][foo=bar]"}                     | ${"an elective annotation besides the calendar"}
+    ${"2024-02-24T00:00:00+00:00[UTC][foo=bar][u-ca=hebrew]"} | ${"an elective annotation besides the calendar, zoned"}
+    ${"2024-02-24T00:00:00+00:00[UTC][foo=bar]"}              | ${"an elective annotation, zoned"}
+    ${"2024-02-24[foo=bar]"}                                  | ${"an elective annotation, plain"}
+    ${"2024-02-24[Europe/Helsinki]"}                          | ${"a zone annotation on a plain date"}
+    ${"2024-02-24[u-ca=hebrew][!u-ca=roc]"}                   | ${"critical second calendar annotation"}
+    ${"2024-02-24T00:00:00Z[u-ca=hebrew]"}                    | ${"UTC designator without a time zone annotation"}
+    ${"2024-02-24T00:00:00+00:00[u-ca=hebrew][UTC]"}          | ${"calendar before zone (not RFC 9557)"}
+    ${"2024-02-24[U-CA=hebrew]"}                              | ${"upper-case annotation key"}
+    ${"2024-02-24[u-ca=chinese]"}                             | ${"calendar GMT does not support"}
+    ${"0006-02-01[u-ca=japanese;era=reiwa]"}                  | ${"';era=' is not RFC 9557 syntax"}
+    ${"2016-12-31t23:59:60+00:00[UTC]"}                       | ${"leap second, lowercase t"}
+    ${"2016-12-31T23:59:60"}                                  | ${"leap second, PlainDateTime"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => resolveDurationRelativeTo(value)).toThrow(RangeError);
   });
@@ -107,18 +124,19 @@ describe("resolveDurationRelativeTo calendar PlainDate strings use GMT's strict 
 // 24 hours relative to each); GMT rejects them.
 describe("resolveDurationRelativeTo requires GMT's strict extended shape for every string", () => {
   it.each`
-    value                                            | reason
-    ${"20241003"}                                    | ${"basic date"}
-    ${"2024-10-03 00:00"}                            | ${"space separator"}
-    ${"2024-10-03t00:00"}                            | ${"lower-case t separator"}
-    ${"2024-10-03T00"}                               | ${"hour-only time"}
-    ${"2024-10-03T00:00+05:00"}                      | ${"UTC offset without a time zone annotation"}
-    ${"20241003T000000-0400[America/New_York]"}      | ${"basic zoned format"}
-    ${"2024-10-03 00:00:00-04:00[America/New_York]"} | ${"zoned, space separator"}
-    ${"2024-10-03T04:00:00z[America/New_York]"}      | ${"zoned, lower-case z"}
-    ${"2024-10-03T00:00:00-04[America/New_York]"}    | ${"zoned, hour-only offset"}
-    ${"2024-10-03[UTC]"}                             | ${"zoned, date without a time"}
-    ${"2024-02-24[UTC][u-ca=hebrew]"}                | ${"calendar zoned, date without a time"}
+    value                                                     | reason
+    ${"20241003"}                                             | ${"basic date"}
+    ${"2024-10-03 00:00"}                                     | ${"space separator"}
+    ${"2024-10-03t00:00"}                                     | ${"lower-case t separator"}
+    ${"2024-10-03T00"}                                        | ${"hour-only time"}
+    ${"2024-10-03T00:00+05:00"}                               | ${"UTC offset without a time zone annotation"}
+    ${"20241003T000000-0400[America/New_York]"}               | ${"basic zoned format"}
+    ${"2024-10-03 00:00:00-04:00[America/New_York]"}          | ${"zoned, space separator"}
+    ${"2024-10-03T04:00:00z[America/New_York]"}               | ${"zoned, lower-case z"}
+    ${"2024-10-03T00:00:00-04[America/New_York]"}             | ${"zoned, hour-only offset"}
+    ${"2024-10-03T00:00:00-04:00[America/New_York][foo=bar]"} | ${"zoned, an elective annotation after the zone"}
+    ${"2024-10-03[UTC]"}                                      | ${"zoned, date without a time"}
+    ${"2024-02-24[UTC][u-ca=hebrew]"}                         | ${"calendar zoned, date without a time"}
   `("throws for $value ($reason)", ({ value }) => {
     expect(() => resolveDurationRelativeTo(value)).toThrow(RangeError);
   });
@@ -136,11 +154,10 @@ describe("resolveDurationRelativeTo requires GMT's strict extended shape for eve
   // `ToRelativeTemporalObject` matches it. Each spelling names midnight on 3 October 2024 in New
   // York, which is at -04:00 in October: 04:00:00Z.
   it.each`
-    value                                                     | label
-    ${"2024-10-03T00:00:00-04:00[America/New_York]"}          | ${"an offset and a zone"}
-    ${"2024-10-03T00:00[America/New_York]"}                   | ${"no seconds and no offset"}
-    ${"2024-10-03T04:00:00Z[America/New_York]"}               | ${"a Z designator and a zone"}
-    ${"2024-10-03T00:00:00-04:00[America/New_York][foo=bar]"} | ${"an offset, a zone and an unknown annotation"}
+    value                                            | label
+    ${"2024-10-03T00:00:00-04:00[America/New_York]"} | ${"an offset and a zone"}
+    ${"2024-10-03T00:00[America/New_York]"}          | ${"no seconds and no offset"}
+    ${"2024-10-03T04:00:00Z[America/New_York]"}      | ${"a Z designator and a zone"}
   `(
     "reads the strict extended zoned $label as the ZonedDateTime it names",
     ({ value }) => {

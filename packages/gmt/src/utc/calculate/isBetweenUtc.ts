@@ -1,8 +1,8 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Return true when `value` is between `start` and `end` (inclusive by default).
@@ -50,22 +50,21 @@ export function isBetweenUtc(
     // reading of it gives `false`: ECMA-402 reads a boolean option through ToBoolean (null → false),
     // and the house rule rejects an invalid member outright — neither yields `true`. So `null`
     // behaves here exactly as `0` and `""` already do.
-    const inclusiveStart = optionOrDefault(options?.inclusiveStart, true);
-    const inclusiveEnd = optionOrDefault(options?.inclusiveEnd, true);
+    const inclusiveStart = booleanOption(options?.inclusiveStart, true);
+    const inclusiveEnd = booleanOption(options?.inclusiveEnd, true);
 
-    if (!isValidUtc(value) || !isValidUtc(start) || !isValidUtc(end)) {
+    const instant = utcInstantOf(value);
+    if (instant === null) {
       return false;
     }
 
-    let instant: Temporal.Instant;
-    let startInstant: Temporal.Instant;
-    let endInstant: Temporal.Instant;
+    const startInstant = utcInstantOf(start);
+    if (startInstant === null) {
+      return false;
+    }
 
-    try {
-      instant = Temporal.Instant.from(value);
-      startInstant = Temporal.Instant.from(start);
-      endInstant = Temporal.Instant.from(end);
-    } catch {
+    const endInstant = utcInstantOf(end);
+    if (endInstant === null) {
       return false;
     }
 

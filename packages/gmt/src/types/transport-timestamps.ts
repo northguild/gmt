@@ -20,12 +20,12 @@ export type TimestampEvent = {
   /** What the timestamp claims to be: planned, estimated, requested or actual. */
   classifier: TimestampClass;
   /**
-   * The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) or zoned string.
+   * The moment the timestamp names, as an ISO 8601 instant (`Z` or an offset) with no annotation.
    * Functions that return it echo it exactly as written.
    */
   at: string;
   /**
-   * When the timestamp was recorded or received, as an ISO 8601 instant or zoned string. It
+   * When the timestamp was recorded or received, as an ISO 8601 instant with no annotation. It
    * orders revisions of the same class: the latest recorded is the current one.
    */
   recordedAt: string;

@@ -22,7 +22,15 @@
  * - **Keys.** On the dots, Left and Right move to the previous and next dot and Home and End to
  *   the first and last; the page follows the focus. Elsewhere inside `keyArea` Left and Right
  *   change the page, except in a text field or in something that scrolls sideways.
- * - **Focus.** When the page that holds focus closes, focus moves to the page that opens.
+ * - **Focus.** When the page that holds focus closes, focus moves to the page that opens, quietly
+ *   as above, so a page that fills the screen need not ring itself on every page turn.
+ * - **Steps.** A page can hold steps (a slide's builds). With `steps`, the buttons and `step` walk
+ *   the shown page's steps first and open the next page only when `step` answers `false`. A button
+ *   with steps left in its direction is not off and is named "Next build" or "Previous build". The
+ *   steps are the caller's: it shows them and answers `step`, and calls `refresh` when they change
+ *   without the carousel's help. A step never reaches `live` and never calls `onSelect`.
+ * - **Reach.** With `reach`, only that many pages from the first can open (a locked deck shows its
+ *   first slide alone): the dots past it are hidden and the buttons, keys and wheel stop at it.
  * - **Wheel.** Over `wheelArea`, while `wheel()` is true, a page that scrolls scrolls first. A
  *   gesture that starts at the page's end steps to the next page and one that starts at its top to
  *   the previous. One gesture moves one page: after a step the wheel is held until it has been
@@ -40,10 +48,28 @@ export interface CarouselPage {
   el: HTMLElement;
   /** The page's name: its dot's name, the buttons' and what the live region says. */
   label: string;
+  /**
+   * A spare: held back for questions, after the pages of the main run. Its dot carries `data-spare`
+   * and a gap before the first spare, and it is counted apart ("spare 1 of 2").
+   */
+  spare?: boolean;
 }
 
 /** What moved the carousel. */
 export type CarouselBy = "api" | "control" | "key" | "wheel";
+
+/** What a page holds that the buttons walk before they change page: a slide's builds. */
+export interface CarouselSteps {
+  /** How many steps the page at `index` has. */
+  count(index: number): number;
+  /** How many steps of the shown page are taken, from 0 to `count`. */
+  current(): number;
+  /**
+   * Takes one step forward (`1`) or back (`-1`) on the shown page. Answers `false`, taking none,
+   * when the page has no step left that way, so the carousel changes page instead.
+   */
+  step(delta: 1 | -1, by: CarouselBy): boolean;
+}
 
 export interface CarouselWire {
   signal: AbortSignal;
@@ -54,8 +80,8 @@ export interface CarouselWire {
   dots: HTMLElement;
   /** A polite live region; it says the page that opens. */
   live: HTMLElement;
-  /** Where Left and Right change the page. */
-  keyArea: HTMLElement;
+  /** Where Left and Right change the page. Without it the page owns the keys. */
+  keyArea?: HTMLElement;
   /** Where the wheel steps the pages. Without it the wheel does nothing. */
   wheelArea?: HTMLElement;
   /** Whether the wheel steps the pages now. Defaults to always. */
@@ -66,21 +92,55 @@ export interface CarouselWire {
   idPrefix: string;
   /** The page shown first. Defaults to 0. */
   start?: number;
+  /** Steps within a page, taken before the page changes. */
+  steps?: CarouselSteps;
+  /**
+   * How many pages, from the first, can open now: a page past it has no dot, and no button, key or
+   * wheel reaches it. Defaults to every page. Call `refresh` when it changes.
+   */
+  reach?: () => number;
+  /**
+   * The page the buttons, keys and wheel reach from `index` going `delta`, or `null` for none.
+   * Defaults to the next page in the row; the dots' arrow keys always move to the next dot.
+   */
+  neighbour?: (index: number, delta: 1 | -1) => number | null;
+  /** What `live` says when a page opens. Defaults to "<label>, <n> of <total>". */
+  announce?: (label: string, index: number, total: number) => string;
   /** The clock, in milliseconds. Defaults to `performance.now`. */
   now?: () => number;
-  /** Called after the shown page changes, once the new one is shown. */
+  /**
+   * Called after the shown page changes, once the new one is shown and before the buttons and the
+   * live region are redrawn.
+   */
   onSelect?: (index: number, previous: number, by: CarouselBy) => void;
   /**
    * Called to hide the page that has just closed. Call `hide` when it is ready: after a fade, say.
    * Without it the page hides at once. `hide` does nothing if the page has opened again.
    */
   leave?: (el: HTMLElement, hide: () => void) => void;
+  /**
+   * Called with the whole change of page (the new page shown, the old one hidden, `onSelect`, the
+   * buttons and the live region) so the caller can run it later or inside a view transition. It must
+   * run `commit` exactly once. The shown index is already the new one when it is called; without it
+   * the change runs at once.
+   */
+  transition?: (
+    commit: () => void,
+    change: { from: number; to: number; by: CarouselBy },
+  ) => void;
 }
 
 export interface CarouselHandle {
   /** The shown page. */
   readonly index: number;
   select(index: number, by?: CarouselBy): void;
+  /**
+   * One step forward or back: a step of the shown page when `steps` has one, else the next or
+   * previous page. What the buttons do.
+   */
+  step(delta: 1 | -1, by?: CarouselBy): void;
+  /** Redraws the buttons after the caller's steps changed. */
+  refresh(): void;
 }
 
 /** A wheel gesture needs this much movement, in pixels, to step. */
@@ -97,15 +157,32 @@ const TEXT_FIELD = "input, textarea, select, [contenteditable]";
 
 /** The dots: one tab per page, the `current` one selected. */
 export function carouselDots(
-  pages: readonly { id: string; label: string }[],
+  pages: readonly { id: string; label: string; spare?: boolean }[],
   current: number,
 ): SafeHtml {
   return html`${pages.map(
     (p, i) =>
-      html`<button type="button" role="tab" class="${styles.dot}" data-dot="${String(i)}"
+      html`<button type="button" role="tab" class="${styles.dot}" data-dot="${String(i)}"${p.spare ? html` data-spare` : ""}${p.spare && !pages[i - 1]?.spare ? html` data-spare-first` : ""}
         aria-label="${p.label}" aria-controls="${p.id}" aria-selected="${String(i === current)}"
         tabindex="${i === current ? "0" : "-1"}"></button>`,
   )}`;
+}
+
+/**
+ * Focus the reader did not move: `data-quiet-focus` on `el` until it blurs, so its CSS can hold
+ * back the ring.
+ */
+export function markQuietFocus(el: HTMLElement): void {
+  el.setAttribute("data-quiet-focus", "");
+  el.addEventListener("blur", () => el.removeAttribute("data-quiet-focus"), {
+    once: true,
+  });
+}
+
+/** Focus moved by script, quietly (`markQuietFocus`). */
+function quietFocus(el: HTMLElement): void {
+  markQuietFocus(el);
+  el.focus({ preventScroll: true });
 }
 
 /** Whether `el`, or a box it sits in inside `area`, scrolls sideways. */
@@ -123,10 +200,17 @@ export function wireCarousel(
   o: CarouselWire,
 ): CarouselHandle {
   const { signal, pages, prev, next, dots, live, keyArea } = o;
+  const steps = o.steps;
   if (pages.length < 2) throw new Error("carousel needs at least two pages");
   const now = o.now ?? (() => performance.now());
   const doc = root.ownerDocument;
   const total = pages.length;
+  const spares = pages.filter((p) => p.spare).length;
+  /** "3 of 21" for a main page, "spare 1 of 2" for a spare. */
+  const position = (i: number): string =>
+    pages[i].spare
+      ? `spare ${i - (total - spares) + 1} of ${spares}`
+      : `${i + 1} of ${total - spares}`;
 
   // What the wire changes, so destroying it puts the page back as it was.
   const kept = pages.map((p) => ({
@@ -142,17 +226,25 @@ export function wireCarousel(
     if (!p.el.id) p.el.id = `${o.idPrefix}-page-${i + 1}`;
     p.el.setAttribute("role", "tabpanel");
     p.el.setAttribute("aria-roledescription", "slide");
-    p.el.setAttribute("aria-label", `${p.label}, ${i + 1} of ${total}`);
+    p.el.setAttribute("aria-label", `${p.label}, ${position(i)}`);
     p.el.tabIndex = 0;
   });
 
-  let index = Math.max(0, Math.min(total - 1, o.start ?? 0));
+  /** The page a step goes to from `from`, or -1. */
+  const around = (from: number, delta: 1 | -1): number => {
+    const to = o.neighbour ? o.neighbour(from, delta) : from + delta;
+    return to === null || to < 0 || to > end() ? -1 : to;
+  };
+  /** The last page that can open now. */
+  const end = (): number =>
+    Math.max(0, Math.min(total, Math.trunc(o.reach?.() ?? total)) - 1);
+  let index = Math.max(0, Math.min(end(), o.start ?? 0));
   dots.setAttribute("role", "tablist");
   dots.setAttribute("aria-label", o.label);
   setHtml(
     dots,
     carouselDots(
-      pages.map((p) => ({ id: p.el.id, label: p.label })),
+      pages.map((p) => ({ id: p.el.id, label: p.label, spare: p.spare })),
       index,
     ),
   );
@@ -174,12 +266,20 @@ export function wireCarousel(
 
   const refresh = (announce: boolean): void => {
     const focused = doc.activeElement;
-    for (const [button, n, word] of [
-      [prev, index - 1, "Previous"],
-      [next, index + 1, "Next"],
+    const taken = steps?.current() ?? 0;
+    const left = steps ? steps.count(index) - taken : 0;
+    for (const [button, n, word, inPage] of [
+      [prev, around(index, -1), "Previous", taken > 0],
+      [next, around(index, 1), "Next", left > 0],
     ] as const) {
-      const target = pages[n];
-      button.toggleAttribute("data-off", target === undefined);
+      const target = n >= 0 ? pages[n] : undefined;
+      button.toggleAttribute("data-off", target === undefined && !inPage);
+      if (inPage) {
+        button.removeAttribute("tabindex");
+        button.setAttribute("aria-label", `${word} build`);
+        button.setAttribute("aria-controls", pages[index].el.id);
+        continue;
+      }
       if (target === undefined) {
         button.tabIndex = -1;
         continue;
@@ -189,6 +289,7 @@ export function wireCarousel(
       button.setAttribute("aria-controls", target.el.id);
     }
     tabs.forEach((tab, i) => {
+      tab.hidden = i > end();
       tab.setAttribute("aria-selected", String(i === index));
       tab.tabIndex = i === index ? 0 : -1;
     });
@@ -197,47 +298,51 @@ export function wireCarousel(
     );
     if (lost) {
       const to = lost === next ? prev : next;
-      to.setAttribute("data-quiet-focus", "");
-      to.addEventListener(
-        "blur",
-        () => to.removeAttribute("data-quiet-focus"),
-        {
-          once: true,
-        },
-      );
-      to.focus();
+      quietFocus(to);
     }
     if (announce)
-      live.textContent = `${pages[index].label}, ${index + 1} of ${total}`;
+      live.textContent =
+        o.announce?.(pages[index].label, index, total) ??
+        `${pages[index].label}, ${position(index)}`;
   };
 
   const select = (target: number, by: CarouselBy = "api"): void => {
-    const to = Math.max(0, Math.min(total - 1, target));
+    const to = Math.max(0, Math.min(end(), target));
     if (to === index) return;
     const from = index;
     index = to;
-    const leaving = pages[from].el;
-    const held = leaving.contains(doc.activeElement);
-    closing[to]++;
-    show(pages[to].el);
-    leaving.inert = true;
-    const token = ++closing[from];
-    const hide = (): void => {
-      if (closing[from] === token) hideNow(leaving);
+    const commit = (): void => {
+      const leaving = pages[from].el;
+      const held = leaving.contains(doc.activeElement);
+      closing[to]++;
+      show(pages[to].el);
+      leaving.inert = true;
+      const token = ++closing[from];
+      const hide = (): void => {
+        if (closing[from] === token) hideNow(leaving);
+      };
+      if (o.leave) o.leave(leaving, hide);
+      else hide();
+      // `onSelect` first: a caller with `steps` sets the new page's steps there, and the buttons
+      // are named from them.
+      o.onSelect?.(to, from, by);
+      refresh(true);
+      if (held) quietFocus(pages[to].el);
     };
-    if (o.leave) o.leave(leaving, hide);
-    else hide();
-    refresh(true);
-    if (held) pages[to].el.focus({ preventScroll: true });
-    o.onSelect?.(to, from, by);
+    if (o.transition) o.transition(commit, { from, to, by });
+    else commit();
   };
 
-  prev.addEventListener("click", () => select(index - 1, "control"), {
-    signal,
-  });
-  next.addEventListener("click", () => select(index + 1, "control"), {
-    signal,
-  });
+  const step = (delta: 1 | -1, by: CarouselBy = "api"): void => {
+    if (steps?.step(delta, by)) refresh(false);
+    else {
+      const to = around(index, delta);
+      if (to !== -1) select(to, by);
+    }
+  };
+
+  prev.addEventListener("click", () => step(-1, "control"), { signal });
+  next.addEventListener("click", () => step(1, "control"), { signal });
   tabs.forEach((tab, i) =>
     tab.addEventListener("click", () => select(i, "control"), { signal }),
   );
@@ -254,7 +359,7 @@ export function wireCarousel(
             : event.key === "Home"
               ? 0
               : event.key === "End"
-                ? total - 1
+                ? end()
                 : null;
       if (to === null) return;
       event.preventDefault();
@@ -264,28 +369,29 @@ export function wireCarousel(
     { signal },
   );
 
-  keyArea.addEventListener(
-    "keydown",
-    (event) => {
-      if (
-        event.defaultPrevented ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey
-      )
-        return;
-      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-      const t = event.target;
-      if (t instanceof Element) {
-        if (dots.contains(t) || t.closest(TEXT_FIELD)) return;
-        if (scrollsSideways(t, keyArea)) return;
-      }
-      event.preventDefault();
-      select(index + (event.key === "ArrowRight" ? 1 : -1), "key");
-    },
-    { signal },
-  );
+  if (keyArea)
+    keyArea.addEventListener(
+      "keydown",
+      (event) => {
+        if (
+          event.defaultPrevented ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey
+        )
+          return;
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const t = event.target;
+        if (t instanceof Element) {
+          if (dots.contains(t) || t.closest(TEXT_FIELD)) return;
+          if (scrollsSideways(t, keyArea)) return;
+        }
+        event.preventDefault();
+        select(index + (event.key === "ArrowRight" ? 1 : -1), "key");
+      },
+      { signal },
+    );
 
   if (o.wheelArea) {
     const active = o.wheel ?? (() => true);
@@ -342,8 +448,8 @@ export function wireCarousel(
           acc = 0;
           armed = atEdge ? dir : 0;
         }
-        const to = index + dir;
-        if (armed !== dir || !atEdge || to < 0 || to >= total) {
+        const to = around(index, dir > 0 ? 1 : -1);
+        if (armed !== dir || !atEdge || to === -1) {
           acc = 0;
           if (!atEdge || armed !== dir) armed = 0;
           return;
@@ -392,6 +498,7 @@ export function wireCarousel(
         p.el.removeAttribute("aria-roledescription");
         p.el.removeAttribute("aria-label");
         p.el.removeAttribute("data-shown");
+        p.el.removeAttribute("data-quiet-focus");
         p.el.inert = false;
         p.el.scrollTop = 0;
       });
@@ -405,5 +512,7 @@ export function wireCarousel(
       return index;
     },
     select,
+    step,
+    refresh: () => refresh(false),
   };
 }

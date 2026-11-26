@@ -73,15 +73,29 @@
   line-height: 1.5;
   color: var(--gmt-ice-dim);
 
+  /* It comes in from its button (gmt-primitives.css, native panels): from the right beside the
+     stack, from below over the corner button, from above under the corner-start one. */
+  --gmt-panel-from: 0.5rem 0;
+
+  &[data-placement="corner"] {
+    --gmt-panel-from: 0 0.5rem;
+  }
+
+  &[data-placement="corner-start"] {
+    --gmt-panel-from: 0 -0.5rem;
+  }
+
+  /* One column: each credit's label on its own line, its text under it, a gap before the next. */
   & dl {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: var(--gmt-space-1) var(--gmt-space-3);
     margin: 0;
   }
 
   & dt {
     color: var(--gmt-ice);
+  }
+
+  & dd + dt {
+    margin-block-start: var(--gmt-space-3);
   }
 
   & dd {
@@ -129,12 +143,6 @@
     inset-inline: 12px;
     inset-block-end: calc(12px + env(safe-area-inset-bottom, 0px));
     margin-inline: auto;
-  }
-}
-
-@media (width <= 30rem) {
-  .panel dl {
-    grid-template-columns: 1fr;
   }
 }
 

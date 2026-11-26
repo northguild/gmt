@@ -1,12 +1,17 @@
 export { Intl, Temporal, toTemporalInstant } from "./internal/temporal";
+export * from "./aviation";
 export * from "./calendar";
 export * from "./duration";
+export * from "./finance";
 export * from "./gnss";
+export * from "./healthcare";
 export * from "./instant";
 export * from "./intermodal";
 export * from "./interval";
+export * from "./iot";
 export * from "./plain";
 export * from "./precision";
+export * from "./rail";
 export * from "./recurrence";
 export * from "./regex";
 export * from "./span";

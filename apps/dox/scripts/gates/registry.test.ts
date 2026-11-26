@@ -36,7 +36,12 @@ describe("the gate registry", () => {
       "readout-still",
       "data-credits-check",
       "esc-cascade",
+      "hero-phone",
+      "sound-check",
+      "rail-stored-still",
       "canada-layout-check",
+      "frame-check",
+      "slides-check",
       "a11y-axe",
       "a11y-tab-walk",
       "a11y-media",
@@ -46,6 +51,7 @@ describe("the gate registry", () => {
       "canada-clock-still",
       "canada-stored-still",
       "table-fit",
+      "plate-fit",
     ]);
     expect(at("local")).toHaveLength(GATES.length);
   });
@@ -70,10 +76,11 @@ describe("the gate registry", () => {
   });
 });
 
-// `a11y-tab-walk` lists a subset of the built pages and `table-fit` lists the built pages that hold
-// a table, so without `dist` each exits 2 before it reads a flag: its list fails, and its
-// unknown-page case passes for the wrong reason.
-const LISTS_FROM_DIST = new Set(["a11y-tab-walk", "table-fit"]);
+// `a11y-tab-walk` lists a subset of the built pages, `table-fit` lists the built pages that hold a
+// table and `plate-fit` lists the built tool pages, so
+// without `dist` each exits 2 before it reads a flag: its list fails, and its unknown-page case
+// passes for the wrong reason.
+const LISTS_FROM_DIST = new Set(["a11y-tab-walk", "table-fit", "plate-fit"]);
 
 // Each gate answers the page contract without a browser: a JSON list of site paths, and an unknown
 // page is a usage error (exit 2), so a typo never passes as an empty run.
@@ -102,6 +109,23 @@ describe.each(GATES.filter((g) => g.pages !== "dist"))(
       if (unbuilt()) return;
       const r = run("--pages", "/no/such/page/");
       expect(r.status).toBe(2);
+    });
+
+    // A costed gate's shards are dealt by these minutes, and a page with no cost stops the runner,
+    // so every listed page carries one; any other gate refuses the flag rather than answer `{}`.
+    it(`answers --list-page-costs ${gate.costs ? "with a positive cost for every page" : "with exit 2"}`, () => {
+      if (unbuilt()) return;
+      const r = run("--list-page-costs");
+      if (!gate.costs) {
+        expect(r.status).toBe(2);
+        return;
+      }
+      expect(r.status).toBe(0);
+      const costs: Record<string, number> = JSON.parse(r.stdout);
+      const pages: string[] = JSON.parse(run("--list-pages").stdout);
+      expect(Object.keys(costs).sort()).toEqual([...pages].sort());
+      for (const [page, minutes] of Object.entries(costs))
+        expect(minutes, page).toBeGreaterThan(0);
     });
   },
 );

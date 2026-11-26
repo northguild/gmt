@@ -4,6 +4,7 @@
  * keeps its place, drops its link role and says `aria-disabled`, and the hint beside it says why.
  */
 import { html, type SafeHtml } from "../../builders/html";
+import { link } from "../../builders/link";
 import styles from "./handoff-link.module.css";
 
 interface HandoffLinkOptions {
@@ -14,10 +15,24 @@ interface HandoffLinkOptions {
 }
 
 export function handoffLink(o: HandoffLinkOptions): SafeHtml {
-  return html`<a
-    class="${styles.link}"
-    id="${o.id}"
-    ${o.href === undefined ? html`aria-disabled="true"` : html`href="${o.href}"`}
-    ${o.describedBy === undefined ? "" : html`aria-describedby="${o.describedBy}"`}
-  >${o.label}</a>`;
+  return link({
+    href: o.href,
+    class: styles.link,
+    id: o.id,
+    describedBy: o.describedBy,
+    body: o.label,
+  });
+}
+
+/**
+ * The link and its hint on one row, which wraps on a narrow column. The hint is `<id>-hint`,
+ * written by the mount, and describes the link, so a disabled link says why.
+ */
+export function handoffRow(
+  o: Omit<HandoffLinkOptions, "describedBy">,
+): SafeHtml {
+  return html`<div class="${styles.row}">${handoffLink({
+    ...o,
+    describedBy: `${o.id}-hint`,
+  })}<p class="${styles.hint}" id="${o.id}-hint"></p></div>`;
 }

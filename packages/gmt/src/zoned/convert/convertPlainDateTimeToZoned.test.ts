@@ -209,19 +209,19 @@ describe("convertPlainDateTimeToZoned at the range limits", () => {
     },
   );
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // A plain date-time carries no annotation of any kind (RFC 9557 lets Temporal read them; GMT
+  // does not): the zone is the argument, never a bracket on the value.
   it.each`
-    value                                  | expected
-    ${"2024-02-29T14:30:45[foo=bar]"}      | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
-    ${"2024-02-29T14:30:45[u-ca=iso8601]"} | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
-    ${"2024-02-29T14:30:45[Asia/Tokyo]"}   | ${"2024-02-29T14:30:45.000-05:00[America/New_York]"}
+    value
+    ${"2024-02-29T14:30:45[foo=bar]"}
+    ${"2024-02-29T14:30:45[u-ca=iso8601]"}
+    ${"2024-02-29T14:30:45[Asia/Tokyo]"}
+    ${"2024-02-29T14:30:45[America/New_York]"}
+    ${"2024-02-29T14:30:45[!America/New_York]"}
   `(
-    "reads the annotations of $value as Temporal.PlainDateTime.from does → $expected",
-    ({ value, expected }) => {
-      expect(convertPlainDateTimeToZoned(value, "America/New_York")).toBe(
-        expected,
-      );
+    "returns '' for $value, an annotation on a plain date-time",
+    ({ value }) => {
+      expect(convertPlainDateTimeToZoned(value, "America/New_York")).toBe("");
     },
   );
 

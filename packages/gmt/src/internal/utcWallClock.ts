@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { isValidUtc } from "../utc/validate/isValidUtc";
+import { utcInstantOf } from "./utcInstant";
 import { frameWallClock, normalizeZoneFrame } from "./zoneFrame";
 
 /**
@@ -22,13 +22,14 @@ export function utcWallClock(
   value: string,
   options?: { timeZone?: string },
 ): Temporal.PlainDateTime | null {
-  if (!isValidUtc(value)) return null;
+  const instant = utcInstantOf(value);
+  if (instant === null) return null;
 
   const frame = normalizeZoneFrame(options?.timeZone);
   if (frame === null) return null;
 
   try {
-    return frameWallClock(Temporal.Instant.from(value), frame);
+    return frameWallClock(instant, frame);
   } catch {
     return null;
   }

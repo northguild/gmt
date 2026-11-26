@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
@@ -8,7 +9,6 @@ import {
 } from "../../internal/unixEpochValue";
 import type { UnixUnit } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUnix`: every `Intl.DateTimeFormatOptions` field, plus the epoch unit, the
@@ -58,6 +58,11 @@ export interface FormatUnixOptions extends Intl.DateTimeFormatOptions {
  *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
  *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
  *   Node, throw a RangeError exception"). Pass the IANA name.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value unix epoch value to format (string or number, per `epochUnit`)
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -89,7 +94,7 @@ export function formatUnix(
     if (options === null) return "";
     // Each option is read once (GetOption), inherited ones included.
     const epochUnit = options?.epochUnit;
-    const includeTimeZoneName = optionOrDefault(
+    const includeTimeZoneName = booleanOption(
       options?.includeTimeZoneName,
       false,
     );

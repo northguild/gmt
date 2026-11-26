@@ -1,95 +1,22 @@
 ---
 /**
- * One library's call-by-call table: their call, the GMT functions that replace it, and a note.
+ * One library's calls as code pairs: their call beside the GMT code that replaces it, with the
+ * imports and the first example from each function's reference page, then a note and links.
  *
- * The rows are `data/migration-maps.ts`; each GMT name links to its reference page and shows the
- * module to import it from. `part="more"` prints the shorter table of further calls. The
- * Markdown twin of this table is `renderMigrationMap` in `src/lib/mdx-jsx.ts`. Styles are in its `<style>` block.
+ * The rows are `data/migration-maps.ts`; `part="more"` prints the shorter list of further calls.
+ * The Markdown twin is `renderMigrationMap` in `src/lib/mdx-jsx.ts`.
  */
-import { codeBreakHtml } from "../lib/code-break";
-import "./migrate-table.css";
-import { codeSpans, libraryProp, mapView } from "../lib/migrate-view";
-import { withBase } from "../lib/site";
+import CodePairs from "./CodePairs.astro";
+import { libraryOf } from "../data/behaviour-matrix";
+import { libraryProp, mapPairs } from "../lib/migrate-view";
 
 interface Props {
   library: string;
   part?: "rows" | "more";
-  /** `entries` sets each call as a titled entry; a table keeps its columns. */
-  layout?: "entries";
 }
 
-const { library, part = "rows", layout } = Astro.props;
-const view = mapView(libraryProp(library, "MigrationMap"), part);
-const columns = [view.heading, "GMT", "Note"];
+const { library, part = "rows" } = Astro.props;
+const id = libraryProp(library, "MigrationMap");
 ---
 
-<div
-  class="gmt-ref-table"
-  data-kind="content"
-  data-layout={layout}
-  data-label={`${view.heading} calls and their GMT functions`}
->
-  <table class="gmt-migrate-table">
-    <thead>
-      <tr>
-        {columns.map((label) => <th>{label}</th>)}
-      </tr>
-    </thead>
-    <tbody>
-      {
-        view.rows.map((row) => (
-          <tr>
-            <td data-col={columns[0]} set:html={codeSpans(row.theirs)} />
-            <td data-col={columns[1]}>
-              {row.gmt.length === 0 ? (
-                <span>none</span>
-              ) : (
-                row.gmt.map((fn) => (
-                  <div class="gmt-migrate-fn">
-                    <a href={withBase(fn.url)}>
-                      <code>{fn.name}</code>
-                    </a>
-                    <span class="gmt-migrate-module" set:html={codeBreakHtml(fn.importPath)} />
-                  </div>
-                ))
-              )}
-            </td>
-            <td data-col={columns[2]}>
-              {row.note && <span set:html={codeSpans(row.note)} />}
-              {row.cases.length > 0 && (
-                <span class="gmt-migrate-cases">
-                  {" "}
-                  Measured in{" "}
-                  {row.cases.map((c, index) => (
-                    <>
-                      {index > 0 && ", "}
-                      <a href={withBase(c.href)}>{c.id}</a>
-                    </>
-                  ))}
-                  .
-                </span>
-              )}
-            </td>
-          </tr>
-        ))
-      }
-    </tbody>
-  </table>
-</div>
-
-<style is:global>
-.gmt-migrate-fn {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  margin-block-end: 0.35rem;
-}
-
-.gmt-migrate-module {
-  font-family: var(--gmt-font-mono);
-  font-size: var(--sl-text-xs);
-
-  /* The full text tier: the muted gray tiers measure under 7:1 here. */
-  color: var(--gmt-ice);
-}
-</style>
+<CodePairs pairs={mapPairs(id, part)} label={`${libraryOf(id).name} calls and their GMT code`} />

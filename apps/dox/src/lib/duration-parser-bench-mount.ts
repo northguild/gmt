@@ -27,7 +27,7 @@ import {
   NO_SPELLING_TEXT,
   PARSER_LABEL,
   TRY_STRINGS,
-  benchView,
+  durationFacts,
   laytimeRows,
   minuteOrMonthRows,
   permalinkOf,
@@ -77,6 +77,7 @@ import {
 import { defineElements } from "~/widgets/define";
 import { grow } from "~/widgets/primitives/grow/grow";
 import styles from "~/widgets/tools/duration-parser-bench.module.css";
+import { link } from "~/widgets/builders/link";
 
 export type { DurationParserBenchArgs } from "./duration-parser-bench";
 export {
@@ -276,8 +277,7 @@ export function renderDurationParserBenchTemplate(
       ${grow(html`<div id="${id("minute")}">${minuteTable([])}</div>`)}
       ${grow(html`<div id="${id("laytime")}">${laytimeTable([])}</div>`)}
       <p class="${styles.laytimeNote}">
-        <a href="${BIMCO_URL}" rel="noopener">${LAYTIME_NOTE.link}</a
-        >${raw(inlineCodeHtml(LAYTIME_NOTE.rest))}
+        ${link({ href: BIMCO_URL, body: LAYTIME_NOTE.link })}${raw(inlineCodeHtml(LAYTIME_NOTE.rest))}
       </p>
     </div>`,
   );
@@ -363,7 +363,7 @@ function setupWidget(
 
   function render(): void {
     // Never trimmed: a leading space is a case the reader should see refused.
-    const view = benchView(lib, text.value, locale.value);
+    const view = durationFacts(readState(), lib);
 
     setHtml(part("parser"), parserBadge(view.parser));
     result.textContent = view.iso === "" ? RESULT_NO_SIGNAL : view.iso;

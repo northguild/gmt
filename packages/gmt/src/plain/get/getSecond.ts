@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 
 /**
  * Return the current second using the system timeZone.
@@ -14,7 +14,7 @@ import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
  * @example getSecond() // "" (when system timeZone unavailable)
  */
 export function getSecond(): string {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) {
     return "";
   }

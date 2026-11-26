@@ -2,7 +2,7 @@
  * No-throw fuzz harness (CORE-8 row A1).
  *
  * GMT's contract: invalid input returns the return type's sentinel and never throws
- * (context/coding-standards.md § API Contract). This module builds, for every public function,
+ * (context/coding-standards/api-contract.md § API Contract). This module builds, for every public function,
  * a valid baseline call and a set of garbage variants — each argument position replaced in turn
  * by `null`, `undefined`, `0`, `""`, `"x"`, `[]`, `{}` and `NaN` — so the harness tests can
  * assert that no call throws, that every result has the declared return type, and that a call
@@ -108,7 +108,10 @@ function libraryFiles(): [string, string][] {
   );
 }
 
-/** Right-hand sides of every named type in the source tree (`interface` maps to an object literal). */
+/**
+ * Right-hand sides of every named type in the source tree (`interface` maps to an object literal),
+ * with comments removed, since a JSDoc line on a union member would otherwise be read as a member.
+ */
 function namedTypes(): Map<string, string> {
   const types = new Map<string, string>();
   for (const [, source] of libraryFiles()) {
@@ -119,7 +122,8 @@ function namedTypes(): Map<string, string> {
       /^(?:export )?type (\w+)(?:<[^=]*>)? =/gm,
     )) {
       const start = match.index + match[0].length;
-      const rhs = splitTopLevel(source.slice(start), ";")[0] ?? "";
+      const rhs =
+        splitTopLevel(withoutComments(source.slice(start)), ";")[0] ?? "";
       types.set(match[1], rhs);
     }
   }
@@ -612,7 +616,7 @@ function show(value: unknown): string {
 }
 
 /**
- * The sentinel for a declared return type (context/coding-standards.md sentinel table): `null` for
+ * The sentinel for a declared return type (context/coding-standards/api-contract.md sentinel table): `null` for
  * any nullable type, otherwise `""`, `false`, `[]` or `0n`. A non-nullable `number` has none.
  */
 function sentinelOf(declared: DeclaredReturn): {

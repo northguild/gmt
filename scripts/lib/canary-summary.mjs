@@ -7,13 +7,18 @@
  * the verdict holds them, with no locale grouping, so the summary matches the log digit for digit.
  */
 
-import { COMPAT_SOURCES, compatStates, swapReady } from "./canary-issues.mjs";
+import {
+  COMPAT_SOURCES,
+  compatStates,
+  NATIVE_LEGS,
+  SWAP_LEGS,
+  swapReady,
+} from "./canary-issues.mjs";
 
 const CHECK = "temporal-compat-check";
 const ORACLE = "temporal-oracle";
 const LEAP = "leap-seconds";
-
-const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"];
+const US_WATCH = "us-clock-watch";
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 
@@ -256,10 +261,12 @@ function nativeBlocks(verdicts) {
 
 /** How many differing zones the swap block names. */
 const SWAP_ZONES_LISTED = 10;
+/** How many differing calendars the swap block names. */
+const SWAP_CALENDARS_LISTED = 10;
 
 /**
- * The upgrade check (CORE-92, CORE-108): the verdict line, one table row per leg and the offset
- * sweep. A leg that did not run keeps its row.
+ * The upgrade check (CORE-92, CORE-108): the verdict line, one table row per leg, the offset
+ * sweep and the calendar sweep (CORE-110). A leg that did not run keeps its row.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @param {boolean} [swapSkipped]  the legs were skipped on purpose; the block says why
  * @returns {string[]}
@@ -271,7 +278,7 @@ function swapBlocks(verdicts, swapSkipped = false) {
       "Skipped: the pinned temporal-polyfill is the newest release, so there is nothing to check.",
     ];
   }
-  const legs = NATIVE_LEGS.map((leg) => ({
+  const legs = SWAP_LEGS.map((leg) => ({
     leg,
     found: sourceOf(verdicts, `temporal-polyfill-swap-${leg}`),
   }));
@@ -321,6 +328,28 @@ function swapBlocks(verdicts, swapSkipped = false) {
   } else {
     sweepBlocks.push("Offset sweep: did not run.");
   }
+  const calendarSweep =
+    /** @type {import("./canary-issues.mjs").SwapVerdict | import("./canary-issues.mjs").CouldNotRunVerdict | null | undefined} */ (
+      /** @type {unknown} */ (verdicts["temporal-polyfill-swap-node"])
+    )?.calendarSweep ?? null;
+  if (calendarSweep?.status === "ran") {
+    const lines = [
+      `Calendar sweep: ${calendarSweep.differingCalendars} calendars differ (${calendarSweep.calendars} calendars, ${calendarSweep.years} years, ${calendarSweep.from} to ${calendarSweep.through}).`,
+      ...calendarSweep.differing
+        .slice(0, SWAP_CALENDARS_LISTED)
+        .map(
+          (d) =>
+            `- ${d.calendar}: ${d.years} ${d.years === 1 ? "year" : "years"}, first ${d.first ?? "none"}, e.g. ${oneLine(d.example)}`,
+        ),
+    ];
+    sweepBlocks.push(lines.join("\n"));
+  } else if (calendarSweep?.status === "could-not-run") {
+    sweepBlocks.push(
+      `Calendar sweep: could not run: ${oneLine(calendarSweep.message)}`,
+    );
+  } else {
+    sweepBlocks.push("Calendar sweep: did not run.");
+  }
   return [
     "### Temporal polyfill upgrade check",
     `${version} — ${state}`,
@@ -357,7 +386,7 @@ function runtimeLine(verdicts) {
 /**
  * The dry-run lines: one naming the flags that were applied, then one per flag that was skipped,
  * with its reason.
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  * @param {Force} force
  * @param {Skipped[]} skipped
  * @returns {string | null}
@@ -372,8 +401,10 @@ function dryRunLines(workflow, force, skipped) {
     if (force.mismatch) flags.push("--force-mismatch");
     if (force.nativeFailure) flags.push("--force-native-failure");
     if (force.swapReady) flags.push("--force-swap-ready");
-  } else if (force.leapDifference) {
-    flags.push("--force-leap-difference");
+  } else if (workflow === "leap-seconds") {
+    if (force.leapDifference) flags.push("--force-leap-difference");
+  } else if (force.usClockDifference) {
+    flags.push("--force-us-clock-difference");
   }
   const lines = [];
   const applied = flags.filter((flag) => !notApplied.has(flag));
@@ -402,6 +433,16 @@ function issuesLine(results, notFiledReason) {
         ? `opened #${issue} (${oneLine(action.title)})`
         : `failed to open (${oneLine(action.title)}): ${oneLine(error ?? "")}`;
     }
+    if (action.kind === "edit") {
+      return ok
+        ? `rewrote #${action.issue}`
+        : `failed to rewrite #${action.issue}: ${oneLine(error ?? "")}`;
+    }
+    if (action.kind === "close") {
+      return ok
+        ? `closed #${action.issue}`
+        : `failed to close #${action.issue}: ${oneLine(error ?? "")}`;
+    }
     return ok
       ? `commented on #${action.issue}`
       : `failed to comment on #${action.issue}: ${oneLine(error ?? "")}`;
@@ -410,8 +451,57 @@ function issuesLine(results, notFiledReason) {
 }
 
 /**
+ * The US clock-change watch: one row per source, then the differences of each. A source that could
+ * not run says why; the others still show.
+ * @param {Record<string, Verdict | null>} verdicts
+ * @returns {string[]}
+ */
+function usClockWatchBlocks(verdicts) {
+  const blocks = ["## US clock-change watch"];
+  const found = sourceOf(verdicts, US_WATCH);
+  if (!("ran" in found)) {
+    blocks.push(
+      `US clock-change watch: could not run — ${oneLine(found.message)}`,
+    );
+    return blocks;
+  }
+  const watch = found.ran;
+  const parts = [
+    ["Federal bills", watch.federal],
+    ["State bills", watch.state],
+    ["tz zones", watch.tz],
+  ];
+  blocks.push(
+    [
+      "| Source | Result |",
+      "| --- | --- |",
+      ...parts.map(([name, part]) =>
+        part.status === "ran"
+          ? `| ${name} | ${part.differences.length} differences |`
+          : `| ${name} | could not run — ${oneLine(part.message)} |`,
+      ),
+    ].join("\n"),
+  );
+  if (watch.tz.status === "ran") {
+    blocks.push(
+      watch.tz.differences.length === 0
+        ? `tz release ${watch.tz.release}: no US zone changed`
+        : `tz release ${watch.tz.release} (snapshot ${watch.tz.snapshotRelease})`,
+    );
+  }
+  for (const [name, part] of parts) {
+    if (part.status === "ran" && part.differences.length > 0) {
+      blocks.push(
+        `### ${name}\n\n${part.differences.map((/** @type {string} */ d) => `- ${oneLine(d)}`).join("\n")}`,
+      );
+    }
+  }
+  return blocks;
+}
+
+/**
  * GFM for $GITHUB_STEP_SUMMARY.
- * @param {"temporal-oracle" | "leap-seconds"} workflow
+ * @param {"temporal-oracle" | "leap-seconds" | "us-clock-watch"} workflow
  * @param {Record<string, Verdict | null>} verdicts  the real verdicts, before applyForce
  * @param {Force} force
  * @param {Result[] | null} results
@@ -447,6 +537,8 @@ export function summaryMarkdown(
       ...nativeBlocks(verdicts),
       ...swapBlocks(verdicts, swapSkipped),
     );
+  } else if (workflow === "us-clock-watch") {
+    blocks.push(...usClockWatchBlocks(verdicts));
   } else {
     blocks.push("## Leap-second canary");
     const found = sourceOf(verdicts, LEAP);

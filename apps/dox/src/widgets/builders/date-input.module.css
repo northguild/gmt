@@ -1,0 +1,25 @@
+/* dateInput: the kit text input's whole look, plus a focus ring WebKit draws. Its focus is in
+   the control's inner fields (day, month, year), so the ring follows `:focus-within`. The
+   composed sheet loads first, so these rules win at equal specificity. */
+
+.root {
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: root from "./text-input.module.css";
+
+  &:focus-within {
+    outline: 2px solid var(--gmt-cyan);
+    outline-offset: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .root:focus-within {
+    outline-color: Highlight;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .root:focus-within {
+    outline-width: 3px;
+  }
+}

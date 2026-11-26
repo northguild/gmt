@@ -1,4 +1,4 @@
-import { parseInstantNanoseconds } from "../../internal";
+import { spanNanoseconds } from "../../internal/instantNanoseconds";
 
 /**
  * Return the exact elapsed nanoseconds between two ISO 8601 instant strings.
@@ -10,20 +10,11 @@ import { parseInstantNanoseconds } from "../../internal";
  * - Measures **exact elapsed time**, never calendar distance. Across a DST transition
  *   "one day later" and "24 hours later" are different spans — `spanWallClock` answers
  *   the calendar question.
- * - Accepts anything `toNanoseconds` does: the full RFC 9557 instant grammar, no leap
- *   seconds; calendar and elective annotations are ignored, as `Temporal.Instant.from` ignores
- *   them. An offset designator (`Z`, `±HH:MM`) is
- *   required, optionally followed by a bracketed IANA zone — a bracket alone is not enough,
- *   which is the one string shape `spanWallClock` accepts and these two do not. The
- *   endpoints need not share a zone; an instant is an instant.
- * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, so a zoned string Temporal wrote is read back as
- *   the instant it was written for, except a wall time repeated inside a sub-minute offset
- *   change, which reads as its first pass (see `isValidInstant`). Otherwise the bracket is not
- *   checked: a zone that does not exist, or that disagrees with the offset, changes nothing. `spanWallClock`, by
- *   contrast, rejects a mismatched offset.
+ * - Accepts anything `toNanoseconds` does: the RFC 9557 instant grammar, no leap seconds. An
+ *   offset designator (`Z`, `±HH:MM[:SS[.fraction]]`) is required and nothing follows it: a
+ *   time zone, calendar or any other annotation returns `null`, so a zoned string is not an
+ *   instant here (`spanWallClock` is the one that reads those). The offset alone fixes the
+ *   instant, and one written with seconds is read exactly.
  * - Returns `null` on invalid input, not `0n` — `0n` is the span between an instant and
  *   itself. This is why it does not simply subtract two `toNanoseconds` results, which
  *   return `0n` for both the epoch and a rejected string.
@@ -44,18 +35,11 @@ import { parseInstantNanoseconds } from "../../internal";
  * @example spanNs("2024-03-10T12:00:01Z", "2024-03-10T12:00:00Z") // -1000000000n
  * @example spanNs("2024-03-10T12:00:00Z", "2024-03-10T12:00:00Z") // 0n
  * @example spanNs("2024-03-10T12:00:00.123456789Z", "2024-03-10T12:00:00.123456790Z") // 1n
- * @example spanNs("2024-03-10T07:00:00-05:00[America/Bogota]", "2024-03-10T12:00:00Z") // 0n — same instant, different zones
- * @example spanNs("2024-03-10T12:00:00+05:00[Asia/Tokyo]", "2024-03-10T12:00:00-04:00[Asia/Tokyo]") // 32400000000000n — offsets decide, the zone is not checked
- * @example spanNs("1960-01-01T01:04:30Z", "1960-01-01T00:20:00-00:45[Africa/Monrovia]") // 0n — the zone's −00:44:30, which `-00:45` rounds
+ * @example spanNs("2024-03-10T07:00:00-05:00", "2024-03-10T12:00:00Z") // 0n — same instant, different offsets
+ * @example spanNs("2024-03-10T12:00:00+05:00", "2024-03-10T12:00:00-04:00") // 32400000000000n — the offsets decide
+ * @example spanNs("1960-01-01T01:04:30Z", "1960-01-01T00:20:00-00:44:30") // 0n — an offset with seconds is read exactly
  * @example spanNs("2024-03-10T12:00:00Z", "invalid") // null
  */
 export function spanNs(start: string, end: string): bigint | null {
-  const startNanoseconds = parseInstantNanoseconds(start);
-  const endNanoseconds = parseInstantNanoseconds(end);
-
-  if (startNanoseconds === null || endNanoseconds === null) {
-    return null;
-  }
-
-  return endNanoseconds - startNanoseconds;
+  return spanNanoseconds(start, end);
 }

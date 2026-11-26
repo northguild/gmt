@@ -279,13 +279,13 @@ crossingTime("2024-04-06T15:30:00Z", "2024-04-06T16:30:00Z", "Australia/Sydney")
 // { duration: "PT1H", enter: "2024-04-07T02:30:00+11:00[Australia/Sydney]", exit: "2024-04-07T02:30:00+10:00[Australia/Sydney]" }
 ```
 
-`targetZone` is always the rendering zone, and a bracket in the input never supplies it. A fixed
+`targetZone` is always the rendering zone, and the inputs take no bracket. A fixed
 offset renders with no DST: the spring-forward night on a fixed +00:00 reads 07:00, not
 London's 08:00.
 
 ```typescript
-crossingTime("2024-06-15T08:00:00+02:00[Europe/Berlin]", "2024-06-15T17:30:00+02:00[Europe/Berlin]", "America/Panama");
-// { duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" } — the offset fixes each instant, and the Berlin bracket is not checked
+crossingTime("2024-06-15T08:00:00+02:00", "2024-06-15T17:30:00+02:00", "America/Panama");
+// { duration: "PT9H30M", enter: "2024-06-15T01:00:00-05:00[America/Panama]", exit: "2024-06-15T10:30:00-05:00[America/Panama]" } — the offset fixes each instant
 
 crossingTime("2024-03-31T00:00:00Z", "2024-03-31T07:00:00Z", "+00:00");
 // { duration: "PT7H", enter: "2024-03-31T00:00:00+00:00[+00:00]", exit: "2024-03-31T07:00:00+00:00[+00:00]" } — 07:00, not London's 08:00

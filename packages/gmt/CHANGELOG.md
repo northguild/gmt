@@ -1,5 +1,464 @@
 # @northguild/gmt
 
+## 1.23.1
+
+### Patch Changes
+
+- fb81109: Three more locale and calendar pairs format right on Node and other V8 builds that lack the week-year fix.
+
+  - **Coptic and Ethiopic dates in `ksh`, `my` and `te`.** `formatDate`, `formatDateToParts` and the other date formats returned `""` (`[]` for parts). They now print the date, with the Coptic or Ethiopic year.
+  - **Weekday names that hold a digit on some days.** In `lg`, `luy` and `sg`, some weekday names contain a digit (`Lw2` in `lg`) and others do not. The parts functions returned `[]` for a date that fell on such a day. They now return the parts, with the weekday name in one piece.
+  - **A zone name in `my` with the Buddhist calendar.** `formatZonedToParts` with `timeZoneName` crashed the process. It now returns the parts.
+
+  A runtime that already formats these dates right keeps its own text.
+
+## 1.23.0
+
+### Minor Changes
+
+- 2969eb5: Chinese and Dangi (Korean) dates, Coptic and Islamic edge dates now follow the standard on every runtime that can reach it.
+
+  - **Chinese and Dangi (Korean) calendars.** Some runtimes print a date in these calendars differently from the Purple Mountain Observatory (Chinese) or KASI (Dangi) date. Node and Chrome, for example, put the Chinese New Year 2027 on 7 February, where the observatory has 6 February. GMT has no calendar data of its own. On a runtime that prints these dates differently, a Chinese or Dangi date format returns `""` (`[]` for parts). A runtime that prints the same date as the standard keeps its own text. A weekday on its own still formats, and so does a time on its own for a value that has a time.
+  - **Coptic.** The first day of the year 1 AM prints the era `AM` for the whole day. Safari printed `Anno Martyrum` for the first hours, and for the start of the second day in a zone more than 16 hours ahead of UTC.
+  - **Islamic, 2 Muharram 1 AH.** In a zone more than 16 hours ahead of UTC, the start of the second day of the Hijra prints year 1 `AH`. Safari printed year 0 `Before Hijra`.
+
+  ### Breaking changes
+
+  - **Formatting in the Chinese or Dangi calendar** returns the empty value on a runtime that prints the date differently from the standard. This affects `formatDate`, `formatDateTime`, `formatDateRange`, `formatDateTimeRange`, `formatDateToParts`, `formatDateTimeToParts`, `formatCalendar`, `formatUtc`, `formatCalendarUtc`, `formatUnix`, `formatCalendarUnix`, `formatZonedDateTime`, `formatCalendarZoned`, `formatZonedRange` and `formatZonedToParts`.
+
+    ```typescript
+    formatDate("2027-02-06", "zh-u-ca-chinese");
+    // was "2026年腊月30" (ICU4C 78.3 on Node 26.12.1; the observatory has 2027 正月初一), now ""
+    ```
+
+## 1.22.0
+
+### Minor Changes
+
+- 6e36fdc: The `aviation` area now reads the time in a METAR report and the validity of a NOTAM. Both are in `@northguild/gmt/aviation`, in `@northguild/gmt/aviation/parse` and in `@northguild/gmt/aviation/validate`.
+
+  A METAR report time, such as `302350Z`, gives a day, an hour and a minute. It has no month and no year, so reading it needs the time the report was received. A NOTAM states its start (item B) and its end (item C) as ten digits, `YYMMDDHHMM`. Item C can also say `PERM`, or end in `EST` for an estimate.
+
+  - `parseMetarTime(value, referenceInstant)` reads a METAR, SPECI or TAF time group and returns a UTC instant.
+  - `isValidMetarTime(value, referenceInstant)` is `true` exactly when `parseMetarTime` would return an instant.
+  - `parseNotamValidity(value, options)` reads item B) or C) and returns a `NotamValidity`, or `null`.
+  - `isValidNotamValidity(value, options)` is `true` exactly when `parseNotamValidity` would return a value.
+  - `NotamValidity` is `{ kind: "instant"; instant: string; estimated: boolean }` or `{ kind: "permanent" }`.
+
+  ```typescript
+  import {
+    isValidMetarTime,
+    parseMetarTime,
+    parseNotamValidity,
+  } from "@northguild/gmt/aviation";
+
+  parseMetarTime("302350Z", "2024-07-01T00:05:00Z"); // "2024-06-30T23:50:00Z"
+  parseNotamValidity("1407031230EST", { yearWindow: 2000 });
+  // { kind: "instant", instant: "2014-07-03T12:30:00Z", estimated: true }
+  parseNotamValidity("PERM", { yearWindow: 2000 }); // { kind: "permanent" }
+  isValidMetarTime("321200Z", "2024-07-01T00:05:00Z"); // false
+  ```
+
+  - **The reference instant is required.** `parseMetarTime` returns the matching time nearest to it, so a report made at 23:50 on 30 June and received on 1 July reads as 30 June, not 30 days ahead. If two are equally near, it returns the earlier. A month without the day, such as `31` in June, is skipped. The group is read in UTC.
+  - **`PERM` is not a date.** `parseNotamValidity` returns `{ kind: "permanent" }` with no instant. A value ending in `EST` keeps its instant and sets `estimated` to `true`. A space before `EST` is not read.
+  - **You state the century for a NOTAM.** `options.yearWindow` is required, as it is for the EDI and SSIM parsers. Without it, `parseNotamValidity` returns `null` and `isValidNotamValidity` returns `false`.
+  - **Hour `24` is not read.** NOTAMs write the end of a day as `2359`.
+  - **Items B) and C) share one reader.** `PERM` and `EST` belong to item C) only. When you read item B), treat a `"permanent"` result or `estimated: true` as malformed.
+  - **A value that cannot be read returns the empty result.** `parseMetarTime` returns `""`, `parseNotamValidity` returns `null` and the validators return `false`. This includes a reference that is not an ISO 8601 instant with `Z` or an offset.
+- f6a00ee: A new `aviation` area reads and writes the date in IATA SSIM airline schedule files. An SSIM date has seven characters, `DDMMMYY`, such as `01JAN26`. It is not ISO 8601, so `Temporal` cannot read it. The functions are in `@northguild/gmt/aviation`, and in `@northguild/gmt/aviation/parse`, `@northguild/gmt/aviation/format` and `@northguild/gmt/aviation/validate`.
+
+  - `parseSsimDate(value, options)` reads an SSIM date and returns an ISO date.
+  - `formatSsimDate(value, options)` writes an ISO date as an SSIM date.
+  - `isValidSsimDate(value, options)` is `true` exactly when `parseSsimDate` would return a date.
+
+  ```typescript
+  import {
+    formatSsimDate,
+    isValidSsimDate,
+    parseSsimDate,
+  } from "@northguild/gmt/aviation";
+
+  parseSsimDate("01JAN26", { yearWindow: 2000 }); // "2026-01-01"
+  formatSsimDate("2026-10-25", { yearWindow: 2000 }); // "25OCT26"
+  isValidSsimDate("31FEB26", { yearWindow: 2000 }); // false
+  ```
+
+  Three rules apply to all three functions:
+
+  - **The month is a fixed English code.** It is one of `JAN` to `DEC`, in upper case, and it is never read through the platform's language. The result is the same on every machine. `01jan26`, `01ENE26` and `01JANV26` are not read.
+  - **You state the century.** A two-digit year has no century of its own, so `options.yearWindow` is required: a first year such as `2000`, or `"rolling"`. There is no default. Without it, the parser and the formatter return `""` and the validator returns `false`.
+  - **A date that does not exist is refused.** `29FEB25` and `31APR26` return `""`. `formatSsimDate` also returns `""` for a year outside the window, because written as two digits it would be read back as another century.
+- 6e67c2b: Four new functions read and write the two CCSDS ASCII time codes of CCSDS 301.0-B-4. The parsers are in `@northguild/gmt/timescale/parse` and the formatters are in `@northguild/gmt/timescale/format`. All four are also in `@northguild/gmt/timescale` and the root.
+
+  - `parseCcsdsAsciiA(value)` and `formatCcsdsAsciiA(isoString, fractionalSecondDigits?)` use Code A, which names the day by its calendar date: `1988-01-18T17:20:43.123456Z`.
+  - `parseCcsdsAsciiB(value)` and `formatCcsdsAsciiB(isoString, fractionalSecondDigits?)` use Code B, which names the day by its number in the year: `1988-018T17:20:43.123456Z`. Day 366 exists only in a leap year.
+
+  A parser takes the code and returns the instant as an ISO 8601 UTC string. The `Z` is optional on input, and a code without it still counts as UTC, never as local time. A formatter converts its input to UTC and always writes the `Z`. A parser needs the seconds: `2024-06-15` and `2024-06-15T10:30` name a span of time, not an instant, so they return `""`.
+
+  A parser keeps the fraction digits exactly as sent, trailing zeros included, up to nine. Digits after the ninth are dropped, never rounded. In a formatter, `fractionalSecondDigits` is `"auto"` (the default, the shortest fraction that keeps every nanosecond), `0` (no fraction and no period) or `1` to `9` (exactly that many digits). Extra digits are cut, never rounded, so the result never moves into the next second, day or year.
+
+  Second 60 is accepted, and written, only at the 27 inserted leap seconds in the built-in IERS table. `2016-12-31T23:59:60Z` is valid. `2017-12-31T23:59:60Z` is not.
+
+  ```typescript
+  import { formatCcsdsAsciiA, formatCcsdsAsciiB, parseCcsdsAsciiA, parseCcsdsAsciiB } from "@northguild/gmt";
+
+  parseCcsdsAsciiA("1988-01-18T17:20:43.123456Z"); // "1988-01-18T17:20:43.123456Z"
+  parseCcsdsAsciiA("2024-06-15T10:30:00"); // "2024-06-15T10:30:00Z"
+  parseCcsdsAsciiB("1988-018T17:20:43.123456Z"); // "1988-01-18T17:20:43.123456Z"
+  parseCcsdsAsciiB("2024-366T12:00:00Z"); // "2024-12-31T12:00:00Z"
+  parseCcsdsAsciiA("2016-12-31T23:59:60Z"); // "2016-12-31T23:59:60Z"
+  parseCcsdsAsciiA("2017-12-31T23:59:60Z"); // ""
+  formatCcsdsAsciiA("2024-06-15T12:30:00.123456789+02:00", 6); // "2024-06-15T10:30:00.123456Z"
+  formatCcsdsAsciiA("2024-06-15T12:30:00.123456789+02:00"); // "2024-06-15T10:30:00.123456789Z"
+  formatCcsdsAsciiA("2024-06-15T12:30:00.123456789+02:00", 0); // "2024-06-15T10:30:00Z"
+  formatCcsdsAsciiB("2024-01-01T01:00:00+02:00"); // "2023-365T23:00:00Z"
+  formatCcsdsAsciiB("2016-12-31T23:59:60Z"); // "2016-366T23:59:60Z"
+  ```
+
+  Every parser returns `""` for text that is not a code of its kind, such as a lower-case `t` or `z`, a comma for the decimal sign, a missing leading zero, a year outside 0001 to 9999 or a day that does not exist. Every formatter returns `""` for a date-time with no offset, a `fractionalSecondDigits` outside `"auto"` and 0 to 9, or input it cannot read. None of them throws.
+- 2774e57: Every function now accepts exactly one pattern for each kind of string, over the whole string. Before, plain, UTC and instant functions read any time zone annotation and ignored the rest, so `isValidDateTime("2024-02-29T12:34:56[Europe/Helsinkiddddd]")` returned `true`. Some calls that returned a value now return the function's empty result, and the `DurationRelativeTo` type is narrower, so **Breaking changes** lists each change with its migration.
+
+  - Plain dates, times and date-times (`PlainDate`, `PlainTime`, `PlainDateTime`, `PlainYearMonth`, `PlainMonthDay`) take no annotation of any kind.
+  - A UTC string is exactly `<date>T<time>Z`. `isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]")` is now `false`.
+  - An instant is `Z` or an offset (`±HH:MM[:SS[.fraction]]`) with nothing after it. A string with a zone bracket, a calendar annotation or any other annotation returns the function's usual empty result (`""`, `null`, `0n` or `false`). To read a zoned string, use a function that keeps the zone: `transitTime`, `nextDeparture`, `scheduleDelivery`, `toOffsetInstant`, and the `zoned/` functions. The `cutoff` argument of `isPastCutoff` and `timeToCutoff` is the zoned string `cutoffAt` returns (`<date>T<time>±HH:MM[Zone]`) and nothing else: a bare `Z` or offset cut-off returns `false` or `""`, and `now` stays an instant.
+  - The calendar-aware functions (`isValidCalendarDate`, `isValidCalendarZonedDateTime`, `isValidCalendarZonedInterval`, `isValidDateInterval` and the functions built on them) take the body plus at most one `u-ca` annotation. An elective annotation such as `[foo=bar]` is rejected.
+  - The `zoned/` functions take the zoned body and the zone bracket only. `[foo=bar]`, `[!foo=bar]` and `[u-ca=iso8601]` are rejected.
+  - The `relativeTo` argument of the `duration/` functions is an ISO 8601 string only, in the plain or the zoned form exactly as above. A `Temporal` object or a property bag (`{ year: 2024, month: 2, day: 30 }`, which Temporal clamps to 29 February) returns the function's empty result, and the `DurationRelativeTo` type is now `string`.
+  - `hasSecond60` is true only when the whole string is one of GMT's own kinds with a second of `60`: a plain time, a plain date-time, a UTC or offset instant, a zoned date-time or a calendar-aware date-time. A lower-case `t`, a space separator, basic format, a time with a leading `T` or an offset, `[foo=bar]` and trailing text are now `false`. The date, zone and calendar must also exist, so `2016-02-30T23:59:60` and `2016-12-31T23:59:60+00:00[Not/AZone]` are `false`; the leap-second list is not checked. The old uppercase-T pattern in its JSDoc is gone.
+  - `formatEdifactOffsetDateTime` takes an instant string only (`Z` or an offset). A zone bracket returns `""`; it used to be read, and it set the clock the digits were written on.
+  - `toOffsetInstant` and `dwellTime` read an instant string with one exact pattern and a zoned string with another, and nothing else.
+  - A time zone annotation on a zoned string may be an offset (`[+02:00]`), so `isPastCutoff` and `timeToCutoff` accept the cut-off `cutoffAt` writes for an offset `timeZone`.
+  - A `locale` argument that is not `undefined`, a string or an array of strings returns the function's empty result (`""` or `[]`). A number, `true`, an object or a `String` object used to reach `Intl`, which coerced some of them.
+  - An unknown `style` for the month, era and weekday name functions returns `[]` instead of the long names.
+  - A duration designator must be upper case: `P1d` and `Pt1H` return the function's empty result in every duration function, as ISO 8601-1 writes them. The decimal comma stays (`PT0,5H`).
+  - A time zone annotation is an IANA zone name or an extended offset (`[+02:00]`, `[!Europe/London]`). `[ junk ]`, `[a[b]`, `[..]`, `[+0200]`, `[+02]` and `[+24:00]` return the function's empty result, and `isValidZonedDateTime` and `hasSecond60` return `false`. A bare `isValidTimeZone("+0200")` is unchanged.
+  - An option the types declare as a string (`roundingMode`, `overflow`, `style`, `dateStyle`, `timeZone`, ...), a boolean (`allowEqual`, `round`, `inclusive`, `inclusiveStart`, `inclusiveEnd`, `includeTimeZoneName`, `zero`, `hour12`) or a number (`roundingIncrement`, `fractionalSecondDigits`) is read only as that type. `new String("floor")`, `"yes"`, `1` or `null` returns the function's empty result (`""`, `[]`, `null` or `false`) and no `toString` or `valueOf` runs, even when that option plays no part in the call. Before, they were converted.
+  - Every entry of a `locale` array must be a string. `["en-GB", 5]` returns the empty result.
+  - `punctualityRate` and `cutoffSchedule` take an instant string only; `nextDeparture` and `dwellTime` take an instant or a zoned string that carries its offset. A calendar annotation is rejected.
+  - `parseHL7` and `isValidHL7` read an HL7 `TS` value exactly. The first component is the date-time and the second is empty or a degree-of-precision code; anything else inside either one, such as `2024&X`, is rejected. Components after the degree are ignored as HL7 v2 section 2.6.2 says, unless one holds a `|` or `~` or a control character.
+  - Options that a caller supplies as getters are read once, as their declared type, and only those values reach Temporal and Intl. A getter that returns a `String` object, a number or a different value on the second read now returns the function's empty value instead of being converted.
+
+  ### Breaking changes
+
+  **1. Plain, UTC and instant functions refuse an annotated string.** This covers every function that takes a `PlainDate`, `PlainTime`, `PlainDateTime`, `PlainYearMonth`, `PlainMonthDay`, UTC or instant string, in every namespace. A bracket of any kind after the value (a zone, a calendar, `[foo=bar]`) now gives the function's empty result (`""`, `null`, `0n`, `false` or `[]`).
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `isValidDateTime("2024-02-29T12:34:56[Europe/Helsinki]")` | `true` | `false` |
+  | `isValidInstant("2024-06-15T10:30:00+02:00[Europe/Paris]")` | `true` | `false` |
+  | `toArrowTimestamp("2024-06-15T10:30:00+02:00[Europe/Paris]", "second")` | `1718440200n` | `0n` |
+  | `diffDate("2024-03-10[Europe/London]", "2024-03-15", "days")` | `5` | `null` |
+  | `hasSecond60("2016-12-31T23:59:60Z[u-ca=iso8601]")` | `true` | `false` |
+
+  Migration: for a zoned string, call a function that keeps the zone (the `zoned/` functions, `transitTime`, `nextDeparture`, `scheduleDelivery`), or turn it into an instant first with `toOffsetInstant(value)?.instant`. For a plain value, drop the bracket.
+
+  One instant reads differently. 1.21 read a minute-rounded offset against the zone in the bracket, so `1960-06-01T11:15:30-00:45[Africa/Monrovia]` was the moment `-00:44:30` names. Without the bracket, `-00:45` is read as written, 30 seconds later. `Temporal.Instant#toString({ timeZone })` and `ZonedDateTime#toString` write that rounded offset.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `toArrowTimestamp("1960-06-01T11:15:30-00:45[Africa/Monrovia]", "second")` | `-302443200n` | `0n` |
+  | `toArrowTimestamp("1960-06-01T11:15:30-00:45", "second")` | `-302443170n` | `-302443170n` |
+  | `toArrowTimestamp("1960-06-01T11:15:30-00:44:30", "second")` | `-302443200n` | `-302443200n` |
+
+  Migration: write the offset the zone has at that instant. `toOffsetInstant` returns it to the second, and `fromOffsetInstant` given that `instant` and `offset`, without `timeZone`, writes the local time with it:
+
+  ```typescript
+  import { fromOffsetInstant, toOffsetInstant } from "@northguild/gmt";
+
+  const read = toOffsetInstant("1960-06-01T11:15:30-00:44:30[Africa/Monrovia]");
+  if (read !== null) {
+    fromOffsetInstant({ instant: read.instant, offset: read.offset }); // "1960-06-01T11:15:30-00:44:30"
+  }
+  ```
+
+  **2. The list functions skip an annotated entry.** `minDate`, `maxDate`, `sortDates`, `closestDateTo`, `minDateTime`, `maxDateTime`, `sortDateTimes`, `minTime`, `maxTime`, `sortTimes`, `minUtc`, `maxUtc`, `sortUtc`, `minZoned`, `maxZoned`, `sortZoned` and `closestZonedTo` drop an entry their kind does not take, as they drop any other invalid entry. 1.21 stripped the annotation and kept it.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `maxDate(["2024-03-10", "2024-03-15[u-ca=iso8601]"])` | `"2024-03-15"` | `"2024-03-10"` |
+  | `sortDates(["2024-03-15[u-ca=iso8601]", "2024-03-10"])` | `["2024-03-10", "2024-03-15"]` | `["2024-03-10"]` |
+
+  Migration: drop the bracket from each entry before the call, as for item 1.
+
+  **3. A cut-off is the zoned string `cutoffAt` writes.** `isPastCutoff` and `timeToCutoff` read `cutoff` as a zoned string only.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `isPastCutoff("2024-06-12T18:00:00Z", "2024-06-12T17:00:00Z")` | `true` | `false` |
+  | `timeToCutoff("2024-06-12T16:00:00Z", "2024-06-12T17:00:00Z")` | `"PT1H"` | `""` |
+
+  Migration: pass the value `cutoffAt` returns, or a cut-off with its zone: `isPastCutoff("2024-06-12T18:00:00Z", "2024-06-12T17:00:00+00:00[UTC]")` is `true`.
+
+  **4. `relativeTo` is a string, and `DurationRelativeTo` is `string`.** A `Temporal` object or a property bag passed to a `duration/` function no longer compiles, and returns the empty result at run time.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `totalDuration("P1M", "days", { relativeTo: Temporal.PlainDate.from("2024-02-01") })` | `29` | Does not compile. Returns `null` at run time |
+  | `totalDuration("P1M", "days", { relativeTo: { year: 2024, month: 2, day: 30 } })` | `29` (Temporal clamps the 30th to the 29th) | Does not compile. Returns `null` at run time |
+
+  Migration: pass the ISO 8601 string, `{ relativeTo: "2024-02-01" }`, or call `.toString()` on the `Temporal` object.
+
+  **5. A duration designator is upper case.** Every `duration/` function, and every function that takes a duration string, refuses `P1d` or `pt36h`.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `totalDuration("pt36h", "days")` | `1.5` | `null` |
+
+  Migration: write the designators in upper case, `PT36H`.
+
+  **6. An option is read only as its declared type.** A `String` object, a number for a string option, `"yes"` for a boolean and any other converted value give the empty result, as listed above, as does a `locale` that is not `undefined`, a string or an array of strings, and an unknown name-width `style`.
+
+  Migration: pass a string, boolean or number literal of the declared type.
+
+  **7. `parseHL7` and `isValidHL7` read a `TS` exactly.**
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `parseHL7("2024&X")` | `{ kind: "partial", local: "2024", offset: "", precision: "year" }` | `null` |
+  | `parseHL7("20240615^D^X\|Y")` | `{ kind: "partial", local: "2024-06-15", offset: "", precision: "day" }` | `null` |
+
+  Migration: pass one field, split from the message on its field, repetition and segment delimiters, with no subcomponent in the date-time or the degree.
+
+  **8. `hasSecond60` checks the whole string.** A lower-case `t`, a space, basic format, trailing text and a date, zone or calendar that does not exist give `false`.
+
+  | Call | 1.21 | 1.22 |
+  | --- | --- | --- |
+  | `hasSecond60("2016-12-31t23:59:60Z")` | `true` | `false` |
+  | `hasSecond60("2016-02-30T23:59:60")` | `true` | `false` |
+
+  Migration: write the value in one of GMT's own kinds, with an upper-case `T`.
+- 0b68fbc: The `healthcare` namespace now reads, checks and writes the FHIR R4 `date`, `dateTime` and `instant`, such as `2024-06` or `2015-02-07T13:28:17-05:00`.
+
+  - `parseFHIR(value)` returns the value as sent, its precision (`year`, `month`, `day`, `second` or `fraction`) and its offset.
+  - `isValidFHIR(value, type)` checks a value against `"date"`, `"dateTime"` or `"instant"`. A `date` takes a day or coarser, an `instant` a second or finer, and a `dateTime` takes all five.
+  - `formatFHIR(isoString, type, { precision })` writes an ISO 8601 value as a FHIR value, cut to the precision and never rounded.
+  - `fhirDate`, `fhirDateTime` and `fhirInstant` in `@northguild/gmt/regex` are the three R4 regexes. They prove shape only, so use `isValidFHIR` to check a value: `fhirDateTime` accepts `2024-02-30`, `fhirDate` accepts `2023-02-29`, and `fhirInstant` accepts `2017-12-31T23:59:60Z` and a fraction of ten digits.
+
+  Precision is kept, so `2024-06` stays a month and is never padded to 1 June. Unlike HL7 v2, a FHIR time with no zone is invalid, because FHIR does not leave it to the sender's local time. A second of `60` is valid only on an inserted leap second, so `2016-12-31T23:59:60Z` is valid and `2017-12-31T23:59:60Z` is not. `Z`, `+00:00` and `-00:00` all read as the offset `+00:00`.
+
+  ```typescript
+  import { formatFHIR, isValidFHIR, parseFHIR } from "@northguild/gmt/healthcare";
+
+  parseFHIR("2024-06"); // { value: "2024-06", precision: "month", offset: "" }
+  parseFHIR("2015-02-07T13:28:17-05:00");
+  // { value: "2015-02-07T13:28:17-05:00", precision: "second", offset: "-05:00" }
+
+  isValidFHIR("2024-06-15T10:30:00", "dateTime"); // false (a time needs a zone)
+  formatFHIR("2024-06-15T23:30:00-05:00", "date"); // "2024-06-15"
+  formatFHIR("2024-06-15T10:30:00Z", "dateTime", { precision: "month" }); // "2024-06"
+  ```
+
+  `parseFHIR` returns `null`, `formatFHIR` returns `""` and `isValidFHIR` returns `false` for a value that does not fit. None of them throws. The functions are also at `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and `@northguild/gmt/healthcare/validate`, with the types `FhirDateTime`, `FhirDateType`, `FhirPrecision` and `FhirFormatOptions`.
+- f7af3d2: Add the `finance` namespace: read, write and check FIX `UTCTimestamp` values, the `YYYYMMDD-HH:MM:SS[.fraction]` time that orders, executions and market data carry in a FIX message. It is available from `@northguild/gmt` and from `@northguild/gmt/finance`, with `/parse`, `/format` and `/validate` subpaths.
+
+  - `parseFixUtcTimestamp(value)` returns `{ instant, precision, leapSecond, picoseconds }`, or `null`. The precision comes from the number of fraction digits sent (none, 3, 6, 9 or 12) and is never widened, so a millisecond stamp stays a millisecond stamp. `instant` keeps the digits sent up to the ninth, and digits 10 to 12 of a picosecond stamp come back in `picoseconds`, so nothing is dropped without saying so.
+  - `formatFixUtcTimestamp(instant, precision)` writes an instant in UTC at the precision a counterparty asks for. `precision` is `"second"`, `"millisecond"`, `"microsecond"`, `"nanosecond"` or `"picosecond"`. It cuts and never rounds, so a stamp cannot move into the next second or day, and `"picosecond"` pads `000` because an instant holds nothing finer.
+  - `isValidFixUtcTimestamp(value)` is `true` exactly when the parser returns a value. It takes any value and narrows it to `string`.
+
+  A seconds field of `60` is accepted only on the 27 days a leap second was inserted, and it is read back as `23:59:60`. Any other `60` is refused.
+
+  ```typescript
+  import { formatFixUtcTimestamp, parseFixUtcTimestamp } from "@northguild/gmt/finance";
+
+  parseFixUtcTimestamp("20240615-14:30:00.123456789012");
+  // { instant: "2024-06-15T14:30:00.123456789Z", precision: "picosecond", leapSecond: false, picoseconds: 12 }
+  parseFixUtcTimestamp("20171231-23:59:60"); // null: no second was inserted that day
+  formatFixUtcTimestamp("2024-06-15T16:30:00.123456789+02:00", "millisecond"); // "20240615-14:30:00.123"
+  ```
+
+  The parser returns `null` for a fraction of any other width, for a date that does not exist and for a value in ISO 8601 form. The formatter returns `""` for a date-time with no offset, which names no UTC second until `resolveLocal` gives one, for a year outside 0000 to 9999 and for an unknown precision.
+- 51275d6: A new `healthcare` namespace reads and writes the HL7 v2 date-time, the `DTM` and the older `TS` that most clinical feeds still send, such as `20240615103000-0500`.
+
+  - `parseHL7(value)` returns what the value states: an instant (it has an offset), a local time (it has none), a partial value (a year, month, day or hour), or the HL7 null value `""`.
+  - `formatHL7(isoString, { precision })` writes an ISO 8601 value as a `DTM`, cut to the precision and never rounded. It never writes a `TS`, which HL7 withdrew in v2.6.
+  - `isValidHL7(value)` is true exactly when `parseHL7` reads the value.
+
+  An HL7 time with no offset is the sender's local time, and HL7 says so. It is not UTC. `parseHL7` returns it as `kind: "local"` with no `instant`, so you must supply the sender's zone to `resolveLocal` to get one. A value coarser than a minute, such as a birth year, returns `kind: "partial"` and also has no instant. A `TS` degree of precision can only lower the precision, so `199904011200^L` is April 1999, not 12:00.
+
+  ```typescript
+  import { formatHL7, parseHL7, resolveLocal } from "@northguild/gmt";
+
+  parseHL7("20240615103000-0500");
+  // { kind: "instant", instant: "2024-06-15T15:30:00Z", offset: "-05:00", local: "2024-06-15T10:30:00", precision: "second" }
+
+  parseHL7("20240615103000"); // { kind: "local", local: "2024-06-15T10:30:00", precision: "second" }
+  resolveLocal("2024-06-15T10:30:00", "Europe/Helsinki"); // "2024-06-15T07:30:00Z"
+
+  formatHL7("2024-06-15T15:30:00Z"); // "20240615153000+0000"
+  ```
+
+  `parseHL7` returns `null`, `formatHL7` returns `""` and `isValidHL7` returns `false` for a value that does not fit, a day the month lacks, an hour of 24 or a second of 60. None of them throws. The functions are also at `@northguild/gmt/healthcare`, `@northguild/gmt/healthcare/parse`, `@northguild/gmt/healthcare/format` and `@northguild/gmt/healthcare/validate`, with the types `Hl7DateTime`, `Hl7Precision`, `Hl7PartialPrecision`, `Hl7MomentPrecision` and `Hl7FormatOptions`.
+- 56ba23c: New `iot` area: convert a Precision Time Protocol (PTP) timestamp to UTC and back. The functions are in `@northguild/gmt/iot`, in `@northguild/gmt/iot/convert` and in `@northguild/gmt/iot/validate`.
+
+  A PTP timestamp counts seconds and nanoseconds from 1970-01-01T00:00:00 TAI. It shares its epoch value with Unix time but counts a different time scale, so it is ahead of UTC by the offset the grandmaster announces: 37 seconds since 2017. A receiver that skips that step leaves sensor data 37 seconds ahead of every other clock, and nothing raises an error.
+
+  - `ptpToUtc(timestamp, currentUtcOffset)` returns the UTC instant as a string ending in `Z`, or `""`.
+  - `utcToPtp(value, currentUtcOffset)` is the inverse. It returns a `PtpTimestamp`, or `null`.
+  - `isValidPtpTimestamp(value)` is `true` for a record whose members are in range, and narrows the type. The three functions share one reader, so they cannot disagree.
+  - `PtpTimestamp` is `{ seconds: bigint; nanoseconds: number }`. `ptpToUtc` and `isValidPtpTimestamp` also accept `seconds` as a safe-integer `number`. `utcToPtp` always returns a `bigint`.
+
+  ```typescript
+  import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot";
+
+  ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 37); // "2024-01-01T00:00:00Z"
+  ptpToUtc({ seconds: 1704067237n, nanoseconds: 0 }, 0); // "2024-01-01T00:00:37Z"
+  utcToPtp("2024-01-01T02:00:00+02:00", 37); // { seconds: 1704067237n, nanoseconds: 0 }
+  ptpToUtc({ seconds: 0n, nanoseconds: 0 }, 37); // ""
+  ```
+
+  - **The offset is required.** There is no default. `currentUtcOffset` is the TAI minus UTC value your grandmaster announces, an integer from -32768 to 32767. A fixed 37 would hide a grandmaster that announces something else. It means something only when the grandmaster marks it valid and is on the PTP time scale, so check `currentUtcOffsetValid` and `ptpTimescale` before you call.
+  - **The functions use the offset you give them.** They do not read the leap-second table. To check a grandmaster, compare its offset with `taiMinusUtc` for the same date.
+  - **Seconds run from 0 to 2^48 - 1.** The 80-bit PTP timestamp has 32 bits of nanoseconds, which leaves 48 bits of seconds. Nanoseconds run from 0 to 999999999.
+  - **Nothing before 1970 is accepted.** `ptpToUtc` returns `""` when the result would fall before 1970-01-01T00:00:00Z, which in practice means a clock that has not been set. `utcToPtp` returns `null` for an instant before that date, so the two stay inverse.
+  - **A leap second is not written.** A UTC second of `60` returns `null`. During an insertion the grandmaster announces the new offset, and you pass it.
+  - **A result past year 9999** is written in the expanded form, such as `+010000-01-01T00:00:00Z`, up to Temporal's limit.
+  - **A value that cannot be read returns the empty result.** `ptpToUtc` returns `""`, `utcToPtp` returns `null` and `isValidPtpTimestamp` returns `false`. This includes a missing member, a `number` `seconds` that is not a safe integer and an offset that is not an integer.
+- 9db9722: Eight new functions turn an instant into a Julian Date, a Modified Julian Date or a count of seconds since J2000.0, and back. They are in `@northguild/gmt/timescale` and `@northguild/gmt/timescale/convert`.
+
+  - `toJulianDateParts(isoString, scale?)` and `fromJulianDateParts({ jd1, jd2 }, scale?)` carry a Julian Date as two numbers: `jd1` is a whole number of days and `jd2` is the fraction of a day. This form keeps the nanosecond.
+  - `toJulianDate(isoString, scale?)` and `fromJulianDate(jd, scale?)` use one number. One number cannot hold a modern Julian Date exactly, so the result is rounded to about 20 microseconds. Use the two-part form when the precision matters.
+  - `toModifiedJulianDate(isoString, scale?)` and `fromModifiedJulianDate(mjd, scale?)` use the Modified Julian Date, which is the Julian Date minus 2400000.5. It starts at midnight and keeps more digits in one number than the Julian Date does.
+  - `toJ2000Seconds(isoString, scale?)` and `fromJ2000Seconds(seconds, scale?)` count seconds from J2000.0.
+
+  `scale` is `"UTC"`, `"TAI"`, `"TT"` or `"TCG"`; the new type `TimeScale` names them, and `JulianDateParts` is the two-part shape. The default is `"UTC"`, except for the J2000 pair, which default to `"TT"` because J2000.0 is defined as 2000-01-01 12:00 TT. A Julian Date day starts at noon. On UTC, every day counts as one day, including a day with a leap second, so every value converts back to the instant it came from.
+
+  ```typescript
+  import { fromJ2000Seconds, toJ2000Seconds, toJulianDate, toJulianDateParts, toModifiedJulianDate } from "@northguild/gmt";
+
+  toJulianDateParts("2026-01-01T00:00:00.123456789Z"); // { jd1: 2461041, jd2: 0.5000014288980208 }
+  toJulianDate("2026-01-01T12:00:00Z"); // 2461042
+  toModifiedJulianDate("2000-01-01T00:00:00Z"); // 51544
+  toJ2000Seconds("2000-01-01T11:58:55.816Z"); // 0
+  fromJ2000Seconds(0); // "2000-01-01T11:58:55.816Z"
+  ```
+
+  Every `to*` function returns `null` and every `from*` function returns `""` for input that does not fit, an instant before 1972-01-01 or after year 9999, or a scale that is not one of the four. TDB is not offered. A single-number result is also `null` when the rounded number falls outside that range. None of them throws.
+- 38c4b8c: New `rail` area: read, write and check the times in a GTFS transit feed. They are in `@northguild/gmt/rail`, in `@northguild/gmt/rail/parse`, in `@northguild/gmt/rail/format` and in `@northguild/gmt/rail/validate`.
+
+  A GTFS time, such as the `arrival_time` of a stop, is not a clock reading. A trip that runs past midnight is written with an hour above 23: `25:35:00` is 1:35 on the day after the service day, and it still belongs to that service day. A parser that rejects it loses the stop. One that turns it into `01:35:00` puts every trip after midnight on the wrong date.
+
+  - `parseGtfsTime(value)` reads a GTFS time and returns a `GtfsTime`, or `null`.
+  - `formatGtfsTime(value)` writes a `GtfsTime` back as a GTFS time, or `""`.
+  - `isValidGtfsTime(value)` is `true` exactly when `parseGtfsTime` would return a value.
+  - `GtfsTime` is `{ seconds: number; dayOverflow: number }`: the written time less whole 24-hour blocks, in seconds, and the whole days past the service day.
+
+  ```typescript
+  import { formatGtfsTime, parseGtfsTime } from "@northguild/gmt/rail";
+
+  parseGtfsTime("25:35:00"); // { seconds: 5700, dayOverflow: 1 }
+  parseGtfsTime("8:05:00"); // { seconds: 29100, dayOverflow: 0 }
+  parseGtfsTime("110:29:00"); // { seconds: 52140, dayOverflow: 4 }
+  formatGtfsTime({ seconds: 5700, dayOverflow: 1 }); // "25:35:00"
+  parseGtfsTime("25:60:00"); // null
+  ```
+
+  - **The days past the service day are kept.** `25:35:00` gives `dayOverflow: 1`, and writing it back gives `25:35:00`, never `01:35:00`.
+  - **Hours run from 0 to 999.** GTFS sets no upper limit, so the limit is GMT's: MobilityData's gtfs-validator reads one to three hour digits, and real feeds go well past 48 hours. VIA Rail Canada writes `110:29:00` for a train from Vancouver to Toronto. You can write `H:MM:SS`, `HH:MM:SS` or `HHH:MM:SS`; `formatGtfsTime` writes at least two hour digits.
+  - **A GTFS time is not an instant.** It counts from noon minus 12 hours of the service day, so it matches the wall clock only when no clock change falls between that point and the time. These functions name no date and read no time zone.
+  - **Nothing is trimmed.** A space, a tab, a line break or a byte order mark returns the empty result. Remove them when you read the CSV file.
+  - **A value that cannot be read returns the empty result.** `parseGtfsTime` returns `null`, `formatGtfsTime` returns `""` and `isValidGtfsTime` returns `false`. This includes minutes or seconds above 59, a fraction, a sign and a value that is not a string.
+- 88bfffc: New `gtfsToInstant(serviceDate, gtfsTime, timeZone)` in `@northguild/gmt/rail/convert` and `@northguild/gmt/rail`: turn a GTFS stop time into the instant it happens, as a UTC string ending in `"Z"`.
+
+  A GTFS time is counted from noon minus 12 hours of the service day, not from midnight. On most days that is midnight, but on a day when the clocks change it is not. `gtfsToInstant` finds noon on the service date in the agency's time zone, goes back 12 hours, and adds the GTFS time as exact seconds. The zone is the feed's `agency_timezone`, even for a stop that has its own `stop_timezone`.
+
+  ```typescript
+  import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+  gtfsToInstant("20240130", "25:35:00", "America/Los_Angeles"); // "2024-01-31T09:35:00Z"
+  gtfsToInstant("2024-01-30", "25:35:00", "America/Los_Angeles"); // "2024-01-31T09:35:00Z"
+  gtfsToInstant("20240331", "00:00:00", "Europe/Berlin"); // "2024-03-30T22:00:00Z" (23:00 local)
+  ```
+
+  - **The service date** is `YYYYMMDD` (the GTFS form) or `YYYY-MM-DD`. A date that does not exist, such as `20240230`, returns `""`.
+  - **The GTFS time** is read as `parseGtfsTime` reads it, so `25:35:00` and `110:29:00` are fine and `25:60:00` returns `""`.
+  - **A skipped or repeated noon returns `""`.** If the zone had no noon on that date, or had it twice, the anchor is unclear and the result is empty, not a guess.
+  - **Invalid input returns `""`.** This includes a time zone that does not exist and a value that is not a string.
+- 657bc3e: The `finance` area now reads and writes the value date in SWIFT MT messages. The value date in field 30 and field 32A has six digits, `YYMMDD`, such as `240615`. It is not ISO 8601, so `Temporal` cannot read it. The functions are in `@northguild/gmt/finance`, and in `@northguild/gmt/finance/parse`, `@northguild/gmt/finance/format` and `@northguild/gmt/finance/validate`.
+
+  - `parseSwiftDate(value)` reads a value date and returns an ISO date.
+  - `formatSwiftDate(value)` writes an ISO date as a value date.
+  - `isValidSwiftDate(value)` is `true` exactly when `parseSwiftDate` would return a date.
+
+  ```typescript
+  import {
+    formatSwiftDate,
+    isValidSwiftDate,
+    parseSwiftDate,
+  } from "@northguild/gmt/finance";
+
+  parseSwiftDate("240615"); // "2024-06-15"
+  formatSwiftDate("2024-06-15"); // "240615"
+  isValidSwiftDate("750101"); // false
+  ```
+
+  Three rules apply to all three functions:
+
+  - **SWIFT chooses the century, so you do not.** SWIFT reads a `YY` from 01 to 60 as 20`YY`, 2001 to 2060, and refuses any other `YY`, `00` and `61` to `99` included. There are no options. `240615` is 2024-06-15, and `990615` and `750101` are refused.
+  - **A date that does not exist is refused.** The day is checked in the year the rule gives, so `040229` is 2004-02-29 and `050229` returns `""`.
+  - **Only the bare six digits are read.** A tag, a currency, an amount, a space or any other digit makes the parser return `""` and the validator return `false`. `formatSwiftDate` takes an ISO calendar date, and returns `""` for a date-time or for a year outside 2001 to 2060, because written as two digits it would be read back as another year.
+
+  The rule covers the value dates SWIFT states it for: field 32A of MT 910, and fields 30 and 32A of category 1 and 2 messages other than the common group messages n92, n95 and n96. Other six-digit dates, such as field 31D of an MT 700, follow their own rules: read them with `parseDateWithPattern`.
+- ef83c40: Two new functions read and write the TAI64N labels that daemontools' multilog and s6-log write at the start of each log line when timestamping is on, such as `@400000002a2b2c2d00000000`.
+
+  - `toTai64n(isoString)` returns the label of an instant: `@` followed by 24 lowercase hex digits.
+  - `fromTai64n(label)` returns the UTC instant of a TAI64 (16 hex digits), TAI64N (24) or TAI64NA (32) label, with or without the `@`, in either hex case. The attosecond digits of a TAI64NA label are checked and then dropped.
+
+  A label counts seconds of TAI, not of UTC, so a decoder that reads one as Unix seconds is 37 seconds out today and was 26 seconds out for the example in Bernstein's TAI64 definition. Both functions use the leap-second table, so a label written during an inserted second reads back as `23:59:60`.
+
+  ```typescript
+  import { fromTai64n, toTai64n } from "@northguild/gmt";
+
+  toTai64n("1992-06-02T08:06:43Z"); // "@400000002a2b2c2d00000000"
+  fromTai64n("@400000002a2b2c2d00000000"); // "1992-06-02T08:06:43Z"
+  ```
+
+  Both return `""` for an instant before 1972, a result past year 9999, a label of any other length, a character that is not a hex digit, a nanosecond or attosecond counter above 999999999, or a label of 2^63 or more, which the TAI64 definition reserves. One thing to know about your own logs: daemontools on a host whose clock counts UTC adds only 10 seconds to the Unix time, not the full TAI − UTC offset, so from 2017 on its labels read 27 seconds early through `fromTai64n`. s6 on a UTC clock writes true TAI and reads correctly. `fromTai64n` does not correct the daemontools case, and the JSDoc of both functions says so.
+- ec6be04: Five new functions convert between UTC and the two scales spacecraft navigation and Earth ephemerides use: Terrestrial Time (TT) and Geocentric Coordinate Time (TCG).
+
+  - `toTT(isoString)` returns the TT label of a UTC instant, and `fromTT(ttString)` reads one back. TT is TAI plus exactly 32.184 seconds.
+  - `toTCG(isoString)` returns the TCG label of a UTC instant, and `fromTCG(tcgString)` reads one back. TCG runs ahead of TT at a fixed rate that IAU Resolution B1.9 defines, and the two agree at the TT instant `1977-01-01T00:00:32.184`.
+  - `tcgMinusTt(isoString)` returns the gap TCG − TT in seconds, or `null` when there is no answer. It is the same offset `toTCG` applies.
+
+  ```typescript
+  import { fromTCG, tcgMinusTt, toTCG, toTT } from "@northguild/gmt/timescale";
+
+  toTT("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:09.184 TT"
+  toTCG("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:10.261661917 TCG"
+  fromTCG("2026-01-01T00:01:10.261661917 TCG"); // "2026-01-01T00:00:00Z"
+  tcgMinusTt("2026-01-01T00:00:00Z"); // 1.077661917
+  ```
+
+  The strings follow the form of the TAI labels: a date-time, one space, then the scale name `TT` or `TCG`, with a four-digit year. The names `TDT` and `ET` are not read. The inputs are the ones `toTAI` reads, including the 27 inserted `23:59:60` seconds, and both labels have no second 60. Every function returns `""` (or `null` for `tcgMinusTt`) for an instant before 1972-01-01 UTC, a result past year 9999, or invalid input.
+
+  Results are floored to the nanosecond, in both directions, so `fromTCG(toTCG(x))` gives back `x` for every nanosecond. About one TCG nanosecond in 1.4 billion is not the result of any UTC nanosecond, and `fromTCG` reads it as the UTC instant of the next one.
+
+  `toTAI` and `fromTAI` are unchanged in behaviour. Their `@returns` lines now say what they return, and `fromTAI` lost a check for second 60 that could never be true, because the parser already refuses it for TAI.
+
+### Patch Changes
+
+- 6c99dde: Formatted dates are right in four more cases.
+
+  - A Coptic date before year 1 AM prints its signed year and the era AM, as the Intl era and month code proposal numbers it: ISO `-0001-07-10` is `Epep 18, -285 AM`. Engines on ICU 78 printed `Epep 18, 286` with no era, which names a different year.
+  - In WebKit (Safari), the first day of year 1 AH in `islamic-civil`, `islamic-tbla` and `islamic-umalqura` prints as year 1 AH. WebKit printed its first hours as year 0 `Before Hijra`.
+  - In WebKit, formatting an Islamic-calendar range no longer stops responding. GMT's range check asked the polyfill for a date before 1 AH, which never returns in WebKit.
+  - In WebKit, an English time range that starts at noon with a long day period keeps both periods: `12:00 noon - 12:25 in the afternoon`.
+
+  On Node and Chromium only the Coptic change shows; Firefox 147 and later already printed all four right. Each repair stays off on an engine that prints the date right.
+- ba5fe2b: Formatting no longer stops Node with a crash, and prints the right year, in languages whose date patterns print the year a week belongs to instead of the calendar year. `formatZonedRange`, `formatCalendar` and the `…ToParts` functions stopped Node 22, 24 and 26 with a crash for some languages and calendars, for example Burmese with the Buddhist calendar, and Galician with the Hebrew, Buddhist or ROC calendar and a full date style. Every format function also printed the wrong year near the start or end of a year, or all year in the Buddhist, Japanese and ROC calendars: Scottish Gaelic printed `Dùbh 2025` for 30 December 2024, and now prints `Dùbh 2024`.
+
+  Some calendars and languages printed a year or a range that the specifications do not give, and now print the specifications' text:
+
+  - The Japanese calendar before 1873, when Japan adopted it, printed an era year: `Dec 31, 5 Meiji` for 31 December 1872 is now `Dec 31, 1872 AD`.
+  - An Islamic date before the Hijra printed a negative year such as `-23 AH`, and is now the empty value.
+  - Japanese with the Japanese calendar and a two-digit year printed `令和6年`, and now prints `令和06年`. The first year of an era stays `元年`. With another numbering system the era year printed Latin digits, and now prints that system's digits: `ja-u-ca-japanese-nu-arab` printed `令和6年` and now prints `令和٦年`.
+  - The Chinese and Dangi calendars with a two-digit year padded the related year, which has no two-digit form: `05(yi-chou)` for the year 5 is now `5(yi-chou)`.
+  - A range whose language's interval pattern drops or repeats a field, such as the year of a Chinese-calendar range across two years, prints both dates in full, joined by the language's own range separator.
+  - A language with the `islamic` calendar printed the astronomical Hijri date (`Muh. 5, 1446 AH` for 10 July 2024). It now prints the tabular `islamic-tbla` date (`Muh. 4, 1446 AH`), and `islamic-rgsa` prints the language's default calendar.
+- ba5fe2b: GMT checks the installed `@js-temporal/polyfill` for one more bug in counting months or years between two dates in a non-ISO calendar. The polyfill's unreleased `main` loses a day when a Hebrew or Islamic count starts on the 30th and crosses a 29-day month (tc39/proposal-temporal#3327). GMT already uses its own count while the polyfill has the older bugs in it. With this check, a later release that fixes those but has this one still gets GMT's count, so results stay correct. On 0.5.1, the release GMT depends on today, no result changes.
+- 2489bc4: Calls that check their input first are faster. Each input is now parsed once, where before a function checked it and then parsed it again, or called another public function that did the same. No function, signature or result changes.
+
+  - Two edge cases change, and only for an object whose getters return different values on each read. Interval functions read an interval's `start` and `end` once per call. `demurrageClock` reads each event's `.at` once per call. Plain strings and ordinary objects behave as before.
+
 ## 1.21.0
 
 ### Minor Changes

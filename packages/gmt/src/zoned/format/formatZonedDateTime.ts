@@ -1,9 +1,9 @@
 import { cachedFormatter } from "../../internal/formatterCache";
-import { normalizeDateTime, zonedDateTimeFrom } from "../../internal";
+import { normalizeDateTime } from "../../internal";
 import { instantFormatOptions } from "../../internal/instantFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Format a zoned ISO 8601 datetime string using the Intl.DateTimeFormat implementation.
@@ -23,6 +23,11 @@ import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOpti
  *   `formatUtc` with its `timeZone` option.
  * - `options` null returns `""`, as ECMA-402's CoerceOptionsToObject rejects it (a string or number
  *   options value formats with the defaults, as `Intl.DateTimeFormat` does).
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value zoned ISO 8601 datetime string
  * @param locale optional locale tag (e.g. "en-GB", "ja-JP"), or a preference list of tags (ECMA-402)
@@ -50,7 +55,8 @@ export function formatZonedDateTime(
   if (options === null) {
     return "";
   }
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
@@ -59,7 +65,6 @@ export function formatZonedDateTime(
     // zone with the options ZonedDateTime#toLocaleString resolves to
     // (GetDateTimeFormat ~any~, ~zoned-date-time~, ~all~), so the requested
     // fields and widths are kept.
-    const zonedDateTime = zonedDateTimeFrom(value);
     const resolved = instantFormatOptions(
       readDateTimeFormatOptions(options),
       zonedDateTime.timeZoneId,

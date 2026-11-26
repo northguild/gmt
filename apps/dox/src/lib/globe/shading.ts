@@ -14,7 +14,13 @@
  * takes the constants below by interpolating them into the shader source rather
  * than restating them — one source of truth, checked by
  * `webgpu/shaders.test.ts`.
+ *
+ * The surface normal under a pixel comes from `pinhole.ts` (`rayHit`): the globe is seen
+ * through a pinhole at geostationary distance, not an orthographic projection. The WGSL
+ * path mirrors it with the same ray-sphere intersection.
  */
+
+import { G, P, RIM, rayHit, type Vec3 } from "./pinhole";
 
 export type Rgb = readonly [number, number, number];
 
@@ -174,6 +180,9 @@ export function imageryLight(sunElevationSine: number): number {
   return IMAGERY_AMBIENT + (1 - IMAGERY_AMBIENT) * dayFactor(sunElevationSine);
 }
 
+/** Scratch for the per-pixel surface normal, so painting allocates nothing. */
+const HIT: Vec3 = [0, 0, 0];
+
 /**
  * Write RGBA (not premultiplied, as `ImageData` expects) into `pixels`.
  * Layers, bottom to top: the day wash, the limb haze, then the night wash —
@@ -200,8 +209,16 @@ export function paintShading(
         v /= distance;
         distance = 1;
       }
-      const nz = Math.sqrt(Math.max(0, 1 - u * u - v * v));
-      const elevation = u * sx + v * sy + nz * sz;
+      /* `rayHit` wants v up and answers in the camera frame [towards the viewer, right, up];
+         the sun is in shading axes (right, down, towards the viewer). */
+      if (!rayHit(u, -v, HIT)) {
+        /* Rounding can leave the normalised offset a hair outside the unit disc. Past the limb the
+           surface is the rim itself, so write its normal: [RIM, G·u/P, −G·v/P] in `rayHit`'s frame. */
+        HIT[0] = RIM;
+        HIT[1] = (G * u) / P;
+        HIT[2] = (-G * v) / P;
+      }
+      const elevation = HIT[1] * sx - HIT[2] * sy + HIT[0] * sz;
 
       const dayA = input.dayAlpha * dayFactor(elevation);
       // The haze is sunlight scattered by the air, so it fades with the day.

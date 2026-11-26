@@ -1,0 +1,43 @@
+---
+/**
+ * The new moon of February 2027 over Shanghai, as a short panel. Every figure is read from the
+ * U.S. Naval Observatory's record (`new-moon.json`) and worked out with gmt at build time
+ * (`newMoonFacts`); nothing is typed in. It states the facts and draws no conclusion from them.
+ */
+import Link from "~/components/Link.astro";
+import { newMoonFacts } from "~/slides/give-me-temporal/content";
+
+const f = newMoonFacts();
+---
+
+<div class="gmt-deck-panel gmt-newmoon">
+  <p>
+    <strong>New moon:</strong> {f.utcDay}, {f.utcTime} {f.timeScale}.
+    In Shanghai: {f.localTime} on {f.localDay}, {f.minutesToMidnight} minutes before midnight.
+  </p>
+  <p>
+    A Chinese calendar month starts on the day of the new moon, by the clock at {f.calendarClock}:
+    Shanghai's.
+  </p>
+  <p class="gmt-newmoon-source">
+    Sources: <Link href={f.url}>{f.source}</Link>; <Link href={f.calendarUrl}>{f.calendarSource}</Link>.
+  </p>
+</div>
+
+<style>
+  .gmt-newmoon {
+    display: grid;
+    gap: 0.6em;
+    padding: 1.2cqi 1.6cqi;
+    font-size: max(0.875rem, 1.6cqi);
+  }
+
+  .gmt-newmoon p {
+    margin: 0;
+  }
+
+  .gmt-newmoon-source {
+    font-size: max(0.75rem, 1.35cqi);
+    color: var(--gmt-ice);
+  }
+</style>

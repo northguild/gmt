@@ -1,5 +1,7 @@
 name: Deploy Dox
 
+# Pulse check: deploy-dox
+#
 on:
   # After Release, never alongside it. Release runs on every push to main, so this
   # still deploys every merge. A push that publishes pushes its
@@ -9,7 +11,7 @@ on:
   # or failure.
   #
   # Failure mode: if Release ever stops running on pushes to main (renamed,
-  # disabled, or given a path filter), merges stop deploying the docs. The daily
+  # disabled, or given a path filter), merges stop deploying the docs. The
   # schedule and workflow_dispatch below still deploy.
   workflow_run:
     workflows: [Release]
@@ -67,10 +69,14 @@ jobs:
       # The build's generate step refreshes the /upstream/ tracker from GitHub
       # (scripts/upstream.mjs refresh). It is best-effort: without a token or on a
       # rate limit it keeps the committed snapshot and never fails the build.
+      # WEBMCP_ORIGIN_TRIAL_TOKEN puts the WebMCP origin-trial meta on each tool
+      # page (apps/dox/src/lib/webmcp/origin-trial.ts). Only this workflow has the
+      # secret, so pull-request and weekly-gate builds go out without the tag.
       - name: Build apps/dox (builds @northguild/gmt first)
         run: pnpm --filter "@gmt/dox..." -r --if-present run build
         env:
           GH_TOKEN: ${{ github.token }}
+          WEBMCP_ORIGIN_TRIAL_TOKEN: ${{ secrets.WEBMCP_ORIGIN_TRIAL_TOKEN }}
 
       # The Wrangler in apps/dox's lockfile, run through pnpm. Not
       # cloudflare/wrangler-action: it runs npx and `npm i`, and npm refuses to

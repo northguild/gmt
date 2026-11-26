@@ -31,6 +31,14 @@ export const INTEGER_UTC_FROM = "1972-01-01T00:00:00Z";
 export const CONTINUOUS_UTC_FROM = "2027-05-20";
 
 /**
+ * The date-time part of a scale label, written with `Z`: `"2026-01-01T00:01:09.184 TT"` reads
+ * `"2026-01-01T00:01:09.184Z"`. For `diffUtcAsDuration` and `spanNs`, which take a `Z` instant:
+ * the label's own clock, not a UTC instant. A label the library did not write (`""`) gives `"Z"`,
+ * so callers check for `""` first.
+ */
+export const asUtc = (label: string): string => `${label.split(" ")[0] ?? ""}Z`;
+
+/**
  * Every inserted second, in order, as its `…T23:59:60Z` label: the walk of
  * `nextLeapSecond` from `INTEGER_UTC_FROM` until it returns `""`. The walk
  * also stops if a step does not move forward, so a library fault cannot loop.

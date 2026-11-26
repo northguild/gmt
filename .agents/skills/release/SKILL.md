@@ -132,7 +132,8 @@ Node, so it catches a failure that only happens in CI (#453).
   is in the tree and has not been pushed.
 - **`gh pr create --base main --head release/<name> --title "<subject>" --label release
   --body-file <file>`**, with the body file outside the tree. If the label does not exist, open the
-  PR without it and say so.
+  PR without it and say so. Then run `node scripts/pr-meta.mjs --apply` to ask the other
+  collaborator for review.
 
 Write the body in plain English (the [`plain-english` skill](../plain-english/SKILL.md)):
 

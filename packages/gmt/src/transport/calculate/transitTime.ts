@@ -1,8 +1,4 @@
-import {
-  exactDurationNanoseconds,
-  readExactMoment,
-  writeExactMoment,
-} from "../../internal";
+import { transitTimeText } from "../../internal/deliverySchedule";
 
 /**
  * Add a transit duration to a departure and return the arrival, in the departure's own zone.
@@ -44,11 +40,9 @@ import {
  *   spring-forward hour the clock skipped — resolves to the **later** instant:
  *   `2024-10-06T02:30:00[Australia/Sydney]` is `03:30+11:00`. Write the offset to name the other
  *   pass of a repeated hour; a departure that carries its offset is never re-resolved.
- * - RFC 9557 annotations are read as `Temporal.Instant.from` reads them: a bracket without `=`
- *   is a time zone, and a `key=value` bracket with an unknown key is ignored when elective and
- *   rejected when critical (`[!…]`). A calendar on a departure without a zone is accepted and
- *   changes nothing, since an instant has no calendar; a zoned departure's calendar must be ISO,
- *   as `isValidZonedDateTime` requires.
+ * - The only annotation read is one time zone after a departure body. A calendar, an elective
+ *   or a critical unknown annotation, or a second bracket, returns `""`, on a zoned departure
+ *   and on an instant alike.
  * - A negative duration is allowed and moves backwards; that is how a departure is recovered
  *   from an arrival.
  * - Returns `""` when `departure` is not a zoned datetime or instant string, or `duration` is
@@ -64,7 +58,7 @@ import {
  * @example transitTime("2024-06-15T10:00:00Z", "PT36H") // "2024-06-16T22:00:00Z"
  * @example transitTime("2024-06-15T10:00:00+09:00", "PT1H") // "2024-06-15T11:00:00+09:00" (an offset stays an offset)
  * @example transitTime("2024-06-15T10:00:00+05:30:15", "PT1H") // "2024-06-15T11:00:00+05:30:15" (a sub-minute offset is kept as written)
- * @example transitTime("2024-06-15T10:00:00Z[foo=bar]", "PT1H") // "2024-06-15T11:00:00Z" (an elective unknown annotation is ignored)
+ * @example transitTime("2024-06-15T10:00:00Z[foo=bar]", "PT1H") // "" (only a time zone bracket is accepted)
  * @example transitTime("2024-06-15T12:30:00+09:00[Asia/Tokyo]", "-PT2H30M") // "2024-06-15T10:00:00+09:00[Asia/Tokyo]"
  * @example transitTime("2024-04-07T02:30:00[Australia/Sydney]", "PT0S") // "2024-04-07T02:30:00+11:00[Australia/Sydney]" (an ambiguous wall time resolves to the earlier instant)
  * @example transitTime("2024-10-06T02:30:00[Australia/Sydney]", "PT0S") // "2024-10-06T03:30:00+11:00[Australia/Sydney]" (a nonexistent wall time resolves to the later instant)
@@ -75,35 +69,5 @@ import {
  * @example transitTime("2024-06-15T10:00:00Z", "2 hours") // ""
  */
 export function transitTime(departure: string, duration: string): string {
-  // A non-string would reach the regex tests below, which coerce it: a throwing `toString`, a
-  // Symbol or a hostile Proxy would escape. Refuse it before any read.
-  if (typeof departure !== "string" || typeof duration !== "string") {
-    return "";
-  }
-
-  try {
-    return addLeg(departure, duration);
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
-}
-
-/** `transitTime` for two strings, without the guard. */
-function addLeg(departure: string, duration: string): string {
-  // Days are 24 exact hours; years, months and weeks are refused.
-  const amount = exactDurationNanoseconds(duration);
-  if (amount === null) {
-    return "";
-  }
-
-  // A string that names a zone must name a real one that agrees with its offset; only a string
-  // that names none is read as an instant, keeping its offset text.
-  const moment = readExactMoment(departure);
-  if (moment === null) {
-    return "";
-  }
-
-  return writeExactMoment(moment.nanoseconds + amount, moment.notation);
+  return transitTimeText(departure, duration);
 }

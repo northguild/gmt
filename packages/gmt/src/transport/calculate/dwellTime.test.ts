@@ -183,16 +183,17 @@ describe("dwellTime", () => {
   });
 
   it.each`
-    entry                                         | exit                                 | targetZone         | reason
-    ${"2024-06-15T23:30:00+01:00[Europe/London]"} | ${"2024-06-16T01:00:00Z[Not/AZone]"} | ${undefined}       | ${"the exit's bracket is never read"}
-    ${"2024-06-15T22:30:00Z[Not/AZone]"}          | ${"2024-06-16T01:00:00Z"}            | ${"Europe/London"} | ${"the entry's bracket is not read when targetZone is given"}
+    entry                                                       | exit                                   | targetZone         | reason
+    ${"2024-06-15T23:30:00+01:00[Europe/London]"}               | ${"2024-06-16T01:00:00Z[Not/AZone]"}   | ${undefined}       | ${"an exit zone that does not exist"}
+    ${"2024-06-15T22:30:00Z[Not/AZone]"}                        | ${"2024-06-16T01:00:00Z"}              | ${"Europe/London"} | ${"an entry zone that does not exist, even with a targetZone"}
+    ${"2024-06-15T23:30:00+01:00[Europe/London]"}               | ${"2024-06-16T01:00:00Z[u-ca=hebrew]"} | ${undefined}       | ${"a calendar annotation on the exit"}
+    ${"2024-06-15T23:30:00+01:00[foo=bar]"}                     | ${"2024-06-16T01:00:00Z"}              | ${"Europe/London"} | ${"an elective annotation on the entry"}
+    ${"2024-06-15T23:30:00+01:00[Europe/London][u-ca=iso8601]"} | ${"2024-06-16T01:00:00Z"}              | ${undefined}       | ${"a calendar annotation after the zone"}
+    ${"2024-06-15T23:30:00+05:00[Europe/London]"}               | ${"2024-06-16T01:00:00Z"}              | ${undefined}       | ${"an offset that disagrees with the zone"}
   `(
-    "reads only the instant when $reason, as Temporal.Instant.from does",
+    "returns null for $entry to $exit with $targetZone ($reason)",
     ({ entry, exit, targetZone }) => {
-      expect(dwellTime(entry, exit, targetZone)).toMatchObject({
-        calendarDays: 2,
-        exit: "2024-06-16T02:00:00+01:00[Europe/London]",
-      });
+      expect(dwellTime(entry, exit, targetZone)).toBeNull();
     },
   );
 

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "moment",
+    "name": "Moment.js",
+    "title": "Moment.js | Home",
+    "url": "https://momentjs.com/",
+    "capturedAt": "2026-11-18T09:37:22.281642265Z",
+    "image": "slides/give-me-temporal/wall/moment.webp",
+    "clock": true
+  },
+  {
+    "id": "luxon",
+    "name": "Luxon",
+    "title": "Home",
+    "url": "https://moment.github.io/luxon/",
+    "capturedAt": "2026-11-18T09:37:22.281642265Z",
+    "image": "slides/give-me-temporal/wall/luxon.webp",
+    "clock": true
+  },
+  {
+    "id": "date-fns",
+    "name": "date-fns",
+    "title": "date-fns - modern JavaScript date utility library",
+    "url": "https://date-fns.org/",
+    "capturedAt": "2026-11-18T09:37:22.281642265Z",
+    "image": "slides/give-me-temporal/wall/date-fns.webp",
+    "clock": true
+  },
+  {
+    "id": "dayjs",
+    "name": "Day.js",
+    "title": "Day.js \u00b7 2kB JavaScript date utility library",
+    "url": "https://day.js.org/",
+    "capturedAt": "2026-11-18T09:37:22.281642265Z",
+    "image": "slides/give-me-temporal/wall/dayjs.webp",
+    "clock": true
+  },
+  {
+    "id": "spacetime",
+    "name": "Spacetime",
+    "title": "Spacetime",
+    "url": "https://spacetime.how/",
+    "capturedAt": "2026-11-18T09:37:22.281642265Z",
+    "image": "slides/give-me-temporal/wall/spacetime.webp",
+    "clock": false
+  }
+]

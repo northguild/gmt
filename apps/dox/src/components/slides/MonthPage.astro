@@ -1,0 +1,49 @@
+---
+/**
+ * A month as a wall-calendar page, laid out by gmt (`monthGrid`): the day the report observed (its
+ * result) ringed in red, the day it expects ringed in green, keyed as a run's rows are (`RunLabel`). The observed ring lands after the page is shown (CSS,
+ * keyed by the `data-active` that `lib/slides/bug-visuals.ts` sets); without script both show.
+ */
+import { monthGrid } from "~/lib/slides/calendar-figures";
+import RunLabel from "./RunLabel.astro";
+import "./calendar-figures.css";
+
+interface Props {
+  /** `YYYY-MM`. */
+  month: string;
+  expected: { day: number };
+  observed: { day: number };
+  /** What falls on the expected day, such as "Chinese New Year". */
+  caption: string;
+}
+const { month, expected, observed, caption } = Astro.props;
+const grid = monthGrid(month);
+const mark = (day: number | null): string | undefined =>
+  day === expected.day ? "expected" : day === observed.day ? "observed" : undefined;
+---
+
+<figure class="gmt-month" data-visual="pages">
+  <table class="gmt-month-page">
+    <caption>{grid.title}</caption>
+    <thead>
+      <tr>{grid.weekdays.map((w) => <th scope="col"><abbr title={w.long}>{w.short}</abbr></th>)}</tr>
+    </thead>
+    <tbody>
+      {grid.weeks.map((week) => (
+        <tr>
+          {week.map((day) => (
+            <td data-mark={mark(day)}>
+              {day !== null && <span class="gmt-month-day">{day}</span>}
+              {mark(day) === "expected" && <span class="gmt-sr-only">, expected {caption}</span>}
+              {mark(day) === "observed" && <span class="gmt-sr-only">, observed {caption}</span>}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <figcaption class="gmt-month-key">
+    <span data-key="observed"><RunLabel outcome="wrong" /> {caption} on {observed.day} {grid.month}</span>
+    <span data-key="expected"><RunLabel outcome="expected" /> {caption} on {expected.day} {grid.month}</span>
+  </figcaption>
+</figure>

@@ -1,4 +1,4 @@
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { unixWallClock } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
@@ -62,7 +62,7 @@ export function parseWeekFromUnix(
     if (wallClock === null || weekStartsOn === null) return null;
 
     try {
-      return getWeekNumber(wallClock.toPlainDate().toString(), weekStartsOn);
+      return weekNumberOf(wallClock.toPlainDate(), weekStartsOn);
     } catch {
       return null;
     }

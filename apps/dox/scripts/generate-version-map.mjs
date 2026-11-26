@@ -77,6 +77,16 @@ if (!gmt) {
   process.exit(1);
 }
 
+// 2b. The Node floor the site states: engines.node of the published package. Missing is fatal,
+//     never defaulted.
+const gmtManifest = join(packagesDir, "gmt", "package.json");
+const gmtNodeEngines = JSON.parse(readFileSync(gmtManifest, "utf-8")).engines
+  ?.node;
+if (typeof gmtNodeEngines !== "string" || gmtNodeEngines === "") {
+  console.error(`ERROR: ${gmtManifest} has no engines.node`);
+  process.exit(1);
+}
+
 // 3. Emit a typed module, not JSON — consumers get autocomplete and type errors.
 const body = entries
   .map(
@@ -94,6 +104,8 @@ ${body}
 export type PackageName = keyof typeof packageVersions;
 
 export const gmtVersion: string = packageVersions["@northguild/gmt"];
+
+export const gmtNodeEngines: string = ${JSON.stringify(gmtNodeEngines)};
 `;
 
 mkdirSync(resolve(appRoot, "src", "generated"), { recursive: true });

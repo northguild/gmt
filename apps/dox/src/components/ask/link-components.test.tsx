@@ -67,7 +67,7 @@ describe("the rendered link-hardening path", () => {
 
     expect(screen.getByRole("link", { name: "convert" })).toHaveAttribute(
       "href",
-      `/gmt${REAL}`,
+      `/gmt${REAL}/`,
     );
     await expectNoAxeViolations(container);
   });

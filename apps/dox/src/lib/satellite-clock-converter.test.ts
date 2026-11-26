@@ -652,6 +652,12 @@ describe("the permalink", () => {
     expect(isSeeded({})).toBe(false);
     expect(isSeeded(undefined)).toBe(false);
     expect(isSeeded({ value: "" })).toBe(false);
+    expect(isSeeded({ value: 3 })).toBe(false);
+    expect(isSeeded({ value: "", preset: "beidou-reading" })).toBe(true);
+    expect(isSeeded({ value: "", preset: "" })).toBe(false);
+    expect(readArgs({ value: "", preset: "beidou-reading" })).toEqual(
+      preset("beidou-reading").state,
+    );
   });
 
   it("matches a preset by its trimmed value, else custom", () => {

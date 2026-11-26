@@ -10,9 +10,11 @@
  * Built on the component kit: `renderExpiryCalculatorTemplate` writes the markup from builders
  * only, with ids from `idScope(idPrefix)`, and never reads the clock. `mount` finds its parts by
  * those ids and delegates every listener on the widget with the mount's `signal`. With Now
- * chosen, one `ttlFromNow` a second fills the plates and the printed calls; the table does not
- * tick. Every result slot holds the widest text it can show, so nothing moves while a reader
- * drags or the clock ticks.
+ * chosen, one `ttlFromNow` on each second fills the plates and the printed calls, written in
+ * place so focus survives; the table does not tick. The "Live clock" switch pauses that: off,
+ * Now keeps the last values, and it starts off under `prefers-reduced-motion`. In "A date"
+ * nothing ticks, so the switch is off and disabled there. Every result slot holds the widest
+ * text it can show, so nothing moves while a reader drags or the clock ticks.
  */
 import { defineElements } from "~/widgets/define";
 import {
@@ -25,11 +27,16 @@ import {
   hint,
   html,
   idScope,
+  instant,
+  paintCodeFrame,
+  paintPlates,
+  paintVerdict,
   plates,
   section,
   select,
   setHtml,
   srOnly,
+  switchField,
   table,
   textInput,
   verdict,
@@ -37,7 +44,11 @@ import {
   type Plate,
   type SafeHtml,
 } from "~/widgets/builders";
-import { heldText, type HeldState } from "~/widgets/families/holiday/held-text";
+import {
+  heldText,
+  paintHeldText,
+  type HeldState,
+} from "~/widgets/families/holiday/held-text";
 import { reservedText } from "~/widgets/families/holiday/reserved-text";
 import { chips } from "~/widgets/primitives/chips/chips";
 import { grow } from "~/widgets/primitives/grow/grow";
@@ -45,6 +56,7 @@ import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import { range, type GmtRange } from "~/widgets/primitives/range/range";
 import styles from "~/widgets/tools/expiry-calculator.module.css";
 import {
+  HINT_NOW_NULL,
   AMOUNT_MAX_LENGTH,
   CALL_LINES,
   CUSTOM_PRESET_ID,
@@ -79,6 +91,7 @@ import {
   type StripRow,
   type VerdictText,
 } from "./expiry-calculator";
+import { msToNextSecond } from "./clock-change-common";
 import { loadExpiryLib, type ExpiryLib, type ExpiryTtl } from "./expiry-lib";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
 
@@ -97,11 +110,12 @@ const SPEAK_DELAY_MS = 500;
 
 const HINT_NOW_RESULT =
   "Now is your clock, live. All four plates come from one ttlFromNow call, so they name one instant.";
-const HINT_NOW_NULL =
-  "ttlFromNow takes a whole length of zero or more, and its end needs a four-digit year. A past Expires is formatHttpDate(getUtcAgo({ days: 1 })).";
 const HINT_DATE =
   "A date is pinned: the four plates come from the start below, and the same start always gives the same answer.";
-const HINTS = [HINT_NOW_RESULT, HINT_NOW_NULL, HINT_DATE];
+const HINT_NOW_PAUSED =
+  "Now is your clock, paused on the last reading. All four plates come from one ttlFromNow call, so they name one instant.";
+const HINTS = [HINT_NOW_RESULT, HINT_NOW_PAUSED, HINT_NOW_NULL, HINT_DATE];
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 const NOTE_DATE = "The starts count from the start above.";
 const NOTE_NOW = "Starts counted from the moment you chose Now.";
@@ -116,14 +130,11 @@ function liveGate(state: ExpiryState, ...gates: string[]): string | undefined {
   return list.length === 0 ? undefined : list.join(" ");
 }
 
-function platesBlock(
-  values: PlateValues,
-  state: ExpiryState,
-  reading: boolean,
-): SafeHtml {
+/** The four plates for one reading; `reading` is Now before the first read. */
+function plateList(values: PlateValues, reading: boolean): Plate[] {
   const text = (v: string | number | null, shown: string | null = null) =>
     v === null ? (reading ? READING_YOUR_CLOCK : null) : (shown ?? String(v));
-  const list: Plate[] = [
+  return [
     {
       caption: "Cookie Max-Age",
       value: text(values.maxAge),
@@ -157,7 +168,14 @@ function platesBlock(
       samples: [WIDEST_TIME],
     },
   ];
-  return plates(list, { gate: liveGate(state) });
+}
+
+function platesBlock(
+  values: PlateValues,
+  state: ExpiryState,
+  reading: boolean,
+): SafeHtml {
+  return plates(plateList(values, reading), { gate: liveGate(state) });
 }
 
 function verdictBlock(v: VerdictText, state: ExpiryState): SafeHtml {
@@ -205,12 +223,17 @@ function noteBlock(text: string): SafeHtml {
   });
 }
 
-function cell(text: string | null, samples: readonly string[]): SafeHtml {
+function cell(
+  text: string | null,
+  samples: readonly string[],
+  format?: (text: string) => SafeHtml,
+): SafeHtml {
   return html`<span class="${styles.cell}"
     >${reservedText({
       text: text ?? NO_RESULT_TEXT,
       state: text === null ? "off" : "live",
       samples: [...samples, NO_RESULT_TEXT],
+      format,
     })}</span
   >`;
 }
@@ -232,8 +255,8 @@ const COLUMNS = [
 function rowOf(row: StripRow): Record<ColumnKey, SafeHtml> {
   const differs = row.word.startsWith("Short") || row.word.startsWith("Long");
   return {
-    start: cell(row.start, [WIDEST_TIME]),
-    ends: cell(row.ends, [WIDEST_TIME]),
+    start: cell(row.start, [WIDEST_TIME], instant),
+    ends: cell(row.ends, [WIDEST_TIME], instant),
     seconds: cell(row.seconds === null ? null : String(row.seconds), [
       WIDEST_SECONDS,
     ]),
@@ -271,6 +294,7 @@ function stripBlock(rows: readonly StripRow[]): SafeHtml {
 function hintFor(
   state: ExpiryState,
   ttl: ExpiryTtl | null | undefined,
+  paused = false,
 ): {
   text: string;
   tone: HeldState;
@@ -278,7 +302,7 @@ function hintFor(
   if (state.mode === "date") return { text: HINT_DATE, tone: "ok" };
   return ttl === null
     ? { text: HINT_NOW_NULL, tone: "note" }
-    : { text: HINT_NOW_RESULT, tone: "note" };
+    : { text: paused ? HINT_NOW_PAUSED : HINT_NOW_RESULT, tone: "note" };
 }
 
 /**
@@ -348,7 +372,7 @@ export function renderExpiryCalculatorTemplate(
           { value: "date", label: "A date", checked: !now },
           { value: "now", label: "Now", checked: now },
         ],
-      })}<div id="${id("hint")}">${hintBlock(first.text, first.tone)}</div></div>${field(
+      })}${switchField({ id: id("live"), label: "Live clock", checked: now, disabled: !now, gate: "hold" })}<div id="${id("hint")}">${hintBlock(first.text, first.tone)}</div></div>${field(
         {
           id: id("start"),
           label: "Start date",
@@ -433,6 +457,9 @@ function setupWidget(
   const startEl = el<HTMLInputElement>("start");
   const sliderEl = el("slider").closest<GmtRange>("gmt-range")!;
   const presetEl = el("preset").closest<GmtPreset>("gmt-preset")!;
+  const liveEl = el<HTMLInputElement>("live");
+  const media =
+    typeof matchMedia === "function" ? matchMedia(REDUCED_MOTION) : null;
   const modeInputs = [
     ...widgetEl.querySelectorAll<HTMLInputElement>("[type=radio]"),
   ];
@@ -443,15 +470,17 @@ function setupWidget(
   let offset = 0;
   /** `undefined` until the first read; `null` is the library's refusal. */
   let ttl: ExpiryTtl | null | undefined;
-  let interval: ReturnType<typeof setInterval> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  /** The reader's choice for the clock: on unless the reader asks for reduced motion. */
+  let wantsLive = !(media?.matches ?? false);
   let speakTimer: ReturnType<typeof setTimeout> | undefined;
   let stripRefused = false;
   let destroyed = false;
 
   function stopClock(): void {
-    if (interval !== undefined) {
-      clearInterval(interval);
-      interval = undefined;
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
     }
   }
 
@@ -469,6 +498,8 @@ function setupWidget(
     startEl.value = state.start;
     startEl.disabled = now;
     sliderEl.disabled = now;
+    liveEl.disabled = !now;
+    liveEl.checked = now && wantsLive;
     for (const input of modeInputs) input.checked = input.value === state.mode;
     syncSlider();
   }
@@ -487,8 +518,25 @@ function setupWidget(
       el("calls"),
       callsBlock(callsOf(lib, state, ttl).join("\n"), state),
     );
-    const h = hintFor(state, ttl);
+    const h = hintFor(state, ttl, state.mode === "now" && !wantsLive);
     setHtml(el("hint"), hintBlock(h.text, h.tone));
+  }
+
+  /**
+   * A tick's repaint, and the pause's: the same plates, verdict, calls and hint as `drawLive`,
+   * written in place. No node is replaced, so focus on the copy button or the calls survives.
+   */
+  function paintLive(): void {
+    const values = platesOf(lib, state, ttl);
+    const hand = handWritten(state);
+    const v = verdictText(compare(values.maxAge, hand), hand, state.unit);
+    paintPlates(el("plates"), plateList(values, ttl === undefined));
+    const shown = el("verdict").querySelector(`.${styles.liveVerdict} > p`);
+    if (shown !== null)
+      paintVerdict(shown, { tone: v.tone, title: v.title, detail: v.detail });
+    paintCodeFrame(el("calls"), callsOf(lib, state, ttl).join("\n"));
+    const h = hintFor(state, ttl, !wantsLive);
+    paintHeldText(el("hint"), h.text, h.tone);
   }
 
   function drawStrip(): void {
@@ -516,17 +564,36 @@ function setupWidget(
     speakTimer = setTimeout(speak, SPEAK_DELAY_MS);
   }
 
+  /**
+   * One reading, then the next on the second. The wait is read from `getUtcNow`, which keeps
+   * the fraction a whole-second snapshot drops, so a tick that ran late does not push the next.
+   */
   function tick(): void {
     ttl = readTtl(lib, state);
-    drawLive();
+    timer = setTimeout(tick, msToNextSecond(lib.getUtcNow()));
+    paintLive();
     if (state.mode === "now" && (ttl === null) !== stripRefused) drawStrip();
   }
 
+  /**
+   * Takes the start Now counts from and reads the clock once. With the switch on the clock then
+   * follows on the second; off, it holds that reading.
+   */
   function startClock(): void {
     stopClock();
     state.snapshot = takeSnapshot(lib);
     ttl = readTtl(lib, state);
-    interval = setInterval(tick, 1000);
+    if (wantsLive) timer = setTimeout(tick, msToNextSecond(lib.getUtcNow()));
+  }
+
+  /** The switch: off holds the last values, on reads the clock again. */
+  function setTicking(on: boolean): void {
+    wantsLive = on;
+    liveEl.checked = state.mode === "now" && on;
+    if (state.mode !== "now") return;
+    stopClock();
+    if (on) tick();
+    else paintLive();
   }
 
   function chooseMode(mode: ExpiryState["mode"]): void {
@@ -602,6 +669,8 @@ function setupWidget(
           apply(presetState(chosen));
           queueSpeak();
         }
+      } else if (target === liveEl) {
+        setTicking(liveEl.checked);
       } else if (
         target instanceof HTMLElement &&
         target.localName === "gmt-chips"
@@ -636,6 +705,9 @@ function setupWidget(
   }
 
   signal.addEventListener("abort", destroy, { once: true });
+  media?.addEventListener("change", () => setTicking(!media.matches), {
+    signal,
+  });
   apply(state);
 
   return {

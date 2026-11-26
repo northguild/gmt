@@ -4,7 +4,9 @@
  *
  * The width lives in one CSS custom property on the container the parent passes
  * (`--gmt-hive-rail-width`), so a widget swap, which remounts the rail, keeps
- * it. The reader's last width is remembered in this browser only.
+ * it. On /dox/ the reader's last width is remembered in this browser only; a
+ * host that sets its own starting width (the slide deck) passes
+ * `remember={false}` and neither reads nor writes it.
  *
  * Desktop only: below 60rem the rail is a bottom sheet and the handle is
  * hidden (`gmt-hive.css`).
@@ -16,6 +18,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { drawnScale } from "~/lib/drawn-scale";
 import styles from "./RailResizer.module.css";
 import {
   clampRailWidth,
@@ -23,9 +26,9 @@ import {
   railWidthForKey,
   type RailBounds,
 } from "./rail-width";
+import { STORAGE_KEY, WIDTH_PROPERTY } from "./rail-prepaint";
 
-export const WIDTH_PROPERTY = "--gmt-hive-rail-width";
-export const STORAGE_KEY = "gmt-dox-rail-width";
+export { STORAGE_KEY, WIDTH_PROPERTY };
 
 function readStoredWidth(): number | undefined {
   try {
@@ -60,15 +63,31 @@ interface Measured {
 export function RailResizer({
   railId,
   container,
+  remember = true,
+  className,
 }: {
   railId: string;
   /** The element that holds the transcript and the rail: it carries the width
    * property and the dragging flag. A ref from the parent that renders it. */
   container: RefObject<HTMLElement | null>;
+  /** Whether the width is kept in this browser for the next visit (/dox/'s). */
+  remember?: boolean;
+  /** A host's own class, for hiding the handle where its rail is not beside the chat. */
+  className?: string;
 }) {
+  const save = useCallback(
+    (width: number | undefined) => {
+      if (remember) storeWidth(width);
+    },
+    [remember],
+  );
   const handleRef = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState<Measured | null>(null);
-  const drag = useRef<{ startX: number; startWidth: number } | null>(null);
+  const drag = useRef<{
+    startX: number;
+    startWidth: number;
+    scale: number;
+  } | null>(null);
   const frame = useRef(0);
   /** The width the last pointer move asked for, until its frame is drawn. */
   const pending = useRef<number | undefined>(undefined);
@@ -82,11 +101,16 @@ export function RailResizer({
   const measure = useCallback((): Measured | null => {
     const found = elements();
     if (!found) return null;
-    const bodyWidth = found.body.getBoundingClientRect().width;
+    // Layout pixels, the ones the width property is set in: a scaled host draws them larger or smaller.
+    const scale = drawnScale(found.body);
+    const bodyWidth = found.body.getBoundingClientRect().width / scale;
     const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    // The CSS states the narrowest width (`--gmt-hive-rail-min`); the computed value is in pixels.
+    const minWidth =
+      parseFloat(getComputedStyle(found.rail).minInlineSize) || 0;
     return {
-      width: found.rail.getBoundingClientRect().width,
-      bounds: railBounds({ viewportWidth: window.innerWidth, bodyWidth, rem }),
+      width: found.rail.getBoundingClientRect().width / scale,
+      bounds: railBounds({ minWidth, bodyWidth, rem }),
       bodyWidth,
     };
   }, [elements]);
@@ -110,16 +134,21 @@ export function RailResizer({
 
   // After mount only: the server knows neither the window nor the reader's
   // stored width (#418). Re-measured on resize so the handle's value stays true.
+  // The head script already painted the stored width on `<html>`
+  // (`rail-prepaint.ts`); the body now carries the same value, so dropping
+  // the root copy changes nothing on screen, and a later reset is not undone
+  // by inheritance.
   useEffect(() => {
-    const stored = readStoredWidth();
+    const stored = remember ? readStoredWidth() : undefined;
     apply(stored);
+    document.documentElement.style.removeProperty(WIDTH_PROPERTY);
     const onResize = () => setMeasured(measure());
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(frame.current);
     };
-  }, [apply, measure]);
+  }, [apply, measure, remember]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -127,7 +156,12 @@ export function RailResizer({
     if (!current) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { startX: event.clientX, startWidth: current.width };
+    const body = elements()?.body;
+    drag.current = {
+      startX: event.clientX,
+      startWidth: current.width,
+      scale: body ? drawnScale(body) : 1,
+    };
     elements()?.body.setAttribute("data-resizing", "");
     event.currentTarget.setAttribute("data-resizing", "");
   };
@@ -136,7 +170,8 @@ export function RailResizer({
     const start = drag.current;
     if (!start) return;
     // The rail is on the right: moving the pointer left widens it.
-    const width = start.startWidth + (start.startX - event.clientX);
+    const width =
+      start.startWidth + (start.startX - event.clientX) / start.scale;
     pending.current = width;
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
@@ -161,7 +196,7 @@ export function RailResizer({
       pending.current = undefined;
     }
     const width = measure()?.width;
-    if (width !== undefined) storeWidth(width);
+    if (width !== undefined) save(width);
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -176,18 +211,18 @@ export function RailResizer({
     if (width === undefined) return;
     event.preventDefault();
     apply(width);
-    storeWidth(width);
+    save(width);
   };
 
   const onDoubleClick = () => {
     apply(undefined);
-    storeWidth(undefined);
+    save(undefined);
   };
 
   return (
     <div
       ref={handleRef}
-      className={styles.resizer}
+      className={className ? `${styles.resizer} ${className}` : styles.resizer}
       // A focusable separator is the ARIA Authoring Practices window splitter,
       // an interactive widget. <hr> is non-interactive and cannot take focus
       // or key handlers.

@@ -47,43 +47,55 @@ import {
   formOf,
   formsOf,
   type DbForm,
-  type DbPreset,
   type FormKind,
 } from "./database-timestamp-forms";
 import {
+  CUSTOM_PRESET_ID,
+  DEFAULT_PRESET,
+  fieldValues,
   GIVE_ZONE_TEXT,
+  INVALID_TEXT,
+  isLost,
+  isSeeded,
+  LOST_TEXT,
+  matchPreset,
   NOT_A_NUMBER_TEXT,
+  permalinkOf,
+  presetState,
+  readArgs,
   readDb,
+  reasonOf,
   unknownZoneText,
+  VALUE_KEYS,
+  type DatabaseReaderState,
+  type DatabaseTimestampReaderArgs,
   type DbCall,
   type DbReading,
 } from "./database-timestamp-reader";
+
+// What the page's tests and the chat rail import from here.
+export {
+  CUSTOM_PRESET_ID,
+  isSeeded,
+  matchPreset,
+  permalinkOf,
+  presetState,
+  readArgs,
+  type DatabaseReaderState,
+  type DatabaseTimestampReaderArgs,
+};
 import { withBase } from "./site";
 import { codeSpan } from "./widget-ui";
 import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
-
-/** What a seed names: a preset, or a form with its fields and zone. All strings. */
-export interface DatabaseTimestampReaderArgs {
-  preset?: string;
-  form?: string;
-  value?: string;
-  value2?: string;
-  value3?: string;
-  zone?: string;
-}
+import { link } from "~/widgets/builders/link";
 
 const WIDGET_NAME = "database-timestamp-reader";
-export const CUSTOM_PRESET_ID = "custom";
 const MAX_FIELDS = 3;
-/** The permalink key and the field id of each of the three value slots, in order. */
-const VALUE_KEYS = ["value", "value2", "value3"] as const;
 const HERO_CAP_IDLE = "Reading";
 export const ZONE_LABEL = "Session time zone";
 const ZONE_HINT =
   "An IANA name such as Europe/Stockholm. Blank reads the wall time alone.";
 
-const LOST_TEXT =
-  "The call returned its empty sentinel for this text, so there is no value.";
 /**
  * What a part the reading does not use carries: out of sight (the stylesheet), out of the
  * accessibility tree, out of the tab order. It keeps its box.
@@ -91,9 +103,6 @@ const LOST_TEXT =
 const OFF = html`data-off="true" aria-hidden="true" inert`;
 
 const ISO_TITLE = "The ISO readers on the same text";
-const INVALID_TEXT =
-  "The validator returned false: the text is not a valid value.";
-
 /** The widest instant a plate can show: a nanosecond instant with an offset. */
 const WIDEST_VALUE = "2025-02-18T12:34:56.789123456+01:00";
 const WIDEST_OFFSET = "-00:44:30";
@@ -117,8 +126,6 @@ const REASONS = [
 
 /** Every caption the plate can show. */
 const CAPTIONS = [HERO_CAP_IDLE, ...DATABASES];
-
-const DEFAULT_PRESET: DbPreset = DB_PRESETS[0]!;
 
 const DATABASE_OPTIONS = DATABASES.map((d) => ({ value: d, label: d }));
 
@@ -153,94 +160,6 @@ const CALL_SIZER = [
 // ---------------------------------------------------------------------------
 // State, seeds and permalinks
 // ---------------------------------------------------------------------------
-
-export interface DatabaseReaderState {
-  formId: string;
-  values: readonly string[];
-  zone: string;
-}
-
-export function presetState(p: DbPreset): DatabaseReaderState {
-  return { formId: p.form, values: [...p.values], zone: p.zone ?? "" };
-}
-
-function fieldValues(state: DatabaseReaderState, form: DbForm): string[] {
-  return form.fields.map((_, i) => state.values[i] ?? "");
-}
-
-/** The preset the state equals, or the custom id. */
-export function matchPreset(state: DatabaseReaderState): string {
-  const form = formOf(state.formId);
-  if (!form) return CUSTOM_PRESET_ID;
-  const typed = fieldValues(state, form);
-  const found = DB_PRESETS.find(
-    (p) =>
-      p.form === state.formId &&
-      (p.zone ?? "") === (form.zone ? state.zone : "") &&
-      p.values.length === typed.length &&
-      p.values.every((v, i) => v === typed[i]),
-  );
-  return found?.id ?? CUSTOM_PRESET_ID;
-}
-
-/** True when the args name anything to seed the widget from. */
-export function isSeeded(
-  args: DatabaseTimestampReaderArgs | undefined,
-): boolean {
-  return (
-    args !== undefined &&
-    (typeof args.preset === "string" ||
-      (typeof args.form === "string" && formOf(args.form) !== undefined))
-  );
-}
-
-/**
- * The state a seed describes: a preset, or a form with the fields the seed also names. A form
- * with no values starts from its first preset, so no field opens blank unless the link says so.
- * Once the seed names a value, a zone form's session zone is the seed's alone, blank when it
- * names none: a preset's zone is never lent to a value it was not paired with.
- */
-export function readArgs(
-  args: DatabaseTimestampReaderArgs,
-): DatabaseReaderState {
-  const named = DB_PRESETS.find((p) => p.id === args.preset);
-  if (named) return presetState(named);
-  const form = typeof args.form === "string" ? formOf(args.form) : undefined;
-  if (!form) return presetState(DEFAULT_PRESET);
-  const first = DB_PRESETS.find((p) => p.form === form.id);
-  const state = first
-    ? presetState(first)
-    : { formId: form.id, values: form.fields.map(() => ""), zone: "" };
-  VALUE_KEYS.forEach((key, i) => {
-    const v = args[key];
-    if (typeof v === "string" && i < form.fields.length) {
-      state.values = state.values.map((old, j) => (j === i ? v : old));
-    }
-  });
-  const ownValues = VALUE_KEYS.some((key) => typeof args[key] === "string");
-  if (form.zone && typeof args.zone === "string") state.zone = args.zone;
-  else if (form.zone && ownValues) state.zone = "";
-  return state;
-}
-
-/**
- * The permalink keys for `state`: `preset` alone when it is exactly a preset, else the form, every
- * field it has (even blank, so a cleared field comes back blank) and the zone of a zone form.
- */
-export function permalinkOf(
-  state: DatabaseReaderState,
-): Record<string, string> {
-  const preset = matchPreset(state);
-  if (preset !== CUSTOM_PRESET_ID) return { preset };
-  const form = formOf(state.formId);
-  if (!form) return {};
-  const out: Record<string, string> = { form: form.id };
-  fieldValues(state, form).forEach((v, i) => {
-    out[VALUE_KEYS[i]!] = v;
-  });
-  if (form.zone) out["zone"] = state.zone;
-  return out;
-}
 
 // ---------------------------------------------------------------------------
 // Pieces
@@ -283,19 +202,6 @@ function framesOf(
     sizer: CALL_SIZER,
     gate: "codeframe",
   });
-}
-
-/** True when the form's own call returned its sentinel (not a refusal, not a validator's `false`). */
-function isLost(reading: DbReading): boolean {
-  if (reading.ok || reading.shape === "valid") return false;
-  return reading.note === undefined || reading.note === GIVE_ZONE_TEXT;
-}
-
-function reasonOf(reading: DbReading): string {
-  if (isLost(reading)) return reading.note ?? LOST_TEXT;
-  if (reading.note !== undefined) return reading.note;
-  if (reading.shape === "valid" && !reading.valid) return INVALID_TEXT;
-  return "";
 }
 
 function plateOf(reading: DbReading | null): SafeHtml {
@@ -424,7 +330,7 @@ function elsewhereOf(): SafeHtml {
   return html`<div class="${styles.elsewhere}"><p class="${styles.elsewhereTitle}">Forms that live elsewhere</p
     ><ul class="${styles.elsewhereList}">${DB_ELSEWHERE.map(
       (e) =>
-        html`<li><a href="${withBase(e.href)}">${e.database}: ${e.form}</a></li>`,
+        html`<li>${link({ href: withBase(e.href), body: `${e.database}: ${e.form}` })}</li>`,
     )}</ul></div>`;
 }
 

@@ -1,4 +1,3 @@
-import { describe } from "vitest";
 import { dutyViolations } from "../src/workforce";
 import { type DutyStep, dutySequence } from "../src/test";
 import type { DutyEntry, DutyRule } from "../src/types";

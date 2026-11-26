@@ -20,8 +20,6 @@
  */
 
 import {
-  convertUnixToUtc,
-  convertUtcToUnix,
   getTimeZoneOffset,
   getUnixNow,
   parseDayFromUtc,
@@ -31,7 +29,6 @@ import {
   parseMonthFromUtc,
   parseYearFromUtc,
 } from "@northguild/gmt";
-import { roundUnix } from "@northguild/gmt/unix/calculate";
 import { getSystemTimeZone } from "@northguild/gmt/zoned/get";
 
 import { defineElements } from "~/widgets/define";
@@ -39,7 +36,6 @@ import { findWidget, html, setHtml, type SafeHtml } from "~/widgets/builders";
 import { zoneTile } from "~/widgets/families/zones/zone-tile";
 import {
   SLIDER_RANGE_MIN,
-  SLIDER_STEP_MIN,
   formatShift,
 } from "~/widgets/families/zones/zone-planner-template";
 import type { GmtCombobox } from "~/widgets/primitives/combobox/combobox";
@@ -50,10 +46,18 @@ import styles from "~/widgets/tools/multi-zone-scrubber.module.css";
 import { bindClockGlow, updateCrystalClock } from "./crystal-clock";
 import { formatDayLabel } from "./dwell-ledger";
 import { COORDINATES_BY_ID } from "./globe-zones";
-import { readZoneAt } from "./zone-clock";
+import {
+  anchorZoned,
+  fromUtc,
+  roundToStep,
+  roundUpToStep,
+  toUtc,
+} from "./zone-anchor";
+import { readZonesAt } from "./zone-clock";
 import {
   crossedSwitch,
   dstStatus,
+  formatSwitchShift,
   nextSwitch,
   switchesInWindow,
   type DstSwitch,
@@ -223,19 +227,6 @@ interface ScrubberState {
   offsetMin: number;
 }
 
-/** Epoch-ms -> `YYYY-MM-DDTHH:MM:SSZ`. All time maths goes through `@northguild/gmt`. */
-function toUtc(effectiveMs: number): string {
-  return convertUnixToUtc(effectiveMs, { epochUnit: "milliseconds" }).replace(
-    /\.\d{3}Z$/,
-    "Z",
-  );
-}
-
-/** Epoch-ms, or `null` if the instant string is invalid. */
-function fromUtc(utc: string): number | null {
-  return convertUtcToUnix(utc, { epochUnit: "milliseconds" });
-}
-
 /** `?tz=a,b,c&t=<iso>` — the epic's first URL-state mechanism, minimal by design. */
 export function encodeState(
   pinned: readonly string[],
@@ -266,11 +257,6 @@ export function decodeState(search: string): {
   return result;
 }
 
-/** A zoned value in UTC, the `[UTC]`-bracketed form `convertZonedToZoned` needs. */
-function anchorZoned(effectiveMs: number): string {
-  return toUtc(effectiveMs).replace("Z", "+00:00[UTC]");
-}
-
 function formatReadout(effectiveMs: number): string {
   const utc = toUtc(effectiveMs);
   const weekday = WEEKDAYS[(parseDayOfWeekFromUtc(utc) ?? 1) - 1];
@@ -280,29 +266,7 @@ function formatReadout(effectiveMs: number): string {
   return `${weekday} ${day} ${month} ${year}, ${parseHourFromUtc(utc)}:${parseMinuteFromUtc(utc)} UTC`;
 }
 
-export { formatShift };
-
-function roundToStep(ms: number): number {
-  const stepMs = SLIDER_STEP_MIN * 60_000;
-  return Math.round(ms / stepMs) * stepMs;
-}
-
-/**
- * `ms` rounded forward to the next 5-minute boundary, which is itself when it is
- * already on one: the planner's default reference time is now, so a meeting
- * proposed from it starts on a boundary that has not passed. Rounded in UTC,
- * where a boundary is the same instant whatever zone the reader is in and no
- * transition can move it.
- */
-export function roundUpToStep(ms: number): number | null {
-  return roundUnix(ms, {
-    smallestUnit: "minute",
-    roundingIncrement: SLIDER_STEP_MIN,
-    roundingMode: "ceil",
-    timeZone: "UTC",
-    epochUnit: "milliseconds",
-  });
-}
+export { formatShift, roundUpToStep };
 
 /** "Sun 8 Mar, 07:00 UTC" for the status line. */
 function formatInstantShort(utc: string): string {
@@ -457,9 +421,13 @@ export async function initScrubber(
     const anchor = anchorZoned(instantMs);
     const instant = toUtc(instantMs);
     const crossings: string[] = [];
+    const readings = readZonesAt(
+      tiles.map((tile) => tile.zone),
+      anchor,
+    );
     tiles.forEach((tile, index) => {
       const zone = tile.zone;
-      const reading = readZoneAt(zone, anchor);
+      const reading = readings[index]!;
       const currentOffset = reading.ok
         ? reading.offset
         : getTimeZoneOffset(zone, instant);
@@ -533,7 +501,7 @@ export async function initScrubber(
 
   /** "Spring forward +1 h" or "Fall back −1 h". */
   function switchLabel(s: DstSwitch): string {
-    return `${s.shiftMin > 0 ? "Spring forward" : "Fall back"} ${formatShift(s.shiftMin)}`;
+    return `${s.shiftMin > 0 ? "Spring forward" : "Fall back"} ${formatSwitchShift(s.shiftMin)}`;
   }
 
   function switchTitle(s: DstSwitch): string {
@@ -693,8 +661,8 @@ export async function initScrubber(
       const city = shortZone(next.zone);
       const what =
         next.shiftMin > 0
-          ? `${city} springs forward ${formatShift(next.shiftMin)}`
-          : `${city} falls back ${formatShift(next.shiftMin)}`;
+          ? `${city} springs forward ${formatSwitchShift(next.shiftMin)}`
+          : `${city} falls back ${formatSwitchShift(next.shiftMin)}`;
       const text = `${what} at ${formatInstantShort(next.instant)}. Showing one hour after it.`;
       jumpStatus.textContent = text;
       lastCrossings = text;

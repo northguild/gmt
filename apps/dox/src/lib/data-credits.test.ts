@@ -2,15 +2,18 @@
 import { screen } from "@testing-library/dom";
 import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
+import milkyWay from "../assets/hero-milkyway.json";
 import sky from "../assets/hero-sky.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
   HYG_COMMIT,
   LICENCE_CREDIT,
+  MILKY_WAY,
   NE_TAG,
   NIGHT_SKY,
   renderDataCreditsHtml,
+  STATE_BOUNDARIES,
   TBB_TAG,
   TZ_BOUNDARIES,
 } from "./data-credits";
@@ -58,6 +61,39 @@ describe("the coastline credit", () => {
   });
 });
 
+describe("the state outline credit", () => {
+  it("is labelled State outlines and names Natural Earth as public domain", () => {
+    show([TZ_BOUNDARIES, COASTLINES, STATE_BOUNDARIES], {
+      id: "c",
+      placement: "corner",
+    });
+    const labels = screen
+      .getAllByRole("term", { hidden: true })
+      .map((t) => t.textContent);
+    expect(labels).toEqual([
+      "Time zone boundaries",
+      "Coastlines",
+      "State outlines",
+    ]);
+    expect(text("State outlines")).toHaveTextContent(
+      `State and territory outlines: Natural Earth 5.1.2, public domain (${NE_TAG}).`,
+    );
+  });
+
+  it("links Natural Earth and the pinned tag", () => {
+    show([STATE_BOUNDARIES], { id: "c", placement: "corner" });
+    expect(
+      screen.getByRole("link", { name: "Natural Earth", hidden: true }),
+    ).toHaveAttribute("href", "https://www.naturalearthdata.com/");
+    expect(
+      screen.getByRole("link", { name: NE_TAG, hidden: true }),
+    ).toHaveAttribute(
+      "href",
+      `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    );
+  });
+});
+
 describe("the night sky credit", () => {
   it("is labelled Stars and links the pinned catalogue commit and the licence", () => {
     show([NIGHT_SKY], { id: "c", placement: "stack" });
@@ -81,6 +117,26 @@ describe("the night sky credit", () => {
       "https://creativecommons.org/licenses/by-sa/4.0/",
     );
     expect(HYG_COMMIT).toBe("53e3df311869e813ace5f1ad2ec4ce909f13256c");
+  });
+});
+
+describe("the Milky Way credit", () => {
+  it("is labelled Milky Way, credits ESO's photograph as ESO asks, and says it was changed", () => {
+    show([MILKY_WAY], { id: "c", placement: "stack" });
+    expect(text("Milky Way")).toHaveTextContent(
+      "The Milky Way panorama by ESO/S. Brunier, adapted to a starless greyscale sky map (CC BY 4.0).",
+    );
+    // The page it links is the one the map was made from, and the credit is ESO's own.
+    expect(
+      screen.getByRole("link", {
+        name: "The Milky Way panorama",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", milkyWay.source.page);
+    expect(text("Milky Way")).toHaveTextContent(milkyWay.credit);
+    expect(
+      screen.getByRole("link", { name: "CC BY 4.0", hidden: true }),
+    ).toHaveAttribute("href", milkyWay.licenseUrl);
   });
 });
 

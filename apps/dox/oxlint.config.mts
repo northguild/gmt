@@ -178,7 +178,7 @@ export default defineConfig({
     // Widget tests stay on the test kit (`src/test/render-widget.ts`). The community
     // plugins catch what they can trace to Testing Library; `dox-test` catches the raw DOM.
     {
-      files: ["src/**/*.test.{ts,tsx}"],
+      files: ["src/**/*.test.{ts,tsx}", "evals/**/*.test.ts"],
       jsPlugins: [
         "eslint-plugin-testing-library",
         "eslint-plugin-jest-dom",

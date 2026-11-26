@@ -15,6 +15,7 @@
 
 import { gmtStats } from "./gmt-stats";
 import measurementData from "./library-measurements.json";
+import { suiteSummary } from "./zone-matrix";
 
 /**
  * What was measured about one other library, and where it came from. One entry per library in
@@ -46,7 +47,10 @@ export interface LibraryMeasurement {
   tests: number;
   executions: number;
   nodeVersions: number;
+  /** Dedicated time-zone and DST test files that run. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under. */
+  fullSuiteZones?: number;
   /** Time-zone test files re-run under several zones rather than the whole suite. */
   partialZoneRuns?: { testFiles: number; zones: number; unit: string };
   /** True when a dedicated time-zone workflow exists whose scope could not be read. */
@@ -71,6 +75,31 @@ function measured(id: string): LibraryMeasurement {
   return found;
 }
 
+/** The id the zone matrix gives a comparison entry's library. */
+const ZONE_MATRIX_ID: Record<string, string> = {
+  "@northguild/gmt": "gmt",
+  "@internationalized/date": "internationalized-date",
+};
+
+/**
+ * The zone-matrix counts of one library (`/compare/zone-matrix/`), derived from the recorded
+ * failures. Empty until the suite has been run, so a library is never shown as having none.
+ */
+function zoneMatrixStats(
+  id: string,
+): Pick<LibraryComparisonStats, "zoneMatrix"> {
+  const summary = suiteSummary(ZONE_MATRIX_ID[id] ?? id);
+  return summary
+    ? {
+        zoneMatrix: {
+          oneZone: summary.oneZone,
+          wrongAnswer: summary.wrongAnswer,
+          measured: summary.measured,
+        },
+      }
+    : {};
+}
+
 /** The counts a comparison entry carries, read from its measurement. */
 function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
   return {
@@ -79,9 +108,13 @@ function statsOf(m: LibraryMeasurement): LibraryComparisonStats {
     timezones: m.timezones,
     nodeVersions: m.nodeVersions,
     executions: m.executions,
+    ...(m.fullSuiteZones === undefined
+      ? {}
+      : { fullSuiteZones: m.fullSuiteZones }),
     ...(m.knownFailures === undefined
       ? {}
       : { knownFailures: m.knownFailures }),
+    ...zoneMatrixStats(m.id),
     publicApi: m.publicApi,
   };
 }
@@ -93,6 +126,14 @@ export interface LibraryComparisonStats {
   locales: number;
   /** Distinct timezone contexts exercised by dedicated tz/DST test files. */
   timezones: number;
+  /** Time-zone settings the library's CI re-runs its whole suite under, if any. */
+  fullSuiteZones?: number;
+  /**
+   * Distinct tests of the library's own suite that fail under GMT's CI zones, by kind: the test
+   * assumes one zone, or the library gives a wrong answer. Absent until the matrix has run.
+   * `measured` is false when no zone kept the zone it was given, so the counts are not figures.
+   */
+  zoneMatrix?: { oneZone: number; wrongAnswer: number; measured: boolean };
   /** Node.js versions covered by the library's own CI matrix. */
   nodeVersions: number;
   /** Total test executions the library's own CI actually runs (tests × any TZ/Node matrix its own scripts apply). */
@@ -119,7 +160,7 @@ export interface LibraryComparison {
   displayName: string;
   /**
    * The finest time unit the library's public API represents. Measured from each library's
-   * published TypeScript declarations at its `publicApi` version (2026-09-15): no alternative
+   * published TypeScript declarations at its `publicApi` version (2026-11-11): no alternative
    * declares a microsecond or nanosecond field or unit anywhere, so each stops at the
    * millisecond, like `Date`. GMT is nanosecond: Temporal counts epoch nanoseconds, and GMT
    * keeps them exact as `bigint` (the `precision` namespace).
@@ -163,6 +204,7 @@ export const libraryComparisons: LibraryComparison[] = [
       timezones: gmtStats.timezones,
       nodeVersions: gmtStats.nodes.length,
       executions: gmtStats.executions,
+      ...zoneMatrixStats("@northguild/gmt"),
     },
   },
   {
@@ -193,6 +235,7 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "date-fns",
     timeResolution: "millisecond",
     displayName: measured("date-fns").name,
+    matrixLabel: "4 Node versions + 378 time zones",
     kind: "wraps",
     foundation: "built on Date",
     detail:
@@ -230,11 +273,11 @@ export const libraryComparisons: LibraryComparison[] = [
     id: "spacetime",
     timeResolution: "millisecond",
     displayName: measured("spacetime").name,
-    matrixLabel: "2 Node versions",
+    matrixLabel: "5 Node versions",
     kind: "wraps",
     foundation: "leans on Date",
     detail:
-      "now()/today() default through new Date(). Four DST edge-case suites are named .ignore.js and never run — and the DST tests that do run are currently failing.",
+      "now()/today() default through Date.now(), the system clock. Its own suite passes in full.",
     measurement: measured("spacetime"),
     stats: statsOf(measured("spacetime")),
   },
@@ -255,10 +298,27 @@ export function competitorExecutionRange(): { min: number; max: number } {
 
 /** Fewest and most of one stat among the alternatives — so page copy never types a range. */
 export function competitorStatRange(
-  stat: keyof Omit<LibraryComparisonStats, "knownFailures" | "publicApi">,
+  stat: keyof Omit<
+    LibraryComparisonStats,
+    "knownFailures" | "publicApi" | "fullSuiteZones" | "zoneMatrix"
+  >,
 ): { min: number; max: number } {
   const values = competitorComparisons.map((l) => l.stats[stat]);
   return { min: Math.min(...values), max: Math.max(...values) };
+}
+
+/**
+ * One clause per alternative whose CI re-runs the whole suite under a time-zone matrix, for
+ * pages that count dedicated time-zone test files separately.
+ */
+export function fullSuiteZoneClauses(): string[] {
+  return competitorComparisons.flatMap((l) =>
+    l.stats.fullSuiteZones
+      ? [
+          `${l.displayName} re-runs its whole suite under ${l.stats.fullSuiteZones} time-zone settings`,
+        ]
+      : [],
+  );
 }
 
 /** A library's public callable API: functions plus methods (see `LibraryComparisonStats.publicApi`). */

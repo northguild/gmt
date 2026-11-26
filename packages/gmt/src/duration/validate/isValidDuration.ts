@@ -1,4 +1,4 @@
-import { isDurationString } from "../../internal/inputChecks";
+import { durationOf } from "../../internal/inputChecks";
 
 /**
  * Return true if `value` is a valid ISO 8601 duration string.
@@ -22,5 +22,5 @@ export function isValidDuration(value: string): boolean;
 export function isValidDuration(value: {} | null | undefined | void): boolean;
 export function isValidDuration(value: unknown): value is string;
 export function isValidDuration(value: unknown): boolean {
-  return isDurationString(value);
+  return durationOf(value) !== null;
 }

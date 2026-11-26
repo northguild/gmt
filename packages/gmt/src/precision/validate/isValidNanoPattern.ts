@@ -1,8 +1,4 @@
-import {
-  isValidEpochNanoseconds,
-  MAX_EPOCH_NANOSECOND_DIGITS,
-} from "../../internal";
-import { nanosecondDecimal } from "../../regex/nanoseconds";
+import { isNanoPattern } from "../../internal/inputChecks";
 
 /**
  * Validate whether a string is a nanosecond timestamp `parseNanoseconds` will parse.
@@ -38,17 +34,5 @@ export function isValidNanoPattern(
 ): boolean;
 export function isValidNanoPattern(value: unknown): value is string;
 export function isValidNanoPattern(value: unknown): boolean {
-  if (typeof value !== "string" || !nanosecondDecimal.test(value)) {
-    return false;
-  }
-
-  // Out of range by inspection once it is longer than MAX_EPOCH_NANOSECONDS, and stopping
-  // here keeps BigInt off an arbitrarily long payload string.
-  const digits = value.startsWith("-") ? value.length - 1 : value.length;
-
-  if (digits > MAX_EPOCH_NANOSECOND_DIGITS) {
-    return false;
-  }
-
-  return isValidEpochNanoseconds(BigInt(value));
+  return isNanoPattern(value);
 }

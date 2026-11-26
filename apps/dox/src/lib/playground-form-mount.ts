@@ -52,6 +52,7 @@ function scalarControl(cell: HTMLElement): FieldControl {
   const name = cell.dataset["field"] ?? "";
   const kind = (cell.dataset["kind"] ?? "string") as Kind;
   const optional = cell.dataset["optional"] === "true";
+  const numeric = (cell.dataset["numeric"] || "").split("\n").filter(Boolean);
 
   if (kind === "units") {
     const amount = cell.querySelector<HTMLInputElement>("input")!;
@@ -79,7 +80,13 @@ function scalarControl(cell: HTMLElement): FieldControl {
   return {
     name,
     select: el instanceof HTMLSelectElement ? el : null,
-    read: () => ({ name, kind, value: el.value, optional }),
+    read: () => ({
+      name,
+      kind,
+      value: el.value,
+      optional,
+      ...(numeric.length ? { numeric } : {}),
+    }),
     write: (seed) => {
       el.value = seed.seed;
     },

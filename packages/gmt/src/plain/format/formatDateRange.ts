@@ -1,8 +1,8 @@
-import { Temporal } from "../../internal/temporal";
+import { formatRangeRepaired } from "../../internal/rangeFields";
+import { plainDateOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -27,6 +27,11 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a weekday
+ *   field always returns its text.
  *
  * @param start ISO PlainDate string (range start)
  * @param end ISO PlainDate string (range end)
@@ -46,7 +51,9 @@ export function formatDateRange(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidDate(start) || !isValidDate(end)) {
+  const startParsed = plainDateOf(start);
+  const endParsed = plainDateOf(end);
+  if (startParsed === null || endParsed === null) {
     return "";
   }
 
@@ -62,11 +69,13 @@ export function formatDateRange(
     if (resolved === null) {
       return "";
     }
-    const out = cachedFormatter("DateTimeFormat", locale, resolved).formatRange(
-      Temporal.PlainDate.from(start).toZonedDateTime("UTC").epochMilliseconds,
-      Temporal.PlainDate.from(end).toZonedDateTime("UTC").epochMilliseconds,
+    const out = formatRangeRepaired(
+      cachedFormatter("DateTimeFormat", locale, resolved),
+      resolved,
+      startParsed.toZonedDateTime("UTC").epochMilliseconds,
+      endParsed.toZonedDateTime("UTC").epochMilliseconds,
     );
-    return normalizeDateTime(out);
+    return out === null ? "" : normalizeDateTime(out);
   } catch {
     return "";
   }

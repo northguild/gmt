@@ -9,11 +9,8 @@ import {
   zonedDateTimeFrom,
 } from "../../internal";
 import { classifyWall } from "../../internal/earlierOccurrence";
-import {
-  hasInstantShape,
-  hasZonedDateTimeShape,
-} from "../../internal/isoStringBody";
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
+import { hasZonedInstantShape } from "../../internal/isoStringBody";
+import { hasSecond60Field } from "../../internal/inputChecks";
 import { utcOffset } from "../../regex";
 import type { StoredZonedClassification } from "../../types";
 
@@ -69,9 +66,8 @@ export function classifyStoredZoned(
 ): StoredZonedClassification | null {
   if (
     typeof value !== "string" ||
-    hasSecond60(value) ||
-    !hasZonedDateTimeShape(value) ||
-    !hasInstantShape(value)
+    hasSecond60Field(value) ||
+    !hasZonedInstantShape(value)
   ) {
     return null;
   }

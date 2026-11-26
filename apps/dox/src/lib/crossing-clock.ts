@@ -14,6 +14,7 @@
 
 import { Temporal } from "@northguild/gmt";
 import { formatDayLabel } from "./dwell-ledger";
+import { OFFSET_SOURCE, offsetShift } from "./exact-offset";
 import {
   TRANSPORT_ZONES,
   epochMs,
@@ -108,10 +109,10 @@ export const CROSSING_PRESETS: readonly CrossingPreset[] = [
     id: "read-elsewhere",
     label: "Logged in Berlin, read on the canal's clock in Panama",
     description:
-      "Logged with Berlin's own offset in brackets, but a bracket in the input is never read: both ends are rendered on the canal authority's clock in Panama.",
+      "Logged with Berlin's own offset, +02:00. The offset fixes each instant, so both ends are rendered on the canal authority's clock in Panama.",
     state: {
-      entry: "2024-06-15T08:00:00+02:00[Europe/Berlin]",
-      exit: "2024-06-15T17:30:00+02:00[Europe/Berlin]",
+      entry: "2024-06-15T08:00:00+02:00",
+      exit: "2024-06-15T17:30:00+02:00",
       targetZone: "America/Panama",
     },
   },
@@ -304,10 +305,12 @@ function buildTicks(
   return ticks;
 }
 
-function parseOffsetMinutesLocal(offset: string): number {
-  const m = /^([+-])(\d{2}):(\d{2})$/.exec(offset);
-  if (!m) return 0;
-  return (m[1] === "-" ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3]));
+/** `HH:MM`, or `HH:MM:SS` when the second is not zero: a change from an
+ *  offset with seconds (New York's `-04:56:02` in 1883) moves the wall clock
+ *  by a part of a minute. */
+function wallText(t: Temporal.PlainTime): string {
+  const hm = `${pad(t.hour)}:${pad(t.minute)}`;
+  return t.second === 0 ? hm : `${hm}:${pad(t.second)}`;
 }
 
 /**
@@ -333,23 +336,22 @@ function crossingChanges(
     for (let i = 0; i < 4; i++) {
       const next = cur.getTimeZoneTransition("next");
       if (!next || next.epochMilliseconds > exitMs) break;
-      const gapMinutes =
-        parseOffsetMinutesLocal(next.offset) -
-        parseOffsetMinutesLocal(cur.offset);
-      if (gapMinutes === 0) {
+      const shift = offsetShift(cur.offset, next.offset);
+      if (shift === null || shift.sign === 0) {
         cur = next;
         continue;
       }
+      const forward = shift.sign > 0;
       const after = next.toPlainTime();
-      const before = after.subtract({ minutes: gapMinutes });
-      const wall = (t: Temporal.PlainTime) => `${pad(t.hour)}:${pad(t.minute)}`;
+      const before = after.subtract(shift);
+      const wall = wallText;
       const percent = ((next.epochMilliseconds - entryMs) / span) * 100;
       // Chronological order regardless of direction: skip runs before→after
       // (02:00 then 03:00), repeat runs after→before (01:00 then 02:00) —
       // both are already "from the smaller wall reading to the larger one".
-      const range = gapMinutes > 0 ? [before, after] : [after, before];
+      const range = forward ? [before, after] : [after, before];
       out.push(
-        gapMinutes > 0
+        forward
           ? {
               kind: "skip",
               percent,
@@ -417,15 +419,19 @@ export function crossingStrip(
 // The crystal clocks
 // ---------------------------------------------------------------------------
 
-const ZONED_RE =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}(?:\.\d+)?([+-]\d{2}:\d{2}|Z)(?:\[([^\]]+)\])?$/;
+const ZONED_RE = new RegExp(
+  String.raw`^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):\d{2}(?:\.\d+)?(${OFFSET_SOURCE}|Z)(?:\[([^\]]+)\])?$`,
+);
+const WHOLE_OFFSET = new RegExp(`^${OFFSET_SOURCE}$`);
 
 export interface ClockFace {
   /** 0–23. */
   hour: number;
   /** 0–59. */
   minute: number;
-  /** The zoned string's own offset, e.g. `"-04:00"`. */
+  /** The zone's exact offset at that moment, e.g. `"-04:00"`, or
+   *  `"-00:44:30"` for Monrovia in 1960, where the zoned string itself carries
+   *  Temporal's minute-rounded `-00:45`. */
   offset: string;
   /** The zone's last path segment with underscores turned to spaces, e.g.
    *  "New York" — or "Fixed offset" for an offset-only zone, which has no
@@ -447,25 +453,42 @@ const BLANK_FACE: ClockFace = {
 };
 
 function shortZoneLabel(zone: string): string {
-  if (/^[+-]\d{2}:\d{2}$/.test(zone)) return "Fixed offset";
+  if (WHOLE_OFFSET.test(zone)) return "Fixed offset";
   const last = zone.split("/").pop() ?? zone;
   return last.replace(/_/g, " ");
+}
+
+/** The bracketed zone's exact offset for `zoned`, or the written one when
+ *  there is no bracket or Temporal will not read it. */
+function exactOffsetOf(zoned: string, written: string): string {
+  try {
+    return Temporal.ZonedDateTime.from(zoned).offset;
+  } catch {
+    return written === "Z" ? "+00:00" : written;
+  }
 }
 
 /**
  * Reads one of `crossingTime`'s own zoned strings — `enter` or `exit` —
  * into the pieces a crystal clock face and its captions need. Every field
- * is copied out of the string the library already rendered; nothing here
- * is computed from an instant or a duration.
+ * but the offset is copied out of the string the library already rendered;
+ * the offset is the zone's own, read with the polyfill, because a zoned
+ * string rounds an offset with seconds to the minute.
  */
 export function crossingClockFace(zoned: string): ClockFace {
-  const m = ZONED_RE.exec(zoned.trim());
+  const text = zoned.trim();
+  const m = ZONED_RE.exec(text);
   if (!m) return BLANK_FACE;
   const [, year, month, day, hh, mm, offset, bracket] = m;
   return {
     hour: Number(hh),
     minute: Number(mm),
-    offset: offset === "Z" ? "+00:00" : offset!,
+    offset:
+      bracket === undefined
+        ? offset === "Z"
+          ? "+00:00"
+          : offset!
+        : exactOffsetOf(text, offset!),
     zoneLabel: shortZoneLabel(bracket ?? offset!),
     dateLabel: `${formatDayLabel(`${year}-${month}-${day}`)} ${year}`,
     timeLabel: `${hh}:${mm}`,
@@ -502,9 +525,9 @@ type CrossingNullReason =
 
 export const NULL_REASON_TEXT: Record<CrossingNullReason, string> = {
   "invalid-entry":
-    "The entry is not an instant: it needs a Z, an offset, or an offset with a bracketed zone.",
+    "The entry is not an instant: it needs a Z or an offset, with no zone name after it.",
   "invalid-exit":
-    "The exit is not an instant: it needs a Z, an offset, or an offset with a bracketed zone.",
+    "The exit is not an instant: it needs a Z or an offset, with no zone name after it.",
   "unknown-zone": "targetZone is not a time zone this browser knows.",
   inverted: "An exit before its entry is a data error, not a negative transit.",
 };
@@ -538,4 +561,31 @@ export function explainNull(
     return "inverted";
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Facts — every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+export interface CrossingFacts {
+  /** `crossingTime(entry, exit, targetZone)`, or `null`. */
+  result: Crossing | null;
+  /** Why `result` is `null`; `null` when the crossing was read. */
+  reason: ReturnType<typeof explainNull>;
+}
+
+/**
+ * The library calls the redraw makes, returned unchanged. The mount draws from this and the
+ * WebMCP tool answers with it, so the two cannot disagree.
+ */
+export function crossingFacts(
+  state: CrossingState,
+  lib: TransportLib,
+): CrossingFacts {
+  const result = lib.crossingTime(state.entry, state.exit, state.targetZone);
+  const reason =
+    result === null
+      ? explainNull(state.entry, state.exit, state.targetZone, lib)
+      : null;
+  return { result, reason };
 }

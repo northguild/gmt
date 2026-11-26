@@ -40,12 +40,12 @@ import { getUtcYear } from "../utc/get/getUtcYear";
 import { parseDateFromUtc } from "../utc/parse/parseDateFromUtc";
 import { parseUnitFromUtc } from "../utc/parse/parseUnitFromUtc";
 import { parseYearFromUtc } from "../utc/parse/parseYearFromUtc";
-import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../internal/resolveLocale";
 import { getZonedNowUnit } from "../zoned/get/getZonedNowUnit";
 import { getZonedToday } from "../zoned/get/getZonedToday";
 import { getZonedYear } from "../zoned/get/getZonedYear";
 
-vi.mock("../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../internal/resolveLocale", { spy: true });
 
 /** 12:00:00Z on 15 June of `year`, built by plain Temporal from the year as a number. */
 function midYear(year: number): Temporal.Instant {
@@ -63,12 +63,12 @@ describe("how a year is written", () => {
   function pinClock(year: number): void {
     vi.useFakeTimers();
     vi.setSystemTime(midYear(year).epochMilliseconds);
-    vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+    vi.mocked(systemTimeZone).mockReturnValue("UTC");
   }
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
     vi.useRealTimers();
   });
 
@@ -347,18 +347,18 @@ describe("how a year is written", () => {
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so each file resets this one explicitly.
-describe("getSystemTimeZone after a mocked row", () => {
+describe("systemTimeZone after a mocked row", () => {
   afterEach(() => {
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
   });
 
   it("returns the mocked zone while a row replaces it", () => {
-    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
-    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+    vi.mocked(systemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(systemTimeZone()).toBe("Pacific/Kiritimati");
   });
 
   it("returns the host's own zone again in the next row", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });

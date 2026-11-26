@@ -7,7 +7,7 @@ description: Test-driven development. Use when the user wants to build features 
 
 TDD is the red → green loop. This skill is the reference that makes that loop produce tests worth keeping: what a good test is, where tests go, the anti-patterns, and the rules of the loop. Every section applies on every cycle: consult them before and during the loop, not after.
 
-When exploring the codebase, read [AGENTS.md](../../../AGENTS.md) and the [testing standards](../../../context/testing-standards/references/index.md) so test names and fixtures match the project's conventions, and respect the decisions of record in [coding-standards § Calendar & zone semantics](../../../context/coding-standards.md#calendar--zone-semantics).
+When exploring the codebase, read [AGENTS.md](../../../AGENTS.md) and the [testing standards](../../../context/testing-standards/references/index.md) so test names and fixtures match the project's conventions, and respect the decisions of record in [coding-standards § Calendar & zone semantics](../../../context/coding-standards/calendar-and-zones.md#calendar--zone-semantics).
 
 ## What a good test is
 

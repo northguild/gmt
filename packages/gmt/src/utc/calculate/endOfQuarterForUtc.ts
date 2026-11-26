@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return the end of the quarter for a given UTC Instant string.
@@ -15,12 +14,12 @@ import { isValidUtc } from "../validate/isValidUtc";
  * @example endOfQuarterForUtc("invalid") // ""
  */
 export function endOfQuarterForUtc(value: string): string {
-  if (!isValidUtc(value)) {
+  const instant = utcInstantOf(value);
+  if (instant === null) {
     return "";
   }
 
   try {
-    const instant = Temporal.Instant.from(value);
     const zdt = instant.toZonedDateTimeISO("UTC");
     const month = zdt.month;
     const quarterEndMonth = Math.floor((month - 1) / 3) * 3 + 3;

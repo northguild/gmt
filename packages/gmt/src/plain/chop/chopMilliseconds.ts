@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime, isValidTime } from "../validate";
+import { plainDateTimeOf, plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return a string with millisecond precision removed from a PlainDateTime or PlainTime value.
@@ -17,13 +16,15 @@ import { isValidDateTime, isValidTime } from "../validate";
  */
 export function chopMilliseconds(value: string): string {
   try {
-    if (isValidDateTime(value)) {
-      return Temporal.PlainDateTime.from(value).toString({
+    const dateTime = plainDateTimeOf(value);
+    if (dateTime !== null) {
+      return dateTime.toString({
         smallestUnit: "second",
       });
     }
-    if (isValidTime(value)) {
-      return Temporal.PlainTime.from(value).toString({
+    const time = plainTimeOf(value);
+    if (time !== null) {
+      return time.toString({
         smallestUnit: "second",
       });
     }

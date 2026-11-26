@@ -1,0 +1,12 @@
+data: {"type":"data-retrieval","id":"retrieval","data":{"totalChunks":10,"retrievedCount":1,"chunkTitles":["a"],"chunkUrls":["/reference/a"],"brainId":"cf-gemma-4-26b"}}
+
+data: {"type":"tool-input-start","toolCallId":"call-1","toolName":"showGlobe"}
+
+data: {"type":"tool-input-error","toolCallId":"call-1","toolName":"showGlobe","input":"{not json","errorText":"Invalid input for tool showGlobe"}
+
+data: {"type":"tool-input-start","toolCallId":"call-2","toolName":"showDstInspector"}
+
+data: {"type":"text-delta","id":"t1","delta":"Sorry about that."}
+
+data: [DONE]
+

@@ -15,7 +15,13 @@ const EXPECTED: Record<string, { id: string; labels: string[] }[]> = {
   "index.html": [
     {
       id: "globe-data-credits",
-      labels: ["Time zone boundaries", "Earth imagery", "Stars", "Licence"],
+      labels: [
+        "Time zone boundaries",
+        "Earth imagery",
+        "Stars",
+        "Milky Way",
+        "Licence",
+      ],
     },
   ],
   "tools/zoned-earth/index.html": [

@@ -5,7 +5,8 @@ import { html } from "../../builders/html";
 import { renderHtml } from "../../test-fixture";
 import { callOutput } from "../gnss/call-output";
 import type { EdiCall } from "~/lib/edi-widgets";
-import { callLines, outputOf } from "./call-lines";
+import { callLines } from "../gnss/call-lines";
+import { outputOf } from "./call-lines";
 
 const call = (fn: string, args: unknown[], result: unknown): EdiCall =>
   ({ fn, args, result }) as EdiCall;

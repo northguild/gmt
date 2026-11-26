@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Extract the plain date portion from an ISO 8601 zoned datetime string.
@@ -14,12 +13,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseDateFromZoned("invalid") // ""
  */
 export function parseDateFromZoned(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return zonedDateTime?.toPlainDate().toString();
   } catch {
     return "";

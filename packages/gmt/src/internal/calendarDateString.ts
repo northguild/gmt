@@ -1,8 +1,6 @@
 import { Temporal } from "./temporal";
-import { plainDate } from "../regex/date";
-import { plainDateTime } from "../regex/date-time";
 import { canonicalCalendarSystem } from "./calendarSystemIds";
-import { isoStringBody } from "./isoStringBody";
+import { hasCalendarDateShape } from "./isoStringBody";
 
 /**
  * Second `60` in the time of day, before any `[`: `T`, `t` or space separator, extended or basic
@@ -18,26 +16,26 @@ export const temporalStringLeapSecond =
  * reads it, restricted to GMT's written shape and GMT's calendars. Throws on invalid input — callers
  * wrap this in try-catch per GMT's sentinel contract.
  *
- * - The part before the first `[` must be GMT's strict extended date (`plainDate`) or date-time
- *   (`plainDateTime`), as `isValidDate` and `isValidDateTime` require. Basic
- *   format (`20241003`), a space or lower-case `t` separator and a UTC offset are rejected, although
- *   `Temporal.PlainDate.from` reads them. Only then does Temporal read the annotations.
- * - An ISO date, optionally followed by RFC 9557 annotations (`"2024-10-03[u-ca=hebrew]"`, which is
- *   what `Temporal.PlainDate#toString()` writes). The digits are always the ISO date; the annotation
+ * - The whole string must be GMT's strict extended date (`plainDate`) or date-time
+ *   (`plainDateTime`), as `isValidDate` and `isValidDateTime` require, optionally followed by one
+ *   calendar annotation (`[u-ca=hebrew]`, or critical `[!u-ca=hebrew]`) and nothing else. Basic
+ *   format (`20241003`), a space or lower-case `t` separator and a UTC offset are rejected,
+ *   although `Temporal.PlainDate.from` reads them, and so is every other annotation: a time zone
+ *   (`[Europe/Helsinki]`, `[!Not/AZone]`, `[+02:00]`), an elective `[foo=bar]` and a second
+ *   `u-ca`. Only then does Temporal read the string.
+ * - An ISO date with a calendar annotation (`"2024-10-03[u-ca=hebrew]"`, which is what
+ *   `Temporal.PlainDate#toString()` writes). The digits are always the ISO date; the annotation
  *   names the calendar (RFC 9557 §3.3).
  * - A date-time is read as its date, as `Temporal.PlainDate.from` reads it
  *   (`"2024-10-03T14:30[u-ca=hebrew]"` is 2024-10-03 in Hebrew): the time is dropped. A leap
  *   second (second `60`) is rejected, as every GMT Plain date-time input rejects it.
- * - The annotations follow Temporal's ISO grammar (`ParseISODateTime`): a time zone annotation
- *   and elective unknown annotations (`[foo=bar]`) are read and ignored, the first `u-ca`
- *   annotation names the calendar, and an unknown critical annotation (`[!foo=bar]`) or a second
- *   `u-ca` annotation when either one is critical is rejected. `Temporal.PlainDate.from` applies
- *   those rules and canonicalizes the id (`HEBREW` → `hebrew`, `islamicc` → `islamic-civil`,
- *   `ethiopic-amete-alem` → `ethioaa`).
+ * - `Temporal.PlainDate.from` canonicalizes the calendar id (`HEBREW` → `hebrew`, `islamicc` →
+ *   `islamic-civil`, `ethiopic-amete-alem` → `ethioaa`).
  * - The calendar must be a `CalendarSystem`. Temporal also knows `chinese`, `dangi`, `islamic` and
- *   `islamic-rgsa`, which GMT does not support.
+ *   `islamic-rgsa`, which GMT does not support (`chinese` and `dangi`: hosts print different dates,
+ *   compat D33).
  *
- * @param value an extended ISO date or date-time, optionally with RFC 9557 annotations
+ * @param value an extended ISO date or date-time, optionally with one calendar annotation
  * @returns the Temporal.PlainDate, in the canonical calendar
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
@@ -48,10 +46,9 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   if (temporalStringLeapSecond.test(value)) {
     throw new RangeError(`Leap seconds are not supported: ${value}`);
   }
-  const body = isoStringBody(value);
-  if (!plainDate.test(body) && !plainDateTime.test(body)) {
+  if (!hasCalendarDateShape(value)) {
     throw new RangeError(
-      `Not an extended ISO 8601 date or date-time: ${value}`,
+      `Not an extended ISO 8601 date or date-time with at most a calendar annotation: ${value}`,
     );
   }
   const date = Temporal.PlainDate.from(value);
@@ -60,4 +57,26 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
     throw new RangeError(`Unsupported calendar: ${date.calendarId}`);
   }
   return date.withCalendar(calendar);
+}
+
+/**
+ * The check behind `isValidCalendarDate`: the `PlainDate` `parseCalendarDateValue` reads, or
+ * `null` where it throws.
+ *
+ * @param value the candidate; a value that is not a non-empty string is not a calendar date
+ * @returns the `PlainDate` in the canonical calendar, else `null`
+ *
+ * @example calendarDateOf("2024-10-03[u-ca=hebrew]")?.calendarId // "hebrew"
+ * @example calendarDateOf("2024-02-30") // null
+ * @example calendarDateOf(null) // null
+ */
+export function calendarDateOf(value: unknown): Temporal.PlainDate | null {
+  if (typeof value !== "string" || value.length === 0) {
+    return null;
+  }
+  try {
+    return parseCalendarDateValue(value);
+  } catch {
+    return null;
+  }
 }

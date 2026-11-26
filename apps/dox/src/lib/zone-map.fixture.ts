@@ -233,5 +233,19 @@ export function mapPalette() {
     ["stops in 2026: purple ink", token("--gmt-dst-purple-ink")],
     ["selected: green", token("--gmt-globe-selected")],
   ];
-  return { sea, land, strokes, contrast: ratio };
+  // The fills as painted, each laid on the sea. A lighter step must stay apart from its solid
+  // step, from the sea and from the land no zone covers.
+  const over = (name: string, a: string): Rgb =>
+    mix(token(name), sea, alpha(a));
+  const fills: Record<string, Rgb> = {
+    none: over("--gmt-cyan", "none-fill-a"),
+    noneSoft: over("--gmt-cyan", "none-soft-fill-a"),
+    changes: over("--gmt-dst-gold", "changes-fill-a"),
+    stopped: over("--gmt-dst-purple", "stopped-fill-a"),
+    stoppedSoft: over("--gmt-dst-purple", "stopped-soft-fill-a"),
+  };
+  /** The largest difference in any one 8-bit channel. */
+  const apart = (a: Rgb, b: Rgb): number =>
+    Math.max(...a.map((v, i) => Math.abs(v - b[i]!)));
+  return { sea, land, strokes, fills, apart, contrast: ratio };
 }

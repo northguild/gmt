@@ -1,5 +1,48 @@
 import { showHolidayRuleBuilderInput } from "./dox-tools";
+import { SCHEDULE_TEXT_MAX } from "./schedule-text-max";
+import {
+  PRESETS as SERVICE_DAY_PRESETS,
+  permalinkOf as serviceDayPermalinkOf,
+  presetState as serviceDayPresetState,
+  readArgs as serviceDayReadArgs,
+} from "./gtfs-service-day-clock";
+import {
+  PRESETS as TRIP_PRESETS,
+  permalinkOf as tripPermalinkOf,
+  presetState as tripPresetState,
+  readArgs as tripReadArgs,
+} from "./gtfs-trip-board";
+import {
+  COUNTER_PRESETS,
+  DEFAULT_PRESET as COUNTER_DEFAULT,
+  permalinkOf as counterPermalinkOf,
+  readArgs as readCounterArgs,
+} from "./julian-day-counter";
+import {
+  DEFAULT_PRESET as METER_DEFAULT,
+  METER_PRESETS,
+  permalinkOf as meterPermalinkOf,
+  readArgs as readMeterArgs,
+} from "./double-precision-meter";
 import { formatRuleLines } from "./holiday-codec";
+import {
+  DEFAULT_PRESET,
+  MAX_VALUE_LENGTH,
+  STACK_PRESETS,
+  permalinkOf as stackPermalinkOf,
+} from "./terrestrial-time-stack";
+import {
+  METAR_PRESETS,
+  NOTAM_PRESETS,
+  blankNotam,
+  blankState,
+  notamPermalinkOf,
+  notamPresetState,
+  permalinkOf as reportPermalinkOf,
+  presetState as reportPresetState,
+  readArgs as readReportArgs,
+  readNotamArgs,
+} from "./report-time-resolver";
 import {
   decodeWidgetPermalink,
   encodeWidgetPermalink,
@@ -91,6 +134,39 @@ describe("widget permalinks", () => {
     expect(
       seedFromLocation("moroccoclock", long.slice(long.indexOf("?"))),
     ).toEqual({});
+  });
+
+  it("carries the Sunshine Protection Act's view and place through a link", () => {
+    const seed = (view: unknown) =>
+      seedFromLocation(
+        "sunshineact",
+        encodeWidgetPermalink("sunshineact", { view }).replace(/^[^?]*/, ""),
+      );
+    expect(
+      encodeWidgetPermalink("sunshineact", { view: { kind: "today" } }),
+    ).toContain("/check/us-sunshine-protection-act/?w=sunshineact&");
+    expect(seed({ kind: "today", zone: "America/Phoenix" })).toEqual({
+      view: { kind: "today", zone: "America/Phoenix" },
+    });
+    expect(seed({ kind: "proposals", state: "DE" })).toEqual({
+      view: { kind: "proposals", state: "DE" },
+    });
+    expect(seed({ kind: "proposals" })).toEqual({
+      view: { kind: "proposals" },
+    });
+  });
+
+  it("opens the Sunshine Protection Act on Today, unpinned, for a malformed view", () => {
+    const seed = (view: unknown) =>
+      seedFromLocation(
+        "sunshineact",
+        encodeWidgetPermalink("sunshineact", { view }).replace(/^[^?]*/, ""),
+      );
+    expect(seed("proposals")).toEqual({});
+    expect(seed({ kind: "elsewhere", zone: "UTC" })).toEqual({});
+    expect(seed({ kind: "today", zone: "A".repeat(65) })).toEqual({
+      view: { kind: "today" },
+    });
   });
 
   it("needs no anchor, because the widget is the whole page", () => {
@@ -209,6 +285,271 @@ describe("widget permalinks", () => {
     const url = encodeWidgetPermalink("storedaudit", { values, line: "5" });
     const seeded = seedFromLocation("storedaudit", url.slice(url.indexOf("?")));
     expect(seeded).toEqual({ values, line: "5" });
+  });
+
+  it("round-trips multi-line TAI64N log values, a line and an instant", () => {
+    const values = Array.from(
+      { length: 4 },
+      (_, i) => `@4000000065920${i}a500000000 message ${i}`,
+    ).join("\n");
+    expect(values.length).toBeGreaterThan(64);
+    const state = { values, line: "3", instant: "2024-01-01T00:00:00Z" };
+    const url = encodeWidgetPermalink("tai64n", state);
+    expect(url).toContain("/tools/tai64n-log-reader/");
+    expect(seedFromLocation("tai64n", url.slice(url.indexOf("?")))).toEqual(
+      state,
+    );
+  });
+
+  it("round-trips a FIX stamp and the instant to write", () => {
+    const state = {
+      stamp: "20161231-23:59:60.500",
+      write: "2016-12-31T23:59:60.5Z",
+    };
+    const url = encodeWidgetPermalink("fixstamp", state);
+    expect(url).toContain("/tools/fix-timestamp-reader/");
+    expect(seedFromLocation("fixstamp", url.slice(url.indexOf("?")))).toEqual(
+      state,
+    );
+  });
+
+  it("round-trips a FHIR value and a preset, each a string", () => {
+    for (const state of [
+      { value: "2024-06-15T10:30:00Z[Europe/Berlin]" },
+      { preset: "feb-30" },
+    ]) {
+      const url = encodeWidgetPermalink("fhir", state);
+      expect(url).toContain("/tools/fhir-date-checker/");
+      expect(seedFromLocation("fhir", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
+  it("round-trips an SSIM read with a blank window and a cleared value", () => {
+    for (const state of [
+      { value: "01JAN26", window: "", locale: "fr-FR", date: "" },
+      { value: "", window: "rolling", locale: "en", date: "2026-01-01" },
+      { value: "01JAN26", window: "2000", locale: "en", date: "" },
+    ]) {
+      const url = encodeWidgetPermalink("ssim", state);
+      expect(url).toContain("/tools/ssim-date-reader/");
+      expect(seedFromLocation("ssim", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
+  it("round-trips every Report Time Resolver preset, and a custom state with a blank reference and window", () => {
+    const via = (args: Record<string, unknown>) => {
+      const url = encodeWidgetPermalink("reporttime", args);
+      expect(url).toContain("/tools/report-time-resolver/");
+      return seedFromLocation("reporttime", url.slice(url.indexOf("?")));
+    };
+    for (const p of METAR_PRESETS) {
+      const state = reportPresetState(p);
+      expect(readReportArgs(via(reportPermalinkOf(state)) as never)).toEqual(
+        state,
+      );
+    }
+    for (const p of NOTAM_PRESETS) {
+      const state = notamPresetState(p);
+      expect(readNotamArgs(via(notamPermalinkOf(state)) as never)).toEqual(
+        state,
+      );
+    }
+    const metar = { ...blankState(), group: "302350Z", reference: "" };
+    const notam = { ...blankNotam(), itemB: "2506151200", itemC: "2506160000" };
+    const seed = via({
+      ...reportPermalinkOf(metar),
+      ...notamPermalinkOf(notam),
+    });
+    expect(seed).toEqual({
+      group: "302350Z",
+      ref: "",
+      b: "2506151200",
+      c: "2506160000",
+      window: "",
+    });
+    expect(readReportArgs(seed as never)).toEqual(metar);
+    expect(readNotamArgs(seed as never)).toEqual(notam);
+    const shifted = {
+      ...blankState(),
+      group: "302350Z",
+      reference: "x",
+      shift: -45,
+    };
+    expect(readReportArgs(via(reportPermalinkOf(shifted)) as never)).toEqual(
+      shifted,
+    );
+  });
+
+  it("round-trips a SWIFT read: a preset name, a typed value and a cleared box", () => {
+    for (const state of [
+      { preset: "nineteen", writePreset: "round-trip" },
+      { value: "350615", date: "2024-06-15" },
+      { value: "", date: "" },
+      { preset: "twenty", date: "" },
+    ]) {
+      const url = encodeWidgetPermalink("swiftdate", state);
+      expect(url).toContain("/tools/swift-value-date-reader/");
+      expect(
+        seedFromLocation("swiftdate", url.slice(url.indexOf("?"))),
+      ).toEqual(state);
+    }
+  });
+
+  it("opens a GTFS Time Reader link on the state it names, even a cleared one", () => {
+    for (const state of [
+      { value: "25:10:00", seconds: "", dayOverflow: "" },
+      { value: "", seconds: "90000", dayOverflow: "" },
+      { value: "", seconds: "", dayOverflow: "" },
+    ]) {
+      const url = encodeWidgetPermalink("gtfstime", state);
+      expect(url).toContain("/tools/gtfs-time-reader/");
+      expect(seedFromLocation("gtfstime", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
+  it("opens each GTFS Service Day Clock preset's link on that preset, and keeps typed and cleared boxes", () => {
+    for (const preset of SERVICE_DAY_PRESETS) {
+      const args = serviceDayPermalinkOf(serviceDayPresetState(preset));
+      expect(args).toEqual({ preset: preset.id });
+      const url = encodeWidgetPermalink("gtfsday", args);
+      expect(url).toContain("/tools/gtfs-service-day-clock/");
+      expect(seedFromLocation("gtfsday", url.slice(url.indexOf("?")))).toEqual({
+        preset: preset.id,
+      });
+    }
+    for (const state of [
+      { date: "20240331", time: "03:00:00", zone: "Europe/Berlin" },
+      { date: "", time: "", zone: "" },
+    ]) {
+      const args = serviceDayPermalinkOf(state);
+      expect(Object.keys(args)).toEqual(["serviceDate", "time", "timeZone"]);
+      const url = encodeWidgetPermalink("gtfsday", args);
+      const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+      expect(seed).toEqual(args);
+      expect(serviceDayReadArgs(seed)).toEqual(state);
+    }
+  });
+
+  it("opens a GTFS Service Day Clock link with an unknown preset on the default", () => {
+    const url = encodeWidgetPermalink("gtfsday", { preset: "far-future" });
+    const seed = seedFromLocation("gtfsday", url.slice(url.indexOf("?")));
+    expect(serviceDayReadArgs(seed)).toEqual(serviceDayPresetState());
+  });
+
+  it("opens each GTFS Trip Board preset's link on that preset, and keeps typed and cleared boxes", () => {
+    for (const preset of TRIP_PRESETS) {
+      const args = tripPermalinkOf(tripPresetState(preset));
+      expect(args).toEqual({ preset: preset.id });
+      const url = encodeWidgetPermalink("gtfstrip", args);
+      expect(url).toContain("/tools/gtfs-trip-board/");
+      expect(seedFromLocation("gtfstrip", url.slice(url.indexOf("?")))).toEqual(
+        { preset: preset.id },
+      );
+    }
+    for (const state of [
+      { rows: "a\nb", date: "20240331", zone: "Europe/Berlin" },
+      { rows: "", date: "", zone: "" },
+    ]) {
+      const args = tripPermalinkOf(state);
+      expect(Object.keys(args)).toEqual(["stopTimes", "date", "zone"]);
+      const url = encodeWidgetPermalink("gtfstrip", args);
+      const seed = seedFromLocation("gtfstrip", url.slice(url.indexOf("?")));
+      expect(seed).toEqual(args);
+      expect(tripReadArgs(seed)).toEqual(state);
+    }
+  });
+
+  it("keeps a GTFS Trip Board paste of 2,000 characters and drops one of 2,001", () => {
+    const seedOf = (stopTimes: string) => {
+      const url = encodeWidgetPermalink("gtfstrip", { stopTimes });
+      return seedFromLocation("gtfstrip", url.slice(url.indexOf("?")));
+    };
+    expect(seedOf("x".repeat(2000))).toEqual({ stopTimes: "x".repeat(2000) });
+    expect(seedOf("x".repeat(2001))).not.toHaveProperty("stopTimes");
+  });
+
+  it("keeps an Operating Schedule Checker paste of 8,000 characters and drops one of 8,001", () => {
+    const seedOf = (schedule: string) => {
+      const url = encodeWidgetPermalink("schedule", { schedule });
+      expect(url).toContain("/tools/operating-schedule-checker/");
+      return seedFromLocation("schedule", url.slice(url.indexOf("?")));
+    };
+    expect(seedOf("x".repeat(SCHEDULE_TEXT_MAX))).toEqual({
+      schedule: "x".repeat(SCHEDULE_TEXT_MAX),
+    });
+    expect(seedOf("x".repeat(SCHEDULE_TEXT_MAX + 1))).not.toHaveProperty(
+      "schedule",
+    );
+    expect(SCHEDULE_TEXT_MAX).toBe(8000);
+  });
+
+  it("opens a PTP Clock Converter link on the state it names, even a cleared one", () => {
+    for (const state of [
+      { preset: "stale-36", writePreset: "leap-second" },
+      { seconds: "1704067237", nanoseconds: "0", offset: "35", instant: "" },
+      { seconds: "", nanoseconds: "", offset: "", instant: "" },
+    ]) {
+      const url = encodeWidgetPermalink("ptpclock", state);
+      expect(url).toContain("/tools/ptp-clock-converter/");
+      expect(seedFromLocation("ptpclock", url.slice(url.indexOf("?")))).toEqual(
+        state,
+      );
+    }
+  });
+
+  it("opens each Terrestrial Time Stack preset's link on that preset", () => {
+    for (const preset of STACK_PRESETS) {
+      if (preset === DEFAULT_PRESET) continue;
+      const args = stackPermalinkOf(preset.state);
+      const url = encodeWidgetPermalink("ttstack", args);
+      expect(url).toContain("/tools/terrestrial-time-stack/");
+      expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual(
+        preset.state,
+      );
+    }
+  });
+
+  it("keeps a Terrestrial Time Stack value at its 64-character cap", () => {
+    const value = "2026-01-01T00:01:10.261661917 TCG";
+    expect(value.length).toBeLessThanOrEqual(MAX_VALUE_LENGTH);
+    const url = encodeWidgetPermalink("ttstack", { value });
+    expect(seedFromLocation("ttstack", url.slice(url.indexOf("?")))).toEqual({
+      value,
+    });
+  });
+
+  it("opens each Julian Day Counter preset's link on that preset", () => {
+    for (const preset of COUNTER_PRESETS) {
+      if (preset === COUNTER_DEFAULT) continue;
+      const args = counterPermalinkOf(preset.state);
+      const url = encodeWidgetPermalink("jdcount", args);
+      expect(url).toContain("/tools/julian-day-counter/");
+      expect(
+        readCounterArgs(
+          seedFromLocation("jdcount", url.slice(url.indexOf("?"))),
+        ),
+      ).toEqual(preset.state);
+    }
+  });
+
+  it("opens each Double Precision Meter preset's link on that preset", () => {
+    for (const preset of METER_PRESETS) {
+      if (preset === METER_DEFAULT) continue;
+      const url = encodeWidgetPermalink(
+        "dpmeter",
+        meterPermalinkOf(preset.state),
+      );
+      expect(url).toContain("/tools/double-precision-meter/");
+      expect(
+        readMeterArgs(seedFromLocation("dpmeter", url.slice(url.indexOf("?")))),
+      ).toEqual(preset.state);
+    }
   });
 
   it("registers the three holiday tools at their own pages", () => {

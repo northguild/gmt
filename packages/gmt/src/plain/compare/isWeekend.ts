@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { getLocaleWeekendDays } from "../../internal";
-import { isValidDate } from "../validate";
 
 /**
  * Return true when `value` falls on a weekend day for `locale`.
@@ -27,13 +26,13 @@ import { isValidDate } from "../validate";
  * @example isWeekend("2024-05-17", ["ar-EG", "fr-FR"]) // true (Friday is an ar-EG weekend day)
  */
 export function isWeekend(value: string, locale: string | string[]): boolean {
-  if (!isValidDate(value)) return false;
+  const date = plainDateOf(value);
+  if (date === null) return false;
 
   const weekendDays = getLocaleWeekendDays(locale);
   if (!weekendDays) return false;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return weekendDays.has(date.dayOfWeek);
   } catch {
     return false;

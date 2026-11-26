@@ -1,15 +1,16 @@
 /* verdict: the answer line. A full bevelled border and a tinted fill; the tone
-   shows as a heavier bottom edge, never a left stripe (invariant 13). */
+   shows as a heavier bottom edge, never a left stripe (invariant 13). The edge is the 1px border plus a
+   2px inset shadow: unequal border widths on a bevelled box misdraw the opposite edge. */
 
 .root {
   --gmt-verdict-edge: var(--gmt-border-strong);
 
   margin: 0;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem calc(0.5rem + 2px);
   border: 1px solid var(--gmt-verdict-edge);
-  border-block-end-width: 3px;
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-verdict-edge);
   background: color-mix(
     in srgb,
     var(--gmt-verdict-edge) 10%,
@@ -24,6 +25,10 @@
 
   &[data-tone="bad"] {
     --gmt-verdict-edge: var(--gmt-danger);
+  }
+
+  &[data-tone="sentinel"] {
+    --gmt-verdict-edge: var(--gmt-signal-border);
   }
 }
 
@@ -41,7 +46,8 @@
     background: Canvas;
     color: CanvasText;
 
-    &[data-tone="bad"] {
+    &[data-tone="bad"],
+    &[data-tone="sentinel"] {
       border-style: double;
     }
   }

@@ -1,24 +1,14 @@
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
+import { etaAtZoneText } from "../../internal/deliverySchedule";
 
 /**
  * Render an arrival instant as local time in the zone where it will be read.
  *
  * Schedules are computed in UTC and displayed where the cargo lands. The zone is the caller's
  * fact: GMT does not resolve a port, airport, terminal or station code to a timezone, and
- * takes an IANA identifier instead (see the parked registries note in the epic's painpoints).
+ * takes an IANA identifier instead.
  *
- * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z`, an offset, or an offset with a
- *   bracketed zone. Only the instant is read; a bracketed zone in the input is not the zone the
- *   result is rendered in, `targetZone` is.
- * - **The offset fixes the instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it, so rendering this function's own result again gives
- *   the same moment, except a wall time repeated inside a sub-minute offset change, which
- *   reads as its first pass (see `isValidInstant`). A zone that does not exist, or that disagrees with the offset, is not
- *   checked and changes nothing.
+ * - `arrivalUtc` is any instant `isValidInstant` accepts — `Z` or an offset, with no annotation of
+ *   any kind. `targetZone` is the zone the result is rendered in.
  * - **No disambiguation arises.** The input is a moment, and a moment has exactly one wall
  *   time in any zone, so the `disambiguation` vocabulary of `resolveLocal` does not apply here.
  *   On a fall-back night two moments an hour apart print the same wall time with different
@@ -50,15 +40,5 @@ import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
  * @example etaAtZone("2024-06-15T12:30:00Z", "Asia/Tokio") // ""
  */
 export function etaAtZone(arrivalUtc: string, targetZone: string): string {
-  try {
-    if (!isValidInstant(arrivalUtc) || !isValidTimeZone(targetZone)) {
-      return "";
-    }
-
-    return instantFrom(arrivalUtc).toZonedDateTimeISO(targetZone).toString();
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
+  return etaAtZoneText(arrivalUtc, targetZone);
 }

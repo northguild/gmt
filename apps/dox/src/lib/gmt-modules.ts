@@ -39,7 +39,14 @@ export const GMT_MODULES: Record<
   // --- timescale ---
   "timescale/calculate": () => import("@northguild/gmt/timescale/calculate"),
   "timescale/convert": () => import("@northguild/gmt/timescale/convert"),
+  "timescale/format": () => import("@northguild/gmt/timescale/format"),
+  "timescale/parse": () => import("@northguild/gmt/timescale/parse"),
   "timescale/validate": () => import("@northguild/gmt/timescale/validate"),
+
+  // --- finance ---
+  "finance/format": () => import("@northguild/gmt/finance/format"),
+  "finance/parse": () => import("@northguild/gmt/finance/parse"),
+  "finance/validate": () => import("@northguild/gmt/finance/validate"),
 
   // --- gnss ---
   "gnss/convert": () => import("@northguild/gmt/gnss/convert"),
@@ -48,6 +55,11 @@ export const GMT_MODULES: Record<
   "instant/convert": () => import("@northguild/gmt/instant/convert"),
   "instant/parse": () => import("@northguild/gmt/instant/parse"),
   "instant/validate": () => import("@northguild/gmt/instant/validate"),
+
+  // --- aviation ---
+  "aviation/format": () => import("@northguild/gmt/aviation/format"),
+  "aviation/parse": () => import("@northguild/gmt/aviation/parse"),
+  "aviation/validate": () => import("@northguild/gmt/aviation/validate"),
 
   // --- calendar ---
   "calendar/business": () => import("@northguild/gmt/calendar/business"),
@@ -75,6 +87,11 @@ export const GMT_MODULES: Record<
   "intermodal/format": () => import("@northguild/gmt/intermodal/format"),
   "intermodal/parse": () => import("@northguild/gmt/intermodal/parse"),
   "intermodal/validate": () => import("@northguild/gmt/intermodal/validate"),
+
+  // --- healthcare ---
+  "healthcare/format": () => import("@northguild/gmt/healthcare/format"),
+  "healthcare/parse": () => import("@northguild/gmt/healthcare/parse"),
+  "healthcare/validate": () => import("@northguild/gmt/healthcare/validate"),
 
   // --- duration ---
   "duration/calculate": () => import("@northguild/gmt/duration/calculate"),
@@ -121,6 +138,16 @@ export const GMT_MODULES: Record<
   // --- span ---
   "span/calculate": () => import("@northguild/gmt/span/calculate"),
   "span/validate": () => import("@northguild/gmt/span/validate"),
+
+  // --- rail ---
+  "rail/convert": () => import("@northguild/gmt/rail/convert"),
+  "rail/format": () => import("@northguild/gmt/rail/format"),
+  "rail/parse": () => import("@northguild/gmt/rail/parse"),
+  "rail/validate": () => import("@northguild/gmt/rail/validate"),
+
+  // --- iot ---
+  "iot/convert": () => import("@northguild/gmt/iot/convert"),
+  "iot/validate": () => import("@northguild/gmt/iot/validate"),
 
   // --- recurrence ---
   "recurrence/calculate": () => import("@northguild/gmt/recurrence/calculate"),

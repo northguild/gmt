@@ -10,6 +10,24 @@
  * Kept free of Astro globals so vitest can import it directly.
  */
 import {
+  areas as pulseAreas,
+  cardsIn as pulseCardsIn,
+  checkById as pulseCheck,
+  countWorkarounds,
+  filingsWaitedOn,
+  groupsClaimed,
+  runsFor as pulseRuns,
+  runsRead as pulseRunsRead,
+  type PulseLife,
+} from "../data/pulse";
+import { filingRef as pulseFilingRef } from "../data/upstream-filings";
+import {
+  beats as pulseBeats,
+  beatsCaption,
+  cadenceText,
+  noSignal,
+} from "./pulse-view";
+import {
   BUNDLE_COLUMNS,
   bundleCells,
   bundleRows,
@@ -19,6 +37,12 @@ import {
 import { KEY_POINTS } from "../data/canada-key-points";
 import { keyPointsMarkdown } from "../data/clock-change-text";
 import { MOROCCO_KEY_POINTS } from "../data/morocco-key-points";
+import { US_GUIDANCE } from "../data/sunshine-protection-act-guidance";
+import {
+  NATIONAL,
+  OTHER_NATIONAL,
+  OTHER_NATIONAL_HEADING,
+} from "../data/sunshine-protection-act-proposals";
 import { serversMarkdown } from "./canada-clock-change";
 import { serversMarkdown as moroccoServersMarkdown } from "./morocco-clock-change";
 import { dateFaults } from "../data/date-faults";
@@ -28,26 +52,47 @@ import {
   compatGroups,
   groupLabel,
   groupWhatBreaks,
-  shortRef,
   stateLine,
 } from "../data/temporal-compat";
 import {
   filedByUs,
   filedPrs,
+  filingRef,
   filings,
   handledInGmt,
   listings,
   unaffectingGmt,
 } from "../data/upstream-filings";
+import { tableMarkdown } from "./compare-table";
 import {
   compareTables,
   notesMarkdown,
-  tableMarkdown,
   type CompareTableId,
 } from "./library-compare-tables";
+import {
+  zoneMatrixEvidenceTable,
+  zoneMatrixFailureTable,
+  zoneMatrixKnownTable,
+  zoneMatrixSummaryTable,
+  zoneMatrixZoneTable,
+} from "./zone-matrix-tables";
 import { LISTING_COLUMNS, listingStatus } from "./upstream-status";
-import { asDate, contributionClause, coverageClause } from "./upstream-summary";
-import { diffViews, libraryProp, mapView, matrixView } from "./migrate-view";
+import {
+  asDate,
+  contributionClause,
+  coverageClause,
+  unguardedClause,
+} from "./upstream-summary";
+import {
+  diffPairs,
+  libraryProp,
+  mapPairs,
+  matrixView,
+  temporalPairs,
+  type CodePairView,
+} from "./migrate-view";
+import { VERDICT_LABEL } from "../data/behaviour-matrix";
+import { zoneMatrixSummary } from "../data/zone-matrix";
 
 /** A parsed JSX element: the props it was given, and the span it occupied. */
 interface JsxElement {
@@ -348,9 +393,7 @@ function renderUpstreamDefects(): string {
   const rows = compatGroups.map((group) => {
     const sent = filings
       .filter((f) => f.gmtGuard && group.defects.includes(f.gmtGuard))
-      .map(
-        (f) => `[${shortRef(f.repo, f.number)}](${f.contributionUrl ?? f.url})`,
-      )
+      .map((f) => `[${filingRef(f)}](${f.contributionUrl ?? f.url})`)
       .join(", ");
     const { badge, count } = stateLine(group);
     const state = `${badge} — ${count}`;
@@ -394,66 +437,129 @@ function renderPolyfillCompare(): string {
   ].join("\n");
 }
 
-/** `<MigrationMap library="…" part="more" />` as a Markdown table: their call, the GMT functions, a note. */
+/** A titled fenced block: the title as a bold line, then the code. */
+const titledFence = (title: string, code: string): string =>
+  `**${escapeMarkdownInline(title)}**\n${fence(code)}`;
+
+/**
+ * A list of code pairs, as `CodePairs.astro` renders them: an optional heading, the facts, their
+ * code and the GMT code as fenced blocks, the note, then the links. Facts and notes are written by
+ * hand with backtick code spans, so they pass through as they are.
+ */
+function renderCodePairs(pairs: readonly CodePairView[]): string {
+  const out: string[] = [""];
+  for (const pair of pairs) {
+    if (pair.heading) {
+      const tag = pair.heading.tag ? `${pair.heading.tag}. ` : "";
+      out.push(`### ${tag}${pair.heading.text}`, "");
+    }
+    for (const fact of pair.facts) out.push(`- ${fact.label}: ${fact.text}`);
+    if (pair.facts.length > 0) out.push("");
+    out.push(titledFence(pair.theirs.title, pair.theirs.code));
+    out.push(titledFence(pair.gmt.title, pair.gmt.code));
+    if (pair.note) out.push(pair.note, "");
+    for (const group of pair.links) {
+      if (group.links.length === 0) continue;
+      const links = group.links.map((link) => {
+        const text = link.code
+          ? `\`${link.text}\``
+          : escapeMarkdownInline(link.text);
+        return `[${text}](${link.href})`;
+      });
+      out.push(`${group.label}: ${links.join(", ")}.`, "");
+    }
+  }
+  return out.join("\n");
+}
+
+/** `<MigrationMap library="…" part="more" />`: their call beside the GMT code, one pair per call. */
 function renderMigrationMap(props: Record<string, string>): string {
-  const view = mapView(
-    libraryProp(props.library, "MigrationMap"),
-    props.part === "more" ? "more" : "rows",
-  );
-  const rows = view.rows.map((row) => {
-    const gmt =
-      row.gmt.length === 0
-        ? "none"
-        : row.gmt.map((fn) => `[\`${fn.name}\`](${fn.url})`).join(", ");
-    // Notes are written by hand with backtick code spans, so they pass through as they are.
-    const note = row.note ?? "";
-    return `| ${row.theirs} | ${gmt} | ${note} |`;
-  });
-  return [
-    "",
-    `| ${view.heading} | GMT | Note |`,
-    "| --- | --- | --- |",
-    ...rows,
-    "",
-  ].join("\n");
+  const id = libraryProp(props.library, "MigrationMap");
+  return renderCodePairs(mapPairs(id, props.part === "more" ? "more" : "rows"));
 }
 
-/** `<BehaviourDiffs library="…" />` as a list: one item per case where the library differs from Temporal. */
+/** `<BehaviourDiffs library="…" />`: one pair per case where the library differs from Temporal. */
 function renderBehaviourDiffs(props: Record<string, string>): string {
-  const items = diffViews(libraryProp(props.library, "BehaviourDiffs")).map(
-    (diff) => {
-      const issues = diff.issues.length
-        ? ` Upstream: ${diff.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
-        : "";
-      return `- **${diff.id}. ${escapeMarkdownInline(diff.title)}** Input: ${escapeMarkdownInline(diff.input)}. The library returns ${escapeMarkdownInline(diff.libraryReturns)}; ${diff.referenceLabel === "Temporal returns" ? "Temporal returns" : "the stated result is"} ${escapeMarkdownInline(diff.temporalReturns)}. Specification: [${escapeMarkdownInline(diff.clause.label)}](${diff.clause.url}).${issues} [Matrix row](${diff.matrixHref}).`;
-    },
+  return renderCodePairs(
+    diffPairs(libraryProp(props.library, "BehaviourDiffs")),
   );
-  return ["", ...items, ""].join("\n");
 }
 
-/** `<BehaviourMatrix />` as one heading and one table per case. */
+/** `<TemporalMap />`: each Temporal call beside the matching GMT code. */
+function renderTemporalMap(): string {
+  return renderCodePairs(temporalPairs());
+}
+
+/** `<ZoneMatrix />` as the page prints it: the summary table, then a section per suite. */
+function renderZoneMatrix(): string {
+  if (!zoneMatrixSummary.ran) {
+    return "\nNo zone-matrix run is recorded yet, so no figure is shown.\n";
+  }
+  const out: string[] = [tableMarkdown(zoneMatrixSummaryTable())];
+  for (const suite of zoneMatrixSummary.suites) {
+    out.push(
+      `## ${escapeMarkdownInline(suite.name)} ${suite.version}`,
+      "",
+      `Commit \`${suite.commit}\` of [${suite.repository.replace("https://github.com/", "")}](${suite.repository}), run with \`${suite.command}\`. The project's own command is \`${suite.ownCommand}\`. Reference zone: ${escapeMarkdownInline(suite.referenceZone)} (${escapeMarkdownInline(suite.referenceSource)}).`,
+      tableMarkdown(zoneMatrixZoneTable(suite)),
+    );
+    if (suite.overridden.length) {
+      out.push(
+        `The suite sets its own zone in ${suite.overridden.map((o) => `${o.zone} on Node ${o.node}`).join("; ")}, so those runs count no failure.`,
+        "",
+      );
+    }
+    if (suite.couldNotRun.length) {
+      out.push(
+        `Could not run: ${suite.couldNotRun.map((c) => `${c.zone} on Node ${c.node} (${escapeMarkdownInline(c.reason)})`).join("; ")}.`,
+        "",
+      );
+    }
+    if (!suite.measured) {
+      out.push(
+        "No run of this suite kept the zone it was given, so it is not measured and shows no figure.",
+        "",
+      );
+    }
+    const failures = zoneMatrixFailureTable(suite);
+    if (failures.rows.length) out.push(tableMarkdown(failures));
+    const evidence = zoneMatrixEvidenceTable(suite);
+    if (evidence.rows.length) out.push(tableMarkdown(evidence));
+    const known = zoneMatrixKnownTable(suite);
+    if (known.rows.length) {
+      out.push(
+        "Counted in neither kind, with the cause of each failure:",
+        tableMarkdown(known),
+      );
+    }
+  }
+  return out.join("\n");
+}
+
+/**
+ * `<BehaviourMatrix />` as the page prints it: a heading per case, its facts, then GMT's result and
+ * each library's as a verdict line and a code block. Facts and notes are written by hand with
+ * backtick code spans, so they pass through as they are.
+ */
 function renderBehaviourMatrix(): string {
   const out: string[] = [""];
   for (const view of matrixView()) {
     out.push(`## ${view.id}. ${escapeMarkdownInline(view.title)}`, "");
+    for (const fact of view.facts) out.push(`- ${fact.label}: ${fact.text}`);
     out.push(
-      `Input: ${escapeMarkdownInline(view.input)}. Compared as: ${escapeMarkdownInline(view.compare)}. Specification: ${view.clauses.map((c) => `[${escapeMarkdownInline(c.label)}](${c.url})`).join(", ")}.`,
+      `- Specification: ${view.clauses.map((c) => `[${escapeMarkdownInline(c.label)}](${c.url})`).join(", ")}`,
       "",
     );
-    if (view.expectedNote) out.push(view.expectedNote, "");
-    // The note is written by hand with backtick code spans, so it passes through as it is.
-    if (view.note) out.push(view.note, "");
-    out.push(
-      `| Library | Call | Returns | Compared with ${view.reference} | Upstream issue |`,
-      "| --- | --- | --- | --- | --- |",
-    );
-    for (const row of view.rows) {
-      const issues = row.issues.map((i) => `[${i.text}](${i.url})`).join(", ");
+    for (const note of view.notes) out.push(note, "");
+    for (const entry of view.entries) {
+      const issues = entry.issues.length
+        ? ` Upstream: ${entry.issues.map((i) => `[${i.text}](${i.url})`).join(", ")}.`
+        : "";
       out.push(
-        `| ${escapeMarkdownInline(row.who)} | ${escapeMarkdownInline(row.call)} | ${escapeMarkdownInline(row.returns.join(", "))} | ${row.verdict} | ${issues || "none"} |`,
+        `**${escapeMarkdownInline(entry.name)}**: ${VERDICT_LABEL[entry.verdict]}.${issues}`,
+        fence(entry.code),
       );
     }
-    out.push("");
   }
   return out.join("\n");
 }
@@ -466,7 +572,7 @@ function renderBehaviourMatrix(): string {
  * with it (CORE-8 review, #253).
  */
 function renderUpstreamTracker(): string {
-  return `\n**So far we have sent ${filedByUs} reports and fixes to the Temporal projects, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.**\n`;
+  return `\n**So far we have sent ${filedByUs} reports and fixes to Temporal and the projects it builds on, ${filedPrs} of them as ready-to-merge code changes${contributionClause}. ${coverageClause}: ${handledInGmt} through its own built-in fix, and ${unaffectingGmt} because the bug is in code GMT doesn't use.${unguardedClause}**\n`;
 }
 
 /**
@@ -484,6 +590,59 @@ function renderUpstreamListings(): string {
     ...rows,
     "",
   ].join("\n");
+}
+
+/** A check's retirement, in words, for the text twin of `/pulse/`. */
+function pulseLife(life: PulseLife): string {
+  if (life.kind === "permanent") return `Stays. ${life.why}`;
+  if (life.kind === "condition") {
+    const waited = filingsWaitedOn(life).map(
+      (f) => `[${pulseFilingRef(f)}](${f.url})`,
+    );
+    return `Retires when ${life.until}.${waited.length > 0 ? ` Waiting on ${waited.join(", ")}.` : ""}`;
+  }
+  const claimed = groupsClaimed(life);
+  if (claimed.length === 0) {
+    return "Retires with its workarounds, which are not in the compatibility snapshot yet.";
+  }
+  const c = countWorkarounds(claimed);
+  return `Retires with its workarounds: ${c.stillNeeded} still needed, ${c.removable} removable${c.other > 0 ? `, ${c.other} only on some engines` : ""}.`;
+}
+
+/**
+ * `<Pulse />` as Markdown: each check's cadence, what it watches, its last results as words and
+ * what retires it. There is no next run: that is a live value the text cannot hold.
+ */
+function renderPulse(): string {
+  const out: string[] = [""];
+  for (const area of pulseAreas) {
+    out.push(`## ${area.heading}`, "", area.blurb, "");
+    for (const card of pulseCardsIn(area.id)) {
+      out.push(`### ${card.name}`, "");
+      const cron = card.crons[0];
+      if (cron === undefined) {
+        out.push("Runs with the Dox tests, never on a schedule.", "");
+      } else {
+        out.push(card.crons.map(cadenceText).join(" and ") + ".", "");
+        const runs = pulseRuns(card);
+        const lost = noSignal(runs, pulseRunsRead);
+        out.push(
+          lost !== null || runs === null || pulseRunsRead === null
+            ? `No signal: ${lost?.text ?? "Run history not read in this build"}.`
+            : beatsCaption(pulseBeats(cron, runs, pulseRunsRead)) + ".",
+          "",
+        );
+      }
+      for (const id of card.checkIds) {
+        const check = pulseCheck(id);
+        out.push(
+          `- **${check.name}.** ${check.watches} ${check.finds} ${pulseLife(check.life)}`,
+        );
+      }
+      out.push("");
+    }
+  }
+  return out.join("\n");
 }
 
 /**
@@ -541,12 +700,15 @@ export function renderMdxComponents(body: string): string {
   out = replaceElements(out, "LibraryCompare", renderLibraryCompare);
   out = replaceElements(out, "UpstreamDefects", renderUpstreamDefects);
   out = replaceElements(out, "UpstreamTracker", renderUpstreamTracker);
+  out = replaceElements(out, "Pulse", renderPulse);
   out = replaceElements(out, "UpstreamListings", renderUpstreamListings);
   out = replaceElements(out, "BundleSize", renderBundleSize);
   out = replaceElements(out, "PolyfillCompare", renderPolyfillCompare);
   out = replaceElements(out, "MigrationMap", renderMigrationMap);
   out = replaceElements(out, "BehaviourDiffs", renderBehaviourDiffs);
+  out = replaceElements(out, "TemporalMap", renderTemporalMap);
   out = replaceElements(out, "BehaviourMatrix", renderBehaviourMatrix);
+  out = replaceElements(out, "ZoneMatrix", renderZoneMatrix);
 
   // `SectionHeading` is an `<h2>` around its children, so it becomes one.
   out = replaceElements(
@@ -571,6 +733,24 @@ export function renderMdxComponents(body: string): string {
     out,
     "MoroccoClockChange",
     () => keyPointsMarkdown(MOROCCO_KEY_POINTS) + moroccoServersMarkdown(),
+  );
+  // The Sunshine Protection Act page: what the national proposal would do, the other national
+  // proposals, then the guidance cards.
+  out = replaceElements(
+    out,
+    "SunshineProtectionAct",
+    () =>
+      [
+        "",
+        "## What the national proposal would do",
+        "",
+        ...NATIONAL.effects.map((line) => `- ${line}`),
+        "",
+        `## ${OTHER_NATIONAL_HEADING}`,
+        "",
+        ...OTHER_NATIONAL.map((line) => `- ${line}`),
+        "",
+      ].join("\n") + keyPointsMarkdown(US_GUIDANCE),
   );
   out = replaceElements(out, "WhyDateAlternatives", renderWhyDateAlternatives);
 
@@ -606,7 +786,9 @@ export function renderMdxComponents(body: string): string {
     "DwellLedger",
     "EpcisEventReader",
     "EtaDrift",
+    "FhirDateChecker",
     "FreeTimeLedger",
+    "Hl7TimestampReader",
     "JourneySplit",
     "PunctualityBoard",
     "TimetableReader",
@@ -619,6 +801,17 @@ export function renderMdxComponents(body: string): string {
     "LeapSecondTimeline",
     "ElapsedVsClock",
     "StoredTimeAudit",
+    "Tai64nLogReader",
+    "FixTimestampReader",
+    "SsimDateReader",
+    "ReportTimeResolver",
+    "SwiftValueDateReader",
+    "GtfsTimeReader",
+    "GtfsServiceDayClock",
+    "GtfsTripBoard",
+    "PtpClockConverter",
+    "ScheduleChecker",
+    "OpeningHoursBoard",
     "HolidayRuleBuilder",
     "ObservanceComparator",
     "MovingFeasts",
@@ -629,6 +822,11 @@ export function renderMdxComponents(body: string): string {
     "LeapDayBirthday",
     "ExpiryCalculator",
     "DatabaseTimestampReader",
+    "TerrestrialTimeStack",
+    "JulianDayCounter",
+    "DoublePrecisionMeter",
+    "CcsdsTimeCodeDecoder",
+    "CodeBDayRuler",
   ]) {
     out = replaceElements(out, dropped, (props) =>
       props.caption ? `\n${props.caption}\n` : "",

@@ -14,6 +14,8 @@
 
 import { Temporal } from "@northguild/gmt";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import { exactOffsetText } from "./exact-offset";
+import type { DwellLib } from "./ledger-lib";
 import type { DayMark, PlateSpec, SeriesNumber } from "./ledger-widgets";
 
 export interface DwellLedgerArgs {
@@ -57,8 +59,8 @@ export const DWELL_PRESETS: readonly DwellPreset[] = [
     label: "23:00 → 01:00: two hours, two days",
     description:
       "A container gates in at 23:00 and out at 01:00 in Johannesburg. Two hours elapsed, and it was there on two local dates.",
-    entry: "2024-06-15T23:00:00+02:00[Africa/Johannesburg]",
-    exit: "2024-06-16T01:00:00+02:00[Africa/Johannesburg]",
+    entry: "2024-06-15T23:00:00+02:00",
+    exit: "2024-06-16T01:00:00+02:00",
     zone: "Africa/Johannesburg",
   },
   {
@@ -104,13 +106,18 @@ const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-/** The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone. */
+/**
+ * The instant an ISO string names, or NaN. Accepts `Z`, an offset, or a bracketed zone.
+ * A bracketed zone is read first: Temporal writes a zoned string's offset rounded to the
+ * minute (`1960-06-01T11:15:30-00:45[Africa/Monrovia]`), and only the zone gives back the
+ * exact `-00:44:30`. The offset alone would name a moment 30 seconds later.
+ */
 export function toEpochMs(iso: string): number {
   try {
-    return Temporal.Instant.from(iso).epochMilliseconds;
+    return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
   } catch {
     try {
-      return Temporal.ZonedDateTime.from(iso).epochMilliseconds;
+      return Temporal.Instant.from(iso).epochMilliseconds;
     } catch {
       return Number.NaN;
     }
@@ -149,8 +156,10 @@ const HAS_OFFSET =
  * A wall time with no offset (`2024-06-15T23:00:00`), read in `zone`.
  *
  * What a chat model sends when a reader says "23:00 in New York". It is not an
- * instant, so `dwellTime` would refuse it; reading it in the stated zone is what
- * the reader meant. `reject`, not `compatible`: a wall time inside a skipped
+ * instant, so the library would refuse it; reading it in the stated zone is what
+ * the reader meant. The result is an offset instant (`2024-06-15T23:00:00-04:00`):
+ * the offset fixes the moment, and the library's instant functions take no zone
+ * name after it. `reject`, not `compatible`: a wall time inside a skipped
  * hour is left as typed, and the widget's sentinel says why, rather than being
  * moved silently. Anything that already names an instant is returned unchanged.
  */
@@ -160,9 +169,10 @@ export function resolveWallTime(value: string, zone: string): string {
     return trimmed;
   }
   try {
-    return Temporal.PlainDateTime.from(trimmed)
-      .toZonedDateTime(zone, { disambiguation: "reject" })
-      .toString();
+    const zoned = Temporal.PlainDateTime.from(trimmed).toZonedDateTime(zone, {
+      disambiguation: "reject",
+    });
+    return exactOffsetText(zoned.toInstant(), zone);
   } catch {
     return trimmed;
   }
@@ -192,9 +202,11 @@ function snapMinutesFor(spanMs: number): number {
 export function createLedgerCanvas(
   startMs: number,
   endMs: number,
+  /** A snap of the tool's own, in minutes. Left out, it follows the span. */
+  snapOverride?: number,
 ): LedgerCanvas {
   const spanMs = Math.max(1, endMs - startMs);
-  const snapMinutes = snapMinutesFor(spanMs);
+  const snapMinutes = snapOverride ?? snapMinutesFor(spanMs);
   const snapMs = snapMinutes * MINUTE_MS;
   const clamp = (ms: number) => Math.max(startMs, Math.min(endMs, ms));
   return {
@@ -382,14 +394,16 @@ export function axisLabels(
 }
 
 /**
- * The string a dragged handle writes back: zoned in the grid zone when there
- * is one, so the reader sees the local time they dragged to, else a `Z` instant.
+ * The string a dragged handle writes back: an offset instant on the grid
+ * zone's clock when there is one, so the reader sees the local time they dragged
+ * to, else a `Z` instant. It never carries a zone name: the library's instant
+ * functions refuse one.
  */
 export function formatHandleValue(ms: number, zone: string | null): string {
   const instant = Temporal.Instant.fromEpochMilliseconds(ms);
   if (zone === null) return instant.toString();
   try {
-    return instant.toZonedDateTimeISO(zone).toString();
+    return exactOffsetText(instant, zone);
   } catch {
     return instant.toString();
   }
@@ -399,7 +413,7 @@ export function formatHandleValue(ms: number, zone: string | null): string {
 // Why null
 // ---------------------------------------------------------------------------
 
-type NullReason =
+export type NullReason =
   | "invalid-entry"
   | "invalid-exit"
   | "unknown-zone"
@@ -435,8 +449,11 @@ export function explainNull(
   zone: string,
   v: NullValidators,
 ): NullReason | null {
-  if (!v.isValidInstant(entry)) return "invalid-entry";
-  if (!v.isValidInstant(exit)) return "invalid-exit";
+  // `dwellTime` reads either end as an instant or as a zoned string.
+  const isMoment = (value: string) =>
+    v.isValidInstant(value) || v.isValidZonedDateTime(value);
+  if (!isMoment(entry)) return "invalid-entry";
+  if (!isMoment(exit)) return "invalid-exit";
   if (zone !== NO_ZONE) {
     if (!v.isValidTimeZone(zone)) return "unknown-zone";
   } else if (!v.isValidZonedDateTime(entry)) {
@@ -553,4 +570,115 @@ export function dwellPlates(
       ],
     },
   ];
+}
+
+// ---------------------------------------------------------------------------
+// Facts: every library call the redraw makes
+// ---------------------------------------------------------------------------
+
+/** The controls `dwellFacts` reads: the two times, the zone days are counted in, and a second zone. */
+export interface DwellInput {
+  entry: string;
+  exit: string;
+  /** `NO_ZONE` counts in the entry's own bracketed zone. */
+  zone: string;
+  /** `NO_ZONE` draws no comparison. */
+  compareZone: string;
+}
+
+/** The most local days `touchedDays` lists; a longer dwell is counted but not listed. */
+export const MAX_LISTED_DAYS = 366;
+
+export interface DwellFacts {
+  /** `dwellTime(entry, exit, zone)`, or `null`. */
+  result: DwellResult | null;
+  /** Why `result` is `null`; `null` when the dwell was read. */
+  reason: NullReason | null;
+  /**
+   * The local dates, `YYYY-MM-DD`, in the counting zone that the half-open dwell touches. `null`
+   * when there is no result, no zone to count in, or more than `MAX_LISTED_DAYS` days.
+   */
+  touchedDays: string[] | null;
+  /** The same instants counted in a second zone; `null` when none was asked for. */
+  compare: { zone: string; result: DwellResult | null } | null;
+}
+
+/**
+ * The local dates the half-open dwell `[entry, exit)` touches in `zone`, and a zero-length dwell
+ * touches the day it sits on: the rule `dayCells` marks and `dwellTime` counts with. `null` past
+ * `MAX_LISTED_DAYS` days or for a zone Temporal cannot read.
+ */
+export function touchedDates(
+  entryMs: number,
+  exitMs: number,
+  zone: string,
+): string[] | null {
+  if (Number.isNaN(entryMs) || Number.isNaN(exitMs) || exitMs < entryMs) {
+    return null;
+  }
+  const days: string[] = [];
+  try {
+    let day = Temporal.Instant.fromEpochMilliseconds(entryMs)
+      .toZonedDateTimeISO(zone)
+      .startOfDay();
+    // A day is touched while it starts before the exit; a dwell of no length touches its own day.
+    while (day.epochMilliseconds < exitMs || days.length === 0) {
+      if (days.length >= MAX_LISTED_DAYS) return null;
+      days.push(day.toPlainDate().toString());
+      day = day.add({ days: 1 }).startOfDay();
+    }
+  } catch {
+    return null;
+  }
+  return days;
+}
+
+/**
+ * What the WebMCP tool tells the agent beside `result`: why there is none, or why the dates are
+ * not listed. Only the tool calls it, because it reads `touchedDays`, which the mount never does.
+ */
+export function dwellNotes(state: DwellInput, facts: DwellFacts): string[] {
+  if (facts.reason) return [NULL_REASON_TEXT[facts.reason]];
+  if (
+    facts.result !== null &&
+    gridZone(state.entry, state.zone) !== null &&
+    facts.touchedDays === null
+  ) {
+    return [
+      `The dwell is longer than ${MAX_LISTED_DAYS} days, so its dates are not listed.`,
+    ];
+  }
+  return [];
+}
+
+/**
+ * The library calls the redraw makes, returned unchanged, with the days the dwell touched. The
+ * mount draws from this and the WebMCP tool answers with it, so the two cannot disagree. No DOM and
+ * no gmt import: `DwellLib` comes in from the caller.
+ */
+export function dwellFacts(state: DwellInput, lib: DwellLib): DwellFacts {
+  const { entry, exit, zone, compareZone } = state;
+  const result = lib.dwellTime(
+    entry,
+    exit,
+    zone === NO_ZONE ? undefined : zone,
+  );
+  const reason = result === null ? explainNull(entry, exit, zone, lib) : null;
+  const compare =
+    compareZone === NO_ZONE
+      ? null
+      : { zone: compareZone, result: lib.dwellTime(entry, exit, compareZone) };
+  return {
+    result,
+    reason,
+    compare,
+    // A getter, so the redraw that runs on every drag step never walks the days it does not
+    // read; JSON carries it, so the tool's answer holds them.
+    get touchedDays() {
+      const grid = gridZone(entry, zone);
+      return result === null || grid === null
+        ? null
+        : touchedDates(toEpochMs(entry), toEpochMs(exit), grid);
+    },
+  };
 }

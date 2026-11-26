@@ -1,64 +1,38 @@
-import { filingInGmt, filingStatus, listingStatus } from "./upstream-status";
+import { countLabel, countNoun, listingStatus } from "./upstream-status";
 
-describe("filingStatus", () => {
-  // A merged PR is also `closed` on GitHub; merged is the more specific state.
+describe("listingStatus", () => {
   it.each`
     kind       | state       | draft    | reviewDecision         | mergedAt        | expected
-    ${"pr"}    | ${"closed"} | ${false} | ${"APPROVED"}          | ${"2026-05-01"} | ${"Merged, not yet in a published release"}
-    ${"pr"}    | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed"}
-    ${"issue"} | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed"}
     ${"pr"}    | ${"open"}   | ${true}  | ${"APPROVED"}          | ${null}         | ${"Draft"}
-    ${"pr"}    | ${"open"}   | ${false} | ${"APPROVED"}          | ${null}         | ${"Approved"}
-    ${"pr"}    | ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${null}         | ${"Changes requested"}
-    ${"pr"}    | ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${null}         | ${"Open, awaiting review"}
     ${"pr"}    | ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open, awaiting review"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${null}         | ${"Open, awaiting review"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${null}         | ${"Changes requested"}
+    ${"pr"}    | ${"open"}   | ${false} | ${"APPROVED"}          | ${null}         | ${"Approved"}
+    ${"pr"}    | ${"closed"} | ${false} | ${"APPROVED"}          | ${"2026-11-05"} | ${"Merged"}
+    ${"pr"}    | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed without merging"}
     ${"issue"} | ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open"}
+    ${"issue"} | ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed"}
   `(
     "$kind state=$state draft=$draft review=$reviewDecision merged=$mergedAt is '$expected'",
     ({ kind, state, draft, reviewDecision, mergedAt, expected }) => {
       expect(
-        filingStatus({ kind, state, draft, reviewDecision, mergedAt }),
+        listingStatus({ kind, state, draft, reviewDecision, mergedAt }),
       ).toBe(expected);
     },
   );
 });
 
-describe("filingInGmt", () => {
-  it.each`
-    kind       | gmtGuard       | gmtNote         | pairsWith                          | label                   | handled
-    ${"issue"} | ${"someGuard"} | ${null}         | ${[]}                              | ${"Already handled"}    | ${true}
-    ${"pr"}    | ${"someGuard"} | ${"also noted"} | ${[]}                              | ${"Already handled"}    | ${true}
-    ${"issue"} | ${null}        | ${"n/a to GMT"} | ${[]}                              | ${"Doesn't affect GMT"} | ${true}
-    ${"pr"}    | ${null}        | ${null}         | ${[]}                              | ${"Fix filed upstream"} | ${false}
-    ${"issue"} | ${null}        | ${null}         | ${["tc39/proposal-temporal#3327"]} | ${"Fix filed upstream"} | ${false}
-    ${"issue"} | ${null}        | ${null}         | ${[]}                              | ${"Reported upstream"}  | ${false}
-  `(
-    "$kind guard=$gmtGuard note=$gmtNote pairsWith=$pairsWith is '$label' (handled=$handled)",
-    ({ kind, gmtGuard, gmtNote, pairsWith, label, handled }) => {
-      expect(filingInGmt({ kind, gmtGuard, gmtNote, pairsWith })).toEqual({
-        label,
-        handled,
-      });
-    },
-  );
-});
-
-describe("listingStatus", () => {
-  it.each`
-    state       | draft    | reviewDecision         | mergedAt        | expected
-    ${"open"}   | ${true}  | ${"APPROVED"}          | ${null}         | ${"Draft"}
-    ${"open"}   | ${false} | ${null}                | ${null}         | ${"Open, awaiting review"}
-    ${"open"}   | ${false} | ${"REVIEW_REQUIRED"}   | ${null}         | ${"Open, awaiting review"}
-    ${"open"}   | ${false} | ${"CHANGES_REQUESTED"} | ${null}         | ${"Changes requested"}
-    ${"open"}   | ${false} | ${"APPROVED"}          | ${null}         | ${"Approved"}
-    ${"closed"} | ${false} | ${"APPROVED"}          | ${"2026-11-05"} | ${"Merged"}
-    ${"closed"} | ${false} | ${null}                | ${null}         | ${"Closed without merging"}
-  `(
-    "state=$state draft=$draft review=$reviewDecision merged=$mergedAt is '$expected'",
-    ({ state, draft, reviewDecision, mergedAt, expected }) => {
-      expect(listingStatus({ state, draft, reviewDecision, mergedAt })).toBe(
-        expected,
-      );
-    },
-  );
+describe("countLabel", () => {
+  it.each([
+    [0, "0 maintainer replies"],
+    [1, "1 maintainer reply"],
+    [3, "3 maintainer replies"],
+  ])("names the noun for %i", (n, expected) => {
+    expect(countLabel(n, "maintainer reply", "maintainer replies")).toBe(
+      expected,
+    );
+    expect(
+      `${n} ${countNoun(n, "maintainer reply", "maintainer replies")}`,
+    ).toBe(expected);
+  });
 });

@@ -36,15 +36,14 @@ describe("clampDate", () => {
     },
   );
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // CORE-113 (#528): a plain date matches its exact pattern over the whole string, so an annotation of any kind (zone, calendar or elective) makes it invalid.
   it.each`
     value                    | min                           | max                         | expected
-    ${"2024-03-15[foo=bar]"} | ${"2024-03-01"}               | ${"2024-03-31"}             | ${"2024-03-15"}
-    ${"2024-02-15"}          | ${"2024-03-01[u-ca=iso8601]"} | ${"2024-03-31"}             | ${"2024-03-01"}
-    ${"2024-04-15"}          | ${"2024-03-01"}               | ${"2024-03-31[Asia/Tokyo]"} | ${"2024-03-31"}
+    ${"2024-03-15[foo=bar]"} | ${"2024-03-01"}               | ${"2024-03-31"}             | ${""}
+    ${"2024-02-15"}          | ${"2024-03-01[u-ca=iso8601]"} | ${"2024-03-31"}             | ${""}
+    ${"2024-04-15"}          | ${"2024-03-01"}               | ${"2024-03-31[Asia/Tokyo]"} | ${""}
   `(
-    "returns the canonical date for annotated input ($value in [$min, $max]) → $expected",
+    "returns an empty string for annotated input ($value in [$min, $max]) → '$expected'",
     ({ value, min, max, expected }) => {
       expect(clampDate(value, min, max)).toBe(expected);
     },

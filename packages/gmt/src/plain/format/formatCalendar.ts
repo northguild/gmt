@@ -1,12 +1,12 @@
+import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { cachedFormatter } from "../../internal/formatterCache";
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import { Temporal } from "../../internal/temporal";
 import { joinDateTimeConnector, normalizeDateTime } from "../../internal";
 import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
-import { isValidDateTime } from "../validate";
-import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendar`: the date-time the value is compared with, and the style of the
@@ -54,6 +54,11 @@ const ABS_DAY_THRESHOLD = 6;
  *   use `formatRelativeDateTime` for elapsed-time displays ("in 1 day").
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value ISO PlainDateTime string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -74,29 +79,27 @@ export function formatCalendar(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
-    if (!isValidDateTime(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = plainDateTimeOf(value);
+    if (target === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
+    const referenceOptionParsed = plainDateTimeOf(referenceOption);
+    if (referenceOption !== undefined && referenceOptionParsed === null)
       return "";
 
     try {
-      const target = Temporal.PlainDateTime.from(value);
-      const reference = referenceOption
-        ? Temporal.PlainDateTime.from(referenceOption)
-        : Temporal.Now.plainDateTimeISO();
+      const reference =
+        referenceOptionParsed ?? Temporal.Now.plainDateTimeISO();
 
       const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
       // "long"/"full" are outside the type but reachable from JS; their zone
       // name would describe the UTC anchor, not the value. Temporal's
       // PlainDateTime format drops timeZoneName (AdjustDateTimeStyleFormat).
-      // GetOption converts the value once (ToString), so `new String("long")`
-      // is mapped as "long" is; a symbol throws, and that is invalid input.
+      // The option is read once and must be a primitive string: a wrapped
+      // value such as `new String("long")` throws and is invalid input.
       const timeStyle = plainTimeStyle(
-        `${optionOrDefault(options.timeStyle, "short")}` as NonNullable<
-          FormatCalendarOptions["timeStyle"]
-        >,
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
 
       // Plain values carry no timezone. UTC is an arbitrary but stable anchor

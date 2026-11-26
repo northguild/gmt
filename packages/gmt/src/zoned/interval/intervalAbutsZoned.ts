@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { Temporal } from "../../internal/temporal";
-import { halfOpenAbuts, parseCalendarZonedValue } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { halfOpenAbuts } from "../../internal";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return true when two half-open zoned intervals `[start, end)` are exactly adjacent — one ends at
@@ -49,21 +49,15 @@ export function intervalAbutsZoned(
   // empty strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown
   // zones and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
   // RFC 9557 calendar annotations.
-  if (
-    !isValidCalendarZonedDateTime(aStart) ||
-    !isValidCalendarZonedDateTime(aEnd) ||
-    !isValidCalendarZonedDateTime(bStart) ||
-    !isValidCalendarZonedDateTime(bEnd)
-  ) {
+  const aSZdt = calendarZonedOf(aStart);
+  const aEZdt = calendarZonedOf(aEnd);
+  const bSZdt = calendarZonedOf(bStart);
+  const bEZdt = calendarZonedOf(bEnd);
+  if (aSZdt === null || aEZdt === null || bSZdt === null || bEZdt === null) {
     return false;
   }
 
   try {
-    const aSZdt = parseCalendarZonedValue(aStart);
-    const aEZdt = parseCalendarZonedValue(aEnd);
-    const bSZdt = parseCalendarZonedValue(bStart);
-    const bEZdt = parseCalendarZonedValue(bEnd);
-
     const aS = aSZdt.toInstant();
     const aE = aEZdt.toInstant();
     const bS = bSZdt.toInstant();

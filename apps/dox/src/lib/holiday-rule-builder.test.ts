@@ -19,7 +19,6 @@ import {
   easterLabel,
   isSeeded,
   ledgerHandoff,
-  literal,
   matchPreset,
   movedCount,
   permalinkOf,
@@ -35,6 +34,7 @@ import {
   weekendNames,
   yearOf,
 } from "./holiday-rule-builder";
+import { literal } from "./literal";
 import { readArgs as readLedgerArgs } from "./free-time-ledger";
 import { attributeRows, attributeRules } from "./holiday-widgets";
 import { encodeWidgetPermalink, seedFromLocation } from "./widget-permalink";

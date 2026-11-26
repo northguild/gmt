@@ -1,6 +1,5 @@
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
-import { isValidZonedDateTime } from "../validate/isValidZonedDateTime";
-import { zonedDateTimeFrom } from "../../internal";
+import { hasSecond60Field } from "../../internal/inputChecks";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Parse a zoned datetime and return the plain local datetime portion as an ISO plain datetime string.
@@ -16,12 +15,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseDateTimeFromZoned("invalid") // ""
  */
 export const parseDateTimeFromZoned = (value: string): string => {
-  if (!isValidZonedDateTime(value) || hasSecond60(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null || hasSecond60Field(value)) {
     return "";
   }
 
   try {
-    return zonedDateTimeFrom(value).toPlainDateTime().toString();
+    return zonedDateTime.toPlainDateTime().toString();
   } catch {
     return "";
   }

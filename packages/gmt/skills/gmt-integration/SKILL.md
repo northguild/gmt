@@ -7,11 +7,14 @@ description: >
   timestamps inside UUID, ULID, ObjectId, Snowflake and KSUID identifiers,
   Parquet INT96, Arrow and protobuf timestamps, TAI and the closed IERS
   leap-second table (taiMinusUtc, leapSecondsBetween, nextLeapSecond,
-  isLeapSecond, toTAI, fromTAI), and lint package selection (ESLint, Biome,
-  Oxlint). GNSS time is in gmt-gnss. Reads the docs site (llms.txt and each
-  page's .md twin) and the installed package's JSDoc for API details, and the
-  lint-package READMEs for lint setup; this skill is a routing pointer, not an
-  API dump.
+  isLeapSecond, toTAI, fromTAI, toTai64n, fromTai64n, toTT, fromTT, toTCG,
+  fromTCG, tcgMinusTt), Julian Date, Modified Julian Date and J2000 seconds
+  (toJulianDate, toModifiedJulianDate, toJ2000Seconds and their from and Parts
+  forms), CCSDS ASCII time codes A and B (parseCcsdsAscii*, formatCcsdsAscii*),
+  and lint package selection (ESLint, Biome, Oxlint). GNSS time is in gmt-gnss.
+  Reads the docs site (llms.txt and each page's .md twin) and the installed
+  package's JSDoc for API details, and the lint-package READMEs for lint setup;
+  this skill is a routing pointer, not an API dump.
 sources:
   - "northguild/gmt:apps/dox/src/content/docs/install.mdx"
   - "northguild/gmt:apps/dox/src/content/docs/guides/integration/app-integratio\
@@ -33,7 +36,7 @@ sources:
 metadata:
   type: composition
   library: "@northguild/gmt"
-  library_version: "1.21.0"
+  library_version: "1.23.1"
 ---
 
 # GMT Integration
@@ -105,10 +108,9 @@ which lint package to install for Date-ban enforcement.
      unsynchronized" marker. Check for `0n` yourself before trusting it as 1900.
    - .NET ticks name an instant only when `DateTimeKind` is `Utc`. `Local` and
      `Unspecified` ticks count wall-clock time.
-   - `toNanoseconds` and `isValidInstant` read the offset and do not validate a
-     bracketed zone annotation. One thing is read from it: an offset written to the
-     minute that is the zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`)
-     names the instant the zone gives.
+   - `toNanoseconds` and `isValidInstant` take exactly `Z` or a written offset
+     and nothing after it: a bracketed zone, calendar or other annotation
+     (`2024-06-15T10:00:00Z[Europe/London]`) makes the string invalid.
 6. **Leap seconds come from the built-in table, never a literal.** `timescale/`
    holds the IERS leap-second table as a closed record: 27 insertions, the last
    on 2016-12-31, and TAI − UTC stays 37 s for every later date, because UTC
@@ -120,11 +122,56 @@ which lint package to install for Date-ban enforcement.
    isLeapSecond("2024-06-15T12:34:60Z"); // false (hasSecond60 is the shape test)
    toTAI("2026-01-01T00:00:00Z"); // "2026-01-01T00:00:37 TAI"
    fromTAI("2017-01-01T00:00:36 TAI"); // "2016-12-31T23:59:60Z"
+   toTai64n("1992-06-02T08:06:43Z"); // "@400000002a2b2c2d00000000"
+   fromTai64n("@400000002a2b2c2d00000000"); // "1992-06-02T08:06:43Z"
+   toTT("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:09.184 TT"
+   toTCG("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:10.261661917 TCG"
+   fromTCG("2026-01-01T00:01:10.261661917 TCG"); // "2026-01-01T00:00:00Z"
+   tcgMinusTt("2026-01-01T00:00:00Z"); // 1.077661917
+   toJulianDateParts("2026-01-01T00:00:00.123456789Z"); // { jd1: 2461041, jd2: 0.5000014288980208 }
+   toJulianDate("2026-01-01T12:00:00Z"); // 2461042
+   toModifiedJulianDate("2000-01-01T00:00:00Z"); // 51544
+   toJ2000Seconds("2000-01-01T11:58:55.816Z"); // 0
+   fromJ2000Seconds(0); // "2000-01-01T11:58:55.816Z"
+   parseCcsdsAsciiA("1988-01-18T17:20:43.123456Z"); // "1988-01-18T17:20:43.123456Z"
+   parseCcsdsAsciiB("2024-366T12:00:00Z"); // "2024-12-31T12:00:00Z"
+   formatCcsdsAsciiA("2024-06-15T12:30:00.123456789+02:00", 6); // "2024-06-15T10:30:00.123456Z"
+   formatCcsdsAsciiB("2016-12-31T23:59:60Z"); // "2016-366T23:59:60Z"
    ```
+   - `toTai64n` and `fromTai64n` read and write the TAI64N labels of qmail,
+     daemontools and s6 logs. A label counts TAI seconds, so reading one as Unix
+     seconds is 37 s out today. `fromTai64n` takes 16, 24 or 32 hex digits, with
+     or without `@`, and drops TAI64NA attoseconds. Labels daemontools writes on
+     a UTC clock read 27 s early: `fromTai64n` does not correct that.
+   - `toTT` / `fromTT` and `toTCG` / `fromTCG` convert to and from Terrestrial
+     Time (TAI + 32.184 s) and Geocentric Coordinate Time, which runs ahead of
+     TT at a fixed rate. `tcgMinusTt` returns the gap in seconds, or `null`.
+     All floor to the nanosecond and return `""` before 1972.
+   - `toJulianDateParts` / `fromJulianDateParts` carry a Julian Date as two
+     doubles, `jd1` a whole number of days and `jd2` the fraction, and keep
+     the nanosecond. `toJulianDate` and `toModifiedJulianDate` return one
+     double, which is rounded: about 20 µs at today's JD, and the MJD keeps
+     more digits than the JD. Each `to*` has a `from*` that returns the UTC
+     instant. They take an optional scale (`"UTC"`, `"TAI"`, `"TT"`,
+     `"TCG"`). The default is `"UTC"`, except `toJ2000Seconds` and
+     `fromJ2000Seconds`, which default to `"TT"`, the scale J2000.0 is defined
+     in. A JD day starts at noon and an MJD day at midnight. On UTC every day
+     counts as one day, a leap-second day included. Any other scale, such as
+     `"TDB"`, returns the sentinel.
+   - `parseCcsdsAsciiA` / `formatCcsdsAsciiA` and `parseCcsdsAsciiB` /
+     `formatCcsdsAsciiB` read and write the CCSDS ASCII time codes (CCSDS
+     301.0-B-4). Code A names the day by calendar date
+     (`1988-01-18T17:20:43.123456Z`), Code B by day of year
+     (`1988-018T17:20:43.123456Z`). The code is UTC: `Z` is optional on input
+     and always written. A parser needs the seconds, keeps the fraction digits
+     as sent (up to nine, never rounded) and returns the instant as ISO 8601.
+     A formatter takes `fractionalSecondDigits` (`"auto"`, or 0 to 9; extra
+     digits are cut, never rounded). Second 60 is read and written only at an
+     inserted leap second. All four return `""` on input that does not fit.
    - Before 1972-01-01 TAI − UTC was fractional, so every function returns its
      sentinel there.
-   - `timescale/` and `gnss/` accept a second 60 only on a listed insertion
-     day (for `gnss/`, see the `gmt-gnss` skill), and may return `…T23:59:60Z`. Every other GMT function rejects `:60`,
+   - `timescale/`, `gnss/` and `finance/` accept a second 60 only on a listed insertion
+     day (for `gnss/`, see the `gmt-gnss` skill; for `finance/`, the `gmt-finance` skill), and may return `…T23:59:60Z`. Every other GMT function rejects `:60`,
      so do not pass that result on.
    - A smeared clock never reads `23:59:60` and is up to a second off UTC
      around an insertion. GMT cannot detect smearing.
@@ -180,13 +227,15 @@ the pattern.
   `precision/identifiers`, and bridge Parquet `INT96`, Arrow and protobuf values
   with the `precision/convert/` bridges.
 - **Atomic time at the boundary**: convert a TAI label to a UTC instant on the
-  way in (`fromTAI`), and back on the way out. GNSS time scales and weeks are in
+  way in (`fromTAI`, or `fromTai64n` for a log label), and back on the way out. GNSS time scales and weeks are in
   the `gmt-gnss` skill.
 
 ## Key functions
 
 - **Leap seconds and TAI** (`@northguild/gmt/timescale`): `taiMinusUtc`,
-  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`
+  `leapSecondsBetween`, `nextLeapSecond`, `isLeapSecond`, `toTAI`, `fromTAI`, `toTai64n`, `fromTai64n`, `toTT`, `fromTT`, `toTCG`, `fromTCG`, `tcgMinusTt`,
+  `toJulianDateParts`, `fromJulianDateParts`, `toJulianDate`, `fromJulianDate`,
+  `toModifiedJulianDate`, `fromModifiedJulianDate`, `toJ2000Seconds`, `fromJ2000Seconds`
 
 - **Identifiers** (`@northguild/gmt/precision/identifiers`): `fromUuidTimestamp`,
   `uuidV7TimestampPrefix`, `fromUlid`, `ulidTimestampPrefix`, `fromObjectId`,

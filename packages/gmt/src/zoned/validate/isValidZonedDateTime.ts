@@ -1,6 +1,4 @@
-import { hasZonedDateTimeShape } from "../../internal/isoStringBody";
-import { zonedDateTimeFrom } from "../../internal/zonedWallClock";
-import { hasSecond60 } from "../../plain/validate/hasSecond60";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Validate whether a string is a valid ISO 8601 zoned datetime string.
@@ -19,10 +17,9 @@ import { hasSecond60 } from "../../plain/validate/hasSecond60";
  *   `Temporal.ZonedDateTime.from` requires (`CheckISODaysRange`): a zoned string on
  *   −271821-04-19, which a zone west of Greenwich shows for the first hours of the instant
  *   range, is rejected although `isValidInstant` accepts it.
- * - Reads RFC 9557 annotations as `Temporal.ZonedDateTime.from` does: elective ones
- *   (`[foo=bar]`) are ignored and an unknown critical one (`[!foo=bar]`) is rejected.
- * - The calendar must be ISO: `[u-ca=iso8601]` is accepted, and a non-ISO calendar annotation is
- *   `isValidCalendarZonedDateTime`'s input.
+ * - The zone bracket is the only annotation: a calendar (`[u-ca=iso8601]`, `[u-ca=hebrew]`), an
+ *   elective one (`[foo=bar]`), an unknown critical one or a second bracket returns false.
+ *   `isValidCalendarZonedDateTime` reads the calendar.
  * - Returns false for an empty string.
  * - A value that is not a string, a `String` object included, returns `false`. A `true` result
  *   narrows an `unknown` value to `string`.
@@ -32,9 +29,9 @@ import { hasSecond60 } from "../../plain/validate/hasSecond60";
  *
  * @example isValidZonedDateTime("2024-02-29T12:34:56.789+00:00[UTC]") // true
  * @example isValidZonedDateTime("2024-06-30T23:59:60+00:00[UTC]") // false (leap second)
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]") // false (non-ISO calendar: use isValidCalendarZonedDateTime)
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]") // true
- * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]") // true (elective annotation ignored)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=hebrew]") // false (a calendar: use isValidCalendarZonedDateTime)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][u-ca=iso8601]") // false (a calendar: use isValidCalendarZonedDateTime)
+ * @example isValidZonedDateTime("2024-02-10T12:00:00+11:00[Australia/Sydney][foo=bar]") // false (elective annotation)
  * @example isValidZonedDateTime("20241003T143000+0530[Asia/Kolkata]") // false (basic format)
  * @example isValidZonedDateTime("2024-10-03 14:30:00+05:30[Asia/Kolkata]") // false (space separator)
  * @example isValidZonedDateTime("2024-10-03[Asia/Kolkata]") // false (no time)
@@ -52,21 +49,5 @@ export function isValidZonedDateTime(
 ): boolean;
 export function isValidZonedDateTime(value: unknown): value is string;
 export function isValidZonedDateTime(value: unknown): boolean {
-  if (typeof value !== "string" || value.length === 0) {
-    return false;
-  }
-
-  if (hasSecond60(value) || !hasZonedDateTimeShape(value)) {
-    return false;
-  }
-
-  try {
-    const zonedDateTime = zonedDateTimeFrom(value);
-    return (
-      zonedDateTime.timeZoneId.length > 0 &&
-      zonedDateTime.calendarId === "iso8601"
-    );
-  } catch {
-    return false;
-  }
+  return zonedDateTimeOf(value) !== null;
 }

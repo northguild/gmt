@@ -1,0 +1,60 @@
+---
+title: Terrestrial Time Stack
+description: One instant on UTC, TAI, TT and TCG, with the three gaps between UTC and TCG drawn as one bar and the growth of TCG minus TT plotted from 1972 to 9999.
+industries: [core]
+---
+
+import TerrestrialTimeStack from "../../../components/TerrestrialTimeStack.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="time scales">
+
+<Fragment slot="keypoint">
+
+An ephemeris takes TT, not UTC, as its time argument, and since 2017 the two are 69.184 seconds apart. TCG differs from TT by a rate: the gap was zero in 1977 and grows by about 22 milliseconds a year.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+Three offsets sit between a UTC timestamp and TCG, and each is a different kind of offset. TAI − UTC **steps**: it is a whole number of seconds that rises by one at each inserted second. TT − TAI is **constant**. TCG − TT **drifts**: it is negative before 1977, zero at the epoch IAU 2000 Resolution B1.9 fixes, and it grows for ever after. The tool draws them as one bar from UTC, a different pattern for each piece, with the size in words under every piece. It does not tell them apart by colour alone.
+
+The bar's scale is fixed from the first year to the last on the slider, so it never rescales while you drag. The drift lane under it plots TCG − TT across the same years, with a cursor at your year. The headline plate gives TT − UTC, the gap a UTC timestamp carries when it is passed as an ephemeris's TT argument, and the table writes the instant on all four scales and spells each label back to UTC.
+
+TT is the geocentric scale of Earth ephemerides. Barycentric work uses a different scale, TDB, which this tool does not show. Type a UTC instant, or paste a label that ends in `TAI`, `TT` or `TCG` after one space, such as `2026-01-01T00:01:09.184 TT`. The ending picks the scale the value is read on. Drag the slider to move to 1 January of any year from 1972 to 9999. The presets reach the dates around an inserted second.
+
+</Fragment>
+
+<TerrestrialTimeStack fullbleed />
+
+<Fragment slot="after">
+
+**To TT.** [`toTT`](/reference/timescale/convert/toTT/) writes a UTC instant as a TT label. TT is TAI plus a constant (IERS Technical Note 36, section 10.1), so the label is ahead of UTC by the leap-second steps plus that constant. It returns `""` before 1972, and for a second 60 on a day with no inserted second.
+
+**From TT.** [`fromTT`](/reference/timescale/convert/fromTT/) reads a TT label back to UTC. A label whose token is `TDT` or `ET` is refused, because those name TT's older predecessors and not TT.
+
+**To TCG.** [`toTCG`](/reference/timescale/convert/toTCG/) writes the instant on TCG. The label is TT's, plus the drift that IAU 2000 Resolution B1.9 defines, written to the nanosecond.
+
+**From TCG.** [`fromTCG`](/reference/timescale/convert/fromTCG/) reads a TCG label back to UTC, rounding toward the earlier nanosecond.
+
+**The drift.** [`tcgMinusTt`](/reference/timescale/calculate/tcgMinusTt/) returns TCG − TT in seconds at a UTC instant, or `null` before 1972. It is the number `toTCG` applies, so the lane and the table agree.
+
+```ts
+toTT("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:09.184 TT"
+toTCG("2026-01-01T00:00:00Z"); // "2026-01-01T00:01:10.261661917 TCG"
+tcgMinusTt("2026-01-01T00:00:00Z"); // 1.077661917
+tcgMinusTt("1976-12-31T23:59:45Z"); // 0
+tcgMinusTt("9999-01-01T00:00:00Z"); // 176.427468382
+tcgMinusTt("1971-01-01T00:00:00Z"); // null
+toTT("1971-01-01T00:00:00Z"); // ""
+fromTT("2026-01-01T00:01:09.184 TT"); // "2026-01-01T00:00:00Z"
+fromTCG("2026-01-01T00:01:10.261661917 TCG"); // "2026-01-01T00:00:00Z"
+```
+
+**Worth trying:** [A TT label](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%222026-01-01T00%3A01%3A09.184+TT%22%7D) — it reads back to midnight in UTC. [The same instant on TCG](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%222026-01-01T00%3A01%3A10.261661917+TCG%22%7D) — 1.08 seconds further on. [Where TCG and TT agree](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%221977-01-01T00%3A00%3A32.184+TT%22%7D) — the gap is zero. [The first day of integer UTC](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%221972-01-01T00%3A00%3A00Z%22%7D) — TCG reads behind TT. [Inside a leap second](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%222016-12-31T23%3A59%3A60Z%22%7D) — each scale has a label for it. [The year 9999](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%229999-01-01T00%3A00%3A00Z%22%7D) — the drift is larger than TT − UTC is today. [Before 1972](/tools/terrestrial-time-stack/?w=ttstack&wa=%7B%22value%22%3A%221971-12-31T23%3A59%3A59Z%22%7D) — the library answers `""` and `null`, and the tool shows `NO SIGNAL`.
+
+**Reference:** [`toTT`](/reference/timescale/convert/toTT/), [`fromTT`](/reference/timescale/convert/fromTT/), [`toTCG`](/reference/timescale/convert/toTCG/), [`fromTCG`](/reference/timescale/convert/fromTCG/) and [`tcgMinusTt`](/reference/timescale/calculate/tcgMinusTt/). The guide is [Leap Seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>

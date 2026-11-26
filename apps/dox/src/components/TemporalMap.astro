@@ -1,0 +1,11 @@
+---
+/**
+ * The list on /migrate/temporal/: each Temporal call beside the GMT function that matches it,
+ * then the clause of the proposal it follows. The rows are `data/temporal-map.ts`; the Markdown
+ * twin is `renderTemporalMap` in `src/lib/mdx-jsx.ts`.
+ */
+import CodePairs from "./CodePairs.astro";
+import { temporalPairs } from "../lib/migrate-view";
+---
+
+<CodePairs pairs={temporalPairs()} label="Temporal calls and their GMT code" />

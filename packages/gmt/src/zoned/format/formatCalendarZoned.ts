@@ -1,11 +1,13 @@
 import { Temporal } from "../../internal/temporal";
-import { zonedDateTimeFrom } from "../../internal";
+import {
+  zonedDateTimeFrom,
+  zonedDateTimeOf,
+} from "../../internal/zonedWallClock";
 import { formatCalendarDays } from "../../internal/formatCalendarDays";
-import { isValidUtc } from "../../utc/validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
-import { isValidZonedDateTime } from "../validate";
-import { optionOrDefault } from "../../internal/optionOrDefault";
-import { isObject } from "../../internal/isObject";
+import { stringOptionOrDefault } from "../../internal/typedOptions";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatCalendarZoned`: the moment the day label is measured from and the length of
@@ -40,6 +42,11 @@ export interface FormatCalendarZonedOptions {
  * calendar-day comparison and the rendered clock time.
  * - `options` must be an object or omitted: `null` or any other primitive returns `""`, as
  *   Temporal's GetOptionsObject rejects it.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value ZonedDateTime ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -60,24 +67,26 @@ export function formatCalendarZoned(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
-    if (!isValidZonedDateTime(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = zonedDateTimeOf(value);
+    if (target === null) return "";
 
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
     if (!isValidZonedFormatReference(referenceOption)) return "";
 
     try {
-      const target = zonedDateTimeFrom(value);
       const timeZone = target.timeZoneId;
 
       let reference: Temporal.ZonedDateTime;
       if (referenceOption === undefined) {
         reference = Temporal.Now.zonedDateTimeISO(timeZone);
       } else if (typeof referenceOption === "string") {
-        reference = isValidUtc(referenceOption)
-          ? Temporal.Instant.from(referenceOption).toZonedDateTimeISO(timeZone)
-          : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
+        const referenceInstant = utcInstantOf(referenceOption);
+        reference =
+          referenceInstant !== null
+            ? referenceInstant.toZonedDateTimeISO(timeZone)
+            : zonedDateTimeFrom(referenceOption).withTimeZone(timeZone);
       } else {
         reference =
           Temporal.Instant.fromEpochMilliseconds(
@@ -90,7 +99,7 @@ export function formatCalendarZoned(
         target.epochMilliseconds,
         timeZone,
         locale,
-        optionOrDefault(options.timeStyle, "short"),
+        stringOptionOrDefault(options.timeStyle, "short"),
       );
     } catch {
       return "";

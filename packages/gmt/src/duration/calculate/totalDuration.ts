@@ -1,9 +1,8 @@
 import type { DateTimeUnit } from "../../internal/temporalTypes";
-import { Temporal } from "../../internal/temporal";
 import { durationTotal, resolveDurationRelativeTo } from "../../internal";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, DurationRelativeTo } from "../../types";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -33,18 +32,17 @@ import { isOptionsArgument } from "../../internal/isObject";
  *   offset "reject", as Temporal does: an ambiguous wall time takes the earlier instant, a
  *   nonexistent one the later instant, and an offset that does not match the zone returns null.
  *   Pass an explicit offset to pick the other reading of an ambiguous wall time.
- * - A `relativeTo` string is ISO 8601 extended format before its first `[`:
- *   a date, a date-time, or with a time zone annotation a zoned date-time (`<date>T<time>`, then
- *   nothing, `Z` or `±HH:MM`). Basic format (`"20240101"`), a space or lower-case `t` separator, a
- *   lower-case `z`, a UTC offset without a zone and a zoned date without a time are invalid.
+ * - A `relativeTo` string is ISO 8601 extended format over the whole string, and nothing else:
+ *   a date, a date-time, or a zoned date-time (`<date>T<time>`, then nothing, `Z` or `±HH:MM`,
+ *   then one time zone annotation). Basic format (`"20240101"`), a space or lower-case `t`
+ *   separator, a lower-case `z`, a UTC offset without a zone and a zoned date without a time are
+ *   invalid, and so is a time zone annotation on a plain value.
  * - A `relativeTo` string takes a calendar in RFC 9557 form, as `convertDateToCalendar` and
- *   `convertZonedToCalendar` write it: ISO digits and a `[u-ca=<id>]` annotation, after the zone
- *   for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
- *   The annotations are read as Temporal reads them: the critical flag and the id's letter case
- *   are accepted, elective unknown annotations are ignored, the first `u-ca` names the calendar,
- *   and a string with a time zone annotation is zoned. An unknown critical annotation, a critical
- *   duplicate calendar, a calendar before the zone, an unsupported calendar and a leap second in
- *   any spelling return null.
+ *   `convertZonedToCalendar` write it: ISO digits and one `[u-ca=<id>]` annotation, after the
+ *   zone for a zoned string (`"2024-02-24[u-ca=hebrew]"`, `"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`).
+ *   The critical flag and the id's letter case are accepted. Any other annotation (an elective
+ *   `[foo=bar]`, a second `u-ca`, an unknown critical one), a calendar before the zone, an
+ *   unsupported calendar and a leap second in any spelling return null.
  *   Compatibility: before 1.16.0 the digits were read as the calendar's own year, month and day.
  * - `unit` accepts the plural or singular name (`"hours"` or `"hour"`), as Temporal does.
  * - Returns null on a non-duration `value`, an invalid `unit`, or an invalid `relativeTo`.
@@ -91,13 +89,15 @@ export function totalDuration(
 
   const resolvedUnit = resolveDurationUnit(unit);
 
-  if (!isValidDuration(value) || !isValidDateTimeDurationUnit(resolvedUnit)) {
+  const duration = durationOf(value);
+
+  if (duration === null || !isDateTimeDurationUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
     return durationTotal(
-      Temporal.Duration.from(value),
+      duration,
       resolvedUnit,
       resolveDurationRelativeTo(options?.relativeTo),
     );

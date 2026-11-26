@@ -1,0 +1,99 @@
+/*
+ * The zone-probe experiment slides (`ExperimentSlide.astro`, `ExperimentOpener.astro`).
+ * Breakage is the danger colour, GMT's zero is green; the example is a `gmt-deck-panel`
+ * (`slides.css`), a full bevelled border and never a one-sided accent. Counts are tabular and sit
+ * in fixed columns, so nothing shifts.
+ */
+.gmt-slide[data-layout="experiment"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+/* In the stage the whole slide is set smaller so nine rows, an example and a footnote fit. */
+:is(html[data-deck], [data-slide-stage]) .gmt-slide[data-layout="experiment"] {
+  padding-block: var(--gmt-deck-pad-safe);
+  gap: 0.3em;
+  line-height: 1.2;
+  font-size: var(--gmt-deck-text-sm);
+}
+
+.gmt-slide[data-layout="experiment"] > .gmt-slide-body {
+  display: contents;
+}
+
+/* The body is `display: contents`; its size rule would still reach the children. */
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="experiment"]
+  > .gmt-slide-body {
+  font-size: inherit;
+}
+
+.gmt-slide[data-layout="experiment"] .gmt-slide-title {
+  margin-block: 0;
+  font-size: max(1.4rem, 3.2cqi);
+}
+
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="experiment"]
+  .gmt-slide-title {
+  font-size: max(1.2rem, 2.1cqi);
+  line-height: 1.1;
+}
+
+.gmt-exp-kicker {
+  order: -1;
+  margin: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: max(0.75rem, 0.9em);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-exp-fed {
+  margin: 0;
+  color: var(--gmt-ice);
+}
+
+.gmt-exp-cases {
+  color: var(--gmt-ice-dim);
+  white-space: nowrap;
+}
+
+.gmt-exp-example {
+  display: grid;
+  gap: 0.15em;
+  margin: 0;
+  padding: 0.5em 0.8em;
+  font-size: max(0.75rem, 0.85em);
+}
+
+.gmt-exp-example-input {
+  font-family: var(--gmt-font-mono);
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-exp-wrong-answer {
+  color: var(--gmt-danger-ink);
+}
+
+.gmt-exp-right-answer {
+  color: var(--gmt-spring-ink);
+}
+
+.gmt-exp-example code {
+  white-space: nowrap;
+}
+
+:is(html[data-deck], [data-slide-stage])
+  :is(.gmt-exp-kicker, .gmt-exp-example, .gmt-exp-example code) {
+  font-size: 1em;
+}
+
+.gmt-exp-foot {
+  margin: auto 0 0;
+  font-size: var(--gmt-deck-text-fine);
+  line-height: 1.25;
+  color: var(--gmt-ice-dim);
+}

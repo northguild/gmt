@@ -1,7 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
-import { isValidTimeZone } from "../../zoned/validate/isValidTimeZone";
+import { instantOf } from "../../internal/instantNanoseconds";
+import { isZoneId } from "../../internal/inputChecks";
 
 /** What `crossingTime` returns: exact elapsed time plus the local view at either end. */
 export interface Crossing {
@@ -29,15 +28,10 @@ export interface Crossing {
  *   that actually elapsed; the local wall clocks at either end can be an hour apart from that.
  *   Hours is the largest unit, so the value never depends on a calendar.
  * - **`targetZone` is always the rendering zone.** `entry` and `exit` are anything
- *   `isValidInstant` accepts — `Z`, an offset, or an offset with a bracketed zone — and only the
- *   instant is read: a bracketed zone in the input is never the zone the result is rendered
- *   in. That is the one contract difference from `dwellTime`, whose zone may come from its
- *   entry's bracket.
- * - **The offset fixes each instant; a bracketed zone only resolves a rounded one.** An offset
- *   written to the minute that is the bracketed zone's sub-minute offset rounded
- *   (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the zone gives, as
- *   `Temporal.ZonedDateTime.from` reads it. A zone that does not exist, or that disagrees with
- *   the offset, is not checked and changes nothing.
+ *   `isValidInstant` accepts — `Z` or an offset, with no annotation of any kind — so a zone in
+ *   the input is never the zone the result is rendered in. That is the one contract difference
+ *   from `dwellTime`, whose zone may come from its entry's bracket.
+ * - **The offset fixes each instant.** An offset written with seconds is read exactly.
  * - `targetZone` is whatever `isValidTimeZone` accepts, which is what Temporal accepts: an IANA
  *   identifier, or a fixed offset such as `"+02:00"`, which observes no DST.
  * - GMT does not resolve a canal, lock or checkpoint code to a zone; the caller supplies the
@@ -50,8 +44,8 @@ export interface Crossing {
  *   `fromOffsetInstant({ instant, offset })` for the local time with its full offset and no
  *   bracket.
  *
- * @param entry ISO 8601 zoned datetime or instant string of entering the crossing
- * @param exit ISO 8601 zoned datetime or instant string of leaving it
+ * @param entry ISO 8601 instant string (`Z` or an offset, no annotation) of entering the crossing
+ * @param exit ISO 8601 instant string (`Z` or an offset, no annotation) of leaving it
  * @param targetZone IANA name or a UTC offset to the minute (what `isValidTimeZone` accepts) the
  *   crossing is read in
  * @returns exact duration and zone-local entry and exit, or null on invalid input
@@ -73,16 +67,16 @@ export function crossingTime(
 ): Crossing | null {
   try {
     // fallow-ignore-next-line code-duplication -- not delegated to dwellTime: its transition walk returns null past 10,000 transitions, a false null for a long crossing, and its calendar-day count is work crossingTime does not use
-    if (
-      !isValidInstant(entry) ||
-      !isValidInstant(exit) ||
-      !isValidTimeZone(targetZone)
-    ) {
+    const entryInstant = instantOf(entry);
+    if (entryInstant === null) {
       return null;
     }
 
-    const entryInstant = instantFrom(entry);
-    const exitInstant = instantFrom(exit);
+    const exitInstant = instantOf(exit);
+    if (exitInstant === null || !isZoneId(targetZone)) {
+      return null;
+    }
+
     if (Temporal.Instant.compare(entryInstant, exitInstant) > 0) {
       return null;
     }

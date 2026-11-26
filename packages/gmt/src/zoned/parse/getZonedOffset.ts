@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Extract the UTC offset from an ISO 8601 zoned datetime string.
@@ -18,12 +17,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example getZonedOffset("invalid") // ""
  */
 export function getZonedOffset(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    return zonedDateTimeFrom(value).offset;
+    return zonedDateTime.offset;
   } catch {
     return "";
   }

@@ -29,6 +29,17 @@ describe("badge", () => {
     expect(screen.getByText("Occurs twice: the earlier instant")).toBeVisible();
   });
 
+  it("draws an icon without adding to the word", async () => {
+    const a = renderHtml(
+      badge({ text: "Merged", tone: "purple", icon: "git-merge", fill: true }),
+    );
+    const word = screen.getByText("Merged");
+    expect(word).toBeVisible();
+    // The icon is decorative: the chip's accessible text is its word alone.
+    expect(word).toHaveTextContent(/^Merged$/);
+    await expectNoAxeViolations(a.host);
+  });
+
   it("escapes its text", () => {
     renderHtml(badge({ text: "<b>x</b>", tone: "neutral" }));
     expect(screen.getByText("<b>x</b>")).toBeInTheDocument();

@@ -64,8 +64,9 @@ const ROOTS = [
   join(REPO, "packages/gmt/src"),
 ];
 
-// Installed packages and the behaviour-matrix runner's bundled copy of GMT are not our source.
-const SKIPPED_DIRECTORIES = new Set(["node_modules", ".cache"]);
+// Installed packages, the behaviour-matrix runner's bundled copy of GMT and the suites the
+// zone-matrix runner clones into `.work/` are not our source.
+const SKIPPED_DIRECTORIES = new Set(["node_modules", ".cache", ".work"]);
 
 function walk(dir: string): string[] {
   if (!statSync(dir, { throwIfNoEntry: false })?.isDirectory()) return [];

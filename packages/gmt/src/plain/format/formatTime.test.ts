@@ -497,12 +497,11 @@ describe("formatTime with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: 20:05:00
-// with a 2-digit hour in en-US is "08:05 PM"; a second ToString would answer "numeric" and print
-// "8:05 PM".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatTime with an option that is an object", () => {
-  it("calls hour.toString() once and formats with its first answer, 2-digit", () => {
+  it("returns the sentinel for hour given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const hour = {
       toString() {
@@ -514,20 +513,25 @@ describe("formatTime with an option that is an object", () => {
       hour,
       minute: "2-digit",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "08:05 PM", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });
 
 // A plain time has no zone, so a "long" timeStyle is written without one (AdjustDateTimeStyleFormat
-// removes the zone field): 20:05:00 in en-US is "8:05:00 PM". The option is converted to the
-// string "long" before it is looked at, so a String object is treated as the string it holds;
-// 1.17 compared the object itself, missed, and wrote "8:05:00 PM UTC".
+// removes the zone field): 20:05:00 in en-US is "8:05:00 PM". A String object is not the string
+// the type names, so it is refused with the sentinel, where 1.17 treated it as the string it holds.
 describe("formatTime with a timeStyle that is a String object", () => {
-  it('formats 20:05:00 with timeStyle new String("long") as 8:05:00 PM, with no zone name', () => {
+  it('formats 20:05:00 with timeStyle "long" as 8:05:00 PM, with no zone name', () => {
+    expect(formatTime("20:05:00", "en-US", { timeStyle: "long" })).toBe(
+      "8:05:00 PM",
+    );
+  });
+
+  it('returns "" for 20:05:00 with timeStyle new String("long")', () => {
     expect(
       formatTime("20:05:00", "en-US", {
         timeStyle: new String("long"),
       } as never),
-    ).toBe("8:05:00 PM");
+    ).toBe("");
   });
 });

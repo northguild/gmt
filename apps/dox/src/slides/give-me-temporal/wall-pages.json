@@ -1,0 +1,32 @@
+[
+  {
+    "id": "moment",
+    "label": "Moment.js",
+    "url": "https://momentjs.com/",
+    "clock": true
+  },
+  {
+    "id": "luxon",
+    "label": "Luxon",
+    "url": "https://moment.github.io/luxon/",
+    "clock": true
+  },
+  {
+    "id": "date-fns",
+    "label": "date-fns",
+    "url": "https://date-fns.org/",
+    "clock": true
+  },
+  {
+    "id": "dayjs",
+    "label": "Day.js",
+    "url": "https://day.js.org/",
+    "clock": true
+  },
+  {
+    "id": "spacetime",
+    "label": "Spacetime",
+    "url": "https://spacetime.how/",
+    "clock": false
+  }
+]

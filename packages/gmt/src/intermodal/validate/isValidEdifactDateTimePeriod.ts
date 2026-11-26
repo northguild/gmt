@@ -1,5 +1,5 @@
 import type { EdifactDateTimePeriodFormat } from "../../types/edi";
-import { parseEdifactDateTimePeriod } from "../parse/parseEdifactDateTimePeriod";
+import { edifactDateTimePeriodText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a period
@@ -11,7 +11,7 @@ import { parseEdifactDateTimePeriod } from "../parse/parseEdifactDateTimePeriod"
  * | `719` | `CCYYMMDDHHMM-CCYYMMDDHHMM` | "A period of time which includes the century, year, month, day, hour and minute. Format of period to be given in actual message without hyphen." |
  *
  * - True exactly when `parseEdifactDateTimePeriod` returns a period for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - A period is valid in its wire form only, with no hyphen.
  * - A period whose end precedes its start is false; an end equal to its start is true.
  * - Checks the calendar as well as the shape: hour 24 and 29 February 2023 are false.
@@ -31,5 +31,5 @@ export function isValidEdifactDateTimePeriod(
   value: string,
   format: EdifactDateTimePeriodFormat,
 ): boolean {
-  return parseEdifactDateTimePeriod(value, format) !== null;
+  return edifactDateTimePeriodText(value, format) !== null;
 }

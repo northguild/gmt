@@ -1,0 +1,72 @@
+# trimmed excerpt of tzdata 2026e northamerica
+Rule	US	1918	1919	-	Mar	lastSun	2:00	1:00	D
+Rule	US	1918	1919	-	Oct	lastSun	2:00	0	S
+Rule	US	1942	only	-	Feb	9	2:00	1:00	W # War
+Rule	US	1945	only	-	Aug	14	23:00u	1:00	P # Peace
+Rule	US	1945	only	-	Sep	30	2:00	0	S
+Rule	US	1967	2006	-	Oct	lastSun	2:00	0	S
+Rule	US	1967	1973	-	Apr	lastSun	2:00	1:00	D
+Rule	US	1974	only	-	Jan	6	2:00	1:00	D
+Rule	US	1975	only	-	Feb	lastSun	2:00	1:00	D
+Rule	US	1976	1986	-	Apr	lastSun	2:00	1:00	D
+Rule	US	1987	2006	-	Apr	Sun>=1	2:00	1:00	D
+Rule	US	2007	max	-	Mar	Sun>=8	2:00	1:00	D
+Rule	US	2007	max	-	Nov	Sun>=1	2:00	0	S
+Rule	NYC	1920	only	-	Mar	lastSun	2:00	1:00	D
+Rule	NYC	1920	only	-	Oct	lastSun	2:00	0	S
+Rule	NYC	1921	1966	-	Apr	lastSun	2:00	1:00	D
+Rule	NYC	1921	1954	-	Sep	lastSun	2:00	0	S
+Rule	NYC	1955	1966	-	Oct	lastSun	2:00	0	S
+Zone America/New_York	-4:56:02 -	LMT	1883 Nov 18 17:00u
+			-5:00	US	E%sT	1920
+			-5:00	NYC	E%sT	1942
+			-5:00	US	E%sT	1946
+			-5:00	NYC	E%sT	1967
+			-5:00	US	E%sT
+Rule	Cuba	1928	only	-	Jun	10	0:00	1:00	D
+Rule	Cuba	1928	only	-	Oct	10	0:00	0	S
+Rule	Cuba	1940	1942	-	Jun	Sun>=1	0:00	1:00	D
+Rule	Cuba	1940	1942	-	Sep	Sun>=1	0:00	0	S
+Rule	Cuba	1945	1946	-	Jun	Sun>=1	0:00	1:00	D
+Rule	Cuba	1945	1946	-	Sep	Sun>=1	0:00	0	S
+Rule	Cuba	1965	only	-	Jun	1	0:00	1:00	D
+Rule	Cuba	1965	only	-	Sep	30	0:00	0	S
+Rule	Cuba	1966	only	-	May	29	0:00	1:00	D
+Rule	Cuba	1966	only	-	Oct	2	0:00	0	S
+Rule	Cuba	1967	only	-	Apr	8	0:00	1:00	D
+Rule	Cuba	1967	1968	-	Sep	Sun>=8	0:00	0	S
+Rule	Cuba	1968	only	-	Apr	14	0:00	1:00	D
+Rule	Cuba	1969	1977	-	Apr	lastSun	0:00	1:00	D
+Rule	Cuba	1969	1971	-	Oct	lastSun	0:00	0	S
+Rule	Cuba	1972	1974	-	Oct	8	0:00	0	S
+Rule	Cuba	1975	1977	-	Oct	lastSun	0:00	0	S
+Rule	Cuba	1978	only	-	May	7	0:00	1:00	D
+Rule	Cuba	1978	1990	-	Oct	Sun>=8	0:00	0	S
+Rule	Cuba	1979	1980	-	Mar	Sun>=15	0:00	1:00	D
+Rule	Cuba	1981	1985	-	May	Sun>=5	0:00	1:00	D
+Rule	Cuba	1986	1989	-	Mar	Sun>=14	0:00	1:00	D
+Rule	Cuba	1990	1997	-	Apr	Sun>=1	0:00	1:00	D
+Rule	Cuba	1991	1995	-	Oct	Sun>=8	0:00s	0	S
+Rule	Cuba	1996	only	-	Oct	 6	0:00s	0	S
+Rule	Cuba	1997	only	-	Oct	12	0:00s	0	S
+Rule	Cuba	1998	1999	-	Mar	lastSun	0:00s	1:00	D
+Rule	Cuba	1998	2003	-	Oct	lastSun	0:00s	0	S
+Rule	Cuba	2000	2003	-	Apr	Sun>=1	0:00s	1:00	D
+Rule	Cuba	2004	only	-	Mar	lastSun	0:00s	1:00	D
+Rule	Cuba	2006	2010	-	Oct	lastSun	0:00s	0	S
+Rule	Cuba	2007	only	-	Mar	Sun>=8	0:00s	1:00	D
+Rule	Cuba	2008	only	-	Mar	Sun>=15	0:00s	1:00	D
+Rule	Cuba	2009	2010	-	Mar	Sun>=8	0:00s	1:00	D
+Rule	Cuba	2011	only	-	Mar	Sun>=15	0:00s	1:00	D
+Rule	Cuba	2011	only	-	Nov	13	0:00s	0	S
+Rule	Cuba	2012	only	-	Apr	1	0:00s	1:00	D
+Rule	Cuba	2012	max	-	Nov	Sun>=1	0:00s	0	S
+Rule	Cuba	2013	max	-	Mar	Sun>=8	0:00s	1:00	D
+Rule	Detroit	1948	only	-	Apr	lastSun	2:00	1:00	D
+Rule	Detroit	1948	only	-	Sep	lastSun	2:00	0	S
+Zone America/Detroit	-5:32:11 -	LMT	1905
+			-6:00	-	CST	1915 May 15 2:00
+			-5:00	-	EST	1942
+			-5:00	US	E%sT	1946
+			-5:00	Detroit	E%sT	1967 Jun 14 0:01
+			-5:00	US	E%sT

@@ -1,12 +1,8 @@
 import { Temporal } from "./temporal";
-import { isValidZonedDateTime } from "../zoned/validate/isValidZonedDateTime";
 import { parseInstantNanoseconds } from "./instantNanoseconds";
-import { EXTENDED_UTC_OFFSET, TIME_ZONE_ANNOTATION } from "./isoStringBody";
+import { EXTENDED_UTC_OFFSET, hasZonedInstantShape } from "./isoStringBody";
 import { wallClockAtOffset } from "./wallClockAtOffset";
-import {
-  utcOffsetStringNanoseconds,
-  zonedDateTimeFrom,
-} from "./zonedWallClock";
+import { utcOffsetStringNanoseconds, zonedDateTimeOf } from "./zonedWallClock";
 
 /**
  * How an exact moment was written, so a result can be written the same way: in a named zone
@@ -21,19 +17,11 @@ export type MomentNotation =
 export type ExactMoment = { nanoseconds: bigint; notation: MomentNotation };
 
 /**
- * Trailing `Z` or extended offset of an instant string, before any annotation. The offset grammar
+ * Trailing `Z` or extended offset of an instant string. The offset grammar
  * is `isValidInstant`'s own (`EXTENDED_UTC_OFFSET`), so every offset it accepts, `,` fractions
  * included, is captured as written.
  */
-const trailingOffset = new RegExp(
-  `(Z|${EXTENDED_UTC_OFFSET})(?:\\[[^\\]]*\\])*$`,
-);
-
-/**
- * A time-zone annotation anywhere in the string (`TIME_ZONE_ANNOTATION`). Every `key=value`
- * bracket is a tagged annotation, which the instant parse already decides.
- */
-const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
+const trailingOffset = new RegExp(`(Z|${EXTENDED_UTC_OFFSET})$`);
 
 /**
  * Read an exact moment the way `transitTime` reads a departure, or `null`.
@@ -52,9 +40,9 @@ const zoneAnnotation = new RegExp(TIME_ZONE_ANNOTATION);
  * - A string that names a zone the zoned read rejects is `null`; it never falls back to its
  *   offset. That includes a zoned string whose local date is −271821-04-19, which
  *   `Temporal.ZonedDateTime.from` refuses although its instant is in range.
- * - Otherwise an instant (`Z` or an offset) as `parseInstantNanoseconds` reads it: calendar and
- *   elective annotations are ignored and a critical unknown one is rejected. Its offset text is
- *   kept exactly as written, sub-minute and `,` fractions included.
+ * - Otherwise an instant (`Z` or an offset) as `parseInstantNanoseconds` reads it, with no
+ *   annotation of any kind (a bracket that is not a valid zoned string is `null`). Its offset text
+ *   is kept exactly as written, sub-minute and `,` fractions included.
  *
  * @param value candidate zoned datetime or instant string
  * @returns the moment's epoch nanoseconds and notation, or null on invalid input
@@ -69,17 +57,13 @@ export function readExactMoment(value: unknown): ExactMoment | null {
   }
 
   try {
-    if (isValidZonedDateTime(value)) {
-      const zoned = zonedDateTimeFrom(value);
+    const zoned = zonedDateTimeOf(value);
+    if (zoned !== null) {
       return {
         nanoseconds: zoned.epochNanoseconds,
         notation: { kind: "zone", timeZone: zoned.timeZoneId },
       };
     }
-    if (zoneAnnotation.test(value)) {
-      return null;
-    }
-
     const nanoseconds = parseInstantNanoseconds(value);
     if (nanoseconds === null) {
       return null;
@@ -89,6 +73,41 @@ export function readExactMoment(value: unknown): ExactMoment | null {
       nanoseconds,
       notation: offset === "Z" ? { kind: "utc" } : { kind: "offset", offset },
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the instant of a zoned string that writes its offset: exactly the shape `cutoffAt`
+ * writes, `<date>T<time>±HH:MM[Zone]` (an offset or `Z`, then one time zone bracket, the
+ * critical `[!Zone]` included, and nothing after it).
+ *
+ * - The bracket must name a real zone that agrees with the offset, as `readExactMoment` reads
+ *   it. A bracket that is itself an offset (`[+02:00]`) is a time zone to GMT
+ *   (`isValidTimeZone("+02:00")`) and is read; `cutoffAt` writes it for an offset `timeZone`.
+ * - A bare instant (`Z` or an offset with no bracket) is a different kind and is `null`, as is
+ *   a wall time with no offset (it names no moment) and any other annotation.
+ *
+ * @param value candidate zoned datetime string
+ * @returns the moment's instant, or null on invalid input
+ *
+ * @example zonedInstantOf("2024-06-12T17:00:00+02:00[Europe/Amsterdam]")?.toString() // "2024-06-12T15:00:00Z"
+ * @example zonedInstantOf("2024-06-12T17:00:00+02:00[!Europe/Amsterdam]")?.toString() // "2024-06-12T15:00:00Z"
+ * @example zonedInstantOf("2024-06-12T17:00:00+02:00") // null
+ * @example zonedInstantOf("2024-06-12T17:00:00+02:00[+02:00]")?.toString() // "2024-06-12T15:00:00Z"
+ * @example zonedInstantOf("2024-06-12T17:00:00[Europe/Amsterdam]") // null
+ */
+export function zonedInstantOf(value: unknown): Temporal.Instant | null {
+  if (typeof value !== "string" || !hasZonedInstantShape(value)) {
+    return null;
+  }
+  try {
+    const zoned = zonedDateTimeOf(value);
+    if (zoned === null) {
+      return null;
+    }
+    return zoned.toInstant();
   } catch {
     return null;
   }

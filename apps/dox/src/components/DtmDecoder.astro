@@ -46,6 +46,7 @@ const html = renderDtmDecoderTemplate("dtm-decoder", {}).value;
   import { mountDtmDecoder } from "../lib/dtm-decoder-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     /* A `?w=dtm&wa=` permalink seeds the widget with the values it names; see
@@ -59,5 +60,9 @@ const html = renderDtmDecoderTemplate("dtm-decoder", {}).value;
           (error) => showUnavailable(el, error),
         );
       });
+    void offerPageTool(
+      "dtm-decoder",
+      () => import("../lib/webmcp/tools/dtm-decoder"),
+    );
   }
 </script>

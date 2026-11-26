@@ -55,6 +55,7 @@ describe("assets.run_worker_first", () => {
     "/gmt/reference/",
     "/gmt/nope/",
     "/gmt/llms.txt",
+    "/gmt/reference/zoned/llms.txt",
     "/gmt/install.md",
     "/gmt/_astro/a.css",
     "/gmt/404.html",

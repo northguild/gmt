@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -41,10 +40,10 @@ export function convertUtcToPlainTime(
     const frame = normalizeZoneFrame(options?.timeZone);
 
     if (frame === null) return "";
-    if (!isValidUtc(value)) return "";
+    const instant = utcInstantOf(value);
+    if (instant === null) return "";
 
     try {
-      const instant = Temporal.Instant.from(value);
       const wallClock = frameWallClock(instant, frame);
       return `${wallClock.hour.toString().padStart(2, "0")}:${wallClock.minute
         .toString()

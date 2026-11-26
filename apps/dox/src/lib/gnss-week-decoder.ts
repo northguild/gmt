@@ -25,6 +25,7 @@
  * by their RINEX tokens (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`).
  */
 
+import { Temporal } from "@northguild/gmt";
 import { runCall, type EdiCall } from "./edi-widgets";
 import { toEpochMs } from "./dwell-ledger";
 import {
@@ -748,6 +749,9 @@ function blankRead(state: GnssDecoderState): GnssRead {
     calls: { reading: [], counters: [], rinex: [] },
   };
 }
+
+/** The reader's clock as a UTC instant: what `readGnss` is given as `nowIso`. */
+export const clockNow = (): string => Temporal.Now.instant().toString();
 
 /**
  * Read the library for `state`. `nowIso` is the reader's clock, read once per

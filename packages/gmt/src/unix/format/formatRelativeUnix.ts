@@ -9,7 +9,7 @@ import { resolveUnixFormatReference } from "../../internal/unixFormatReference";
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeUnix`: the wording of the phrase, the unit and rounding of the
@@ -118,7 +118,7 @@ export function formatRelativeUnix(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
     const epochUnit = resolveUnixEpochUnit(options.epochUnit);
     if (epochUnit === null) return "";
     const frame = normalizeZoneFrame(options.timeZone);

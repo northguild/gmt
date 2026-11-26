@@ -1,7 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { getLocaleFirstDayOfWeek } from "../../internal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the locale-relative day-of-week index for `value`.
@@ -30,13 +29,13 @@ export function getLocaleDayOfWeek(
   value: string,
   locale: string | string[],
 ): number | null {
-  if (!isValidDate(value)) return null;
+  const date = plainDateOf(value);
+  if (date === null) return null;
 
   const firstDay = getLocaleFirstDayOfWeek(locale);
   if (firstDay === null) return null;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return (date.dayOfWeek - firstDay + 7) % 7;
   } catch {
     return null;

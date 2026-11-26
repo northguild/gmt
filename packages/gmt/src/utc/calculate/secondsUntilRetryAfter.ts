@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { wholeSecondsUntil } from "../../internal/lengthFromNow";
-import { parseHttpDate } from "../parse/parseHttpDate";
+import { httpDateInstantOf } from "../../internal/httpDateFields";
 
 // RFC 9110 section 10.2.3: delay-seconds = 1*DIGIT. `\d` is ASCII-only in ECMA-262, and
 // `$` without the `m` flag does not match before a trailing newline.
@@ -45,15 +45,12 @@ export function secondsUntilRetryAfter(value: string): number | null {
       return Number.isSafeInteger(delay) ? delay : null;
     }
 
-    const utc = parseHttpDate(value);
-    if (utc === "") {
+    const instant = httpDateInstantOf(value);
+    if (instant === null) {
       return null;
     }
 
-    return wholeSecondsUntil(
-      Temporal.Instant.from(utc),
-      Temporal.Now.instant(),
-    );
+    return wholeSecondsUntil(instant, Temporal.Now.instant());
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
     return null;

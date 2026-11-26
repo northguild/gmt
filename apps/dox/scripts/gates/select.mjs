@@ -14,7 +14,10 @@
  * - A changed gate script selects that gate on the sample (`gateScripts` names the scripts and the data files a gate reads).
  * - Any other `apps/dox/` file that no page's closure holds selects the sample, never nothing: a
  *   component the chrome imports, a generator of the `/reference/` pages, a file in `public/`.
- * - Over `CAP` pages, only the sample and `CAP_REST` evenly picked others are kept.
+ * - Over `CAP` pages, only the sample and `CAP_REST` evenly picked others are kept, plus one
+ *   reached page for each gate (`gatePages`) that would otherwise be left with none: a gate with
+ *   few pages, such as `slides-check` and its decks, is never skipped because the cap fell on
+ *   other pages.
  */
 
 export const CAP = 12;
@@ -30,7 +33,7 @@ const CHROME_COMPONENTS = new Set([
   "Header",
   "Footer",
   "ThemeProvider",
-  "ThemeSelect",
+  "SettingsControl",
   "Hero",
   "PageTitle",
   "Sidebar",
@@ -45,9 +48,14 @@ const RUNNER_PREFIXES = [
   "apps/dox/scripts/lib/",
 ];
 
-/** Whether a changed file is worth a build at all (the early exit). */
+/**
+ * Whether a changed file is worth a build at all (the early exit). A test file (any
+ * `*.test.{js,mjs,cjs,ts,mts,cts,jsx,tsx}`) and a test helper under `apps/dox/src/test/` never
+ * ship, and only test files import them, so neither selects a page.
+ */
 export function isRelevant(file) {
-  if (file.endsWith(".test.ts")) return false;
+  if (/\.test\.[cm]?[jt]sx?$/.test(file)) return false;
+  if (file.startsWith("apps/dox/src/test/")) return false;
   return (
     file.startsWith("apps/dox/") ||
     file.startsWith("packages/gmt/src/") ||
@@ -73,13 +81,15 @@ export function pickEvenly(list, count) {
 }
 
 /**
- * `gateScripts` maps a script file name to its gate id.
+ * `gateScripts` maps a script file name to its gate id. `gatePages` maps a gate id to the pages
+ * it lists (`--list-pages`), for the cap.
  *
  * @param {{
  *   changed: string[],
  *   pages: { path: string, file: string, closure: string[], gmt: string[] }[],
  *   sample: string[],
  *   gateScripts?: Record<string, string>,
+ *   gatePages?: Record<string, string[]>,
  *   all?: boolean,
  * }} input
  */
@@ -88,6 +98,7 @@ export function selectPages({
   pages,
   sample,
   gateScripts = {},
+  gatePages = {},
   all = false,
 }) {
   const known = new Set(pages.map((p) => p.path));
@@ -147,6 +158,14 @@ export function selectPages({
     const kept = [
       ...new Set([...sampleHere, ...pickEvenly(rest, CAP_REST)]),
     ].sort();
+    for (const [gate, listed] of Object.entries(gatePages)) {
+      const reached = listed.filter((p) => selected.includes(p)).sort();
+      if (reached.length > 0 && !reached.some((p) => kept.includes(p))) {
+        kept.push(reached[0]);
+        why(reached[0], `cap: kept for ${gate}`);
+      }
+    }
+    kept.sort();
     capped = { from: selected.length, to: kept.length };
     for (const p of kept) {
       if (!inSample.includes(p) && !reasons.has(p)) why(p, "cap");

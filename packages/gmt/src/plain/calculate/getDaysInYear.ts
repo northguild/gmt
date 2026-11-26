@@ -1,6 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return the number of days in the calendar year containing `value`.
@@ -19,10 +17,10 @@ import { isValidDate } from "../validate";
  * @example getDaysInYear("invalid") // null
  */
 export function getDaysInYear(value: string): number | null {
-  if (!isValidDate(value)) return null;
+  const date = plainDateOf(value);
+  if (date === null) return null;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.daysInYear;
   } catch {
     return null;

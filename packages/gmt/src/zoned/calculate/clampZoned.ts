@@ -1,7 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Restrict `value` to the range [`min`, `max`] in zoned datetime space.
@@ -23,19 +22,14 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example clampZoned("invalid", "2024-03-01T00:00:00+00:00[UTC]", "2024-03-31T23:59:59+00:00[UTC]") // ""
  */
 export function clampZoned(value: string, min: string, max: string): string {
-  if (
-    !isValidZonedDateTime(value) ||
-    !isValidZonedDateTime(min) ||
-    !isValidZonedDateTime(max)
-  ) {
+  const v = zonedDateTimeOf(value);
+  const mn = zonedDateTimeOf(min);
+  const mx = zonedDateTimeOf(max);
+  if (v === null || mn === null || mx === null) {
     return "";
   }
 
   try {
-    const v = zonedDateTimeFrom(value);
-    const mn = zonedDateTimeFrom(min);
-    const mx = zonedDateTimeFrom(max);
-
     if (Temporal.ZonedDateTime.compare(mn, mx) === 1) {
       return "";
     }

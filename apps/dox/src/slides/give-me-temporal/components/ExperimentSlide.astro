@@ -1,0 +1,56 @@
+---
+/**
+ * One zone-probe experiment as a slide, read from `data/zone-probe.json` by its id (`gaps`,
+ * `overlaps`, `host`, `odd`). Top to bottom: "Experiment N", the question in large type, one line on
+ * what was fed in, a `BarRows` bar per library with the wrong count large, one example, and the footnote.
+ * Breakage is in the danger colour and GMT's zero is green; GMT stays in the list. A library that
+ * answered nothing wrong shows a green "0" and an empty bar. The slide's title is the question; the
+ * kicker above it is moved up by `experiment-slide.css`. The default slot takes the slide's notes.
+ */
+import { experimentViews, probeFootnote } from "~/data/zone-probe";
+import Slide from "~/components/slides/Slide.astro";
+import BarRows, { type BarRow } from "~/components/slides/BarRows.astro";
+import "./experiment-slide.css";
+
+interface Props {
+  /** The experiment's id in `zone-probe.json`. */
+  experiment: string;
+  /** The slide's anchor. Defaults to `experiment-<id>`. */
+  id?: string;
+  minutes: number;
+  place?: string;
+  plainClock?: boolean;
+}
+
+const { experiment, id, minutes, place, plainClock } = Astro.props;
+const view = experimentViews().find((v) => v.id === experiment);
+if (!view) throw new Error(`ExperimentSlide: no experiment "${experiment}" in zone-probe.json`);
+const total = view.cases.toLocaleString("en");
+const example = view.example;
+const rows: BarRow[] = view.rows.map((row) => ({
+  name: row.name,
+  share: row.share,
+  value: row.wrong.toLocaleString("en"),
+  note: `of ${row.total.toLocaleString("en")}`,
+  clean: row.wrong === 0,
+}));
+---
+
+<Slide id={id ?? `experiment-${view.id}`} title={view.question} minutes={minutes} place={place} plainClock={plainClock} layout="experiment">
+  <p class="gmt-exp-kicker">Experiment {view.number}</p>
+  <p class="gmt-exp-fed">{view.fed} <span class="gmt-exp-cases">{total} cases.</span></p>
+<BarRows label="Wrong answers per library" noteLead=" wrong " rows={rows} />
+{
+  example && (
+    <p class="gmt-exp-example gmt-deck-panel">
+      <span class="gmt-exp-example-input">{example.input}</span>
+      <span class="gmt-exp-example-line">
+        {example.name} says <code class="gmt-exp-wrong-answer">{example.answer}</code>, the right
+        answer is <code class="gmt-exp-right-answer">{example.expected}</code>
+      </span>
+    </p>
+  )
+}
+<p class="gmt-exp-foot" data-fine-print>{probeFootnote()}</p>
+  <slot />
+</Slide>

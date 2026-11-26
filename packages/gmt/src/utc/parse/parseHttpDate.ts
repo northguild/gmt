@@ -1,10 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { ENGLISH_MONTH_NAMES, ENGLISH_WEEKDAY_NAMES } from "../../internal";
-import {
-  type HttpDateFields,
-  readObsoleteHttpDate,
-} from "../../internal/httpDateFields";
-import { httpDate } from "../../regex";
+import { httpDateInstantOf } from "../../internal/httpDateFields";
 
 /**
  * Parse an HTTP header date — the RFC 9110 HTTP-date that headers like
@@ -57,51 +51,5 @@ import { httpDate } from "../../regex";
  * @example parseHttpDate("not a date") // ""
  */
 export function parseHttpDate(value: string): string {
-  if (typeof value !== "string") return "";
-
-  try {
-    const fields = readHttpDate(value);
-    if (fields === null) return "";
-
-    const plainDateTime = Temporal.PlainDateTime.from(
-      {
-        year: fields.year,
-        month: fields.month,
-        day: fields.day,
-        hour: fields.hour,
-        minute: fields.minute,
-        second: fields.second,
-      },
-      { overflow: "reject" },
-    );
-    // RFC 9110 gives day-name RFC 5322's semantics: "the day-of-week (if
-    // included) MUST be the day implied by the date".
-    if (fields.dayOfWeek !== plainDateTime.dayOfWeek) return "";
-
-    return plainDateTime.toZonedDateTime("UTC").toInstant().toString();
-  } catch {
-    return "";
-  }
-}
-
-function readHttpDate(value: string): HttpDateFields | null {
-  const match = httpDate.exec(value);
-  if (match === null) return readObsoleteHttpDate(value);
-
-  const [, dayName, day, month, year, hour, minute, second] = match;
-  return {
-    dayOfWeek:
-      ENGLISH_WEEKDAY_NAMES.indexOf(
-        dayName as (typeof ENGLISH_WEEKDAY_NAMES)[number],
-      ) + 1,
-    year: Number(year),
-    month:
-      ENGLISH_MONTH_NAMES.indexOf(
-        month as (typeof ENGLISH_MONTH_NAMES)[number],
-      ) + 1,
-    day: Number(day),
-    hour: Number(hour),
-    minute: Number(minute),
-    second: Number(second),
-  };
+  return httpDateInstantOf(value)?.toString() ?? "";
 }

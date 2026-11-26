@@ -6,6 +6,10 @@
   "entry": [
     "packages/gmt/src/test/nativeTemporal.ts",
     "scripts/lib/native-suite-reporter.mjs",
+    // The weekly D23/D24 locale sweep (CORE-112), run by hand or from a workflow.
+    "scripts/canary/weekYear.mjs",
+    // The weekly D29 range sweep (CORE-112); it starts itself as a child process.
+    "scripts/canary/rangeFields.mjs",
     "packages/gmt/bench/*.bench.ts",
     "packages/gmt/src/test/*.browser.ts",
     "packages/gmt/src/test/boundedWorker.ts",
@@ -20,7 +24,11 @@
     "gmt-js-temporal-release",
   ],
   // The behaviour-matrix runner has its own package.json and lockfile outside the workspace.
-  "ignorePatterns": ["oxlint.config.js", "scripts/behaviour-matrix/**"],
+  "ignorePatterns": [
+    "oxlint.config.js",
+    "scripts/behaviour-matrix/**",
+    "scripts/zone-matrix/**",
+  ],
   "ignoreUnresolvedImports": ["./packages/gmt-oxlint/dist/index.js"],
   "ignoreExports": [
     {
@@ -44,6 +52,54 @@
     "maxCrap": 30,
     "maxUnitSize": 60,
     "thresholdOverrides": [
+      {
+        "files": ["packages/gmt/src/internal/weekYearRange.ts"],
+        "functions": [
+          "farRange",
+          "shiftYears",
+          "digitsMatch",
+          "computeShift",
+          "movedLikeYear",
+          "signOf",
+        ],
+        "maxCrap": 70,
+        "reason": "D24 range verdict: cyclomatic and cognitive are inside the limits; the CRAP figure is estimated from export references because these helpers are not exported, and weekYearRange.test.ts covers every branch through rangeYearVerdict",
+      },
+      {
+        "files": ["packages/gmt/src/internal/rangeDetector.ts"],
+        "functions": [
+          "judge",
+          "rangeVerdict",
+          "isAbsent",
+          "probeKind",
+          "<arrow>",
+        ],
+        "maxCyclomatic": 30,
+        "maxCognitive": 30,
+        "maxCrap": 150,
+        "reason": "D29 range detector kernel: judge and the per-probe check branch once per field class (year, month, day, day period, hour, minute, era); rangeDetector.test.ts covers each verdict and its broken field class, and the three-engine sweep exercises every branch, while fallow estimates CRAP from export references because the helpers are not exported",
+      },
+      {
+        "files": ["packages/gmt/src/internal/rangeFieldValues.ts"],
+        "functions": ["rowsOf"],
+        "maxCrap": 40,
+        "reason": "D29 field-value rows (ECMA-402 Table 6): cyclomatic 11 and cognitive 8 are inside the limits, and the CRAP figure is estimated from export references because rowsOf is unexported; rangeFields.test.ts and yearPrinting.test.ts reach every row through rangeFieldsEqual",
+      },
+      {
+        "files": ["packages/gmt/src/internal/weekYearSynth.ts"],
+        "functions": ["textTwinOptions", "timeTwinOptions", "fits"],
+        "maxCrap": 40,
+        "reason": "D23 week-year parts synthesis: cyclomatic 10 and cognitive at most 13 are inside the limits, and the CRAP figure is estimated from export references because each helper is unexported; weekYearSingle.test.ts covers each branch through guardedDateTimeFormat",
+      },
+      {
+        "files": [
+          "packages/gmt/src/internal/yearPrinting.ts",
+          "packages/gmt/src/zoned/format/formatZonedRange.ts",
+        ],
+        "functions": ["formatRange", "zonedRangeText", "twinParts"],
+        "maxCrap": 70,
+        "reason": "CORE-112 range repairs: cyclomatic (at most 11) and cognitive (at most 11) are inside the limits; the CRAP figure is estimated from export references because each is a closure or an unexported helper, and yearPrinting.test.ts, rangeFields.test.ts and formatZonedRange*.test.ts cover each branch through the public range functions",
+      },
       {
         "files": ["packages/gmt/src/internal/patternToken.ts"],
         "functions": [

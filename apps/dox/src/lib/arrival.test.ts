@@ -2,10 +2,11 @@
  * @vitest-environment jsdom
  *
  * The inline head script runs before first paint: it marks a landing load as waiting for the
- * entrance, frees the page after a failsafe, and notes an arrival through a view transition. It
- * runs here against a stand-in window so no listener outlives a test.
+ * entrance (or shows it at once when the reader came from this site), frees the page after a failsafe, drops a carousel mark nothing took over once the
+ * document is parsed, and notes an arrival through a view transition. It runs here against a
+ * stand-in window so no listener outlives a test.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HOME_LOCKED_QUERY } from "./home-carousel";
 import {
   ARRIVAL_FAILSAFE_MS,
   VIEW_TRANSITION_OPT_IN,
@@ -19,6 +20,12 @@ interface Origin {
   /** `navigation.activation.from.url`; absent where the Navigation API is. */
   activation?: string;
   referrer?: string;
+  /** The navigation timing entry's `type`: `reload` for a reload. */
+  type?: string;
+  /** Whether the screen is locked (`HOME_LOCKED_QUERY` matches). Defaults to true. */
+  locked?: boolean;
+  /** A browser with no `matchMedia`. */
+  noMatchMedia?: boolean;
 }
 
 /** A view transition stand-in that records the types added to it. */
@@ -29,7 +36,11 @@ function transition(): { types: Set<string> } {
 interface Stand {
   /** Delivers `pagereveal` to what the script registered. */
   reveal: (viewTransition: unknown) => void;
+  /** Delivers `DOMContentLoaded`: every deferred module script has run. */
+  parsed: () => void;
   root: HTMLElement;
+  /** Every media query the script asked about. */
+  asked: string[];
 }
 
 const ORIGIN = "https://northguild.dev";
@@ -37,13 +48,28 @@ const ORIGIN = "https://northguild.dev";
 /** Runs the script for `path` on a stand-in window and a fresh root element. */
 function run(base: string, path: string, from: Origin = {}): Stand {
   const listeners: Listener[] = [];
+  const onParsed: (() => void)[] = [];
+  const asked: string[] = [];
   const win = {
     navigation:
       from.activation === undefined
         ? undefined
         : { activation: { from: { url: from.activation } } },
+    performance: {
+      getEntriesByType: (kind: string) =>
+        kind === "navigation" ? [{ type: from.type ?? "navigate" }] : [],
+    },
+    matchMedia: from.noMatchMedia
+      ? undefined
+      : (query: string) => {
+          asked.push(query);
+          return {
+            matches: query === HOME_LOCKED_QUERY && from.locked !== false,
+          };
+        },
     addEventListener: (name: string, listener: Listener) => {
       if (name === "pagereveal") listeners.push(listener);
+      if (name === "DOMContentLoaded") onParsed.push(listener as () => void);
     },
   };
   const root = document.createElement("html");
@@ -56,7 +82,11 @@ function run(base: string, path: string, from: Origin = {}): Stand {
     reveal: (viewTransition) => {
       for (const listener of listeners) listener({ viewTransition });
     },
+    parsed: () => {
+      for (const listener of onParsed) listener();
+    },
     root,
+    asked,
   };
 }
 
@@ -126,6 +156,62 @@ describe("arrivalInlineSource", () => {
     const { reveal, root } = run("/", "/install/");
     reveal({});
     expect(root.dataset["arrival"]).toBe("transition");
+  });
+});
+
+describe("the entrance by where the reader came from", () => {
+  const SITE = `${ORIGIN}/gmt`;
+
+  it("shows the landing at once when the reader came from another page of this site", () => {
+    expect(
+      run("/gmt/", "/gmt/", { activation: `${SITE}/guides/x/` }).root.dataset[
+        "entrance"
+      ],
+    ).toBe("static");
+    expect(
+      run("/gmt/", "/gmt/", { activation: SITE }).root.dataset["entrance"],
+    ).toBe("static");
+  });
+
+  it("reads the referrer where the Navigation API is missing", () => {
+    expect(
+      run("/gmt/", "/gmt/", { referrer: `${SITE}/install/` }).root.dataset[
+        "entrance"
+      ],
+    ).toBe("static");
+  });
+
+  it("runs the whole entrance from northguild.dev, from another site, or from nowhere known", () => {
+    for (const from of [
+      { activation: `${ORIGIN}/` },
+      { activation: `${ORIGIN}/gmtx/` },
+      { referrer: "https://example.com/gmt/" },
+      {},
+    ])
+      expect(run("/gmt/", "/gmt/", from).root.dataset["entrance"]).toBe("wait");
+  });
+
+  it("runs the whole entrance on a reload", () => {
+    expect(
+      run("/gmt/", "/gmt/", { activation: `${SITE}/`, type: "reload" }).root
+        .dataset["entrance"],
+    ).toBe("wait");
+  });
+
+  it("keeps the carousel mark and the arrival note when it shows the landing at once", () => {
+    const { reveal, root } = run("/gmt/", "/gmt/", {
+      activation: `${SITE}/guides/x/`,
+    });
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+    reveal(null);
+    expect(root.dataset["arrival"]).toBe("load");
+  });
+
+  it("leaves a page that is not the landing alone, wherever the reader came from", () => {
+    expect(
+      run("/gmt/", "/gmt/install/", { activation: `${SITE}/guides/x/` }).root
+        .dataset["entrance"],
+    ).toBeUndefined();
   });
 });
 
@@ -208,8 +294,23 @@ describe("the view-transition opt-in", () => {
 });
 
 describe("the carousel mark", () => {
-  it("marks the landing as waiting for the carousel, on any screen", () => {
-    expect(run("/", "/").root.dataset["homeCarousel"]).toBe("wait");
+  it("marks the locked landing as waiting for the carousel", () => {
+    const { root, asked } = run("/", "/");
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+    expect(asked).toEqual([HOME_LOCKED_QUERY]);
+  });
+
+  it("leaves a stacked landing unmarked, so its pages read in order", () => {
+    const { root, parsed } = run("/", "/", { locked: false });
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+    parsed();
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+  });
+
+  it("leaves the landing unmarked where there is no matchMedia", () => {
+    const { root } = run("/", "/", { noMatchMedia: true });
+    expect(root.dataset["homeCarousel"]).toBe(undefined);
+    expect(root.dataset["entrance"]).toBe("wait");
   });
 
   it("leaves a page that is not the landing alone", () => {
@@ -220,16 +321,24 @@ describe("the carousel mark", () => {
     expect(run("/gmt/", "/gmt/").root.dataset["homeCarousel"]).toBe("wait");
   });
 
-  it("removes a mark nothing has replaced when the failsafe fires", () => {
-    const { root } = run("/", "/");
-    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS);
+  it("removes a mark nothing has replaced once the document is parsed", () => {
+    const { parsed, root } = run("/", "/");
+    parsed();
     expect(root.dataset["homeCarousel"]).toBe(undefined);
   });
 
-  it("keeps the mark once the carousel has taken it over", () => {
+  it("keeps the mark through a slow load, however long the modules take", () => {
+    // On a cold cache the carousel waits behind the globe's modules. A timer would drop the
+    // paged layout while it waits, and the landing would switch layouts mid-load.
     const { root } = run("/", "/");
+    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS * 10);
+    expect(root.dataset["homeCarousel"]).toBe("wait");
+  });
+
+  it("keeps the mark once the carousel has taken it over", () => {
+    const { parsed, root } = run("/", "/");
     root.dataset["homeCarousel"] = "on";
-    vi.advanceTimersByTime(ARRIVAL_FAILSAFE_MS);
+    parsed();
     expect(root.dataset["homeCarousel"]).toBe("on");
   });
 });

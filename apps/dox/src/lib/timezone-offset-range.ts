@@ -83,13 +83,17 @@ export function zoneOffsetRange(zoneIds: readonly string[]): ZoneOffsetRange {
   return { min: min!, max: max! };
 }
 
-/** "UTC−11" / "UTC+14" / "UTC+5:45" — U+2212 minus sign, matching the rest of the site's offset copy. */
+/**
+ * "UTC−11" / "UTC+14" / "UTC+5:45" — U+2212 minus sign, matching the rest of the site's offset
+ * copy. A fractional minute keeps its seconds: -44.5 is "UTC−0:44:30" (Monrovia before 1972).
+ */
 export function formatOffset(minutes: number): string {
   const sign = minutes < 0 ? "−" : "+";
-  const abs = Math.abs(minutes);
-  const hours = Math.floor(abs / 60);
-  const mins = abs % 60;
-  return mins === 0
-    ? `UTC${sign}${hours}`
-    : `UTC${sign}${hours}:${String(mins).padStart(2, "0")}`;
+  const abs = Math.round(Math.abs(minutes) * 60);
+  const hours = Math.floor(abs / 3600);
+  const mins = Math.floor(abs / 60) % 60;
+  const secs = abs % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (secs !== 0) return `UTC${sign}${hours}:${pad(mins)}:${pad(secs)}`;
+  return mins === 0 ? `UTC${sign}${hours}` : `UTC${sign}${hours}:${pad(mins)}`;
 }

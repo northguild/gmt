@@ -2,6 +2,8 @@ import ts from "typescript";
 import {
   ALL_DT_UNITS,
   buildPlaygroundSpec,
+  canonicalChoice,
+  collapseUnitAliases,
   classifyReturnType,
   classifyReturnTypeFromString,
   classifyType,
@@ -744,6 +746,7 @@ describe("classifyTypeFromString (mixed unions / arrays)", () => {
     expect(classifyTypeFromString(`0 | 1 | 2 | "auto"`)).toEqual({
       type: "enum",
       options: ["0", "1", "2", "auto"],
+      numericOptions: ["0", "1", "2"],
     });
   });
   it("classifies number[] as array", () => {
@@ -783,6 +786,7 @@ describe("classifyType (checker-backed — complex types)", () => {
     expect(classifyType(checker, types[0])).toEqual({
       type: "enum",
       options: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "auto"],
+      numericOptions: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"],
     });
   });
   it("classifies Record<UnitEnum, number> as units", () => {
@@ -1168,6 +1172,7 @@ describe("classifyType (checker-backed — string literals beside an open type)"
     // The checker's order is not ours to pin: compare the choices as a set.
     expect(mixed?.type).toBe("enum");
     expect([...(mixed?.options ?? [])].sort()).toEqual(["1", "2", "x"]);
+    expect([...(mixed?.numericOptions ?? [])].sort()).toEqual(["1", "2"]);
   });
 
   it("leaves `string | number` as it was, because it holds no string literal", () => {
@@ -1197,6 +1202,7 @@ describe("classifyTypeFromString (string literals beside an open type)", () => {
     expect(classifyTypeFromString(`1 | 2 | "x"`)).toEqual({
       type: "enum",
       options: ["1", "2", "x"],
+      numericOptions: ["1", "2"],
     });
   });
 });
@@ -1495,5 +1501,60 @@ describe("orderUnitChoices (select choices)", () => {
       type: "enum",
       options: ["hours", "day", "hour", "dayOfWeek"],
     });
+  });
+});
+
+describe("collapseUnitAliases (one option per unit)", () => {
+  it("keeps the singular and drops the plural when both are present", () => {
+    expect(collapseUnitAliases(["years", "months", "year", "month"])).toEqual({
+      choices: ["year", "month"],
+      aliases: { years: "year", months: "month" },
+    });
+  });
+  it("keeps a plural that has no singular in the list", () => {
+    expect(collapseUnitAliases(["days", "hours"])).toEqual({
+      choices: ["days", "hours"],
+      aliases: {},
+    });
+    expect(collapseUnitAliases(["days", "hours", "hour"]).choices).toEqual([
+      "days",
+      "hour",
+    ]);
+  });
+  it("keeps dayOfWeek and the empty string in their places", () => {
+    expect(
+      collapseUnitAliases(["days", "day", "dayOfWeek", "timeZone", ""]).choices,
+    ).toEqual(["day", "dayOfWeek", "timeZone", ""]);
+  });
+  it("preserves the order of what it keeps", () => {
+    const ordered = orderUnitChoices([
+      "nanosecond",
+      "years",
+      "dayOfWeek",
+      "year",
+      "seconds",
+      "second",
+      "nanoseconds",
+    ]);
+    expect(collapseUnitAliases(ordered).choices).toEqual([
+      "year",
+      "second",
+      "nanosecond",
+      "dayOfWeek",
+    ]);
+  });
+  it("is a no-op on a list with no unit names", () => {
+    expect(collapseUnitAliases(["203", "204", "s", "dayOfWeek"])).toEqual({
+      choices: ["203", "204", "s", "dayOfWeek"],
+      aliases: {},
+    });
+  });
+  it("maps a name through aliases with canonicalChoice", () => {
+    const { aliases } = collapseUnitAliases(["days", "day"]);
+    expect(canonicalChoice("days", aliases)).toBe("day");
+    expect(canonicalChoice("day", aliases)).toBe("day");
+    expect(canonicalChoice("hours", aliases)).toBe("hours");
+    expect(canonicalChoice("constructor", aliases)).toBe("constructor");
+    expect(canonicalChoice("days", undefined)).toBe("days");
   });
 });

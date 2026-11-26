@@ -43,7 +43,11 @@
       translate var(--gmt-duration-med) var(--gmt-ease-sweep);
   }
 
-  /* The sheen's layer: over the content, so the band crosses the cards as light on the glass. */
+  /* The sheen's layer: over the content, so the band crosses the cards as light on the glass. It
+     crosses as the region slides, on the slide's duration, going out as well as coming in, as the
+     sidebar does to and from the landing (gmt-view-transitions.css). Closed, the name differs, so
+     each change of state starts the band again; while the region rests closed it is hidden, so
+     the band that plays on load is never seen. */
   &::after {
     position: absolute;
     inset: 0;
@@ -51,6 +55,7 @@
     corner-shape: inherit;
     content: "";
     pointer-events: none;
+    animation: sheen-out var(--gmt-duration-med) ease-in-out;
   }
 
   :where(input, select, textarea, button) {
@@ -58,8 +63,7 @@
   }
 
   :where(.root[data-open="true"]) > &::after {
-    animation: sheen var(--gmt-duration-sweep) ease-in-out
-      var(--gmt-duration-med);
+    animation-name: sheen;
   }
 }
 
@@ -91,10 +95,27 @@
   }
 }
 
-/* Once the region has slid in, one band of ice light crosses the glass from its inline-end
-   edge, like light glancing off a pane. Only the layer moves; the border stays still. The band starts and ends past the edges, so
-   dropping the layer when the animation ends shows no jump. */
+/* As the region slides, one band of ice light crosses the glass, like light glancing off a pane.
+   Only the layer moves; the border stays still. The band starts and ends past the edges, so
+   dropping the layer when the animation ends shows no jump. `sheen-out` is the same band under a
+   second name, so closing starts it again. */
 @keyframes sheen {
+  from {
+    background-image: var(--gmt-sheen);
+    background-position: -10% 0;
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+  }
+
+  to {
+    background-image: var(--gmt-sheen);
+    background-position: 110% 0;
+    background-size: 250% 100%;
+    background-repeat: no-repeat;
+  }
+}
+
+@keyframes sheen-out {
   from {
     background-image: var(--gmt-sheen);
     background-position: -10% 0;
@@ -121,7 +142,7 @@
       transition: opacity var(--gmt-duration-fade);
     }
 
-    :where(.root[data-open="true"]) > &::after {
+    &::after {
       animation: none;
     }
   }

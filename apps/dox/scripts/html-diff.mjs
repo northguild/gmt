@@ -123,6 +123,14 @@ const PAGES = [
     widget: "dtm-decoder",
   },
   {
+    path: "tools/hl7-timestamp-reader",
+    widget: "hl7-timestamp-reader",
+  },
+  {
+    path: "tools/fhir-date-checker",
+    widget: "fhir-date-checker",
+  },
+  {
     path: "tools/x12-time-reader",
     widget: "x12-time-reader",
   },
@@ -159,12 +167,76 @@ const PAGES = [
     widget: "leap-second-timeline",
   },
   {
+    path: "tools/terrestrial-time-stack",
+    widget: "terrestrial-time-stack",
+  },
+  {
+    path: "tools/julian-day-counter",
+    widget: "julian-day-counter",
+  },
+  {
+    path: "tools/double-precision-meter",
+    widget: "double-precision-meter",
+  },
+  {
     path: "tools/elapsed-vs-clock-difference",
     widget: "elapsed-vs-clock",
   },
   {
     path: "tools/stored-time-audit",
     widget: "stored-time-audit",
+  },
+  {
+    path: "tools/tai64n-log-reader",
+    widget: "tai64n-log-reader",
+  },
+  {
+    path: "tools/fix-timestamp-reader",
+    widget: "fix-timestamp-reader",
+  },
+  {
+    path: "tools/ccsds-time-code-decoder",
+    widget: "ccsds-time-code-decoder",
+  },
+  {
+    path: "tools/code-b-day-ruler",
+    widget: "code-b-day-ruler",
+  },
+  {
+    path: "tools/ssim-date-reader",
+    widget: "ssim-date-reader",
+  },
+  {
+    path: "tools/report-time-resolver",
+    widget: "report-time-resolver",
+  },
+  {
+    path: "tools/swift-value-date-reader",
+    widget: "swift-value-date-reader",
+  },
+  {
+    path: "tools/gtfs-time-reader",
+    widget: "gtfs-time-reader",
+  },
+  {
+    path: "tools/gtfs-service-day-clock",
+    widget: "gtfs-service-day-clock",
+  },
+  {
+    path: "tools/gtfs-trip-board",
+    widget: "gtfs-trip-board",
+  },
+  {
+    path: "tools/ptp-clock-converter",
+    widget: "ptp-clock-converter",
+  },
+  {
+    path: "tools/operating-schedule-checker",
+    widget: "operating-schedule-checker",
+  },
+  {
+    path: "tools/opening-hours-board",
+    widget: "opening-hours-board",
   },
   {
     path: "tools/holiday-rule-builder",
@@ -185,6 +257,10 @@ const PAGES = [
   {
     path: "check/morocco-2026-clock-change",
     widget: "morocco-clock-change",
+  },
+  {
+    path: "check/us-sunshine-protection-act",
+    widget: "sunshine-protection-act",
   },
   {
     path: "tools/duration-parser-bench",
@@ -224,7 +300,7 @@ const slug = (p) => p.replaceAll("/", "_") + ".html";
 
 /** A page entry's site path, as the other gates write it. */
 const sitePath = (p) => `/${p.path}/`;
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: PAGES.map(sitePath),
 });

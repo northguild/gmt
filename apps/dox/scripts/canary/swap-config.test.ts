@@ -1,6 +1,5 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 // The provider only matters when the browsers start; loading Playwright would slow every row.
 vi.mock("@vitest/browser-playwright", () => ({ playwright: () => ({}) }));

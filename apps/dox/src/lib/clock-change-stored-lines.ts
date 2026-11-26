@@ -6,7 +6,7 @@
  * Completing a zone uses only what the reader typed or picked: the site guesses none.
  */
 import type { StoredZonedClassification } from "@northguild/gmt";
-import { cityOf, signedOffset } from "./clock-change-common";
+import { cityOf, offsetSeconds, signedOffset } from "./clock-change-common";
 
 /**
  * The most lines a POST classifies. The Worker runs the polyfill on workerd and is budgeted for
@@ -139,23 +139,28 @@ export function completeStoredLine(line: string, zone: string): string | null {
   return null;
 }
 
-/** `HH:MM` and the day shift of a UTC instant (`...THH:mm...Z`) read at a `±hh:mm` offset. */
+/**
+ * `HH:MM` and the day shift of a UTC instant (`...THH:mm[:ss]...Z`) read at a `±hh:mm[:ss]`
+ * offset, or `HH:MM:SS` when the reading is not a whole minute: New York's 1880 `-04:56:02`
+ * reads 17:00Z as 12:03:58. A fraction of a second is dropped from the instant's seconds only.
+ */
 function localOf(
   instant: string,
   offset: string,
 ): { hm: string; days: number } | null {
-  const hours = Number(instant.slice(11, 13));
-  const minutes = Number(instant.slice(14, 16));
-  const offHours = Number(offset.slice(1, 3));
-  const offMinutes = Number(offset.slice(4, 6));
-  if (![hours, minutes, offHours, offMinutes].every(Number.isFinite))
-    return null;
-  const sign = offset.startsWith("-") ? -1 : 1;
-  const total = hours * 60 + minutes + sign * (offHours * 60 + offMinutes);
-  const days = Math.floor(total / 1440);
-  const inDay = total - days * 1440;
+  const match = /T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(instant);
+  const shift = offsetSeconds(offset);
+  if (match === null || shift === null || !Number.isInteger(shift)) return null;
+  const total =
+    Number(match[1]) * 3600 +
+    Number(match[2]) * 60 +
+    Number(match[3] ?? 0) +
+    shift;
+  const days = Math.floor(total / 86_400);
+  const inDay = total - days * 86_400;
   const pad = (n: number) => String(n).padStart(2, "0");
-  return { hm: `${pad(Math.floor(inDay / 60))}:${pad(inDay % 60)}`, days };
+  const hm = `${pad(Math.floor(inDay / 3600))}:${pad(Math.floor(inDay / 60) % 60)}`;
+  return { hm: inDay % 60 === 0 ? hm : `${hm}:${pad(inDay % 60)}`, days };
 }
 
 /** One checked line for the "Did your saved events move?" table: the Result and the What to do cells. */
@@ -316,9 +321,16 @@ export function storedBadge(
       if (stored === undefined || zone === undefined) {
         return { tone: "bad", label: "Shows the wrong time", mark: "\u2717" };
       }
-      const minutes = Math.abs(offsetMinutes(zone) - offsetMinutes(stored));
-      const words = minutes % 60 === 0 ? `${minutes / 60} h` : `${minutes} min`;
-      return { tone: "bad", label: `Shows ${words} off`, mark: "\u2717" };
+      const zoneSeconds = offsetSeconds(zone);
+      const storedSeconds = offsetSeconds(stored);
+      if (zoneSeconds === null || storedSeconds === null) {
+        return { tone: "bad", label: "Shows the wrong time", mark: "\u2717" };
+      }
+      return {
+        tone: "bad",
+        label: `Shows ${offWords(Math.abs(zoneSeconds - storedSeconds))} off`,
+        mark: "\u2717",
+      };
     }
     case "ambiguous":
       return { tone: "bad", label: "Happens twice", mark: "\u2717" };
@@ -327,10 +339,20 @@ export function storedBadge(
   }
 }
 
-function offsetMinutes(offset: string): number {
-  const sign = offset.startsWith("-") ? -1 : 1;
-  return sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
+/**
+ * How far apart two offsets are, in the badge's words: `1 h`, `30 min`, or with seconds where
+ * the offsets have them (`3 min 58 s`, New York's 1880 `-04:56:02` against `-05:00`).
+ */
+function offWords(seconds: number): string {
+  if (seconds % 3600 === 0) return `${seconds / 3600} h`;
+  if (seconds % 60 === 0) return `${seconds / 60} min`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = Number((seconds % 60).toFixed(9));
+  return minutes === 0 ? `${rest} s` : `${minutes} min ${rest} s`;
 }
+
+/** The offset just before the zone bracket, seconds included (`-04:56:02[America/New_York]`). */
+const STORED_OFFSET = /[+-]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?=\[)/;
 
 /**
  * What to store for a moved line: keep the local time and put the place's own offset on it, or
@@ -343,7 +365,7 @@ export function storedFix(
   if (value === null || result === null || result.kind !== "offsetMismatch")
     return null;
   if (result.zoneOffset === undefined) return null;
-  const keepLocal = value.replace(/[+-]\d{2}:\d{2}(?=\[)/, result.zoneOffset);
+  const keepLocal = value.replace(STORED_OFFSET, result.zoneOffset);
   if (keepLocal === value) return null;
   const old =
     result.atStoredOffset === undefined

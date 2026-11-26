@@ -66,6 +66,18 @@
   }
 }
 
+/* A flow disclosure: the panel is a block under the button, as wide as the root, and takes its
+   room in the page. */
+.root[data-flow="true"] {
+  display: block;
+
+  & > .panel {
+    position: static;
+    inline-size: auto;
+    max-inline-size: none;
+  }
+}
+
 @media (forced-colors: active) {
   .button,
   .panel {

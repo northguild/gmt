@@ -109,11 +109,12 @@ describe("renderIndexPages", () => {
 
   it("writes the slug and the block form of sidebar order in the frontmatter", () => {
     const { mdx } = pageAt("/reference/transport/calculate");
-    expect(mdx.split("\n").slice(0, 8)).toEqual([
+    expect(mdx.split("\n").slice(0, 9)).toEqual([
       "---",
       'title: "transport/calculate"',
       'description: "The calculate module of the transport namespace of @northguild/gmt."',
       'slug: "reference/transport/calculate"',
+      "industries: [core]",
       "sidebar:",
       "  order: 0",
       "---",
@@ -121,7 +122,7 @@ describe("renderIndexPages", () => {
     ]);
     for (const page of renderIndexPages(INPUT)) {
       expect(page.mdx, page.route).toContain(
-        `slug: ${JSON.stringify(page.route.slice(1))}\nsidebar:\n  order: 0\n---\n`,
+        `slug: ${JSON.stringify(page.route.slice(1))}\n${/^\/reference(\/types)?$/.test(page.route) ? "" : "industries: [core]\n"}sidebar:\n  order: 0\n---\n`,
       );
       expect(page.mdx, page.route).not.toContain("sidebar: {");
     }
@@ -365,10 +366,13 @@ describe("renderIndexPages with industries", () => {
     expect(mdx).not.toContain("import");
   });
 
-  it("tags the overview, the function-module indexes and nothing else with the industry that owns the namespace", () => {
+  it("tags the overview and the function-module indexes with the industry that owns the namespace, or Core, and leaves the directory indexes untagged", () => {
     const tagged = renderIndexPages(WITH_INDUSTRIES)
       .filter((p) => /^industries: \[/m.test(p.mdx))
-      .map((p) => [p.route, p.mdx.match(/^industries: \[(\w+)\]$/m)?.[1]]);
+      .map((p) => [p.route, p.mdx.match(/^industries: \[(\w+)\]$/m)?.[1]])
+      .filter(([route]) =>
+        /\/reference\/(gnss|transport|workforce)/.test(route!),
+      );
     expect(tagged).toEqual([
       ["/reference/gnss", "gnss"],
       ["/reference/gnss/convert", "gnss"],
@@ -401,12 +405,19 @@ describe("renderIndexPages with industries", () => {
     expect(mdx).not.toContain("Start with the guide");
   });
 
-  it("leaves a general namespace overview as it was", () => {
+  it("tags a general namespace's overview and modules `[core]`, with or without industries declared", () => {
     expect(pageAt("/reference/regex", WITH_INDUSTRIES).mdx).toBe(
       pageAt("/reference/regex").mdx,
     );
-    expect(pageAt("/reference/timescale", WITH_INDUSTRIES).mdx).not.toContain(
+    expect(pageAt("/reference/timescale", WITH_INDUSTRIES).mdx).toContain(
+      "\nindustries: [core]\n",
+    );
+  });
+
+  it("leaves the root page and the types index without a tag: each shows the tags of the pages under it", () => {
+    expect(pageAt("/reference", WITH_INDUSTRIES).mdx).not.toContain(
       "industries:",
     );
+    expect(pageAt("/reference").mdx).not.toContain("industries:");
   });
 });

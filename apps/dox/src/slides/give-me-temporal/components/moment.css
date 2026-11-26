@@ -1,0 +1,103 @@
+/*
+ * The `moment` slide (`MomentSlide.astro`): two quotes side by side over the yearly download bars
+ * (`BarRows`), then the source line and the closing line. Quotes are `gmt-quote` panels
+ * (`agent-quote.css`), full bevelled borders.
+ */
+.gmt-moment-quotes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  margin-block-end: var(--gmt-space-3);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-moment-quotes {
+  gap: var(--gmt-deck-space-md);
+  margin-block-end: var(--gmt-deck-space-md);
+}
+
+.gmt-quote[data-quote="source"] blockquote {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gmt-quote[data-quote="source"] blockquote p {
+  margin: 0;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-quote[data-quote="source"] blockquote p + p {
+  margin-block-start: var(--gmt-space-2);
+}
+
+.gmt-quote[data-quote="source"] figcaption {
+  margin-block-start: var(--gmt-space-2);
+  color: var(--gmt-ice-dim);
+  font-size: max(0.75rem, 0.85em);
+}
+
+:is(html[data-deck], [data-slide-stage])
+  .gmt-quote[data-quote="source"]
+  figcaption,
+:is(html[data-deck], [data-slide-stage])
+  .gmt-quote[data-quote="source"]
+  figcaption
+  code {
+  font-size: 1em;
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-quote[data-quote="source"] {
+  font-size: 1em;
+}
+
+.gmt-quote[data-quote="source"] blockquote p {
+  font-family: inherit;
+}
+
+.gmt-moment-source {
+  margin: var(--gmt-space-2) 0 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-moment-source {
+  padding-block-start: var(--gmt-deck-space-md);
+  font-size: var(--gmt-deck-text-fine);
+}
+
+/* Code in the source line stays at the line's size, so it keeps the fine-print floor. */
+:is(html[data-deck], [data-slide-stage]) .gmt-moment-source code {
+  font-size: 1em;
+}
+
+.gmt-moment-closing {
+  margin: var(--gmt-space-3) 0 0;
+  color: var(--gmt-ice-bright);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-moment-closing {
+  padding-block-start: var(--gmt-deck-space-md);
+}
+
+/* On the stage the slide is set smaller, as the experiment slides are, so two quotes, eight bars and two lines fit. */
+:is(html[data-deck], [data-slide-stage]) .gmt-slide[data-layout="moment"] {
+  /* The title's text box is taller than its 1.1 line, so it starts a little below the safe edge. */
+  padding-block: calc(var(--gmt-deck-pad-safe) + var(--gmt-deck-space-sm))
+    var(--gmt-deck-pad-safe);
+  font-size: var(--gmt-deck-text-sm);
+  line-height: 1.3;
+}
+
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="moment"]
+  > .gmt-slide-body {
+  font-size: inherit;
+}
+
+:is(html[data-deck], [data-slide-stage])
+  .gmt-slide[data-layout="moment"]
+  .gmt-slide-title {
+  margin-block: 0 var(--gmt-deck-space-md);
+  font-size: max(1.2rem, 2.1cqi);
+  line-height: 1.1;
+}

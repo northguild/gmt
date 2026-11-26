@@ -50,6 +50,7 @@ const BROWSER_ENGINE_IDS: Record<string, string> = {
   chromium: "v8",
   firefox: "firefox",
   webkit: "webkit",
+  "webkit-macos": "webkit",
 };
 
 /** The compat check's verdict in one browser: the same probes, no snapshot. */
@@ -70,7 +71,7 @@ const compat = (
 
 const cleanCompat = () =>
   Object.fromEntries(
-    ["chromium", "firefox", "webkit"].map((leg) => [
+    ["chromium", "firefox", "webkit", "webkit-macos"].map((leg) => [
       `temporal-compat-${leg}`,
       compat(leg, [stillNeededWorkaround], {
         stillNeeded: 15,
@@ -86,7 +87,7 @@ const compatEverywhere = (
 ) => ({
   "temporal-compat-check": check(workarounds, counts),
   ...Object.fromEntries(
-    ["chromium", "firefox", "webkit"].map((leg) => [
+    ["chromium", "firefox", "webkit", "webkit-macos"].map((leg) => [
       `temporal-compat-${leg}`,
       compat(leg, workarounds, counts),
     ]),
@@ -128,6 +129,7 @@ const ENGINES: Record<string, string> = {
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 const native = (leg: string, over: Record<string, unknown> = {}) => ({
@@ -164,6 +166,7 @@ const cleanNative = () => ({
   "native-suite-chromium": native("chromium"),
   "native-suite-firefox": native("firefox"),
   "native-suite-webkit": native("webkit"),
+  "native-suite-webkit-macos": native("webkit-macos"),
 });
 
 const swapSweep = (differingZones = 0) => ({
@@ -182,6 +185,22 @@ const swapSweep = (differingZones = 0) => ({
     runsTruncated: false,
   })),
   differingTruncated: differingZones > 50,
+});
+
+const calendarSweep = (differingCalendars = 0) => ({
+  status: "ran",
+  from: "-003000-01-01",
+  through: "+005000-12-31",
+  calendars: 16,
+  years: 128762,
+  differingCalendars,
+  differing: Array.from({ length: differingCalendars }, (_, i) => ({
+    calendar: `cal${i + 1}`,
+    years: i + 1,
+    first: 1502,
+    example: "year 1502: candidate a;\nreference b",
+  })),
+  differingTruncated: false,
 });
 
 const swap = (leg: string, over: Record<string, unknown> = {}) => ({
@@ -210,6 +229,7 @@ const swap = (leg: string, over: Record<string, unknown> = {}) => ({
   failing: [],
   failingTruncated: false,
   sweep: leg === "node" ? swapSweep() : null,
+  calendarSweep: leg === "node" ? calendarSweep() : null,
   ...over,
 });
 
@@ -241,6 +261,8 @@ const SWAP_BLOCK = [
   "| webkit | 71337 | 0 | 0 |",
   "",
   "Offset sweep: 0 zones differ (418 zones, 1970-01-01 to 2036-11-04, tz 2026e).",
+  "",
+  "Calendar sweep: 0 calendars differ (16 calendars, 128762 years, -003000-01-01 to +005000-12-31).",
 ];
 
 const CLEAN_SUMMARY = [
@@ -259,6 +281,7 @@ const CLEAN_SUMMARY = [
   "| temporal-compat-chromium | Chromium 153.0.8010.12 (v8) | 15 | 0 | 0 |",
   "| temporal-compat-firefox | Firefox 155.0 (firefox) | 15 | 0 | 0 |",
   "| temporal-compat-webkit | WebKit 26.6 (webkit) | 15 | 0 | 0 |",
+  "| temporal-compat-webkit-macos | macOS WebKit 26.6 \u00b7 macOS 15.7.2 (webkit) | 15 | 0 | 0 |",
   "",
   "| Oracle | Count |",
   "| --- | --- |",
@@ -277,6 +300,7 @@ const CLEAN_SUMMARY = [
   "| chromium | Chromium 153.0.8010.12 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| firefox | Firefox 155.0 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "| webkit | WebKit 26.6 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
+  "| webkit-macos | macOS WebKit 26.6 \u00b7 macOS 15.7.2 | 61613 | 61600 | 3 | 0 | 0 | 0 | 0 | 0 |",
   "",
   ...SWAP_BLOCK,
   "",
@@ -287,6 +311,27 @@ const CLEAN_SUMMARY = [
 describe("summaryMarkdown: temporal-oracle", () => {
   it("clean oracle run: the whole layout", () => {
     expect(oracleSummary(clean())).toBe(CLEAN_SUMMARY);
+  });
+
+  it("every native and swap source ran: five native rows, five compat rows, four swap rows, no swap row for webkit-macos", () => {
+    const lines = oracleSummary(clean()).split("\n");
+    const rowsOf = (prefix: string) =>
+      lines.filter((l) => l.startsWith(prefix));
+    expect(
+      lines.filter(
+        (l) =>
+          /^\| (node|chromium|firefox|webkit|webkit-macos) \| .* \| 61613 \|/.test(
+            l,
+          ) && l.includes("| 61600 |"),
+      ),
+    ).toHaveLength(5);
+    expect(rowsOf("| temporal-compat-")).toHaveLength(5);
+    expect(
+      lines
+        .filter((l) => /^\| \S+ \| 71337 \|/.test(l))
+        .map((l) => l.split(" | ")[0]),
+    ).toEqual(["| node", "| chromium", "| firefox", "| webkit"]);
+    expect(lines.join("\n")).not.toContain("did not run");
   });
 
   it("a leg that could not run is a row with the message and empty counts", () => {
@@ -418,13 +463,16 @@ describe("summaryMarkdown: temporal-oracle", () => {
     const lines = oracleSummary(verdicts).split("\n");
     expect(lines).not.toContain("Removable on every engine in scope: D2");
     expect(lines).toContain(
-      "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict)",
+      "Removable on some engines only: D2 (Node v24.11.0: removable; Chromium 153.0.8010.12: still needed, 2 of 2 probes fail; temporal-compat-firefox: no verdict; temporal-compat-webkit: no verdict; temporal-compat-webkit-macos: no verdict)",
     );
     expect(lines).toContain(
       "| temporal-compat-firefox | could not run — the compat page failed in firefox: boom | — | — | — |",
     );
     expect(lines).toContain(
       "| temporal-compat-webkit | could not run — no verdict file: an earlier step or job failed | — | — | — |",
+    );
+    expect(lines).toContain(
+      "| temporal-compat-webkit-macos | could not run — no verdict file: an earlier step or job failed | — | — | — |",
     );
   });
 
@@ -447,6 +495,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
         removable: 1,
       }),
       "temporal-compat-webkit": compat("webkit", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        outOfScope: 1,
+      }),
+      "temporal-compat-webkit-macos": compat("webkit-macos", [elsewhere], {
         stillNeeded: 15,
         removable: 0,
         outOfScope: 1,
@@ -485,6 +538,11 @@ describe("summaryMarkdown: temporal-oracle", () => {
       "temporal-compat-webkit": compat("webkit", [failing], {
         stillNeeded: 16,
         removable: 0,
+      }),
+      "temporal-compat-webkit-macos": compat("webkit-macos", [elsewhere], {
+        stillNeeded: 15,
+        removable: 0,
+        outOfScope: 1,
       }),
       "temporal-oracle": oracle(),
     };
@@ -627,6 +685,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
           title: "Remove workaround D2: summary",
           labels: ["canary"],
           body: "b",
+          findings: ["temporal-compat/removable/D2"],
         },
         ok: true,
         issue: 412,
@@ -643,6 +702,48 @@ describe("summaryMarkdown: temporal-oracle", () => {
     ]);
     expect(text.split("\n")).toContain(
       "**Issues:** opened #412 (Remove workaround D2: summary); commented on #398.",
+    );
+  });
+
+  it("a rewritten and a closed issue are listed, and a failed close names the error", () => {
+    const text = oracleSummary(clean(), {}, [
+      {
+        action: {
+          kind: "edit",
+          key: "temporal-oracle",
+          issue: 77,
+          title: "t",
+          labels: ["canary"],
+          removeLabels: [],
+          body: "b",
+          findings: [],
+        },
+        ok: true,
+        issue: 77,
+      },
+      {
+        action: {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 539,
+          reason: "folded",
+        },
+        ok: true,
+        issue: 539,
+      },
+      {
+        action: {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 540,
+          reason: "folded",
+        },
+        ok: false,
+        error: "HTTP 502\nbad gateway",
+      },
+    ]);
+    expect(text.split("\n")).toContain(
+      "**Issues:** rewrote #77; closed #539; failed to close #540: HTTP 502 bad gateway.",
     );
   });
 
@@ -668,6 +769,7 @@ describe("summaryMarkdown: temporal-oracle", () => {
           title: "Remove workaround D2: summary",
           labels: ["canary"],
           body: "b",
+          findings: ["k"],
         },
         ok: false,
         error: "label missing",
@@ -784,6 +886,61 @@ describe("summaryMarkdown: temporal polyfill swap", () => {
       "temporal-polyfill — Not ready: temporal-polyfill-swap-node: did not run",
     );
     expect(text).toContain("Offset sweep: did not run.");
+    expect(text).toContain("Calendar sweep: did not run.");
+  });
+
+  it("differing calendars are counted and listed with years, first year and an example", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", {
+        calendarSweep: calendarSweep(2),
+      }),
+    });
+    expect(text).toContain(
+      "Calendar sweep: 2 calendars differ (16 calendars, 128762 years, -003000-01-01 to +005000-12-31).\n- cal1: 1 year, first 1502, e.g. year 1502: candidate a; reference b\n- cal2: 2 years, first 1502, e.g. year 1502: candidate a; reference b",
+    );
+    expect(text).toContain(
+      "— Not ready: calendar sweep: 2 calendars differ (cal1, cal2)",
+    );
+  });
+
+  it("a calendar only one side accepts prints 'first none'", () => {
+    const sweep = calendarSweep(1);
+    sweep.differing = [
+      {
+        calendar: "x",
+        years: 0,
+        first: null as never,
+        example: "only the reference accepts this calendar",
+      },
+    ];
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", { calendarSweep: sweep }),
+    });
+    expect(text).toContain(
+      "- x: 0 years, first none, e.g. only the reference accepts this calendar",
+    );
+  });
+
+  it("a calendar sweep that could not run says so", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": swap("node", {
+        calendarSweep: { status: "could-not-run", message: "no Temporal" },
+      }),
+    });
+    expect(text).toContain("Calendar sweep: could not run: no Temporal");
+  });
+
+  it("a node leg that could not run still prints the calendar sweep it carries", () => {
+    const text = swapOnly({
+      "temporal-polyfill-swap-node": {
+        source: "temporal-polyfill-swap-node",
+        status: "could-not-run",
+        message: "timeout",
+        calendarSweep: calendarSweep(1),
+      },
+    });
+    expect(text).toContain("Calendar sweep: 1 calendars differ");
+    expect(text).not.toContain("Calendar sweep: did not run.");
   });
 
   it("a differing sweep counts the zones and lists the first ten", () => {
@@ -952,5 +1109,103 @@ describe("summaryMarkdown: leap-seconds", () => {
   it("oracle flags are not shown on a leap summary", () => {
     const text = leapSummary(leap(), { mismatch: true, removable: "D2" });
     expect(text).not.toContain("Dry run");
+  });
+});
+
+describe("summaryMarkdown: us-clock-watch", () => {
+  const ran = (differences: string[] = [], extra = {}) => ({
+    status: "ran",
+    differences,
+    ...extra,
+  });
+  const watch = (over: Record<string, unknown> = {}) => ({
+    source: "us-clock-watch",
+    status: "ran",
+    federal: ran(),
+    state: ran(),
+    tz: ran([], { release: "2026e", snapshotRelease: "2026e" }),
+    ...over,
+  });
+  const watchSummary = (
+    verdict: unknown,
+    force = {},
+    results: Parameters<typeof summaryMarkdown>[3] = [],
+  ) =>
+    summaryMarkdown(
+      "us-clock-watch",
+      { "us-clock-watch": verdict } as never,
+      force,
+      results,
+    );
+
+  it("a clean run shows no differences and says no US zone changed", () => {
+    expect(watchSummary(watch())).toBe(
+      [
+        "## US clock-change watch",
+        "",
+        "| Source | Result |",
+        "| --- | --- |",
+        "| Federal bills | 0 differences |",
+        "| State bills | 0 differences |",
+        "| tz zones | 0 differences |",
+        "",
+        "tz release 2026e: no US zone changed",
+        "",
+        "**Issues:** No issues filed.",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("lists each source's differences under its own heading", () => {
+    const text = watchSummary(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"]),
+        tz: ran(["America/Detroit"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(text).toContain("| Federal bills | 1 differences |");
+    expect(text).toContain("tz release 2026f (snapshot 2026e)");
+    expect(text).toContain(
+      "### Federal bills\n\n- new: S 7: To adopt permanent standard time",
+    );
+    expect(text).toContain("### tz zones\n\n- America/Detroit");
+    expect(text).not.toContain("### State bills");
+  });
+
+  it("names a source that could not run and still shows the others", () => {
+    const text = watchSummary(
+      watch({
+        state: {
+          status: "could-not-run",
+          message: "HTTP 500 from v3.openstates.org/bills",
+        },
+      }),
+    );
+    expect(text).toContain(
+      "| State bills | could not run — HTTP 500 from v3.openstates.org/bills |",
+    );
+    expect(text).toContain("| Federal bills | 0 differences |");
+  });
+
+  it("a whole-run could-not-run verdict gives one line", () => {
+    const text = watchSummary({
+      source: "us-clock-watch",
+      status: "could-not-run",
+      message: "cannot run: no snapshot",
+    });
+    expect(text).toContain(
+      "US clock-change watch: could not run — cannot run: no snapshot",
+    );
+  });
+
+  it("a forced difference names the flag", () => {
+    const text = watchSummary(watch(), { usClockDifference: true });
+    expect(text.split("\n")).toContain(
+      "**Dry run:** --force-us-clock-difference",
+    );
   });
 });

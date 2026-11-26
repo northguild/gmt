@@ -372,10 +372,19 @@
   min-inline-size: auto;
 }
 
+/* The sentinel in a hold cell wraps at its one space (the `\a0` in its brackets keep each bracket
+   on its word) so the chip fits the value column the sizer sets; two lines are no taller than
+   the sizer. Nowrap here overflowed the table and gave it a scrollbar in WebKit at a 300px root. */
+.cellHold .lost {
+  display: inline-block;
+  max-inline-size: 100%;
+  white-space: normal;
+}
+
 .noteCell > .live > * {
   max-inline-size: 100%;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 
 .sizer {
@@ -852,8 +861,10 @@
   font-weight: 700;
 }
 
+/* A printed time is one token: it keeps one line. */
 .printedText {
   min-inline-size: 0;
+  white-space: nowrap;
   font-family: var(--gmt-font-mono);
 }
 
@@ -871,11 +882,10 @@
 .timeFull {
   display: block;
   margin-block-start: 2px;
-  white-space: normal;
 
-  /* The whole value breaks before its zone, and anywhere as a last resort, so a narrow table
-     wraps the line in its cell and never reaches past its box. */
-  overflow-wrap: anywhere;
+  /* The value breaks only where `zonedValue` puts a break point (after the `T`, before the offset,
+     before the `[`, after a `/`), so a date is never split and the table never scrolls. */
+  overflow-wrap: normal;
   font-family: var(--gmt-font-mono);
   font-size: var(--gmt-text-xs);
   font-variant-numeric: tabular-nums;

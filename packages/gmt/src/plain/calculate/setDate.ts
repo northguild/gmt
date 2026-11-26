@@ -1,8 +1,8 @@
 import type { PlainDateFields } from "../../internal/temporalTypes";
-import { Temporal } from "../../internal/temporal";
-import { DATE_FIELDS, readSetFields, resolveOverflow } from "../../internal";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { withDateFields } from "../../internal/readSetFields";
 import type { Overflow } from "../../types";
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -62,19 +62,15 @@ export function setDate(
     return "";
   }
 
-  if (!isValidDate(value)) return "";
+  const date = plainDateOf(value);
+  if (date === null) return "";
 
   try {
-    const date = Temporal.PlainDate.from(value);
-    const set = readSetFields(fields, DATE_FIELDS);
-    if (set === null) return "";
-    // Only the values readSetFields checked reach Temporal. An empty result sets nothing: a
-    // no-op here, where Temporal's with() would throw.
-    if (Object.keys(set).length === 0) return date.toString();
-
-    return date
-      .with(set, { overflow: resolveOverflow(options?.overflow) })
-      .toString();
+    return (
+      withDateFields(date, fields, () =>
+        resolveOverflow(options?.overflow),
+      )?.toString() ?? ""
+    );
   } catch {
     return "";
   }

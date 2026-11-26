@@ -37,6 +37,7 @@ import {
   unproject as unprojectPoint,
   wrapLng,
 } from "./camera";
+import { focal, P } from "./pinhole";
 import { createController, IDLE_MS, type Controller } from "./controller";
 import {
   DAWN_END_MS,
@@ -50,6 +51,7 @@ import type {
   GlobeRenderer,
   RendererInit,
 } from "./renderer";
+import { canDrawOffThread } from "./off-thread-support";
 import { subsolarPoint } from "./sun";
 import { sunDirection } from "./camera";
 import type {
@@ -68,10 +70,10 @@ import type {
  *  cost doubles for no visible gain on a globe made of washes and thin strokes. */
 const MAX_DPR = 2;
 
-/** While only the ambient spin moves the globe (4 degrees a second, under a pixel a frame at
+/** While only the ambient spin moves the globe (2 degrees a second, under a pixel a frame at
  *  60 Hz), it is drawn at most this often, in milliseconds. The Earth now fills the landing hero,
  *  so a draw at every vsync saturates the main thread of a machine without a GPU raster and drops
- *  frames across the whole page; at 30 Hz the spin steps by under 1.5 px. Any other motion draws
+ *  frames across the whole page; at 30 Hz the spin steps by under 0.75 px. Any other motion draws
  *  at every frame. */
 const AMBIENT_FRAME_MS = 30;
 
@@ -92,7 +94,12 @@ export async function createGlobeEngine(
   const controller = createController({
     initialRotation: options.initialRotation,
     zoomRange: options.zoomRange,
+    ...(options.initialZoom === undefined
+      ? {}
+      : { initialZoom: options.initialZoom }),
     reducedMotion,
+    ambient: options.ambient,
+    onZoom: (dir, closeness) => zoomCallback?.(dir, closeness),
   });
   const camera = createCamera(options.initialRotation);
 
@@ -112,6 +119,8 @@ export async function createGlobeEngine(
   let centreX = 0.5;
   let centreY = 0.5;
   let framed = false;
+  /** Whether a frame has given the camera its place yet; before that it is the 1 px default. */
+  let placed = false;
 
   let frameHandle = 0;
   /** The `requestAnimationFrame` time of the last loop draw. */
@@ -122,9 +131,14 @@ export async function createGlobeEngine(
 
   let tapCallback: Parameters<GlobeEngine["onTap"]>[0] | null = null;
   let frameCallback: (() => void) | null = null;
+  let holdCallback: (() => void) | null = null;
   let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  let zoomCallback: Parameters<GlobeEngine["onZoom"]>[0] | null = null;
   /** Whether the frame loop is held off because the host scrolled out of view. */
   let offscreen = false;
+  /** Whether something drawn over the globe (the search dialog, the mobile menu) hides it. */
+  let covered = false;
+  const held = (): boolean => offscreen || covered;
   const maxDpr = options.maxDpr ?? MAX_DPR;
   const hitArea = options.hitArea;
 
@@ -154,7 +168,14 @@ export async function createGlobeEngine(
     return typeof navigator !== "undefined" && "gpu" in navigator;
   }
 
-  async function loadRenderer(kind: RendererKind): Promise<GlobeRenderer> {
+  /**
+   * `mainThread` skips the worker: used when a worker renderer has just failed, and by a caller
+   * that sets `GlobeOptions.offThread` to false.
+   */
+  async function loadRenderer(
+    kind: RendererKind,
+    mainThread = options.offThread === false,
+  ): Promise<GlobeRenderer> {
     const init: RendererInit = {
       host,
       theme,
@@ -165,6 +186,18 @@ export async function createGlobeEngine(
       entrance: options.entrance ?? "fade",
       reducedMotion,
     };
+    if (kind === "canvas2d" && !mainThread && canDrawOffThread()) {
+      /* The raster goes to a worker so a 100 ms frame cannot hold up input. Any refusal — a
+         module worker the browser will not start, a script that fails to load — falls through
+         to drawing on the main thread, so the globe is never blank. */
+      try {
+        return await (
+          await import("./canvas2d/renderer-canvas2d-worker")
+        ).createWorkerCanvas2dRenderer(init);
+      } catch (error) {
+        console.info(`globe: canvas 2D worker unavailable (${String(error)})`);
+      }
+    }
     const create: CreateRenderer =
       kind === "webgpu"
         ? (await import("./webgpu/renderer-webgpu")).createWebgpuRenderer
@@ -211,8 +244,12 @@ export async function createGlobeEngine(
   }
 
   function handleRendererFailure(reason: string): void {
-    if (destroyed || !renderer || renderer.kind !== "webgpu") return;
-    console.warn(`globe: WebGPU renderer failed (${reason})`);
+    if (destroyed || !renderer) return;
+    const workerFailed = renderer.offThread === true;
+    if (renderer.kind !== "webgpu" && !workerFailed) return;
+    console.warn(
+      `globe: ${workerFailed ? "canvas 2D worker" : "WebGPU renderer"} failed (${reason})`,
+    );
     const previous = renderer;
     renderer = null;
     unbindInput(inputTarget(previous));
@@ -221,12 +258,18 @@ export async function createGlobeEngine(
     /* One retry, and only once the tab is visible: a device lost while hidden is
        usually the browser reclaiming the GPU, and re-requesting it immediately
        tends to lose it again. */
+    /* A load can finish after `destroy()`, which only tears down the renderer it can see. A late
+       one has already put its canvas (and maybe a worker) in place, so it is torn down here. */
+    const adoptUnlessDestroyed = (next: GlobeRenderer) => {
+      if (destroyed) next.destroy();
+      else adoptRenderer(next);
+    };
     const recover = async () => {
       if (destroyed) return;
-      if (!deviceLossRetried) {
+      if (!workerFailed && !deviceLossRetried) {
         deviceLossRetried = true;
         try {
-          adoptRenderer(await loadRenderer("webgpu"));
+          adoptUnlessDestroyed(await loadRenderer("webgpu"));
           return;
         } catch {
           // Fall through to canvas-2D below.
@@ -234,7 +277,7 @@ export async function createGlobeEngine(
       }
       if (destroyed) return;
       try {
-        adoptRenderer(await loadRenderer("canvas2d"));
+        adoptUnlessDestroyed(await loadRenderer("canvas2d", workerFailed));
       } catch (error) {
         console.error("globe: no renderer could start", error);
       }
@@ -353,6 +396,7 @@ export async function createGlobeEngine(
     camera.radius = baseScale * controller.zoom;
     camera.centreX = centreX;
     camera.centreY = centreY;
+    placed = true;
 
     /* One instant for the whole frame. Reading the clock per call site could put
        a marker on the wrong side of the same frame's own terminator. */
@@ -365,7 +409,8 @@ export async function createGlobeEngine(
       subsolar: [solar.lng, solar.lat],
       zoom: controller.zoom,
       quiet: controller.isQuiet(),
-      moving: controller.needsFrame(),
+      // A requested spin turns the globe without being a flight, so it is not "moving".
+      moving: controller.needsFrame() && !controller.isSpinOnly(),
       exposure:
         dawning() && renderer?.kind !== "canvas2d"
           ? dawnExposure(now - (dawnStart as number))
@@ -430,13 +475,7 @@ export async function createGlobeEngine(
    * loop already has a frame pending it will draw anyway, so this does nothing.
    */
   function requestDraw(): void {
-    if (
-      destroyed ||
-      document.hidden ||
-      offscreen ||
-      frameHandle ||
-      drawHandle
-    ) {
+    if (destroyed || document.hidden || held() || frameHandle || drawHandle) {
       return;
     }
     drawHandle = requestAnimationFrame(() => {
@@ -466,7 +505,7 @@ export async function createGlobeEngine(
 
   /** Ask for the next frame, or set the one timer that wakes the ambient spin. */
   function schedule(): void {
-    if (destroyed || document.hidden || offscreen) return;
+    if (destroyed || document.hidden || held()) return;
     /* A dawn entrance has no loop, and the spin no wake timer, until it starts. */
     if (dawnMode && dawnStart === null) return;
     if (controller.needsFrame() || dawning()) {
@@ -665,6 +704,7 @@ export async function createGlobeEngine(
       if (frameHandle) cancelAnimationFrame(frameHandle);
       frameHandle = 0;
       if (wakeTimer) clearTimeout(wakeTimer);
+      holdCallback?.();
       return;
     }
     // Returning after a while: treat now as the last interaction, so the globe
@@ -675,29 +715,41 @@ export async function createGlobeEngine(
   }
   document.addEventListener("visibilitychange", onVisibility);
 
-  /* Out of view the loop stops entirely: no frame, no wake timer. Coming back
-     is treated like a returning tab, so a spin does not resume from a stale
-     timestamp. */
+  /* Held (out of view, or covered) the loop stops entirely: no frame, no wake timer. Coming back
+     is treated like a returning tab, so a spin does not resume from a stale timestamp, and it
+     carries on from the rotation it stopped at. */
+  function applyHold(): void {
+    if (held()) {
+      if (frameHandle) cancelAnimationFrame(frameHandle);
+      if (drawHandle) cancelAnimationFrame(drawHandle);
+      if (wakeTimer) clearTimeout(wakeTimer);
+      frameHandle = 0;
+      drawHandle = 0;
+      holdCallback?.();
+      return;
+    }
+    controller.markInteraction(performanceNow());
+    requestDraw();
+    schedule();
+  }
+
   let viewObserver: IntersectionObserver | undefined;
   if (options.pauseWhenHidden && typeof IntersectionObserver === "function") {
     viewObserver = new IntersectionObserver((entries) => {
       const visible = entries[entries.length - 1]?.isIntersecting ?? true;
       if (visible === !offscreen) return;
       offscreen = !visible;
-      if (offscreen) {
-        if (frameHandle) cancelAnimationFrame(frameHandle);
-        if (drawHandle) cancelAnimationFrame(drawHandle);
-        if (wakeTimer) clearTimeout(wakeTimer);
-        frameHandle = 0;
-        drawHandle = 0;
-        return;
-      }
-      controller.markInteraction(performanceNow());
-      requestDraw();
-      schedule();
+      applyHold();
     });
     viewObserver.observe(options.pauseWhenHidden);
   }
+
+  /* The host says when something covers the globe; the subscription is dropped on `destroy()`. */
+  const stopWatchingCover = options.pauseWhile?.((next) => {
+    if (next === covered || destroyed) return;
+    covered = next;
+    applyHold();
+  });
 
   // --- start ---------------------------------------------------------------
 
@@ -755,13 +807,33 @@ export async function createGlobeEngine(
       renderer?.setArcs(next);
       requestDraw();
     },
-    flyTo(rotation) {
+    flyTo(rotation, flight) {
       controller.flyTo(
         [wrapLng(rotation[0]), clampLat(rotation[1])],
         performanceNow(),
+        flight?.hop,
       );
       schedule();
     },
+    steer(vector) {
+      controller.steer(vector, performanceNow());
+      schedule();
+    },
+    setSpin(on) {
+      controller.setSpin(on);
+      schedule();
+    },
+    isSpinning: () => controller.isSpinning(),
+    refit: () => measure(),
+    getView: () => ({
+      rotation: [controller.rotation[0], controller.rotation[1]],
+      zoom: controller.zoom,
+      // A requested spin turns the globe without being a flight, so it is not "moving".
+      moving: controller.needsFrame() && !controller.isSpinOnly(),
+      distance: P,
+      focalPx: focal(camera.radius),
+      centre: { x: camera.centreX, y: camera.centreY },
+    }),
     setZoom(zoom) {
       controller.setZoom(zoom, performanceNow());
       schedule();
@@ -773,19 +845,36 @@ export async function createGlobeEngine(
     getZoom: () => controller.zoom,
     getRotation: () => [controller.rotation[0], controller.rotation[1]],
     project(point: LngLat) {
+      /* The camera takes its centre and radius from the first frame drawn, which a dawn entrance
+         holds back. Until then it is the default, centred on the host's top left: every point
+         would land there and read as visible, and the zone card placed by it flashed in the
+         page's corner. */
+      if (!placed) return { x: 0, y: 0, visible: false };
       return projectPoint(camera, point[0], point[1]);
     },
     unproject(x, y) {
-      return unprojectPoint(camera, x, y);
+      return placed ? unprojectPoint(camera, x, y) : null;
     },
+    getCentre: () => ({
+      x: camera.centreX,
+      y: camera.centreY,
+      radius: camera.radius,
+    }),
     onTap(callback) {
       tapCallback = callback;
     },
     onInteract(callback) {
       interactCallback = callback;
     },
+    onZoom(callback) {
+      zoomCallback = callback;
+    },
     onFrame(callback) {
       frameCallback = callback;
+    },
+    isHeld: () => destroyed || document.hidden || held(),
+    onHold(callback) {
+      holdCallback = callback;
     },
     requestRender() {
       requestDraw();
@@ -802,6 +891,7 @@ export async function createGlobeEngine(
       if (wakeTimer) clearTimeout(wakeTimer);
       resizeObserver.disconnect();
       viewObserver?.disconnect();
+      stopWatchingCover?.();
       dprQuery?.removeEventListener("change", onDprChange);
       document.removeEventListener("visibilitychange", onVisibility);
       if (renderer) {
@@ -813,6 +903,7 @@ export async function createGlobeEngine(
       tapCallback = null;
       frameCallback = null;
       interactCallback = null;
+      zoomCallback = null;
     },
   };
 

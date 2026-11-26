@@ -32,11 +32,16 @@ export interface DisclosureOptions extends GateOption {
   className?: string;
   /** Extra class on the button, from the caller's own module. */
   buttonClassName?: string;
+  /**
+   * Open the panel in the page's flow, below the button and as wide as its container, so a long
+   * list pushes what follows down instead of floating over it. The behaviour is the same.
+   */
+  flow?: boolean;
 }
 
 export function disclosure(o: DisclosureOptions): SafeHtml {
   const open = o.open === true;
-  return html`<div class="${styles.root} ${o.className ?? ""}" data-disclosure ${gateAttr(o.gate)}
+  return html`<div class="${styles.root} ${o.className ?? ""}" data-disclosure ${o.flow === true ? html`data-flow="true"` : ""} ${gateAttr(o.gate)}
     ><button
       class="${styles.button} ${o.buttonClassName ?? ""}"
       type="button"

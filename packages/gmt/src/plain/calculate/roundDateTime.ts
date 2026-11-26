@@ -1,9 +1,12 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
+import { roundingMembers } from "../../internal/typedOptions";
+import { isDateTimeUnitName } from "../../internal/unitNames";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import {
   defaultFractionalDigits,
-  isObject,
+  isOptionsObject,
   resolveDateTimeUnit,
 } from "../../internal";
 import {
@@ -15,7 +18,6 @@ import { getDaysIntoDateUnit } from "../../internal/dateUnitHelpers";
 import { measureNearRangeEnd } from "../../internal/measureNearRangeEnd";
 import { resolveManualRoundingOptions } from "../../internal/resolveManualRoundingOptions";
 import type { DateTimeUnit } from "../../types";
-import { isValidDateTime, isValidDateTimeUnit } from "../validate";
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
@@ -207,20 +209,18 @@ export function roundDateTime(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,
     );
 
-    if (!isValidDateTime(value) || !isValidDateTimeUnit(smallestUnit))
-      return "";
+    const source = plainDateTimeOf(value);
+    if (source === null || !isDateTimeUnitName(smallestUnit)) return "";
 
     try {
-      const source = Temporal.PlainDateTime.from(value);
-
       if (TIME_UNITS.includes(smallestUnit)) {
         return roundTimeUnit(
           source,

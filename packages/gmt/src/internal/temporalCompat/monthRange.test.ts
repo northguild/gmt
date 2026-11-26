@@ -1,4 +1,7 @@
-import { runInBoundedChild } from "../../test/boundedChild";
+import {
+  BOUNDED_CHILD_TEST_TIMEOUT_MS,
+  runInBoundedChild,
+} from "../../test/boundedChild";
 import { calendarSystems } from "../calendarSystemIds";
 import { MAX_MONTHS_IN_RANGE, assertMonthsInRange } from "./monthRange";
 
@@ -37,28 +40,32 @@ describe("assertMonthsInRange", () => {
   });
 });
 
-describe("MAX_MONTHS_IN_RANGE covers every calendar", () => {
-  const monthsAcrossRange = async (calendar: string) => {
-    const run = await runInBoundedChild([
-      `gmt.diffDate("-271821-04-19[u-ca=${calendar}]", "+275760-09-13[u-ca=${calendar}]", "months")`,
-    ]);
-    expect(
-      { timedOut: run.timedOut, crashed: run.crashed },
-      run.stderr,
-    ).toEqual({ timedOut: false, crashed: false });
-    return run.calls[0]?.value;
-  };
+describe(
+  "MAX_MONTHS_IN_RANGE covers every calendar",
+  { timeout: BOUNDED_CHILD_TEST_TIMEOUT_MS },
+  () => {
+    const monthsAcrossRange = async (calendar: string) => {
+      const run = await runInBoundedChild([
+        `gmt.diffDate("-271821-04-19[u-ca=${calendar}]", "+275760-09-13[u-ca=${calendar}]", "months")`,
+      ]);
+      expect(
+        { timedOut: run.timedOut, crashed: run.crashed },
+        run.stderr,
+      ).toEqual({ timedOut: false, crashed: false });
+      return run.calls[0]?.value;
+    };
 
-  it.each(calendarSystems.map((calendar) => ({ calendar })))(
-    "$calendar: the whole date range is fewer months than the bound",
-    async ({ calendar }) => {
-      const months = await monthsAcrossRange(calendar);
-      expect(typeof months).toBe("number");
-      expect(Math.abs(months as number)).toBeLessThan(MAX_MONTHS_IN_RANGE);
-    },
-  );
+    it.each(calendarSystems.map((calendar) => ({ calendar })))(
+      "$calendar: the whole date range is fewer months than the bound",
+      async ({ calendar }) => {
+        const months = await monthsAcrossRange(calendar);
+        expect(typeof months).toBe("number");
+        expect(Math.abs(months as number)).toBeLessThan(MAX_MONTHS_IN_RANGE);
+      },
+    );
 
-  it("hebrew: the whole date range is 6,772,637 months (the largest of any calendar)", async () => {
-    expect(await monthsAcrossRange("hebrew")).toBe(6_772_637);
-  });
-});
+    it("hebrew: the whole date range is 6,772,637 months (the largest of any calendar)", async () => {
+      expect(await monthsAcrossRange("hebrew")).toBe(6_772_637);
+    });
+  },
+);

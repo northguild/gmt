@@ -348,8 +348,9 @@ describe("the clock handles", () => {
     const w = await open();
     startHandle().focus();
     await w.user.keyboard("{ArrowRight}");
-    expect((startBox() as HTMLInputElement).value).toMatch(
-      /\[Europe\/London\]$/,
+    // an offset instant on the London clock: `freeTimeExpiry` takes no zone bracket
+    expect((startBox() as HTMLInputElement).value).toBe(
+      "2024-06-14T20:15:00+01:00",
     );
     expect(startHandle()).toHaveAttribute(
       "aria-valuetext",
@@ -398,7 +399,7 @@ describe("a seed from the chat", () => {
     expect(chargesOut()).toHaveTextContent('chargedDates: ["2024-06-17"]');
     expect(
       screen.getByRole("group", { name: "Call to chargeableDays" }),
-    ).toHaveTextContent("2024-06-14T15:00:00-04:00[America/New_York]");
+    ).toHaveTextContent("2024-06-14T15:00:00-04:00");
   });
 
   it("shows a hostile value as text", async () => {

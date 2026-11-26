@@ -42,7 +42,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.23.1'
 ---
 
 # GMT Arithmetic
@@ -136,9 +136,10 @@ operations.
 5. **Calendar units need `relativeTo`.** `totalDuration`, `normalizeDuration`, and
    `compareDurations` return `null`/`""` for year/month/week arithmetic without
    a `relativeTo` anchor — a month is not a fixed length. `totalUnits` takes no
-   `relativeTo`, so it always returns `null` for those units. A calendar-annotated
-   `relativeTo` is read as Temporal reads it: zoned when it has a time zone
-   annotation, otherwise a date, and its calendar must be a `CalendarSystem`.
+   `relativeTo`, so it always returns `null` for those units. `relativeTo` is an
+   ISO 8601 string, never an object or a property bag (they return the
+   sentinel): zoned when it has a time zone annotation, otherwise a date, and
+   a calendar annotation must name a `CalendarSystem`.
    - `round*` accept singular or plural `smallestUnit` names (`"hour"` or
      `"hours"`). A `roundingMode` outside Temporal's nine returns the sentinel.
    - `diff*` with an array of units returns only the listed units, and each

@@ -27,17 +27,17 @@ const entry = WIDGET_REGISTRY["showCutoffRuler"] as AnyWidgetEntry;
 const EXPECTED: Record<string, [string, string, string][]> = {
   "sydney-fall-back": [
     [
-      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "P2D", { timeZone: "Australia/Sydney" }',
+      '"2024-04-08T18:00:00+10:00", "P2D", { timeZone: "Australia/Sydney" }',
       "2024-04-06T18:00:00+11:00[Australia/Sydney]",
       "PT49H",
     ],
     [
-      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "PT48H", { timeZone: "Australia/Sydney" }',
+      '"2024-04-08T18:00:00+10:00", "PT48H", { timeZone: "Australia/Sydney" }',
       "2024-04-06T19:00:00+11:00[Australia/Sydney]",
       "PT48H",
     ],
     [
-      '"2024-04-08T18:00:00+10:00[Australia/Sydney]", "P2D", { timeZone: "Australia/Sydney", atLocalTime: "17:00" }',
+      '"2024-04-08T18:00:00+10:00", "P2D", { timeZone: "Australia/Sydney", atLocalTime: "17:00" }',
       "2024-04-06T17:00:00+11:00[Australia/Sydney]",
       "PT50H",
     ],
@@ -100,7 +100,7 @@ describe("the readings", () => {
 
   it("renders the chat seed (the pill args) as R1", async () => {
     await open({
-      anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+      anchor: "2024-04-08T18:00:00+10:00",
       timeZone: "Australia/Sydney",
       days: 2,
       atLocalTime: "17:00",
@@ -228,7 +228,7 @@ describe("the drawing", () => {
 describe("a seed outside the lists", () => {
   it("keeps a zone outside the curated list and reads it", async () => {
     await open({
-      anchor: "2024-06-10T18:00:00+03:00[Europe/Helsinki]",
+      anchor: "2024-06-10T18:00:00+03:00",
       timeZone: "Europe/Helsinki",
       days: 2,
       atLocalTime: "17:00",
@@ -239,7 +239,7 @@ describe("a seed outside the lists", () => {
 
   it("keeps a seeded day count outside 1 to 7 instead of blanking the select", async () => {
     await open({
-      anchor: "2024-06-20T18:00:00+03:00[Europe/Helsinki]",
+      anchor: "2024-06-20T18:00:00+03:00",
       timeZone: "Europe/Helsinki",
       days: 9,
       atLocalTime: "17:00",

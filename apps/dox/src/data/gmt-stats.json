@@ -1,8 +1,8 @@
 {
   "suite": "packages/gmt",
-  "tests": 71044,
-  "files": 937,
-  "executions": 2131320,
+  "tests": 78085,
+  "files": 1034,
+  "executions": 2342550,
   "nodes": ["22", "24", "26"],
   "timezones": 10,
   "timezoneList": [
@@ -37,8 +37,8 @@
     "ru-RU",
     "tr-TR"
   ],
-  "functions": 735,
-  "patterns": 30,
+  "functions": 781,
+  "patterns": 33,
   "byNamespace": [
     {
       "namespace": "plain",
@@ -66,7 +66,11 @@
     },
     {
       "namespace": "calendar",
-      "count": 31
+      "count": 32
+    },
+    {
+      "namespace": "timescale",
+      "count": 25
     },
     {
       "namespace": "duration",
@@ -85,15 +89,23 @@
       "count": 8
     },
     {
+      "namespace": "aviation",
+      "count": 7
+    },
+    {
       "namespace": "instant",
       "count": 7
+    },
+    {
+      "namespace": "finance",
+      "count": 6
     },
     {
       "namespace": "gnss",
       "count": 6
     },
     {
-      "namespace": "timescale",
+      "namespace": "healthcare",
       "count": 6
     },
     {
@@ -101,11 +113,29 @@
       "count": 5
     },
     {
+      "namespace": "rail",
+      "count": 4
+    },
+    {
       "namespace": "recurrence",
       "count": 4
+    },
+    {
+      "namespace": "iot",
+      "count": 3
     }
   ],
-  "industryNamespaces": ["intermodal", "transport", "workforce", "gnss"],
+  "industryNamespaces": [
+    "intermodal",
+    "transport",
+    "workforce",
+    "aviation",
+    "finance",
+    "gnss",
+    "healthcare",
+    "rail",
+    "iot"
+  ],
   "industryLayers": [
     {
       "id": "workforce",
@@ -144,7 +174,7 @@
       "drawsOn": [
         {
           "module": "timescale",
-          "count": 6,
+          "count": 25,
           "shared": false
         }
       ]
@@ -161,11 +191,58 @@
         },
         {
           "module": "timescale",
-          "count": 6,
+          "count": 25,
+          "shared": false
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "own": 6,
+      "drawsOn": []
+    },
+    {
+      "id": "healthcare",
+      "label": "Healthcare",
+      "own": 6,
+      "drawsOn": []
+    },
+    {
+      "id": "aviation",
+      "label": "Aviation",
+      "own": 7,
+      "drawsOn": []
+    },
+    {
+      "id": "rail",
+      "label": "Rail",
+      "own": 4,
+      "drawsOn": [
+        {
+          "module": "transport",
+          "count": 15,
+          "shared": true
+        }
+      ]
+    },
+    {
+      "id": "iot",
+      "label": "IoT",
+      "own": 3,
+      "drawsOn": [
+        {
+          "module": "timescale",
+          "count": 25,
+          "shared": false
+        },
+        {
+          "module": "precision",
+          "count": 37,
           "shared": false
         }
       ]
     }
   ],
-  "industryFunctions": 84
+  "industryFunctions": 110
 }

@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -21,7 +20,13 @@ import {
  * - A lunisolar calendar adds two more: `zh-u-ca-chinese` and `ko-u-ca-dangi` emit
  *   `"relatedYear"` (the Gregorian year the cycle falls in) and `"yearName"` (the sexagenary
  *   cycle name) in place of, or beside, `"year"`. Code that looks up a `"year"` part must handle
- *   their absence.
+ *   their absence. This holds on a runtime that prints the observatory's Chinese or Dangi dates
+ *   (see the next item).
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `[]` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own parts. A format with only a weekday
+ *   field always returns its parts.
  * - The caller should iterate the array as returned; reassembling in a fixed
  *   order reintroduces exactly the bug `formatToParts` exists to avoid.
  * - A PlainDate has no time or zone, so no `hour`/`minute`/`second`/`dayPeriod`/`timeZoneName`
@@ -71,7 +76,8 @@ export function formatDateToParts(
    */
   value: string;
 }> {
-  if (!isValidDate(value)) {
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) {
     return [];
   }
 
@@ -89,7 +95,7 @@ export function formatDateToParts(
       return [];
     }
     const epochMilliseconds =
-      Temporal.PlainDate.from(value).toZonedDateTime("UTC").epochMilliseconds;
+      valueParsed.toZonedDateTime("UTC").epochMilliseconds;
     return cachedFormatter("DateTimeFormat", locale, resolved)
       .formatToParts(epochMilliseconds)
       .map((p) => ({ type: p.type, value: p.value }));

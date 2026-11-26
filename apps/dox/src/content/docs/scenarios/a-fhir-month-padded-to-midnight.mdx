@@ -1,0 +1,36 @@
+---
+title: "A FHIR Month Padded to Midnight"
+description: A FHIR date sent as a month, turned into a midnight instant, so a range check counts the whole month as its first moment.
+industries: [healthcare]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A FHIR Month Padded to Midnight"
+  description="A FHIR resource sends a date as 2024-06, a month. The receiving system turns it into an instant to compare it with a range."
+  naiveCode={`// The naive approach: a month read as the moment it starts
+const value = "2024-06"; // a FHIR date: the month of June
+new Date(value).toISOString();
+// "2024-06-01T00:00:00.000Z" — a day and a time nobody sent
+
+// Or pad it to a full date first
+Temporal.PlainDate.from(value + "-01").toString();
+// "2024-06-01" — the first of the month`}
+  explanation={`FHIR allows a date to stop at a year or a month, and 2024-06 states June 2024 and nothing finer. Padding it, with new Date or with -01, turns the month into one day, or one midnight. A range check then counts the whole month as its first moment, so a month that runs past the end of the range passes because its first day is inside it. parseFHIR keeps the precision and pads nothing, so the month stays a month.`}
+  gmtCode={`import { parseFHIR } from "@northguild/gmt/healthcare/parse";
+
+parseFHIR("2024-06");
+// { value: "2024-06", precision: "month", offset: "" }
+
+parseFHIR("2024-06-15");
+// { value: "2024-06-15", precision: "day", offset: "" }
+
+parseFHIR("2024-6-15");
+// null — the month is not padded`}
+  fixedSpecId="parseFHIR"
+/>
+
+In the widget, try `2024-06`, then `2024-06-15`, then `2024-06-15T10:30:00`. The first is a month, the
+second is a day, and the third is `null`, because a FHIR time needs a zone. The full rules are in
+[Healthcare: Clinical Timestamps](/guides/industries/healthcare-clinical-timestamps/).

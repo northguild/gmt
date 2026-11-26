@@ -24,6 +24,7 @@
 
 import { Temporal } from "@northguild/gmt";
 import { CURATED_TIMEZONES } from "./curated-timezones";
+import { offsetNanoseconds } from "./exact-offset";
 import { codeSpan, escapeAttr, escapeHtml } from "./widget-ui";
 
 // ---------------------------------------------------------------------------
@@ -253,6 +254,17 @@ export function minutesText(n: number): string {
   return `${h} h ${m} min`;
 }
 
+/** `minutesText` with the seconds kept: `"3 min 58 s"`, `"30 s"`, `"1 h"`. For
+ *  a gap between two offsets, which is not always whole minutes (New York ran
+ *  at -04:56:02 until 1883). Whole minutes read exactly as `minutesText`. */
+export function minutesSecondsText(n: number): string {
+  const totalSeconds = Math.abs(Math.round(n * 60));
+  const s = totalSeconds % 60;
+  if (s === 0) return minutesText(totalSeconds / 60);
+  const wholeMinutes = (totalSeconds - s) / 60;
+  return wholeMinutes === 0 ? `${s} s` : `${minutesText(wholeMinutes)} ${s} s`;
+}
+
 /**
  * An instant string's epoch milliseconds, for axis positions and elapsed-
  * minute comparisons. `Temporal.Instant`, never the native `Date` this
@@ -260,6 +272,16 @@ export function minutesText(n: number): string {
  * timezone or calendar of its own, unlike `Date.parse`.
  */
 export function epochMs(instant: string): number {
+  // A zoned string writes its offset rounded to the minute (Monrovia's
+  // -00:44:30 as -00:45), and `Instant.from` would read that rounded offset:
+  // 30 seconds out. Its zone has the exact one.
+  if (instant.includes("[")) {
+    try {
+      return Temporal.ZonedDateTime.from(instant).epochMilliseconds;
+    } catch {
+      // Not a zoned string Temporal can resolve: read the offset as written.
+    }
+  }
   return Temporal.Instant.from(instant).epochMilliseconds;
 }
 
@@ -640,11 +662,10 @@ interface OffsetReading {
   deltaMinutes: number;
 }
 
-function parseOffsetMinutes(offset: string): number {
-  const m = /^([+-])(\d{2}):(\d{2})/.exec(offset);
-  if (!m) return 0;
-  const sign = m[1] === "-" ? -1 : 1;
-  return sign * (Number(m[2]) * 60 + Number(m[3]));
+/** `YYYY-MM-DDTHH:MM`, with `:SS` when the seconds are not zero. */
+function wallText(wall: Temporal.PlainDateTime): string {
+  const text = wall.toString({ fractionalSecondDigits: 0 });
+  return text.endsWith(":00") ? text.slice(0, 16) : text;
 }
 
 /**
@@ -665,31 +686,22 @@ export function offsetTableReading(
 ): OffsetReading {
   const bookedOffset =
     Temporal.Instant.from(bookedAtZ).toZonedDateTimeISO(zone).offset;
-  const naiveInstant = Temporal.Instant.from(instantZ).add({
-    minutes: parseOffsetMinutes(bookedOffset),
-  });
-  const wall = naiveInstant.toString().slice(0, 16);
-
+  // The offset to the second: New York's -04:56:02 or Monrovia's -00:44:30
+  // moves the wall clock by a part of a minute, and the table does too.
+  const naiveWall = Temporal.Instant.from(instantZ)
+    .add({ nanoseconds: offsetNanoseconds(bookedOffset) ?? 0 })
+    .toZonedDateTimeISO("UTC")
+    .toPlainDateTime();
   const trueWall = Temporal.Instant.from(instantZ)
     .toZonedDateTimeISO(zone)
-    .toPlainDateTime()
-    .toString()
-    .slice(0, 16);
+    .toPlainDateTime();
 
   return {
-    wall,
+    wall: wallText(naiveWall),
     offset: bookedOffset,
-    deltaMinutes: offsetTableDelta(wall, trueWall),
+    // The naive wall clock minus the zone's, in minutes (seconds as a fraction).
+    deltaMinutes: naiveWall
+      .since(trueWall, { largestUnit: "minutes" })
+      .total("minutes"),
   };
-}
-
-/**
- * `offsetTableReading`'s `deltaMinutes`, computed against the library's own
- * local-arrival text: the naive wall clock minus the library's, in minutes,
- * from each side's `YYYY-MM-DDTHH:MM` text.
- */
-function offsetTableDelta(naiveWall: string, libraryWall: string): number {
-  const naive = Temporal.PlainDateTime.from(naiveWall.slice(0, 16));
-  const real = Temporal.PlainDateTime.from(libraryWall.slice(0, 16));
-  return naive.since(real, { largestUnit: "minutes" }).total("minutes");
 }

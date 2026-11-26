@@ -5,52 +5,53 @@ import {
   MustTestLocales,
   oneOfIcu,
 } from "../../test";
+import { hostPlainRangeText } from "../../test/hostIntl";
 import { formatDateRange } from "./formatDateRange";
 
 describe("formatDateRange", () => {
   const rangeByLocale = localeDateRangeInputByLocale;
 
   it.each`
-    locale                  | options                   | expected
-    ${MustTestLocales.enUS} | ${{ dateStyle: "long" }}  | ${"February 3 – 5, 2024"}
-    ${MustTestLocales.enUS} | ${{ dateStyle: "short" }} | ${"2/3/24 – 2/5/24"}
-    ${MustTestLocales.enGB} | ${{ dateStyle: "short" }} | ${"03/02/2024 – 05/02/2024"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "long" }}  | ${"3.–5. Februar 2024"}
-    ${MustTestLocales.deDE} | ${{ dateStyle: "short" }} | ${"03.–05.02.24"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "long" }}  | ${"3–5 février 2024"}
-    ${MustTestLocales.frFR} | ${{ dateStyle: "short" }} | ${"03/02/2024 – 05/02/2024"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "long" }}  | ${"3–5 de febrero de 2024"}
-    ${MustTestLocales.esES} | ${{ dateStyle: "short" }} | ${"3/2/24 – 5/2/24"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "long" }}  | ${"03–05 febbraio 2024"}
-    ${MustTestLocales.itIT} | ${{ dateStyle: "short" }} | ${"03/02/24 – 05/02/24"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "long" }}  | ${"3–5 de fevereiro de 2024"}
-    ${MustTestLocales.ptPT} | ${{ dateStyle: "short" }} | ${"03/02/24 – 05/02/24"}
-    ${MustTestLocales.svSE} | ${{ dateStyle: "long" }}  | ${"3–5 februari 2024"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "long" }}  | ${"3.–5. febrúar 2024"}
-    ${MustTestLocales.isIS} | ${{ dateStyle: "short" }} | ${"3.2.2024 – 5.2.2024"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "long" }}  | ${"2024/2/3 – 2024/2/5"}
-    ${MustTestLocales.zhCN} | ${{ dateStyle: "short" }} | ${"2024/2/3 – 2024/2/5"}
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "long" }}  | ${"2024/2/3至2024/2/5"}
-    ${MustTestLocales.zhTW} | ${{ dateStyle: "short" }} | ${"2024/2/3至2024/2/5"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "long" }}  | ${"2024/02/03～2024/02/05"}
-    ${MustTestLocales.jaJP} | ${{ dateStyle: "short" }} | ${"2024/02/03～2024/02/05"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "long" }}  | ${"2024년 2월 3일~5일"}
-    ${MustTestLocales.koKR} | ${{ dateStyle: "short" }} | ${"24. 2. 3. ~ 24. 2. 5."}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "long" }}  | ${"٣–٥ فبراير ٢٠٢٤"}
-    ${MustTestLocales.arSA} | ${{ dateStyle: "short" }} | ${"٣‏/٢‏/٢٠٢٤ – ٥‏/٢‏/٢٠٢٤"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "long" }}  | ${"3–5 בפברואר 2024"}
-    ${MustTestLocales.heIL} | ${{ dateStyle: "short" }} | ${"03.2.2024 – 05.2.2024"}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "long" }}  | ${"3–5 февраля 2024 г."}
-    ${MustTestLocales.ruRU} | ${{ dateStyle: "short" }} | ${"03.02.2024–05.02.2024"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "long" }}  | ${"3–5 Şubat 2024"}
-    ${MustTestLocales.trTR} | ${{ dateStyle: "short" }} | ${"03.02.2024 – 05.02.2024"}
+    locale                  | options
+    ${MustTestLocales.enUS} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.enUS} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.enGB} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.deDE} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.frFR} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.esES} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.itIT} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.ptPT} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.svSE} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.isIS} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.zhCN} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.zhTW} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.jaJP} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.koKR} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.arSA} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.heIL} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.ruRU} | ${{ dateStyle: "short" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "long" }}
+    ${MustTestLocales.trTR} | ${{ dateStyle: "short" }}
   `(
-    "formats a valid date range for locale $locale with options $options",
-    ({ locale, options, expected }) => {
+    "formats a valid date range for locale $locale with options $options in the host's wording",
+    ({ locale, options }) => {
       const { start, end } =
         rangeByLocale[locale as keyof typeof rangeByLocale];
       expect(formatDateRange(start, end, locale, options)).toBe(
-        normalizeDateTime(expected),
+        hostPlainRangeText(locale, options, start, end),
       );
     },
   );
@@ -195,12 +196,11 @@ describe("formatDateRange with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatDateRange with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -212,6 +212,28 @@ describe("formatDateRange with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15 - 17", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
+
+  // D25: before 1873-01-01 the japanese calendar uses the Gregorian eras (Intl era/monthCode
+  // Table 2), so the range reads as the `-u-ca-gregory` twin does: a range keeps the era name
+  // at the era width (long and short 西暦, narrow AD), written once for the shared era.
+  it.each`
+    era         | expected
+    ${"long"}   | ${"西暦1700/07/10～1700/07/12"}
+    ${"short"}  | ${"西暦1700/07/10～1700/07/12"}
+    ${"narrow"} | ${"AD1700/07/10～1700/07/12"}
+  `(
+    "prints the Gregorian era at width $era in a ja japanese range before 1873: $expected",
+    ({ era, expected }) => {
+      expect(
+        formatDateRange("1700-07-10", "1700-07-12", "ja-u-ca-japanese", {
+          era,
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        } as Intl.DateTimeFormatOptions),
+      ).toBe(expected);
+    },
+  );
 });

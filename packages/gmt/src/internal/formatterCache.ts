@@ -1,3 +1,13 @@
+import { plainOptionEntries } from "./plainOptionEntries";
+import { canonicalLocaleTags } from "./resolveLocale";
+import { isIslamicCalendarResolutionCompatNeeded } from "./temporalCompat/capabilities";
+import { forgetWeekYearVerdicts, guardDateTimeFormat } from "./weekYearGuard";
+import { repairCopticEra } from "./copticEra";
+import { repairIslamicEpochEra } from "./islamicEpochEra";
+import { refuseLunisolarDate } from "./lunisolarRefusal";
+import { repairEraYearNumerals } from "./japaneseNumerals";
+import { repairYearPrinting, widenRelatedYear } from "./yearPrinting";
+
 /** The `Intl` formatter classes this module builds. */
 type FormatterKind =
   | "DateTimeFormat"
@@ -29,17 +39,133 @@ function forgetIfReplaced(kind: FormatterKind): void {
   }
 }
 
+/** The options to build with: widened (D28) when the formatter's calendar is chinese or dangi. */
+function widened(
+  native: Intl.DateTimeFormat,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormatOptions {
+  try {
+    return widenRelatedYear(options, native.resolvedOptions().calendar);
+  } catch {
+    return options;
+  }
+}
+
+/**
+ * A date formatter with the week-year guard (D23, D24) and no year repair (D25 to D27, but for the era-year numerals under the guard): its parts
+ * are the engine's own, as a caller that reads the engine's era needs them (D18, `islamicEra.ts`).
+ * Not cached; the caller keeps it.
+ *
+ * @param locale BCP 47 locale
+ * @param options the formatter's options, built by GMT code
+ * @returns the guarded formatter
+ *
+ * @example guardedDateTimeFormat("en-u-ca-islamic-civil", { era: "short", timeZone: "UTC" }).formatToParts(0) // the engine's parts
+ */
+export function guardedDateTimeFormat(
+  locale: FormatterLocale,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const native = new Intl.DateTimeFormat(locale, options);
+  // CORE-112 D28: a chinese or dangi `year: "2-digit"` is built as `"numeric"` where the engine
+  // pads the related year.
+  const built = options.year === "2-digit" ? widened(native, options) : options;
+  // CORE-112 D27: a `ja` japanese era year is written in the numbering system under the guard, so
+  // the guard reads the same digits in every field.
+  return guardDateTimeFormat(
+    repairEraYearNumerals(
+      built === options ? native : new Intl.DateTimeFormat(locale, built),
+      built,
+    ),
+    built,
+  );
+}
+
+/**
+ * The locale tag as D30 needs it: a `ca` keyword of `islamic` becomes `islamic-tbla`, and one of
+ * `islamic-rgsa` is taken out (with its `-u` when it was the last keyword). Other keywords stay.
+ */
+function islamicTag(tag: string): string {
+  // Most tags name no islamic calendar: no `Intl.Locale` is built for them.
+  if (!/islamic/i.test(tag)) {
+    return tag;
+  }
+  try {
+    const { calendar } = new Intl.Locale(tag);
+    if (calendar === "islamic") {
+      return new Intl.Locale(tag, { calendar: "islamic-tbla" }).toString();
+    }
+    if (calendar === "islamic-rgsa") {
+      return tag
+        .replace(/-ca-islamic-rgsa(?![\da-z])/i, "")
+        .replace(/-u(?=$|-[\da-wyz]-|-x-)/i, "");
+    }
+  } catch {
+    // A tag `Intl.Locale` cannot read is left for the constructor to reject.
+  }
+  return tag;
+}
+
+/**
+ * The locales and options a date formatter is built with, after D30: `islamic` becomes
+ * `islamic-tbla` and `islamic-rgsa` is dropped, where the engine resolves either one (Intl
+ * era/monthCode CreateDateTimeFormat; tc39/proposal-intl-era-monthcode#99).
+ */
+function islamicResolved(
+  locale: FormatterLocale,
+  options: Intl.DateTimeFormatOptions,
+): [FormatterLocale, Intl.DateTimeFormatOptions] {
+  if (!isIslamicCalendarResolutionCompatNeeded()) {
+    return [locale, options];
+  }
+  let nextOptions = options;
+  if (options.calendar === "islamic") {
+    nextOptions = { ...options, calendar: "islamic-tbla" };
+  } else if (options.calendar === "islamic-rgsa") {
+    nextOptions = { ...options };
+    delete nextOptions.calendar;
+  }
+  const rebuilt = Array.isArray(locale)
+    ? locale.map(islamicTag)
+    : typeof locale === "string"
+      ? islamicTag(locale)
+      : locale;
+  return [rebuilt, nextOptions];
+}
+
+/**
+ * @param refuseDates whether a chinese or dangi date formatter (compat D33) throws. The argument
+ * check passes `false`: it builds from the caller's own options, which a time-only function
+ * completes later (`formatTime`), so only the formatter a function formats with is refused. So
+ * does a formatter whose date parts are thrown away (`joinDateTimeConnector`).
+ */
 function construct(
   kind: FormatterKind,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): object {
   switch (kind) {
-    case "DateTimeFormat":
-      return new Intl.DateTimeFormat(
+    case "DateTimeFormat": {
+      const [built, builtOptions] = islamicResolved(
         locale,
         options as Intl.DateTimeFormatOptions,
       );
+      // D33: a chinese or dangi date is refused before any repair runs, where the runtime's probe fails.
+      const guarded = guardedDateTimeFormat(built, builtOptions);
+      if (refuseDates) {
+        refuseLunisolarDate(guarded);
+      }
+      return repairIslamicEpochEra(
+        repairCopticEra(
+          repairYearPrinting(guarded, builtOptions, (twin) =>
+            cachedFormatter("DateTimeFormat", built, twin),
+          ),
+          builtOptions,
+        ),
+        builtOptions,
+      );
+    }
     case "NumberFormat":
       return new Intl.NumberFormat(locale, options as Intl.NumberFormatOptions);
     case "ListFormat":
@@ -60,40 +186,6 @@ function isCacheableLocale(locale: FormatterLocale): boolean {
   return (
     typeof locale === "string" || (Array.isArray(locale) && locale.length > 0)
   );
-}
-
-/** Whether `Intl` can read this option value without running caller code. */
-function isPlainOptionValue(value: unknown): boolean {
-  return (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  );
-}
-
-/**
- * The own enumerable options as `[name, value]` pairs, read through property descriptors so a
- * getter is never run, or `null` when one is an accessor or holds a value `Intl` would coerce
- * by running caller code (anything but a string, a finite number or a boolean). An `undefined`
- * value is skipped, as `Intl` reads it as absent.
- */
-function plainOptionEntries(options: object): [string, unknown][] | null {
-  const entries: [string, unknown][] = [];
-  for (const name of Object.keys(options)) {
-    const descriptor = Object.getOwnPropertyDescriptor(options, name);
-    if (descriptor === undefined || !("value" in descriptor)) {
-      return null;
-    }
-    const value: unknown = descriptor.value;
-    if (value === undefined) {
-      continue;
-    }
-    if (!isPlainOptionValue(value)) {
-      return null;
-    }
-    entries.push([name, value]);
-  }
-  return entries;
 }
 
 /** Whether these entries carry a `timeZone` string. */
@@ -130,10 +222,15 @@ function cacheKey(
  * The locale list as `Intl` canonicalizes it (ECMA-402 CanonicalizeLocaleList): an array is read
  * once, here, through `Intl.getCanonicalLocales`, so the key and the constructor see the same
  * strings even when the array is a Proxy that answers each read differently, and a bad list
- * throws before the options are read, as in the constructors.
+ * throws before the options are read, as in the constructors. A value that is not `undefined`,
+ * a string or an array throws `TypeError`, which every caller turns into its sentinel. So does a list with an
+ * entry that is not a string.
  */
 function canonicalLocale(locale: FormatterLocale): FormatterLocale {
-  return Array.isArray(locale) ? Intl.getCanonicalLocales(locale) : locale;
+  // A string stays as it is: its canonical form is the constructor's to read.
+  return typeof locale === "string" || locale === undefined
+    ? locale
+    : canonicalLocaleTags(locale);
 }
 
 /**
@@ -149,6 +246,8 @@ function canonicalLocale(locale: FormatterLocale): FormatterLocale {
  * @param kind which `Intl` formatter class to build
  * @param locale BCP 47 locale or locales, or `undefined` for the runtime default
  * @param options the formatter's options, built by GMT code
+ * @param refuseDates whether a date formatter is refused where compat D33 refuses it;
+ * `false` only for a formatter whose date parts the caller throws away (`joinDateTimeConnector`)
  * @returns the formatter
  *
  * @example cachedFormatter("DateTimeFormat", "en-GB", { timeZone: "UTC" }).format(0) // "01/01/1970"
@@ -159,11 +258,17 @@ export function cachedFormatter<K extends FormatterKind>(
   kind: K,
   locale: FormatterLocale,
   options: object,
+  refuseDates = true,
 ): InstanceType<(typeof Intl)[K]> {
   locale = canonicalLocale(locale);
-  const key = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  const cacheable = cacheKey(kind, locale, options, kind === "DateTimeFormat");
+  // A formatter built without the date refusals is kept apart from the refusing one.
+  const key =
+    cacheable === null || refuseDates ? cacheable : `${cacheable}!dates`;
   if (key === null) {
-    return construct(kind, locale, options) as InstanceType<(typeof Intl)[K]>;
+    return construct(kind, locale, options, refuseDates) as InstanceType<
+      (typeof Intl)[K]
+    >;
   }
   forgetIfReplaced(kind);
   let byKey = formatters.get(kind);
@@ -171,7 +276,7 @@ export function cachedFormatter<K extends FormatterKind>(
   if (hit !== undefined) {
     return hit as InstanceType<(typeof Intl)[K]>;
   }
-  const built = construct(kind, locale, options);
+  const built = construct(kind, locale, options, refuseDates);
   if (byKey === undefined) {
     byKey = new Map();
     formatters.set(kind, byKey);
@@ -203,7 +308,7 @@ export function checkFormatterArguments(
   locale = canonicalLocale(locale);
   const key = cacheKey(kind, locale, options, false);
   if (key === null) {
-    construct(kind, locale, options);
+    construct(kind, locale, options, false);
     return;
   }
   forgetIfReplaced(kind);
@@ -211,7 +316,7 @@ export function checkFormatterArguments(
   if (seen?.has(key)) {
     return;
   }
-  construct(kind, locale, options);
+  construct(kind, locale, options, false);
   if (seen === undefined) {
     seen = new Set();
     checked.set(kind, seen);
@@ -226,4 +331,5 @@ export function clearFormatterCache(): void {
   formatters.clear();
   checked.clear();
   builtWith.clear();
+  forgetWeekYearVerdicts();
 }

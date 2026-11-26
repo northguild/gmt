@@ -1,13 +1,12 @@
 import type { SmallestUnit } from "./temporalTypes";
 import { defaultFractionalDigits } from "./defaultFractionalDigits";
-import { zonedDateTimeFrom } from "./zonedWallClock";
+import { zonedDateTimeOf } from "./zonedWallClock";
 import { zonedUnitEnd, zonedUnitStart } from "./zonedBucket";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "./resolveWeekStartsOn";
-import { isValidDateTimeUnit } from "../plain/validate";
+import { isDateTimeUnitName } from "./unitNames";
 import type { DateTimeUnit, FractionalDigit } from "../types";
-import { isValidZonedDateTime } from "../zoned/validate";
-import { optionOrDefault } from "./optionOrDefault";
+import { fractionalDigitsOption } from "./typedOptions";
 
 /**
  * Internal shared implementation for `startOfZoned` / `endOfZoned`.
@@ -37,9 +36,10 @@ export function startOrEndOfZoned(
   const resolvedUnit = resolveDateTimeUnit(unit);
   const weekStartsOn = resolveWeekStartsOn(options.weekStartsOn);
 
+  const source = zonedDateTimeOf(value);
   if (
-    !isValidZonedDateTime(value) ||
-    !isValidDateTimeUnit(resolvedUnit) ||
+    source === null ||
+    !isDateTimeUnitName(resolvedUnit) ||
     weekStartsOn === null
   )
     return "";
@@ -47,12 +47,14 @@ export function startOrEndOfZoned(
   const weekStartDay = weekStartsOn === "monday" ? 1 : 7;
   // An end is next start − 1 ns, so it defaults to nanosecond precision: fewer digits would
   // print an earlier instant than the end (Calendar & zone semantics §3).
+  const requestedDigits = fractionalDigitsOption(
+    options.fractionalSecondDigits,
+  );
   const fractionalSecondDigits = isEnd
-    ? optionOrDefault(options.fractionalSecondDigits, 9)
-    : defaultFractionalDigits(resolvedUnit, options.fractionalSecondDigits);
+    ? (requestedDigits ?? 9)
+    : defaultFractionalDigits(resolvedUnit, requestedDigits);
 
   try {
-    const source = zonedDateTimeFrom(value);
     const boundary = isEnd
       ? zonedUnitEnd(source, resolvedUnit, weekStartDay)
       : zonedUnitStart(source, resolvedUnit, weekStartDay);

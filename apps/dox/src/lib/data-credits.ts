@@ -19,13 +19,13 @@ import {
 
 export type { DataCredit, DataCreditsPlacement };
 
-/** The timezone-boundary-builder release the boundary files come from (see `built.md` § Boundary data). */
+/** The timezone-boundary-builder release the boundary files come from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const TBB_TAG = "2026e";
 
-/** The Natural Earth release the coastlines come from (see `built.md` § Boundary data). */
+/** The Natural Earth release the coastlines come from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const NE_TAG = "v5.1.2";
 
-/** The HYG v4.4 commit the star list comes from (see `built.md` § Boundary data). */
+/** The HYG v4.4 commit the star list comes from (see `context/dox/built/tier-4-zones.md`, "Boundary data"). */
 export const HYG_COMMIT = "53e3df311869e813ace5f1ad2ec4ce909f13256c";
 
 export const TZ_BOUNDARIES: DataCredit = {
@@ -63,6 +63,24 @@ export const COASTLINES: DataCredit = {
   ],
 };
 
+/** The state and territory outlines of the Sunshine Protection Act map: Natural Earth admin-0 and admin-1. */
+export const STATE_BOUNDARIES: DataCredit = {
+  label: "State outlines",
+  parts: [
+    "State and territory outlines: ",
+    {
+      text: "Natural Earth",
+      href: "https://www.naturalearthdata.com/",
+    },
+    " 5.1.2, public domain (",
+    {
+      text: NE_TAG,
+      href: `https://github.com/nvkelso/natural-earth-vector/releases/tag/${NE_TAG}`,
+    },
+    ").",
+  ],
+};
+
 export const EARTH_IMAGERY: DataCredit = {
   label: "Earth imagery",
   parts: ["NASA Earth Observatory (Blue Marble Next Generation)."],
@@ -83,6 +101,26 @@ export const NIGHT_SKY: DataCredit = {
     {
       text: "CC BY-SA 4.0",
       href: "https://creativecommons.org/licenses/by-sa/4.0/",
+    },
+    ").",
+  ],
+};
+
+/**
+ * The all-sky photograph behind the landing's Milky Way. CC BY 4.0 asks for the credit as given
+ * and a note that the material was changed (§3(a)(1)); the changes are `hero-milkyway.json`'s.
+ */
+export const MILKY_WAY: DataCredit = {
+  label: "Milky Way",
+  parts: [
+    {
+      text: "The Milky Way panorama",
+      href: "https://www.eso.org/public/images/eso0932a/",
+    },
+    " by ESO/S. Brunier, adapted to a starless greyscale sky map (",
+    {
+      text: "CC BY 4.0",
+      href: "https://creativecommons.org/licenses/by/4.0/",
     },
     ").",
   ],

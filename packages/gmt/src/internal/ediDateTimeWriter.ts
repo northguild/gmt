@@ -1,11 +1,6 @@
-// Not re-exported from `internal/index.ts`, for the reason `ediDateTimeFields.ts` gives:
-// `toOffsetInstant` reads that barrel at module top level, and the `plain/validate` functions
-// import it too, so a barrel entry for this module would close a cycle. Import this file directly.
 import { Temporal } from "./temporal";
-import { toOffsetInstant } from "../instant/convert/toOffsetInstant";
-import { isValidDate } from "../plain/validate/isValidDate";
-import { isValidDateTime } from "../plain/validate/isValidDateTime";
-import { isValidTime } from "../plain/validate/isValidTime";
+import { readInstantOffsetInstant } from "./offsetInstant";
+import { plainDateOf, plainDateTimeOf, plainTimeOf } from "./inputChecks";
 import {
   type EdiCode,
   type EdiKind,
@@ -48,9 +43,9 @@ type PartText = Partial<Record<EdiPart, string | null>>;
  *   that is not written return `""`.
  * - The kind fixes the ISO 8601 string `value` must be, as the house plain functions fix theirs:
  *   a date is what `isValidDate` accepts, a time what `isValidTime` accepts, a local date-time
- *   what `isValidDateTime` accepts, and a date-time with an offset what `toOffsetInstant` reads
- *   (an offset, `Z`, or a bracketed zone that agrees). Temporal then reads the fields; no digit
- *   of the input is sliced.
+ *   what `isValidDateTime` accepts, and a date-time with an offset what an instant string is
+ *   (`Z` or an offset, no zone bracket or other annotation). Temporal then reads the fields; no
+ *   digit of the input is sliced.
  * - Precision is cut to the mask and never refused: a fraction of a second is dropped under
  *   every 2379 and 1250 mask (none has decimal seconds) and the seconds under a mask with no
  *   `SS`. The cut is a truncation, never a rounding, so a written value never names a later
@@ -188,32 +183,32 @@ function readHalf(entry: EdiCode, text: string): IsoHalf | null {
   return typeof text === "string" ? READERS[entry.valueKind](text) : null;
 }
 
-/** Each kind's reader: the public validator proves the string, then Temporal reads its fields. */
+/** Each kind's reader: the core of the public validator reads the string once. */
 const READERS: Readonly<
   Record<EdiValueKind, (text: string) => IsoHalf | null>
 > = {
-  date: (text) =>
-    isValidDate(text)
-      ? { date: Temporal.PlainDate.from(text), time: null, offset: null }
-      : null,
-  time: (text) =>
-    isValidTime(text)
-      ? { date: null, time: Temporal.PlainTime.from(text), offset: null }
-      : null,
-  dateTime: (text) =>
-    isValidDateTime(text)
-      ? wallClockHalf(Temporal.PlainDateTime.from(text), null)
-      : null,
+  date: (text) => {
+    const date = plainDateOf(text);
+    return date === null ? null : { date, time: null, offset: null };
+  },
+  time: (text) => {
+    const time = plainTimeOf(text);
+    return time === null ? null : { date: null, time, offset: null };
+  },
+  dateTime: (text) => {
+    const dateTime = plainDateTimeOf(text);
+    return dateTime === null ? null : wallClockHalf(dateTime, null);
+  },
   offsetDateTime: readOffsetDateTime,
 };
 
 /**
- * A date-time with an offset as its own wall clock and its offset. `toOffsetInstant` reads the
- * string (an offset, `Z`, or a bracketed zone that agrees), and the wall clock is the instant
+ * A date-time with an offset as its own wall clock and its offset. `readInstantOffsetInstant` reads the
+ * string (an offset or `Z`; a zone bracket is not an instant and is refused), and the wall clock is the instant
  * seen at that offset, so no digit of the input is sliced.
  */
 function readOffsetDateTime(text: string): IsoHalf | null {
-  const pair = toOffsetInstant(text);
+  const pair = readInstantOffsetInstant(text);
   if (pair === null) {
     return null;
   }

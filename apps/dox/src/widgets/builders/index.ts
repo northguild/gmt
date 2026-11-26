@@ -11,6 +11,7 @@ export {
   type CarouselBy,
   type CarouselHandle,
   type CarouselPage,
+  type CarouselSteps,
   type CarouselWire,
 } from "./carousel";
 export {
@@ -19,7 +20,7 @@ export {
   type ChartKeyItem,
   type ChartKeyKind,
 } from "./chart-key";
-export { codeFrame, type CodeFrameOptions } from "./code-frame";
+export { codeFrame, paintCodeFrame, type CodeFrameOptions } from "./code-frame";
 export {
   dataCredits,
   type DataCredit,
@@ -56,6 +57,7 @@ export {
 export { idScope } from "./ids";
 export { nobreak } from "./nobreak";
 export { instant } from "./instant";
+export { link, type LinkOptions } from "./link";
 export {
   card,
   type CardOptions,
@@ -72,7 +74,7 @@ export {
 } from "./layout";
 export { findWidget, type FoundWidget } from "../root";
 export { loading, type LoadingOptions } from "./loading";
-export { plates, NO_RESULT, type Plate } from "./plates";
+export { plates, paintPlates, NO_RESULT, type Plate } from "./plates";
 export { select, type SelectOption, type SelectOptions } from "./select";
 export { selectOptions } from "./select";
 export { srOnly } from "./sr-only";
@@ -88,7 +90,18 @@ export {
   type TextInputMode,
   type TextInputOptions,
 } from "./text-input";
+export { dateInput } from "./date-input";
+export { textArea } from "./text-area";
 export { table, type Column, type TableOptions } from "./table";
+export {
+  deckControls,
+  deckDialogs,
+  helpDialog,
+  overviewDialog,
+  overviewItems,
+  type KeyHelpRow,
+  type OverviewItem,
+} from "./deck-controls";
 export {
   toolLinks,
   type ToolLinkItem,
@@ -104,5 +117,18 @@ export {
   type TickOptions,
   type TimelineSeries,
 } from "./timeline";
-export { verdict, type VerdictOptions, type VerdictTone } from "./verdict";
+export {
+  verdict,
+  paintVerdict,
+  type VerdictOptions,
+  type VerdictTone,
+} from "./verdict";
 export { zonedValue } from "./zoned-value";
+export {
+  presenterShell,
+  readinessList,
+  readinessPending,
+  PRESENTER_INITIAL,
+  PRESENTER_SAMPLES,
+  type ReadinessItem,
+} from "./presenter";

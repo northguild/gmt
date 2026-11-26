@@ -30,6 +30,45 @@ describe("rehypeBaseLinks", () => {
     expect(a("/gmt/install/").properties.href).toBe("/gmt/install/");
   });
 
+  it.each([
+    ["/reference/types/Overflow", "/gmt/reference/types/Overflow/"],
+    ["/reference/x#opts", "/gmt/reference/x/#opts"],
+    ["/tools/x?w=1", "/gmt/tools/x/?w=1"],
+    ["/gmt/install", "/gmt/install/"],
+    ["/", "/gmt/"],
+  ])("gives the page link %s its trailing slash", (href, want) => {
+    expect(a(href).properties.href).toBe(want);
+  });
+
+  it.each(["/llms.txt", "/reference/x.md", "/burglekitt-logo.png"])(
+    "leaves the file link %s without a slash",
+    (href) => {
+      expect(a(href).properties.href).toBe(`/gmt${href}`);
+    },
+  );
+
+  it("gives an MDX JSX page href its trailing slash", () => {
+    const card = run({
+      type: "mdxJsxFlowElement",
+      name: "LinkCard",
+      attributes: [
+        { type: "mdxJsxAttribute", name: "href", value: "/tools/x" },
+      ],
+      children: [],
+    }) as { attributes: { value: unknown }[] };
+    expect(card.attributes[0].value).toBe("/gmt/tools/x/");
+  });
+
+  it("does not add a slash to a src", () => {
+    const img = run({
+      type: "element",
+      tagName: "img",
+      properties: { src: "/img/a" },
+      children: [],
+    }) as { properties: { src: string } };
+    expect(img.properties.src).toBe("/gmt/img/a");
+  });
+
   it.each(["https://tc39.es/", "//cdn.x/", "#h", "mailto:a@b", "./x", "x"])(
     "leaves %s unchanged",
     (href) => {

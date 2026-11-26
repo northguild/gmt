@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { isObject } from "../../internal";
-import { isValidDate } from "../../plain/validate/isValidDate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /** The dates a billing timeline is counted from: the anchor, and the invoice and request once they exist. */
 export interface BillingDates {
@@ -137,32 +137,45 @@ function isWindow(value: unknown): value is number {
 }
 
 /** An optional date is absent (`undefined`) or a valid ISO date; anything else is invalid. */
-function optionalDate(value: unknown): string | undefined | null {
+function optionalDate(value: unknown): Temporal.PlainDate | undefined | null {
   if (value === undefined) {
     return undefined;
   }
-  return typeof value === "string" && isValidDate(value) ? value : null;
+  return plainDateOf(value);
 }
 
 /** `date + days` on the ISO calendar, canonical. Throws `RangeError` past Temporal's range. */
-function plusDays(date: string, days: number): string {
-  return Temporal.PlainDate.from(date).add({ days }).toString();
+function plusDays(date: Temporal.PlainDate, days: number): Temporal.PlainDate {
+  return date.add({ days });
 }
 
 /** Whether `date` is on or before `deadline`. */
-function byDeadline(date: string, deadline: string): boolean {
-  return (
-    Temporal.PlainDate.compare(
-      Temporal.PlainDate.from(date),
-      Temporal.PlainDate.from(deadline),
-    ) <= 0
-  );
+function byDeadline(
+  date: Temporal.PlainDate,
+  deadline: Temporal.PlainDate,
+): boolean {
+  return Temporal.PlainDate.compare(date, deadline) <= 0;
+}
+
+/** The dates `readDates` accepts, parsed once. */
+interface ParsedDates {
+  anchorOn: Temporal.PlainDate;
+  invoiceIssuedOn: Temporal.PlainDate | undefined;
+  requestReceivedOn: Temporal.PlainDate | undefined;
+}
+
+/** The windows `readWindows` accepts; the agreed date is parsed once. */
+interface ParsedWindows {
+  issueDays: number;
+  disputeDays: number;
+  resolutionDays: number;
+  agreedResolutionOn: Temporal.PlainDate | undefined;
 }
 
 /** The dates, each a valid ISO date, with no request before its invoice; `null` otherwise. */
-function readDates(dates: BillingDates): BillingDates | null {
-  const { anchorOn } = dates;
-  if (typeof anchorOn !== "string" || !isValidDate(anchorOn)) {
+function readDates(dates: BillingDates): ParsedDates | null {
+  const anchorOn = plainDateOf(dates.anchorOn);
+  if (anchorOn === null) {
     return null;
   }
   const invoiceIssuedOn = optionalDate(dates.invoiceIssuedOn);
@@ -182,7 +195,7 @@ function readDates(dates: BillingDates): BillingDates | null {
 }
 
 /** The three windows, each present and valid, and the agreed date if given; `null` otherwise. */
-function readWindows(windows: BillingWindows): BillingWindows | null {
+function readWindows(windows: BillingWindows): ParsedWindows | null {
   const { issueDays, disputeDays, resolutionDays } = windows;
   if (
     !isWindow(issueDays) ||
@@ -200,21 +213,21 @@ function readWindows(windows: BillingWindows): BillingWindows | null {
 
 /** The agreed date when given, else `requestReceivedOn + resolutionDays`; `null` with no request. */
 function resolutionDeadline(
-  requestReceivedOn: string | undefined,
-  windows: BillingWindows,
-): string | null {
+  requestReceivedOn: Temporal.PlainDate | undefined,
+  windows: ParsedWindows,
+): Temporal.PlainDate | null {
   if (requestReceivedOn === undefined) {
     return null;
   }
   return windows.agreedResolutionOn === undefined
     ? plusDays(requestReceivedOn, windows.resolutionDays)
-    : Temporal.PlainDate.from(windows.agreedResolutionOn).toString();
+    : windows.agreedResolutionOn;
 }
 
 /** Whether `date` is on or before `deadline`; `null` until both exist. */
 function onOrBefore(
-  date: string | undefined,
-  deadline: string | null,
+  date: Temporal.PlainDate | undefined,
+  deadline: Temporal.PlainDate | null,
 ): boolean | null {
   return date === undefined || deadline === null
     ? null
@@ -223,8 +236,8 @@ function onOrBefore(
 
 /** An agreed resolution date cannot precede the request it resolves. */
 function agreedAfterRequest(
-  requestReceivedOn: string | undefined,
-  agreedResolutionOn: string | undefined,
+  requestReceivedOn: Temporal.PlainDate | undefined,
+  agreedResolutionOn: Temporal.PlainDate | undefined,
 ): boolean {
   return (
     requestReceivedOn === undefined ||
@@ -257,11 +270,13 @@ function layOutDeadlines(
     invoiceIssuedOn === undefined
       ? null
       : plusDays(invoiceIssuedOn, counts.disputeDays);
+  const resolution = resolutionDeadline(requestReceivedOn, counts);
   return {
-    invoiceDeadline,
+    invoiceDeadline: invoiceDeadline.toString(),
     issuedByDeadline: onOrBefore(invoiceIssuedOn, invoiceDeadline),
-    disputeDeadline,
+    disputeDeadline:
+      disputeDeadline === null ? null : disputeDeadline.toString(),
     requestedByDeadline: onOrBefore(requestReceivedOn, disputeDeadline),
-    resolutionDeadline: resolutionDeadline(requestReceivedOn, counts),
+    resolutionDeadline: resolution === null ? null : resolution.toString(),
   };
 }

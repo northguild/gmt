@@ -5,12 +5,10 @@
  * changes; the buttons and the pager never move.
  *
  * Every rule here sits under `:root[data-home-carousel]`, which `lib/arrival.ts` sets before the
- * first paint on the landing (`wait`) and `lib/home-carousel.ts` confirms (`on`). Without it, or
- * without JavaScript, the pager is not shown and every page reads in order.
- *
- * On a landscape screen 64rem wide and up the page never scrolls: the sky and the Earth fill the
- * viewport, and a page taller than its place scrolls inside it. A narrower or portrait screen (a
- * phone, a tablet held upright) stacks the copy over the Earth.
+ * first paint on the landing (`wait`) and `lib/home-carousel.ts` confirms (`on`), and only where
+ * the landing is locked: a landscape screen 64rem wide and up, where the page never scrolls and a
+ * page taller than its place scrolls inside it. Elsewhere there is no mark, no carousel, and the
+ * pages read in order (gmt-home-stacked.css). The pane look is in gmt-home-panes.css.
  *
  * The pages and the controls are wired by `widgets/builders/carousel.ts`; the motion is in
  * gmt-entrance-freeze.css.
@@ -57,97 +55,12 @@
   visibility: hidden;
 }
 
-/* ---- The pages after the intro: one bevelled pane each ---- */
-:root:where([data-home-carousel])
-  .gmt-herostage-copy
-  > [data-page]:not(:first-child) {
-  --bevel: var(--gmt-bevel-lg);
-
-  margin: 0;
-  padding: 1rem 1.4rem;
-  border: 1px solid color(from var(--gmt-ice) srgb r g b / 16%);
-  border-radius: var(--bevel);
-  corner-shape: bevel;
-  background-color: color(from var(--gmt-void) srgb r g b / 74%);
-  backdrop-filter: blur(4px);
-  color: var(--gmt-ice-dim);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  pointer-events: auto;
-}
-
 /* The blur is recomputed every frame behind a moving mask, which drops frames; it comes back
    when the page settles. The pane's own 74 % wash carries the look in the meantime. */
 :root:where([data-home-carousel])
   .gmt-herostage-copy
   > [data-page][data-motion] {
   backdrop-filter: none;
-}
-
-:root[data-home-carousel] .gmt-grid-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-:root[data-home-carousel] .gmt-grid-section::before,
-:root[data-home-carousel] .gmt-grid-section::after {
-  display: none;
-}
-
-:root[data-home-carousel] .gmt-grid-section > * {
-  margin: 0;
-}
-
-:root[data-home-carousel] .gmt-grid-section .gmt-section-heading {
-  padding: 0;
-  border: 0;
-  color: var(--gmt-cyan);
-  font-size: 1.05rem;
-  line-height: 1.3;
-}
-
-/* The one-line lede, then the more link. The pane is the measure, so the lede takes its width. */
-:root[data-home-carousel] .gmt-grid-section > .gmt-section-heading + p {
-  margin-block-start: -0.35rem;
-}
-
-/* The markdown spacing under a list item's last block is for prose; the tiles and rows in a pane
-   are spaced by their own grid. */
-:root:where([data-home-carousel])
-  .gmt-herostage-copy
-  > [data-page]
-  :is(ul, ol)
-  > li
-  > * {
-  margin-block-end: 0;
-}
-
-:root[data-home-carousel] .gmt-grid-section > p:last-child {
-  align-self: flex-start;
-  font-size: 0.7813rem;
-}
-
-:root[data-home-carousel] .gmt-grid-section > :last-child a {
-  color: var(--gmt-cyan-bright);
-  text-decoration: none;
-  border-block-end: 1px solid
-    color(from var(--gmt-cyan-bright) srgb r g b / 35%);
-}
-
-:root:where([data-home-carousel])
-  .gmt-grid-section
-  > :last-child
-  a:is(:hover, :focus-visible) {
-  color: var(--gmt-ice);
-}
-
-:root:where([data-home-carousel])
-  .gmt-grid-section
-  > :last-child
-  a:focus-visible {
-  outline: 2px solid var(--gmt-cyan);
-  outline-offset: 3px;
 }
 
 /* ---- The buttons, then the pager under them. Neither row takes the pointer; the buttons, the
@@ -247,21 +160,31 @@
   border: 0;
 }
 
-/* No carousel: every page reads in order, and the pager is not shown. */
-:root:not([data-home-carousel]) .gmt-hero-pager {
+/* No carousel (stacked, or no script): every page reads in order, and the pager and its live
+   region, which belong to the carousel, are not shown. The buttons stay. */
+:root:not([data-home-carousel])
+  .gmt-hero-nav
+  :is(.gmt-hero-pager, .gmt-hero-live) {
   display: none;
 }
 
-/* ---- Narrow and portrait screens: the copy stacks over the Earth and the page scrolls. The page area is
-   capped, so a long page scrolls inside it and the row stays under it. ---- */
-@media (width < 64rem) or (orientation: portrait) {
-  :root[data-home-carousel] .gmt-herostage-copy {
-    grid-template-rows: fit-content(min(34rem, 70svh)) auto;
-  }
+/* The pages fill the column, as they do in the carousel. The column is a flex column whose items
+   take their content's width, and a section page is an inline-size container (dox.css), whose
+   content counts as no width at all: left to size itself, it shrank to nothing and set its text
+   one letter a line. */
+:root:where(:not([data-home-carousel])) .gmt-herostage-copy > [data-page] {
+  align-self: stretch;
+  min-inline-size: 0;
+}
 
-  .gmt-hero-nav .gmt-hero-actions {
-    flex-wrap: wrap;
-    justify-content: center;
+/* Beside the Earth the column is sized to its content. The pages after the intro take no part in
+   that width, as in the carousel, so the intro and the buttons set it and a long paragraph does
+   not push the Earth to the edge. */
+@media (width >= 64rem) and (orientation: landscape) {
+  :root:where(:not([data-home-carousel]))
+    .gmt-herostage-copy
+    > [data-page]:not(:first-child) {
+    contain: inline-size;
   }
 }
 
@@ -348,42 +271,5 @@
     corner-shape: bevel;
     background-color: color(from var(--gmt-void) srgb r g b / 70%);
     text-align: end;
-  }
-}
-
-/* ---- No bevel property: the same shapes cut as octagons. ---- */
-@supports not (corner-shape: bevel) {
-  :root:where([data-home-carousel])
-    .gmt-herostage-copy
-    > [data-page]:not(:first-child) {
-    border-radius: 0;
-    clip-path: polygon(
-      var(--bevel) 0,
-      calc(100% - var(--bevel)) 0,
-      100% var(--bevel),
-      100% calc(100% - var(--bevel)),
-      calc(100% - var(--bevel)) 100%,
-      var(--bevel) 100%,
-      0 calc(100% - var(--bevel)),
-      0 var(--bevel)
-    );
-  }
-}
-
-@media (prefers-contrast: more) {
-  :root:where([data-home-carousel])
-    .gmt-herostage-copy
-    > [data-page]:not(:first-child) {
-    border-color: var(--gmt-ice);
-    background-color: var(--gmt-void);
-  }
-}
-
-@media (forced-colors: active) {
-  :root:where([data-home-carousel])
-    .gmt-herostage-copy
-    > [data-page]:not(:first-child) {
-    border-color: CanvasText;
-    background-color: Canvas;
   }
 }

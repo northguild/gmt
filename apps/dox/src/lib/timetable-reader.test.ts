@@ -37,6 +37,7 @@ import {
   tagText,
   tickStepHours,
   trackDate,
+  wallClockText,
   windowPct,
   withMinute,
   zonedParts,
@@ -150,6 +151,35 @@ describe("offsetChoices", () => {
     expect(choices.map((c) => c.value)).toContain("+00:00");
     /* Neither offset names an instant here, so neither is dressed as a pass. */
     for (const c of choices.slice(1)) expect(c.label).toContain("(skipped)");
+  });
+
+  it("offers New York's 1883 offsets to the second, not rounded (-04:56:02)", () => {
+    // 12:01 happened at -04:56:02 (16:57:02Z) and again at -05:00 (17:01Z).
+    expect(
+      offsetChoices("1883-11-18T12:01:00", "America/New_York", lib),
+    ).toEqual([
+      { value: "", label: "None (earlier)" },
+      { value: "-04:56:02", label: "-04:56:02 (earlier)" },
+      { value: "-05:00", label: "-05:00 (later)" },
+    ]);
+    // The written offset picks the pass to the second.
+    expect(
+      leavesAt(
+        {
+          startTimeZone: "America/New_York",
+          duration: "PT0S",
+          timeZone: "America/New_York",
+          rows: [
+            { departure: "1883-11-18T12:01:00", offset: "-04:56:02" },
+            { departure: "", offset: "" },
+            { departure: "", offset: "" },
+            { departure: "", offset: "" },
+          ],
+        },
+        0,
+        lib,
+      ),
+    ).toBe("1883-11-18T12:01:00-04:56[America/New_York]");
   });
 
   it("offers only None for a blank time, a blank zone or an unparseable time", () => {
@@ -526,6 +556,20 @@ describe("dayBands (section 9 B1 to B12)", () => {
       [["skipped", 1410, 1440, "23:30", "00:00"]],
     ],
     ["B12", "UTC", "2024-10-27", []],
+    // New York's 12:03:58 → 12:00 in 1883: the printed 12:03 repeats, so the
+    // band runs to 12:04. Monrovia's 00:00 → 00:44:30 in 1972 skips 00:44.
+    [
+      "B13",
+      "America/New_York",
+      "1883-11-18",
+      [["twice", 720, 724, "12:00", "12:03:58"]],
+    ],
+    [
+      "B14",
+      "Africa/Monrovia",
+      "1972-01-07",
+      [["skipped", 0, 45, "00:00", "00:44:30"]],
+    ],
   ])("%s: %s on %s", (_id, zone, date, want) => {
     expect(bands(zone as string, date as string)).toEqual(want);
   });
@@ -536,6 +580,8 @@ describe("dayBands (section 9 B1 to B12)", () => {
       [LON, "2024-03-31"],
       ["Europe/Berlin", "2024-10-27"],
       ["Australia/Lord_Howe", "2024-04-07"],
+      ["America/New_York", "1883-11-18"],
+      ["Africa/Monrovia", "1972-01-07"],
     ] as const) {
       for (const b of dayBands(zone, date, lib)) {
         expect(lib.classifyLocal(b.startWall, zone)).toBe(
@@ -661,6 +707,33 @@ describe("handleValueText and tagText", () => {
     expect(
       arrivalChipText("2024-10-28T00:30:00+00:00[Europe/London]", "2024-10-27"),
     ).toBe("00:30 +00:00 10-28");
+  });
+
+  it("writes an arrival chip at the zone's offset to the second (Monrovia 1960)", () => {
+    // The zoned string rounds -00:44:30 to -00:45; the chip shows the exact one.
+    expect(
+      arrivalChipText(
+        "1960-06-01T11:15:30-00:45[Africa/Monrovia]",
+        "1960-06-01",
+      ),
+    ).toBe("11:15:30 -00:44:30");
+    expect(arrivalChipText("1960-06-01T11:15:30-00:44:30", "1960-05-31")).toBe(
+      "11:15:30 -00:44:30 06-01",
+    );
+    expect(
+      arrivalChipText(
+        "1880-06-01T12:03:58-04:56[America/New_York]",
+        "1880-06-01",
+      ),
+    ).toBe("12:03:58 -04:56:02");
+  });
+
+  it("reads a wall clock with seconds only when they are not zero", () => {
+    expect(wallClockText("1960-06-01T11:15:30-00:44:30")).toBe("11:15:30");
+    expect(wallClockText("2024-10-27T01:30:00+01:00[Europe/London]")).toBe(
+      "01:30",
+    );
+    expect(wallClockText("not a time")).toBe("");
   });
 });
 
@@ -985,6 +1058,12 @@ describe("the hidden sizers", () => {
     expect(zonedParts("2024-10-27T01:30:00Z[UTC]")).toEqual([
       "2024-10-27T01:30:00Z",
       "[UTC]",
+    ]);
+    expect(
+      zonedParts("1880-06-01T12:03:58-04:56:02[America/New_York]"),
+    ).toEqual(["1880-06-01T12:03:58-04:56:02", "[America/", "New_York]"]);
+    expect(zonedParts("1960-06-01T11:15:30-00:44:30")).toEqual([
+      "1960-06-01T11:15:30-00:44:30",
     ]);
   });
 

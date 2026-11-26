@@ -83,12 +83,15 @@
 .box {
   box-sizing: border-box;
   display: block;
-  padding: 4px 8px;
+  padding: 4px 8px 6px;
   border: 1px solid var(--gmt-border-strong);
-  border-block-end-width: 3px;
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
   background: var(--gmt-surface);
+
+  /* The heavier bottom edge is the border plus 2px of inset shadow, never a wider border: unequal
+     widths on a bevelled box misdraw the opposite edge. */
+  box-shadow: inset 0 var(--gmt-under-edge) 0 var(--gmt-border-strong);
   color: var(--gmt-ice);
   font-size: inherit;
   line-height: 1.4;
@@ -98,6 +101,7 @@
   /* A code that carries no offset says so in words, in a box with a dashed edge. */
   &[data-none="true"] {
     border-style: dashed;
+    box-shadow: none;
     background: none;
     color: var(--gmt-ice-dim);
     font-style: italic;
@@ -161,7 +165,7 @@
 
   .box {
     inline-size: 100%;
-    border-block-end-color: var(--mark);
+    box-shadow: inset 0 var(--gmt-under-edge) 0 var(--mark);
   }
 }
 

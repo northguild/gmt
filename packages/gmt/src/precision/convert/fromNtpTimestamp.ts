@@ -5,7 +5,7 @@ import {
   NTP_ERA_UNITS,
   NTP_UNITS_PER_SECOND,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Convert a 64-bit NTP timestamp (RFC 5905) back to an ISO 8601 instant string.
@@ -68,5 +68,5 @@ export function fromNtpTimestamp(value: bigint, eraArg?: number): string {
       NTP_UNITS_PER_SECOND,
     ) - NTP_EPOCH_OFFSET_NANOSECONDS;
 
-  return fromNanoseconds(nanoseconds);
+  return zonedStringFromEpochNanoseconds(nanoseconds);
 }

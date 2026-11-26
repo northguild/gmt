@@ -1,5 +1,4 @@
-import { parseUtcOffsetNanoseconds } from "../../internal";
-import { epcisTimeZoneOffset } from "../../regex";
+import { isEpcisTimeZoneOffset } from "../../internal/epcisTime";
 
 /**
  * Return true when `value` is a GS1 EPCIS 2.0 `eventTimeZoneOffset`: the UTC offset the local
@@ -39,11 +38,5 @@ export function isValidEpcisTimeZoneOffset(
 ): boolean;
 export function isValidEpcisTimeZoneOffset(value: unknown): value is string;
 export function isValidEpcisTimeZoneOffset(value: unknown): boolean {
-  // `parseEpcisEvent` reads the offset through Temporal after the pattern, so this does too. No
-  // string the pattern matches fails that read: it is here so the two cannot drift.
-  return (
-    typeof value === "string" &&
-    epcisTimeZoneOffset.test(value) &&
-    parseUtcOffsetNanoseconds(value) !== null
-  );
+  return isEpcisTimeZoneOffset(value);
 }

@@ -1,0 +1,130 @@
+/*
+ * The landing's panes: every page after the intro is one bevelled pane with a full border, with or
+ * without the carousel. Locked, the carousel shows one at a time (gmt-home-carousel.css); stacked,
+ * they read one under another (gmt-home-stacked.css). This sheet is the one home of the look.
+ */
+
+/* ---- The pages after the intro: one bevelled pane each ---- */
+.gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+  --bevel: var(--gmt-bevel-lg);
+
+  margin: 0;
+  padding: 1rem 1.4rem;
+  border: 1px solid color(from var(--gmt-ice) srgb r g b / 16%);
+  border-radius: var(--bevel);
+  corner-shape: bevel;
+  background-color: color(from var(--gmt-void) srgb r g b / 74%);
+  backdrop-filter: blur(4px);
+  color: var(--gmt-ice-dim);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+/* Reduced transparency: no frost, and a wash near-opaque over the sky (as the modal scrim's in
+   gmt-a11y.css), so the text never sits on moving stars. */
+/* stylelint-disable-next-line plugin/use-baseline -- prefers-reduced-transparency is not Baseline 2024; a browser without it keeps the translucent pane, which is the status quo */
+@media (prefers-reduced-transparency: reduce) {
+  .gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+    background-color: color(from var(--gmt-void) srgb r g b / 92%);
+    backdrop-filter: none;
+  }
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section::before,
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section::after {
+  display: none;
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section > * {
+  margin: 0;
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section .gmt-section-heading {
+  padding: 0;
+  border: 0;
+  color: var(--gmt-cyan);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+/* The one-line lede, then the more link. The pane is the measure, so the lede takes its width. */
+.gmt-herostage
+  .gmt-herostage-copy
+  .gmt-grid-section
+  > .gmt-section-heading
+  + p {
+  margin-block-start: -0.35rem;
+}
+
+/* The markdown spacing under a list item's last block is for prose; the tiles and rows in a pane
+   are spaced by their own grid. */
+.gmt-herostage-copy > [data-page] :is(ul, ol) > li > * {
+  margin-block-end: 0;
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section > p:last-child {
+  align-self: flex-start;
+  font-size: 0.7813rem;
+}
+
+.gmt-herostage .gmt-herostage-copy .gmt-grid-section > :last-child a {
+  color: var(--gmt-cyan-bright);
+  text-decoration: none;
+  border-block-end: 1px solid
+    color(from var(--gmt-cyan-bright) srgb r g b / 35%);
+}
+
+:where(.gmt-herostage)
+  .gmt-herostage-copy
+  .gmt-grid-section
+  > :last-child
+  a:is(:hover, :focus-visible) {
+  color: var(--gmt-ice);
+}
+
+:where(.gmt-herostage)
+  .gmt-herostage-copy
+  .gmt-grid-section
+  > :last-child
+  a:focus-visible {
+  outline: 2px solid var(--gmt-cyan);
+  outline-offset: 3px;
+}
+
+/* ---- No bevel property: the same shapes cut as octagons. ---- */
+@supports not (corner-shape: bevel) {
+  .gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+    border-radius: 0;
+    clip-path: polygon(
+      var(--bevel) 0,
+      calc(100% - var(--bevel)) 0,
+      100% var(--bevel),
+      100% calc(100% - var(--bevel)),
+      calc(100% - var(--bevel)) 100%,
+      var(--bevel) 100%,
+      0 calc(100% - var(--bevel)),
+      0 var(--bevel)
+    );
+  }
+}
+
+@media (prefers-contrast: more) {
+  .gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+    border-color: var(--gmt-ice);
+    background-color: var(--gmt-void);
+  }
+}
+
+@media (forced-colors: active) {
+  .gmt-herostage-copy > [data-page]:not(.gmt-herostage-intro) {
+    border-color: CanvasText;
+    background-color: Canvas;
+  }
+}

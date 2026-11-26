@@ -57,9 +57,9 @@ import {
   NULL_REASON_TEXT,
   crossingCallSource,
   crossingClockFace,
+  crossingFacts,
   crossingStrip,
   durationMinutes,
-  explainNull,
   isRepeatedReading,
   matchPreset,
   naiveText,
@@ -329,7 +329,7 @@ function setupWidget(
 
   function render(): void {
     const s = readState();
-    const result = lib.crossingTime(s.entry, s.exit, s.targetZone);
+    const { result, reason } = crossingFacts(s, lib);
 
     setHtml(part("call-slot"), callFrame(s));
     setHtml(
@@ -354,7 +354,6 @@ function setupWidget(
       setHtml(part("strip"), crossingBar({ kind: "blank" }));
       clearPanel(part, "entry");
       clearPanel(part, "exit");
-      const reason = explainNull(s.entry, s.exit, s.targetZone, lib);
       setHtml(
         part("reason"),
         aside(

@@ -28,8 +28,8 @@ import {
   localParts,
   type LocalParts,
 } from "./cutoff-widgets";
+import { instantAtOffset, OFFSET_SOURCE, wallReader } from "./exact-offset";
 import { placeLabel } from "./label-fit";
-import { codeSpan } from "./widget-ui";
 
 export {
   TRANSPORT_ZONES,
@@ -95,6 +95,9 @@ export interface Headway {
 /** The six real functions the three widgets need, loaded at module
  *  granularity by `punctuality-lib.ts` and injected. */
 export interface PunctualityLib {
+  /** `toOffsetInstant`'s `instant`, or `""` when the text is not a moment: a
+   *  zoned time rewritten as the `Z` instant the instant functions read. */
+  toInstant(value: string): string;
   scheduleDeviation(planned: string, actual: string): string;
   classifyPunctuality(
     planned: string,
@@ -227,8 +230,10 @@ export function stepMinutesFor(spanMinutes: number): number {
 // A moment as written
 // ---------------------------------------------------------------------------
 
-const OFFSET_PATTERN =
-  /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]\d{2}:\d{2})$/;
+// The offset may carry seconds: Monrovia ran at -00:44:30 until 1972.
+const OFFSET_PATTERN = new RegExp(
+  String.raw`^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|${OFFSET_SOURCE})$`,
+);
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -281,9 +286,11 @@ export function writtenLabel(s: string): string {
   const p = writtenParts(s);
   if (p.date === "") return "";
   // `localLabel` already prints this shape for a zoned string; an offset
-  // string takes the same route through a zoned stand-in.
+  // string takes the same route through a zoned stand-in. The label shows no
+  // offset, so the stand-in carries `Z`: an offset with seconds is not one a
+  // zoned string can hold.
   if (p.zone !== "") return localLabel(s);
-  return localLabel(`${p.date}T${p.time}${p.offset}[UTC]`);
+  return localLabel(`${p.date}T${p.time}Z[UTC]`);
 }
 
 /** `"13:00"`; `""` when the text does not parse. */
@@ -347,7 +354,11 @@ function keyOrderFor(obj: Record<string, unknown>): readonly string[] {
  * brackets. An absent (`undefined`) key is omitted; an unknown key keeps its
  * insertion order after the known ones, never dropped.
  */
-function renderValue(value: unknown, str: (s: string) => string): string {
+export function renderValue(
+  value: unknown,
+  str: (s: string) => string,
+  sep = ", ",
+): string {
   if (value === null) return "null";
   if (typeof value === "string") return str(value);
   if (typeof value === "number" || typeof value === "boolean") {
@@ -359,7 +370,7 @@ function renderValue(value: unknown, str: (s: string) => string): string {
     return `new Uint8Array([${[...value].join(", ")}])`;
   }
   if (Array.isArray(value)) {
-    return `[${value.map((v) => renderValue(v, str)).join(", ")}]`;
+    return `[${value.map((v) => renderValue(v, str, sep)).join(sep)}]`;
   }
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>;
@@ -367,8 +378,8 @@ function renderValue(value: unknown, str: (s: string) => string): string {
     const rest = Object.keys(obj).filter((k) => !known.includes(k));
     const entries = [...known, ...rest]
       .filter((k) => obj[k] !== undefined)
-      .map((k) => `${k}: ${renderValue(obj[k], str)}`);
-    return entries.length === 0 ? "{ }" : `{ ${entries.join(", ")} }`;
+      .map((k) => `${k}: ${renderValue(obj[k], str, sep)}`);
+    return entries.length === 0 ? "{ }" : `{ ${entries.join(sep)} }`;
   }
   return String(value);
 }
@@ -378,13 +389,9 @@ export function formatValue(value: unknown): string {
   return renderValue(value, (s) => JSON.stringify(s));
 }
 
-/** `[html, plain]` for `renderCallLine`: the arguments of a real call. */
-export function callArgs(args: readonly unknown[]): [string, string] {
-  const htmlStr = (s: string) => codeSpan("str", JSON.stringify(s));
-  return [
-    args.map((a) => renderValue(a, htmlStr)).join(", "),
-    args.map((a) => renderValue(a, (s) => JSON.stringify(s))).join(", "),
-  ];
+/** The text of a real call's arguments, as a copy button copies it. */
+export function callArgsPlain(args: readonly unknown[]): string {
+  return args.map((a) => renderValue(a, (s) => JSON.stringify(s))).join(", ");
 }
 
 // ---------------------------------------------------------------------------
@@ -407,22 +414,19 @@ export function minuteTicks(
 ): { ms: number; label: string }[] {
   if (endMs <= startMs || stepMinutes <= 0) return [];
   try {
-    let cur = Temporal.Instant.fromEpochMilliseconds(startMs)
-      .toZonedDateTimeISO(zone)
-      .round({ smallestUnit: "hour", roundingMode: "floor" });
+    const read = wallReader(zone);
+    const first = read(startMs).round({
+      smallestUnit: "hour",
+      roundingMode: "floor",
+    });
+    let curMs = read.msOf(first);
+    let cur = first;
     const out: { ms: number; label: string }[] = [];
-    for (
-      let guard = 0;
-      guard < 4000 && cur.epochMilliseconds <= endMs;
-      guard++
-    ) {
-      if (cur.epochMilliseconds >= startMs) {
-        out.push({ ms: cur.epochMilliseconds, label: label(cur) });
-      }
+    for (let guard = 0; guard < 4000 && curMs <= endMs; guard++) {
+      if (curMs >= startMs) out.push({ ms: curMs, label: label(cur) });
       // Exact minutes: a tick never walks the repeated hour's wall clock twice.
-      cur = Temporal.Instant.fromEpochMilliseconds(
-        cur.epochMilliseconds + stepMinutes * 60_000,
-      ).toZonedDateTimeISO(zone);
+      curMs += stepMinutes * 60_000;
+      cur = read(curMs);
     }
     return out;
   } catch {
@@ -435,7 +439,8 @@ export function minuteTicks(
 // ---------------------------------------------------------------------------
 
 /** The zone a drawn axis reads in: a bracketed zone as itself, a numeric offset
- *  as itself, `Z` as UTC. `""` when the text does not parse. */
+ *  as itself (`minuteTicks` reads one with seconds too), `Z` as UTC. `""` when
+ *  the text does not parse. */
 export function zoneOf(text: string): string {
   const p = writtenParts(text);
   if (p.date === "") return "";
@@ -446,8 +451,9 @@ export function zoneOf(text: string): string {
 /**
  * `ms` written the way `sample` is written: a bracketed zone stays that zone
  * (`2024-06-15T08:40:00+02:00[Europe/Amsterdam]`), a numeric offset stays that
- * offset, `Z` stays `Z`. It builds an input for the library from a handle's
- * position. `""` when `sample` does not parse.
+ * offset to the second (`-00:44:30`, which no Temporal offset zone can hold),
+ * `Z` stays `Z`. It builds an input for the library from a handle's position.
+ * `""` when `sample` does not parse.
  */
 export function writeLike(sample: string, ms: number): string {
   const p = writtenParts(sample);
@@ -456,7 +462,7 @@ export function writeLike(sample: string, ms: number): string {
     const instant = Temporal.Instant.fromEpochMilliseconds(ms);
     if (p.zone !== "") return instant.toZonedDateTimeISO(p.zone).toString();
     if (p.offset === "Z") return instant.toString();
-    return instant.toString({ timeZone: p.offset });
+    return instantAtOffset(instant, p.offset) ?? "";
   } catch {
     return "";
   }

@@ -1,3 +1,4 @@
+import { isTimeUnitName } from "../../internal/unitNames";
 import type { TimeUnit } from "../../types";
 
 /**
@@ -17,18 +18,6 @@ import type { TimeUnit } from "../../types";
  * @example isValidTimeUnit(123) // false
  * @example isValidTimeUnit(null) // false
  */
-
 export function isValidTimeUnit(unit: unknown): unit is TimeUnit {
-  if (typeof unit !== "string") {
-    return false;
-  }
-
-  return (
-    unit === "hour" ||
-    unit === "minute" ||
-    unit === "second" ||
-    unit === "millisecond" ||
-    unit === "microsecond" ||
-    unit === "nanosecond"
-  );
+  return isTimeUnitName(unit);
 }

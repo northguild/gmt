@@ -30,12 +30,18 @@
  * marks a check only CI runs.
  */
 export const CHECKS = [
+  { id: "frozen", run: "node scripts/frozen.mjs check" },
   { id: "format", run: "pnpm exec oxfmt --check" },
   { id: "deps", run: "node scripts/deps.mjs check" },
   { id: "markers", run: "node scripts/test-markers.mjs check" },
   { id: "licences", run: "node scripts/licences.mjs check" },
   { id: "docs-check", run: "pnpm dox:docs-check" },
   { id: "bundle-size", run: "node scripts/bundle-size.mjs check" },
+  {
+    // The Dox lines the branch adds, against Reuse, never reinvent (context/dox/built/index.md).
+    id: "ui-standards",
+    run: "node .agents/skills/ui-standards/scripts/run.mjs",
+  },
   {
     id: "build:gmt-oxlint",
     run: "pnpm --filter @northguild/gmt-oxlint run build",
@@ -56,7 +62,8 @@ export const CHECKS = [
   {
     id: "build:dox",
     run: "pnpm --filter @gmt/dox run build",
-    needs: ["build:gmt"],
+    // Deck 0's `lint` slide reads the plugin's rules from its dist.
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "stats", run: "node scripts/stats.mjs check", needs: ["build:gmt"] },
   {
@@ -70,6 +77,11 @@ export const CHECKS = [
     needs: ["build:gmt"],
   },
   {
+    id: "pulse",
+    run: "node apps/dox/scripts/build-pulse.mjs --check",
+    needs: [],
+  },
+  {
     id: "api-surface",
     run: "node scripts/api-surface.mjs check",
     needs: ["build:gmt", "dox-pages"],
@@ -77,12 +89,15 @@ export const CHECKS = [
   {
     id: "dox-dist",
     local: false,
-    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox exec vitest run scripts/llms.test.ts scripts/dist-base.test.ts scripts/head-tags.test.ts scripts/gates/registry.test.ts",
+    // In CI the `dox-browser` job runs this, on the site the `dox-site` job built.
+    // Every Node test that imports apps/dox/scripts/dist-dir.ts, found by apps/dox/scripts/dist-tests.mjs.
+    run: "DOX_DIST_REQUIRED=1 pnpm --filter @gmt/dox run test:dist",
     needs: ["build:dox"],
   },
   {
     // No table on a built page scrolls sideways at 1440 px (apps/dox/scripts/table-fit.mjs). The
     // browser tests run first: they test the cell check table-fit uses, and need its Chromium.
+    // In CI the `dox-browser` job runs both, on the site the `dox-site` job built.
     id: "dox-tables",
     run: "pnpm --filter @gmt/dox exec vitest run --config vitest.browser.config.ts && pnpm --filter @gmt/dox exec node scripts/table-fit.mjs",
     needs: ["build:dox"],
@@ -105,7 +120,7 @@ export const CHECKS = [
   {
     id: "typecheck:dox",
     run: "pnpm --filter @gmt/dox run typecheck",
-    needs: ["build:gmt"],
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   {
     id: "test:gmt-oxlint",
@@ -114,9 +129,17 @@ export const CHECKS = [
   {
     id: "test:dox",
     run: "pnpm --filter @gmt/dox run test",
-    needs: ["build:gmt"],
+    // `lib/slides/lint-rules.test.ts` reads the plugin's dist.
+    needs: ["build:gmt", "build:gmt-oxlint"],
   },
   { id: "test:gmt", run: "pnpm --filter @northguild/gmt run test" },
+  {
+    // The zone matrix runner's own node:test files. It is a separate package with its own
+    // lockfile and Node 26 floor (scripts/zone-matrix/package.json); one test imports date-fns,
+    // so it installs first. In CI the `zone-matrix` job runs it.
+    id: "test:zone-matrix",
+    run: "pnpm --dir scripts/zone-matrix install --frozen-lockfile && pnpm --dir scripts/zone-matrix test",
+  },
 ];
 
 const ALL = CHECKS.map((c) => c.id);
@@ -141,6 +164,7 @@ const GMT_LIB = allBut(
 const DOX_APP = [
   "markers",
   "docs-check",
+  "ui-standards",
   "dox-pages",
   "build:dox",
   "api-surface",
@@ -162,7 +186,10 @@ const DOX_CONTENT = [
   "test:dox",
 ];
 
-/** The lint plugin: its own build, checks and tests, and the two lints that load it. */
+/**
+ * The lint plugin: its own build, checks and tests, the two lints that load it, and the Dox build
+ * and tests, whose Deck 0 `lint` slide reads its rules.
+ */
 const OXLINT = [
   ...every(
     "build:gmt-oxlint",
@@ -170,6 +197,11 @@ const OXLINT = [
     "test:gmt-oxlint",
     "lint:",
   ),
+  "build:dox",
+  "dox-dist",
+  "dox-tables",
+  "typecheck:dox",
+  "test:dox",
   "markers",
 ];
 
@@ -210,6 +242,19 @@ export const RULES = [
   { test: /^(?:[^/]+\/)?LICENSE$/, checks: ["licences"] },
   { test: /^packages\/[^/]+\/LICENSE$/, checks: ["licences"], listed: ALL },
 
+  // The ui-standards checker is a script under .agents, so a change to it runs it.
+  {
+    test: /^\.agents\/skills\/ui-standards\/scripts\//,
+    checks: ["ui-standards"],
+  },
+
+  // The frozen files, their guard and the settings that load its hook. CI runs the frozen check on
+  // every change as well, in the always-run job that decides the checks.
+  {
+    test: /^(?:context\/coding-standards\/runtime-workarounds\.md|scripts\/frozen\.mjs|\.claude\/settings(?:\.local)?\.json)$/,
+    checks: ["frozen", ...SCRIPT_TESTS],
+  },
+
   // Notes for people and agents, and the changesets (CI checks those on every run).
   {
     test: /^(?:\.agents|\.claude|\.vscode|\.changeset)\//,
@@ -221,7 +266,7 @@ export const RULES = [
   },
   { test: /^\.github\//, checks: [] },
   {
-    test: /^context\/domination\/js-temporal-polyfill-bugs\.md$/,
+    test: /^context\/domination\/(?:js-temporal-polyfill-bugs\.md$|polyfill-bugs\/)/,
     checks: ["deps", ...SCRIPT_TESTS],
   },
   { test: /^context\/(?:domination\/|dox\/tracker\.md$)/, checks: ["deps"] },
@@ -328,7 +373,7 @@ export const RULES = [
   },
   {
     test: /^apps\/dox\/src\/data\//,
-    checks: [...DOX_APP, "stats", "compat", "upstream"],
+    checks: [...DOX_APP, "stats", "compat", "upstream", "pulse"],
   },
   {
     test: /^apps\/dox\/src\/generated\//,
@@ -342,6 +387,12 @@ export const RULES = [
   { test: /^scripts\/licences\.mjs$/, checks: ["licences", ...SCRIPT_TESTS] },
   // The behaviour matrix runner is run by hand; the Dox tests walk and copy scripts/.
   { test: /^scripts\/behaviour-matrix\//, checks: SCRIPT_TESTS },
+  // The zone matrix runner is run by hand; its clones live in .work/, which git ignores. Its
+  // own tests run only when it changes.
+  {
+    test: /^scripts\/zone-matrix\//,
+    checks: ["test:zone-matrix", ...SCRIPT_TESTS],
+  },
   {
     test: /^scripts\/test-markers\.mjs$/,
     checks: ["markers", ...SCRIPT_TESTS],
@@ -363,7 +414,7 @@ export const RULES = [
   },
   { test: /^scripts\/stats\.mjs$/, checks: ["stats", ...SCRIPT_TESTS] },
   {
-    test: /^scripts\/upstream\.mjs$/,
+    test: /^scripts\/(?:upstream\.mjs|lib\/upstream-trackers\.mjs)$/,
     checks: [
       "upstream",
       "build:dox",
@@ -371,6 +422,11 @@ export const RULES = [
       "typecheck:dox",
       ...SCRIPT_TESTS,
     ],
+  },
+  {
+    // The checks list, its builder, the workflows it names and the canary overview it writes.
+    test: /^(?:scripts\/lib\/pulse\.mjs|apps\/dox\/scripts\/build-pulse\.mjs|\.github\/workflows\/[^/]+\.yml|context\/canary\/overview\.md)$/,
+    checks: ["pulse", ...SCRIPT_TESTS],
   },
   {
     test: /^scripts\/temporal-compat(?:\.mjs$|\/)/,
@@ -397,7 +453,7 @@ export const RULES = [
     checks: ["typecheck:dox", ...SCRIPT_TESTS],
   },
   {
-    test: /^scripts\/(?:verdict|lib\/(?:verdict-(?:format|parse)|pr-status-plan))\.mjs$/,
+    test: /^scripts\/(?:verdict|pr-meta|lib\/(?:verdict-(?:format|parse)|pr-status-plan|pr-meta-plan))\.mjs$/,
     checks: ["typecheck:dox", ...SCRIPT_TESTS],
   },
   {

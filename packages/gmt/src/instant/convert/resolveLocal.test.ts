@@ -306,17 +306,16 @@ describe("resolveLocal at the maximum instant", () => {
     },
   );
 
-  // Temporal's ISO grammar reads an elective annotation (`[foo=bar]`) and `[u-ca=iso8601]` and ignores
-  // them (RFC 9557 §3.3; native Temporal agrees), so the result is the unannotated input's.
+  // A plain wall time carries no annotation: every bracketed annotation, even `[u-ca=iso8601]`, is rejected.
   it.each`
     localDateTime                              | expected
-    ${"2024-07-15T12:00:00[foo=bar]"}          | ${"2024-07-15T16:00:00Z"}
-    ${"2024-07-15T12:00:00[u-ca=iso8601]"}     | ${"2024-07-15T16:00:00Z"}
-    ${"2024-07-15T12:00:00[Asia/Tokyo]"}       | ${"2024-07-15T16:00:00Z"}
-    ${"2024-11-03T01:30:00[America/New_York]"} | ${"2024-11-03T05:30:00Z"}
+    ${"2024-07-15T12:00:00[foo=bar]"}          | ${""}
+    ${"2024-07-15T12:00:00[u-ca=iso8601]"}     | ${""}
+    ${"2024-07-15T12:00:00[Asia/Tokyo]"}       | ${""}
+    ${"2024-11-03T01:30:00[America/New_York]"} | ${""}
     ${"2024-07-15T12:00:00[!foo=bar]"}         | ${""}
   `(
-    "reads the annotations of $localDateTime as Temporal.PlainDateTime.from does → '$expected'",
+    "rejects the annotation of $localDateTime as Temporal.PlainDateTime.from does → '$expected'",
     ({ localDateTime, expected }) => {
       expect(resolveLocal(localDateTime, "America/New_York")).toBe(expected);
     },
@@ -372,9 +371,9 @@ describe("resolveLocal with a stored UTC offset", () => {
     ${"1970-01-01T12:00:00"}           | ${"-23:59:59"} | ${"1970-01-02T11:59:59Z"}           | ${"a second short of a day later"}
     ${"1970-01-01T12:00"}              | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}           | ${"a wall time with no seconds"}
     ${"1970-01-01T12:00:00.123456789"} | ${"-00:44:30"} | ${"1970-01-01T12:44:30.123456789Z"} | ${"nanoseconds survive"}
-    ${"1970-01-01T12:00:00[foo=bar]"}  | ${"-00:44:30"} | ${"1970-01-01T12:44:30Z"}           | ${"an elective annotation is ignored"}
+    ${"1970-01-01T12:00:00[foo=bar]"}  | ${"-00:44:30"} | ${""}                               | ${"an elective annotation makes the wall time invalid"}
   `(
-    "resolves $localDateTime at $timeZone → $expected ($reason)",
+    "resolves $localDateTime at $timeZone → '$expected' ($reason)",
     ({ localDateTime, timeZone, expected }) => {
       expect(resolveLocal(localDateTime, timeZone)).toBe(expected);
     },

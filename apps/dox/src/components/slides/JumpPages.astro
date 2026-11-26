@@ -1,0 +1,32 @@
+---
+/**
+ * The tear-off calendar leaves round a zone's recorded jump, from gmt at build time (`zoneJump`,
+ * then `leaf` for each date's month, day and weekday). As the zone's clock crosses the jump, the
+ * leaf for the date it never had tears away (`lib/slides/bug-visuals.ts` sets each leaf's state
+ * from the `gmt-lapse` events). Without script every leaf reads in order.
+ */
+import { leaf } from "~/lib/slides/calendar-figures";
+import { zoneJump } from "~/lib/slides/zone-jump";
+import "./calendar-figures.css";
+
+interface Props {
+  zone: string;
+  years: readonly number[];
+}
+const { zone, years } = Astro.props;
+const jump = zoneJump(zone, years);
+if (jump === null) throw new Error(`${zone} has no recorded jump in ${years.join(", ")}`);
+const city = zone.split("/")[1]!.replaceAll("_", " ");
+const pages = jump.pages.map((p) => ({ ...p, ...leaf(p.date) }));
+---
+
+<ol class="gmt-jump" data-visual="pages" data-zone={zone} aria-label={`${city}'s calendar dates round its jump`} style={`--gmt-jump-n:${pages.length}`}>
+  {pages.map((p) => (
+    <li class="gmt-leaf" data-page data-date={p.date} data-gap={String(p.gap)}>
+      <span class="gmt-leaf-head" aria-hidden="true">{p.head}</span>
+      <span class="gmt-leaf-day" aria-hidden="true">{p.day}</span>
+      <span class="gmt-leaf-weekday" aria-hidden="true">{p.weekday}</span>
+      <span class="gmt-sr-only">{p.weekday} {p.date}{p.gap && ` never existed in ${city}`}</span>
+    </li>
+  ))}
+</ol>

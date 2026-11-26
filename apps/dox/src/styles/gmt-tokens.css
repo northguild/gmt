@@ -1,5 +1,5 @@
 /*
- * GMT palette and token layer — per overview.md §3.
+ * GMT palette and token layer — per context/dox/reference/visual-design.md § "Colour".
  *
  * Six named roles (Void / Cyan / Spring / Teal / Ice / Signal) with derived
  * tokens for the site's surfaces, accents, and Starlight overrides.
@@ -23,7 +23,7 @@
   /* ---- Color-scheme ---- */
   color-scheme: light dark;
 
-  /* ---- Six named roles (overview.md §3) ---- */
+  /* ---- Six named roles (context/dox/reference/visual-design.md § "Colour") ---- */
   --gmt-void: #03080c;
 
   /* Near-black that does NOT flip with the theme (the light theme redefines
@@ -83,7 +83,7 @@
 
   /* ---- Glass tokens (blur/saturate/brightness only — fills use relative colors) ----
    *
-   * overview.md §3 "Panel construction" specifies
+   * context/dox/reference/visual-design.md § "Panels" specifies
    * `blur(24px) saturate(1.4) brightness(0.45)` — the brightness component is a
    * *darkening* and is "not optional": it is what creates a stable contrast floor
    * where glass sits over bright content (code blocks, the future globe). Over the
@@ -284,6 +284,9 @@
   /* The night sky fading in once it is drawn (lib/hero-space.ts). */
   --gmt-duration-reveal: 0.6s;
 
+  /* One ring of the lock a chosen globe pin ripples (globe.module.css, .lock). */
+  --gmt-duration-lock: 0.72s;
+
   /* The page dissolving under an arrival from northguild.dev (gmt-view-transitions.css). */
   --gmt-duration-handoff: 0.6s;
   --gmt-easing-handoff: cubic-bezier(0.25, 0.6, 0.2, 1);
@@ -358,9 +361,60 @@
   --gmt-bevel-md: 10px;
   --gmt-bevel-sm: 6px;
 
+  /* ---- Under-edges ----
+   * A panel's accent is drawn on its bottom edge as an inset shadow, so a bevelled box keeps one
+   * border width and colour on every side (`bevel-border-widths.test.ts`). These are the shadow's
+   * offsets, negative so the shadow sits on the bottom:
+   * `box-shadow: inset 0 var(--gmt-under-edge) 0 <colour>`. A box whose old border took layout
+   * room adds the width back to its end padding: `calc(<padding> - var(--gmt-under-edge))`.
+   * Not colours, so not per theme. */
+  --gmt-under-edge-hair: -1px;
+  --gmt-under-edge: -2px;
+  --gmt-under-edge-bold: -3px;
+
   /* ---- Control dimensions ----
    * The width of a drag handle. Not a colour, so it does not change per theme. */
   --gmt-handle-w: 14px;
+
+  /* ---- Deck scale ----
+   * A slide's sizes, in container units (`cqi`), so a slide scales with its stage and never with
+   * the window. A custom property keeps its `cqi` as written, so each resolves against the stage
+   * that uses it: the deck's, or the presenter view's preview of the same slide. */
+
+  /* The three small sizes of a panel's text on the stage. `sm` is the floor for text the room
+     reads (1.25cqi, about 2 m on a 60-inch TV); `fine` is for fine print only, marked
+     `data-fine-print` where it is rendered. The text-floor gate holds both numbers. */
+  --gmt-deck-text-sm: max(0.75rem, 1.25cqi);
+  --gmt-deck-text-fine: max(0.75rem, 1cqi);
+  --gmt-deck-text-md: max(0.75rem, 1.3cqi);
+  --gmt-deck-text-lg: max(0.75rem, 1.4cqi);
+
+  /* Gaps, padding and margins inside a slide, smallest to largest. */
+  --gmt-deck-space-2xs: 0.2cqi;
+  --gmt-deck-space-xs: 0.4cqi;
+  --gmt-deck-space-sm: 0.6cqi;
+  --gmt-deck-space-md: 1cqi;
+  --gmt-deck-space-lg: 1.2cqi;
+  --gmt-deck-space-xl: 2cqi;
+  --gmt-deck-space-2xl: 3cqi;
+
+  /* The slide's frame: its padding, and the room on the end side kept clear for the Earth and
+     its clock. */
+  --gmt-deck-pad-block: 5cqi;
+  --gmt-deck-pad-inline: 6cqi;
+  --gmt-deck-clock-room: 35cqi;
+
+  /* The start side sits on the action-safe line (3.5% of the stage), the most a TV crops, so the
+     text column gets the empty margin back. A full slide's end side mirrors it. */
+  --gmt-deck-pad-start: 3.5cqi;
+
+  /* What a TV may crop (EBU R95): the guide draws these two insets, and the text-floor gate holds
+     the text to the title-safe one (5% of each dimension). */
+  --gmt-deck-safe-action: 3.5%;
+  --gmt-deck-safe-title: 5%;
+
+  /* The title-safe inset as block padding, for a dense slide that cannot take the full pad. */
+  --gmt-deck-pad-safe: 5cqb;
 
   /* ---- Type scale ----
    * Consolidates the font-sizes widget sheets had been inventing independently
@@ -613,6 +667,7 @@
     --gmt-duration-slow: 0s;
     --gmt-duration-sweep: 0s;
     --gmt-duration-reveal: 0s;
+    --gmt-duration-lock: 0s;
     --gmt-duration-handoff: 0s;
     --gmt-motion-sonar-duration: 0s;
     --gmt-motion-sonar-loop-duration: 0s;

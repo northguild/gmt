@@ -4,31 +4,31 @@ import { areMonthDaysEqual } from "./areMonthDaysEqual";
 
 describe("areMonthDaysEqual", () => {
   it.each`
-    a                          | b                          | why
-    ${"--12-25"}               | ${"--12-25"}               | ${"same value"}
-    ${"12-25"}                 | ${"--12-25"}               | ${"input forms"}
-    ${"--12-25[u-ca=iso8601]"} | ${"--12-25[u-ca=ISO8601]"} | ${"calendar id in another case"}
-    ${"--12-25[_foo=bar]"}     | ${"--12-25"}               | ${"elective annotation ignored"}
-    ${"--02-29"}               | ${"--02-29"}               | ${"29 February equals itself"}
-    ${"--12-25[Europe/Paris]"} | ${"12-25"}                 | ${"zone annotation ignored"}
+    a            | b            | why
+    ${"--12-25"} | ${"--12-25"} | ${"same value"}
+    ${"12-25"}   | ${"--12-25"} | ${"input forms"}
+    ${"--02-29"} | ${"--02-29"} | ${"29 February equals itself"}
   `("returns true for '$a' and '$b' ($why)", ({ a, b }) => {
     expect(areMonthDaysEqual(a, b)).toBe(true);
   });
 
   it.each`
-    a            | b                          | why
-    ${"--02-29"} | ${"--02-28"}               | ${"not constrained"}
-    ${"--12-25"} | ${"--12-26"}               | ${"day differs"}
-    ${"--12-25"} | ${"--11-25"}               | ${"month differs"}
-    ${"--02-30"} | ${"--02-30"}               | ${"invalid on both sides"}
-    ${"--12-25"} | ${"2024-12-25"}            | ${"a date is not a month-day"}
-    ${"--12-25"} | ${"--12-25[u-ca=gregory]"} | ${"not ISO"}
-    ${""}        | ${"--12-25"}               | ${"empty"}
-    ${null}      | ${"--12-25"}               | ${"null"}
-    ${{}}        | ${"--12-25"}               | ${"object"}
-    ${"--12-25"} | ${null}                    | ${"null second"}
-    ${1225}      | ${"--12-25"}               | ${"number"}
-    ${"--12-25"} | ${""}                      | ${"empty second"}
+    a                          | b                          | why
+    ${"--02-29"}               | ${"--02-28"}               | ${"not constrained"}
+    ${"--12-25"}               | ${"--12-26"}               | ${"day differs"}
+    ${"--12-25"}               | ${"--11-25"}               | ${"month differs"}
+    ${"--02-30"}               | ${"--02-30"}               | ${"invalid on both sides"}
+    ${"--12-25"}               | ${"2024-12-25"}            | ${"a date is not a month-day"}
+    ${"--12-25"}               | ${"--12-25[u-ca=gregory]"} | ${"not ISO"}
+    ${""}                      | ${"--12-25"}               | ${"empty"}
+    ${null}                    | ${"--12-25"}               | ${"null"}
+    ${{}}                      | ${"--12-25"}               | ${"object"}
+    ${"--12-25"}               | ${null}                    | ${"null second"}
+    ${1225}                    | ${"--12-25"}               | ${"number"}
+    ${"--12-25"}               | ${""}                      | ${"empty second"}
+    ${"--12-25[u-ca=iso8601]"} | ${"--12-25[u-ca=ISO8601]"} | ${"an ISO calendar annotation is not part of the pattern"}
+    ${"--12-25[_foo=bar]"}     | ${"--12-25"}               | ${"an elective annotation is not part of the pattern"}
+    ${"--12-25[Europe/Paris]"} | ${"12-25"}                 | ${"a time zone annotation is not part of the pattern"}
   `("returns false ($why)", ({ a, b }) => {
     expect(areMonthDaysEqual(a as never, b as never)).toBe(false);
   });

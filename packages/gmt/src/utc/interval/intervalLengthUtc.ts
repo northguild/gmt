@@ -1,7 +1,6 @@
-import { Temporal } from "../../internal/temporal";
 import { durationTotal, resolveDateTimeUnit, zonedUntil } from "../../internal";
-import { isValidDateTimeUnit } from "../../plain/validate";
-import { isValidUtcInterval } from "./validate";
+import { isDateTimeUnitName } from "../../internal/unitNames";
+import { utcIntervalOf } from "../../internal/intervalChecks";
 
 /**
  * Return the exact length of a UTC interval in `unit`, as a real (possibly fractional) number.
@@ -35,17 +34,18 @@ export function intervalLengthUtc(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateTimeUnit(resolvedUnit)) {
+  if (!isDateTimeUnitName(resolvedUnit)) {
     return null;
   }
 
-  if (!isValidUtcInterval(start, end)) {
+  const pair = utcIntervalOf(start, end);
+  if (pair === null) {
     return null;
   }
 
   try {
-    const startVal = Temporal.Instant.from(start).toZonedDateTimeISO("UTC");
-    const endVal = Temporal.Instant.from(end).toZonedDateTimeISO("UTC");
+    const startVal = pair[0].toZonedDateTimeISO("UTC");
+    const endVal = pair[1].toZonedDateTimeISO("UTC");
 
     const duration = zonedUntil(startVal, endVal, {
       largestUnit: resolvedUnit,

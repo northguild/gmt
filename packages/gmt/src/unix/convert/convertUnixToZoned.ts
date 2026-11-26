@@ -2,7 +2,7 @@ import {
   resolveUnixEpochUnitOptions,
   unixEpochToInstant,
 } from "../../internal/unixEpochValue";
-import { isValidTimeZone } from "../../zoned/validate";
+import { isZoneId } from "../../internal/inputChecks";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 
 /**
@@ -45,7 +45,7 @@ export function convertUnixToZoned(
   try {
     const epochUnit = resolveUnixEpochUnitOptions(options);
 
-    if (epochUnit === null || !isValidTimeZone(timeZone)) {
+    if (epochUnit === null || !isZoneId(timeZone)) {
       return "";
     }
 

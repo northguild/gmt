@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 
-import { isValidDate } from "../validate";
 import { exceedsPieceLimit, resolveMaxPieces } from "../../internal/maxPieces";
 
 /**
@@ -67,13 +67,14 @@ export function mapDatesInRange(
       return [];
     }
 
-    if (!isValidDate(startDate) || !isValidDate(endDate)) {
+    const start = plainDateOf(startDate);
+
+    const end = plainDateOf(endDate);
+
+    if (start === null || end === null) {
       return [];
     }
     try {
-      const start = Temporal.PlainDate.from(startDate);
-      const end = Temporal.PlainDate.from(endDate);
-
       if (Temporal.PlainDate.compare(start, end) === 1) {
         return [];
       }

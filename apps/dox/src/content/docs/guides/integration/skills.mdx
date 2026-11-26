@@ -46,9 +46,14 @@ Sample output:
   - gmt-timezone
   - gmt-integration
   - gmt-gnss
+  - gmt-finance
+  - gmt-aviation
+  - gmt-rail
+  - gmt-iot
   - gmt-transport
   - gmt-intermodal
   - gmt-workforce
+  - gmt-healthcare
 
 @northguild/gmt-eslint
   - first-time-setup
@@ -78,7 +83,7 @@ For projects that want explicit routing, pass `--map` to bind a task keyword to 
 skill so `intent list` highlights the right match automatically:
 
 ```bash
-npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "lint=first-time-setup"
+npx @tanstack/intent@latest install --map "basics=gmt-basics" --map "arithmetic=gmt-arithmetic" --map "timezone=gmt-timezone" --map "gnss=gmt-gnss" --map "finance=gmt-finance" --map "transport=gmt-transport" --map "intermodal=gmt-intermodal" --map "workforce=gmt-workforce" --map "healthcare=gmt-healthcare" --map "aviation=gmt-aviation" --map "rail=gmt-rail" --map "iot=gmt-iot" --map "lint=first-time-setup"
 ```
 
 ## Allowlist skills
@@ -126,14 +131,20 @@ its tasks use `gmt-gnss`.
 | Industry | Slug | Task area | Source folders it points to |
 | --- | --- | --- | --- |
 | <Icon name="industry-workforce" size="1.1em" class="gmt-ref-industry-icon" /> Workforce | `gmt-workforce` | Hours-of-work rules over a duty log, with the caller's own limits | `src/workforce/` |
+| <Icon name="industry-healthcare" size="1.1em" class="gmt-ref-industry-icon" /> Healthcare | `gmt-healthcare` | HL7 v2 date-times, with the sender's local time kept apart from UTC | `src/healthcare/` |
 | <Icon name="industry-transport" size="1.1em" class="gmt-ref-industry-icon" /> Transport | `gmt-transport` | Transit legs, connections, cut-offs, punctuality, departures | `src/transport/` |
 | <Icon name="industry-intermodal" size="1.1em" class="gmt-ref-industry-icon" /> Intermodal | `gmt-intermodal` | Free time, demurrage, billing deadlines, bill of lading dates, EDI and EPCIS timestamps | `src/intermodal/` |
 | <Icon name="industry-gnss" size="1.1em" class="gmt-ref-industry-icon" /> GNSS | `gmt-gnss` | GNSS time scales, broadcast and RINEX week numbers, rollover eras | `src/gnss/` |
+| <Icon name="industry-finance" size="1.1em" class="gmt-ref-industry-icon" /> Finance | `gmt-finance` | FIX `UTCTimestamp` values: precision from the digit count, picoseconds, leap seconds | `src/finance/` |
+| <Icon name="industry-aviation" size="1.1em" class="gmt-ref-industry-icon" /> Aviation | `gmt-aviation` | IATA SSIM schedule dates (`DDMMMYY`): fixed English month letters, a stated century | `src/aviation/` |
+| <Icon name="industry-rail" size="1.1em" class="gmt-ref-industry-icon" /> Rail | `gmt-rail` | GTFS stop times past midnight (`25:35:00`): the days past the service day kept apart from the time of day | `src/rail/` |
+| <Icon name="industry-iot" size="1.1em" class="gmt-ref-industry-icon" /> IoT | `gmt-iot` | Precision Time Protocol timestamps: TAI on the wire, the UTC offset the grandmaster announces | `src/iot/` |
 
 > **Skills are routing pointers, not API documentation.** The skill files carry the
 > core rules and common pitfalls. For a signature, a locale matrix or an example,
 > the agent should read this site (`https://northguild.dev/gmt/llms.txt`
-> lists every page, and each page has a `.md` twin) and the JSDoc of the specific
+> links the guides and one file per reference namespace, and each page has a
+> `.md` twin) and the JSDoc of the specific
 > function it intends to call in the installed package.
 
 ### `@northguild/gmt-eslint` / `gmt-oxlint` / `gmt-biome`
@@ -170,3 +181,4 @@ npx @tanstack/intent@latest load @northguild/gmt#issue-creation
 - [Lint Package Selection](/guides/integration/linting/) — choose the right `@northguild` lint package
 - [Application Integration](/guides/integration/app-integration/) — cache keys, routers, tables
 - [Core Rules](/core-rules/) — the contract the skills enforce
+- [Page Tools for Browser Agents](/guides/integration/browser-agents/) — the read-only tool each tool page offers an agent in the browser

@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimesOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the earliest (minimum) of the given ZonedDateTime values.
@@ -20,16 +19,17 @@ export function minZoned(zonedDateTimes: string[]): string | null {
   try {
     if (!Array.isArray(zonedDateTimes) || !zonedDateTimes.length) return null;
 
-    const valid = zonedDateTimes.filter(isValidZonedDateTime);
+    const valid = zonedDateTimesOf(zonedDateTimes);
     if (!valid.length) return null;
 
     try {
-      const min = valid.reduce((currentMin, candidateStr) => {
-        const candidate = zonedDateTimeFrom(candidateStr);
-        return Temporal.ZonedDateTime.compare(candidate, currentMin) < 0
-          ? candidate
-          : currentMin;
-      }, zonedDateTimeFrom(valid[0]));
+      const min = valid.reduce(
+        (currentMin, candidate) =>
+          Temporal.ZonedDateTime.compare(candidate, currentMin) < 0
+            ? candidate
+            : currentMin,
+        valid[0],
+      );
 
       return min.toString();
     } catch {

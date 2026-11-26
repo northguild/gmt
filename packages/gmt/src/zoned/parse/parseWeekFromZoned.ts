@@ -1,8 +1,7 @@
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../../plain/calculate/getWeekNumber";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { weekNumberOf } from "../../internal/weekNumber";
 import { isOptionsArgument } from "../../internal/isObject";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the week of the year for a given ISO 8601 zoned datetime string.
@@ -46,7 +45,8 @@ export function parseWeekFromZoned(
       return null;
     }
 
-    if (!isValidZonedDateTime(value)) {
+    const zonedDateTime = zonedDateTimeOf(value);
+    if (zonedDateTime === null) {
       return null;
     }
 
@@ -54,11 +54,7 @@ export function parseWeekFromZoned(
     if (weekStartsOn === null) return null;
 
     try {
-      const zonedDateTime = zonedDateTimeFrom(value);
-      return getWeekNumber(
-        zonedDateTime.toPlainDate().toString(),
-        weekStartsOn,
-      );
+      return weekNumberOf(zonedDateTime.toPlainDate(), weekStartsOn);
     } catch {
       return null;
     }

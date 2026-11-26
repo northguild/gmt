@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
-import { isValidUtcInterval } from "./validate";
+import { utcIntervalOf } from "../../internal/intervalChecks";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -44,23 +44,15 @@ export function intervalXorAllUtc(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          typeof interval.start === "string" &&
-          typeof interval.end === "string" &&
-          isValidUtcInterval(interval.start, interval.end),
-      )
-    ) {
+    const pairs = intervals.map((interval) =>
+      isObject(interval) ? utcIntervalOf(interval.start, interval.end) : null,
+    );
+    if (!pairs.every((pair) => pair !== null)) {
       return [];
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: Temporal.Instant.from(interval.start),
-        end: Temporal.Instant.from(interval.end),
-      }));
+      const parsed = pairs.map((pair) => ({ start: pair[0], end: pair[1] }));
 
       return halfOpenXor(parsed, Temporal.Instant.compare).map(
         ({ start, end }) => ({

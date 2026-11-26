@@ -1,8 +1,7 @@
-import { Temporal } from "../../internal/temporal";
+import { plainDateOf } from "../../internal/inputChecks";
 import { normalizeDateTime } from "../../internal";
 import { plainDateFormatOptions } from "../../internal/plainFormatOptions";
 import type { DateTimeFormatOptions } from "../../types";
-import { isValidDate } from "../validate";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
 import {
   cachedFormatter,
@@ -26,6 +25,11 @@ import {
  *   other non-object — a string, a number, a boolean — formats with the defaults, as
  *   `Intl.DateTimeFormat` does: CoerceOptionsToObject calls ToObject on it and the wrapper
  *   carries no recognised option. Only `null` and `undefined` are special-cased.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a weekday
+ *   field always returns its text.
  *
  * @param value ISO PlainDate string
  * @param locale optional BCP 47 locale identifier (default: runtime default), or a preference list of tags (ECMA-402)
@@ -47,7 +51,8 @@ export function formatDate(
   locale?: string | string[],
   options?: DateTimeFormatOptions,
 ): string {
-  if (!isValidDate(value)) {
+  const valueParsed = plainDateOf(value);
+  if (valueParsed === null) {
     return "";
   }
 
@@ -68,7 +73,7 @@ export function formatDate(
       return "";
     }
     const epochMilliseconds =
-      Temporal.PlainDate.from(value).toZonedDateTime("UTC").epochMilliseconds;
+      valueParsed.toZonedDateTime("UTC").epochMilliseconds;
     return normalizeDateTime(
       cachedFormatter("DateTimeFormat", locale, resolved).format(
         epochMilliseconds,

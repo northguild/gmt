@@ -1,0 +1,35 @@
+---
+title: "A METAR from Last Month"
+description: A report received at 00:05 on 1 July carries 302350Z, and a reader that assumes the current month puts it 30 days ahead.
+industries: [aviation]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A METAR from Last Month"
+  description="An archive import stamps each METAR with the time it was received, 2024-07-01T00:05:00Z. The report says 302350Z. What time was it issued?"
+  naiveCode={`// The naive approach: put the day, hour and minute in the current month
+const received = new Date("2024-07-01T00:05:00Z");
+
+const issued = new Date(Date.UTC(
+  received.getUTCFullYear(),
+  received.getUTCMonth(), // July
+  30, 23, 50,
+));
+// 2024-07-30T23:50:00Z — 30 days after the report was received`}
+  explanation={`A METAR time group is a day, an hour and a minute. It names no month. The report was issued ten minutes before the end of 30 June and received after midnight, so the month the reader needs is the one before the month it was received in. Code that assumes the current month gets this right 29 or 30 days out of 30, and wrong for every report that crosses a month end, which is why it passes in testing. \`parseMetarTime\` takes the reference you state and chooses the candidate nearest it, so 30 June wins. It never reads the clock, so the same archive gives the same answer in any month.`}
+  gmtCode={`import { parseMetarTime } from "@northguild/gmt/aviation/parse";
+
+parseMetarTime("302350Z", "2024-07-01T00:05:00Z");
+// "2024-06-30T23:50:00Z"
+parseMetarTime("312350Z", "2024-07-01T00:05:00Z");
+// "2024-05-31T23:50:00Z" (June has no 31st)`}
+  fixedSpecId="parseMetarTime"
+/>
+
+The fix is to pass the time the report was received and let the function choose the month. See
+[Aviation: Message Times](/guides/industries/aviation-message-times/#choosing-the-month) for the
+rule, and [Aviation mistakes](/mistakes/aviation/#the-metar-time) for the others that come with it.
+
+[Try it in the Report Time Resolver](/tools/report-time-resolver/?w=reporttime&wa=%7B%22metarPreset%22%3A%22month-end%22%7D).

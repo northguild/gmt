@@ -1,4 +1,4 @@
-import { isValidTimeZone } from "../validate/isValidTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 
 /**
  * Return the runtime system timeZone name (for example "Europe/London").
@@ -13,10 +13,5 @@ import { isValidTimeZone } from "../validate/isValidTimeZone";
  * @example getSystemTimeZone() // "Europe/London"
  */
 export function getSystemTimeZone(): string {
-  try {
-    const systemTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return isValidTimeZone(systemTimeZone) ? systemTimeZone : "";
-  } catch {
-    return "";
-  }
+  return systemTimeZone();
 }

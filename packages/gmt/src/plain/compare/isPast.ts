@@ -1,6 +1,4 @@
-import { getToday } from "../get/getToday";
-import { isValidDate } from "../validate";
-import { isBeforeDate } from "./isBeforeDate";
+import { compareToToday } from "../../internal/compareToToday";
 
 /**
  * Return true when `value` is strictly before today, per the system clock
@@ -8,7 +6,7 @@ import { isBeforeDate } from "./isBeforeDate";
  *
  * - `value === today` returns false — "past" means strictly before, not
  *   on-or-before.
- * - Compares against `getToday()`, so this depends on the **system clock and
+ * - Compares against today, so this depends on the **system clock and
  *   system timeZone**. A caller needing determinism should use `isZonedPast`
  *   with an explicit timeZone, or compare against an explicit reference with
  *   `isBeforeDate`.
@@ -23,14 +21,5 @@ import { isBeforeDate } from "./isBeforeDate";
  * @example isPast("invalid") // false
  */
 export function isPast(value: string): boolean {
-  if (!isValidDate(value)) {
-    return false;
-  }
-
-  const today = getToday();
-  if (today === "") {
-    return false;
-  }
-
-  return isBeforeDate(value, today);
+  return compareToToday(value) === -1;
 }

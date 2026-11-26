@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -14,6 +14,7 @@ import {
   exclusionMatches,
   exclusionProblems,
   focusVisibleProblem,
+  heldAtRest,
   isExcluded,
   isOffSite,
   jumpProblems,
@@ -351,11 +352,23 @@ describe("blockOffSite", () => {
 
 describe("every browser gate", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
+  const familyFiles = (dir: string): string[] =>
+    existsSync(dir)
+      ? readdirSync(dir)
+          .filter((file) => file.endsWith(".mjs"))
+          .map((file) => path.join(dir, file))
+      : [];
   const gates = readdirSync(here)
     .filter((file) => file.endsWith(".mjs"))
     .map((file) => ({
       file,
-      source: readFileSync(path.join(here, file), "utf8"),
+      // A gate split into check families keeps them in `lib/<gate>/`; they open its pages.
+      source: [
+        readFileSync(path.join(here, file), "utf8"),
+        ...familyFiles(path.join(here, "lib", file.replace(/\.mjs$/, ""))).map(
+          (family) => readFileSync(family, "utf8"),
+        ),
+      ].join("\n"),
     }))
     // A gate loads pages of the built site. A script that draws its own markup
     // in a browser (the favicon build) loads none.
@@ -376,10 +389,15 @@ describe("every browser gate", () => {
       "contrast-measure.mjs",
       "data-credits-check.mjs",
       "esc-cascade.mjs",
+      "frame-check.mjs",
       "globe-smoke.mjs",
       "grow-measure.mjs",
       "hero-space-check.mjs",
+      "plate-fit.mjs",
+      "rail-stored-still.mjs",
       "readout-still.mjs",
+      "slides-check.mjs",
+      "sound-check.mjs",
       "table-fit.mjs",
       "visual-snapshot.mjs",
     ]);
@@ -517,14 +535,18 @@ describe("tabWalkPages", () => {
     "/reference/calendar/business/",
     "/reference/calendar/business/nextBusinessDay/",
     "/reference/calendar/business/businessDaysBetween/",
+    "/reference/zoned/",
+    "/reference/zoned/calculate/startOfZoned/",
+    "/reference/zoned/calculate/endOfZoned/",
     "/tools/x/",
     "/",
   ];
-  it("keeps every page outside /reference/ and one function and one type page", () => {
+  it("keeps every page outside /reference/, one function page per namespace and one type page", () => {
     expect(tabWalkPages(all)).toEqual([
       "/",
       "/tools/x/",
       "/reference/calendar/business/businessDaysBetween/",
+      "/reference/zoned/calculate/endOfZoned/",
       "/reference/types/A/",
     ]);
   });
@@ -1006,5 +1028,35 @@ describe("attributeFrames", () => {
       { h: 936, m: 1436, l: 0, g: 1, ticks: 2, eased: -64 },
     ]);
     expect(second).toMatchObject({ l: 0, g: 1, h: 968, m: 1468 });
+  });
+});
+
+describe("heldAtRest", () => {
+  /** Frames every 50 ms from 0 to `ms`, all at height `h` and not growing. */
+  const still = (ms: number, h = 900) =>
+    Array.from({ length: ms / 50 + 1 }, (_, i) => ({ t: i * 50, h, g: 0 }));
+
+  it("is true when 600 ms of frames hold one height with nothing growing", () => {
+    expect(heldAtRest(still(600), 500)).toBe(true);
+  });
+
+  it("is false when the last frame is growing", () => {
+    const frames = still(600);
+    frames[frames.length - 1]!.g = 1;
+    expect(heldAtRest(frames, 500)).toBe(false);
+  });
+
+  it("is false when the height changes by 0.5 px inside the final hold", () => {
+    const frames = still(600);
+    frames[frames.length - 5]!.h = 900.5;
+    expect(heldAtRest(frames, 500)).toBe(false);
+  });
+
+  it("is false when the frames span only 300 ms", () => {
+    expect(heldAtRest(still(300), 500)).toBe(false);
+  });
+
+  it("is false for no frames", () => {
+    expect(heldAtRest([], 500)).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "../validate";
 
 /**
  * Return the latest (maximum) of the given PlainDate values.
@@ -17,16 +17,19 @@ export function maxDate(dates: string[]): string | null {
   try {
     if (!Array.isArray(dates) || !dates.length) return null;
 
-    const valid = dates.filter(isValidDate);
+    const valid: Temporal.PlainDate[] = [];
+    dates.forEach((item) => {
+      const parsed = plainDateOf(item);
+      if (parsed !== null) valid.push(parsed);
+    });
     if (!valid.length) return null;
 
     try {
-      const max = valid.reduce((currentMax, candidateStr) => {
-        const candidate = Temporal.PlainDate.from(candidateStr);
+      const max = valid.reduce((currentMax, candidate) => {
         return Temporal.PlainDate.compare(candidate, currentMax) > 0
           ? candidate
           : currentMax;
-      }, Temporal.PlainDate.from(valid[0]));
+      }, valid[0]);
 
       return max.toString();
     } catch {

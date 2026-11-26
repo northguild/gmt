@@ -1,5 +1,6 @@
 import { Temporal } from "./temporal";
 import { isObject } from "./isObject";
+import type { Overflow } from "../types";
 
 /** The date fields `setDate` takes. */
 export const DATE_FIELDS = ["year", "month", "monthCode", "day"] as const;
@@ -214,4 +215,90 @@ export function readSetFields<Field extends SetField>(
   }
 
   return read as SetFields<Field>;
+}
+
+/** The shared body of the three `with*Fields` cores. */
+function withFields<
+  Value extends { with(fields: never, options: never): Value },
+  Field extends SetField,
+>(
+  value: Value,
+  fields: unknown,
+  allowedFields: readonly Field[],
+  overflow: Overflow | (() => Overflow),
+): Value | null {
+  const set = readSetFields(fields, allowedFields);
+  if (set === null) return null;
+  if (Object.keys(set).length === 0) return value;
+  return value.with(
+    set as never,
+    {
+      overflow: typeof overflow === "function" ? overflow() : overflow,
+    } as never,
+  );
+}
+
+/**
+ * The `setDate` core: a `PlainDate` with the checked `fields` set.
+ *
+ * Only values `readSetFields` checked reach Temporal. An empty set changes nothing, where
+ * Temporal's `with()` would throw. May throw where Temporal does; each caller maps that to its
+ * sentinel.
+ *
+ * @param date the date to change
+ * @param fields the caller's `fields` argument
+ * @param overflow Temporal `overflow`, or a function that reads it; the function runs only once `fields` is
+ *   valid and not empty, so an option that throws is never read for a value that does not need it
+ * @returns the changed date, or `null` when `fields` is invalid
+ *
+ * @example withDateFields(Temporal.PlainDate.from("2024-03-10"), { day: 15 }, "constrain")?.toString() // "2024-03-15"
+ */
+export function withDateFields(
+  date: Temporal.PlainDate,
+  fields: unknown,
+  overflow: Overflow | (() => Overflow),
+): Temporal.PlainDate | null {
+  return withFields(date, fields, DATE_FIELDS, overflow);
+}
+
+/**
+ * The `setDateTime` core: a `PlainDateTime` with the checked `fields` set.
+ *
+ * May throw where Temporal does; each caller maps that to its sentinel.
+ *
+ * @param dateTime the date-time to change
+ * @param fields the caller's `fields` argument
+ * @param overflow Temporal `overflow`, or a function that reads it; the function runs only once `fields` is
+ *   valid and not empty, so an option that throws is never read for a value that does not need it
+ * @returns the changed date-time, or `null` when `fields` is invalid
+ *
+ * @example withDateTimeFields(Temporal.PlainDateTime.from("2024-03-10T08:00"), { hour: 9 }, "constrain")?.toString() // "2024-03-10T09:00:00"
+ */
+export function withDateTimeFields(
+  dateTime: Temporal.PlainDateTime,
+  fields: unknown,
+  overflow: Overflow | (() => Overflow),
+): Temporal.PlainDateTime | null {
+  return withFields(dateTime, fields, DATE_TIME_FIELDS, overflow);
+}
+
+/**
+ * The `setTime` core: a `PlainTime` with the checked `fields` set.
+ *
+ * May throw where Temporal does; each caller maps that to its sentinel.
+ *
+ * @param time the time to change
+ * @param fields the caller's `fields` argument
+ * @param overflow Temporal `overflow`, or a function that reads it; the function runs only once `fields` is
+ *   valid and not empty, so an option that throws is never read for a value that does not need it
+ * @returns the changed time, or `null` when `fields` is invalid
+ *
+ * @example withTimeFields(Temporal.PlainTime.from("08:00"), { minute: 30 }, "constrain")?.toString() // "08:30:00"
+ */
+export function withTimeFields(
+  time: Temporal.PlainTime,
+  fields: unknown,
+  overflow: Overflow | (() => Overflow),
+): Temporal.PlainTime | null {
+  return withFields(time, fields, TIME_FIELDS, overflow);
 }

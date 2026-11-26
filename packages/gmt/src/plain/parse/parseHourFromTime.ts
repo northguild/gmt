@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidTime } from "../validate";
+import { plainTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the hour (0-23) for a given ISO 8601 time string.
@@ -14,10 +13,10 @@ import { isValidTime } from "../validate";
  * @example parseHourFromTime("invalid") // ""
  */
 export function parseHourFromTime(value: string): string {
-  if (!isValidTime(value)) return "";
+  const time = plainTimeOf(value);
+  if (time === null) return "";
 
   try {
-    const time = Temporal.PlainTime.from(value);
     return time.hour.toString().padStart(2, "0");
   } catch {
     return "";

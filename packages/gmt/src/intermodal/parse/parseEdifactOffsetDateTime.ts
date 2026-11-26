@@ -1,5 +1,5 @@
-import { readEdiValue } from "../../internal/ediDateTimeFields";
 import type { EdifactOffsetDateTimeFormat } from "../../types/edi";
+import { edifactOffsetDateTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Parse a UN/EDIFACT `DTM` value that states a date and a time with an offset from UTC, as an
@@ -36,7 +36,9 @@ import type { EdifactOffsetDateTimeFormat } from "../../types/edi";
  *   removing the three letters, and resolve it in the IANA zone you map them to with
  *   `resolveLocal`.
  * - **Pass the unescaped element value.** `+` is the EDIFACT data element separator, so an
- *   interchange transmits `+02` as `?+02`. Remove the release character first:
+ *   interchange transmits `+02` as `?+02` (UN/EDIFACT syntax rules, UNTDID Part 4 Chapter 2.2:
+ *   "? immediately preceding one of the characters ' + : ? restores their normal meaning").
+ *   Remove the release character first:
  *   `"202406151430?+02"` returns `""`.
  * - Seconds are always written in the result, `00` for `205` and `303`. Fields are checked, not
  *   clamped: hour 24, second 60 and 29 February 2023 return `""`.
@@ -63,10 +65,5 @@ export function parseEdifactOffsetDateTime(
   value: string,
   format: EdifactOffsetDateTimeFormat,
 ): string {
-  try {
-    return readEdiValue("edifact", "offsetDateTime", format, value);
-  } catch {
-    // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
-    return "";
-  }
+  return edifactOffsetDateTimeText(value, format);
 }

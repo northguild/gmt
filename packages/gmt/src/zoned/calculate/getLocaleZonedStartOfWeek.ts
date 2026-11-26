@@ -1,13 +1,12 @@
 import {
   getLocaleFirstDayOfWeek,
   type WeekStartDay,
-  zonedDateTimeFrom,
   zonedUnitStart,
 } from "../../internal";
 import type { FractionalDigit } from "../../types";
-import { isValidZonedDateTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
-import { optionOrDefault } from "../../internal/optionOrDefault";
+import { fractionalDigitsOptionOrDefault } from "../../internal/typedOptions";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the start of the week containing `value`, using `locale`'s
@@ -59,19 +58,20 @@ export function getLocaleZonedStartOfWeek(
       return "";
     }
 
-    const fractionalSecondDigits = optionOrDefault(
+    const fractionalSecondDigits = fractionalDigitsOptionOrDefault(
       optionsArg?.fractionalSecondDigits,
       0,
     );
 
-    if (!isValidZonedDateTime(value)) return "";
+    const zonedDateTime = zonedDateTimeOf(value);
+    if (zonedDateTime === null) return "";
 
     const firstDay = getLocaleFirstDayOfWeek(locale);
     if (firstDay === null) return "";
 
     try {
       const start = zonedUnitStart(
-        zonedDateTimeFrom(value),
+        zonedDateTime,
         "week",
         firstDay as WeekStartDay,
       );

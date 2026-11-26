@@ -123,11 +123,13 @@ const KNOWN_REPOS: Readonly<Record<string, string>> = {
   "tc39/proposal-temporal": "tc39",
   "js-temporal/temporal-polyfill": "polyfill",
   "fullcalendar/temporal-polyfill": "fullcalendar",
+  "tc39/ecma402": "ecma402",
+  "nodejs/node": "node",
 };
 
 /**
  * The short form the `/upstream/` tables print for a GitHub reference: `tc39 #3292`,
- * `polyfill #369`, or `owner/repo #n` for any other repository.
+ * `polyfill #369`, `node #67076`, or `owner/repo #n` for any other repository.
  */
 export const shortRef = (repo: string, number: number): string =>
   `${KNOWN_REPOS[repo] ?? repo} #${number}`;
@@ -168,6 +170,18 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
   D19: "Two names for one zone, such as UTC and Etc/UTC or Asia/Kolkata and Asia/Calcutta, which the polyfill treats as different zones in Safari and WebKit",
   D22: "A length in days or larger measured from a repeated hour, which the polyfill can measure from the wrong pass or refuse, so it can be an hour too long or missing. Where the specification has no value, which also happens after a skipped hour, GMT returns its sentinel",
+  D23: "Some languages and calendars, among them Scottish Gaelic, Galician, Burmese and Telugu, whose date patterns use the week-of-year year: asking Node or Chrome for the parts of such a date, or of a range, stopped the process with no error to catch",
+  D24: "Dates in the same languages near the start or end of a year, which every browser prints with the year the week belongs to rather than the calendar year, and with some calendars, such as Buddhist in Telugu, on every day of the year",
+  D25: "Japanese calendar dates before 1873, which every browser prints in a Japanese era such as Meiji 5 or Taika, where the calendar uses the Gregorian era until the end of 1872. A range across 1873 prints each date in its own era",
+  D26: "Islamic calendar dates before the Hijra (622 CE), which Node and Chrome print as a negative year. They have no name for the era before the Hijra, so GMT returns its empty value there",
+  D27: "Japanese calendar dates in Japanese with a two-digit year, which every browser prints as 令和6年 where 令和06年 is asked for, and with Arabic-Indic or other digits asked for, which Node, Chrome and Safari print in Latin digits. The first year of an era stays 元年",
+  D28: "Chinese and Korean calendar dates with a two-digit year, where the Gregorian year shown beside the cycle year was padded, such as 05 for the year 5",
+  D29: "Date ranges in some languages and calendars that leave out, repeat or mix up a part of one date, such as a Chinese calendar range a year apart without the Gregorian year, or a Yoruba range with the weekday twice. GMT prints both dates in full, joined the language's own way",
+  D30: "Dates in the calendars named islamic and islamic-rgsa, which Node and Chrome print with an astronomical Islamic calendar the standard no longer offers. GMT uses islamic-tbla for islamic, and the language's default calendar for islamic-rgsa",
+  D31: "Coptic calendar dates before the year 1 AM (ISO 284-08-29), which Node and Chrome print as a positive year counted backwards, such as 286 for the year -285, with no era. GMT prints the signed year and the era name",
+  D32: "Islamic calendar dates on the first day of the year 1 AH (ISO 0622-07-19, and 0622-07-18 for islamic-tbla), which Safari prints for its first hours as the year 0 Before Hijra, and, west of UTC, the last hours of the day before as AH. GMT prints year 1 AH for the whole day",
+  D33: "Chinese and Korean (Dangi) calendar dates on a runtime that prints them differently from the Purple Mountain Observatory (Chinese) or KASI (Dangi) date, such as Node and Chrome, which put the Chinese New Year 2027 on 7 February where the observatory has 6 February. GMT has no calendar data of its own, so on such a runtime a Chinese or Dangi date format returns its empty value. A runtime that prints the observatory date keeps its own text",
+  D34: "Coptic calendar dates on the first day of the year 1 AM (ISO 284-08-29), which Safari prints for its first hours with the long era name Anno Martyrum, and ranges across that day, which Safari prints with the era twice. GMT prints AM for the whole day",
 };
 
 /** The plain-language line for a group, falling back to the canary's own wording. */

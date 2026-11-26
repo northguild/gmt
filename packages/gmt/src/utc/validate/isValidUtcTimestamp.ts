@@ -1,5 +1,5 @@
 import { rfc3339DateTime } from "../../regex/rfc-3339";
-import { isValidUtc } from "./isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Return true when `value` is a real UTC instant written as `YYYY-MM-DDTHH:MM:SS[.f]Z` and
@@ -51,6 +51,10 @@ export function isValidUtcTimestamp(
 ): boolean;
 export function isValidUtcTimestamp(value: unknown): value is string;
 export function isValidUtcTimestamp(value: unknown): boolean {
-  // `isValidUtc` goes first: it stops a non-string, and narrows `value` to a string for the pattern.
-  return isValidUtc(value) && rfc3339DateTime.test(value);
+  // The string check goes first: it narrows `value` to a string for the pattern.
+  return (
+    typeof value === "string" &&
+    utcInstantOf(value) !== null &&
+    rfc3339DateTime.test(value)
+  );
 }

@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { todayDate } from "../../internal/todayDate";
 
 /**
  * Return the current PlainDate as an ISO string in the system timeZone.
@@ -12,15 +11,5 @@ import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
  * @example getToday() // "2024-03-15" (current date)
  */
 export function getToday(): string {
-  const timeZone = getSystemTimeZone();
-
-  if (!timeZone) {
-    return "";
-  }
-
-  try {
-    return Temporal.Now.zonedDateTimeISO(timeZone).toPlainDate().toString();
-  } catch {
-    return "";
-  }
+  return todayDate()?.toString() ?? "";
 }

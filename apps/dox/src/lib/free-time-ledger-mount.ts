@@ -49,7 +49,7 @@ import {
   ledgerLane,
   ledgerLegend,
 } from "~/widgets/families/ledger/ledger-lane";
-import { textArea } from "~/widgets/families/ledger/text-area";
+import { textArea } from "~/widgets/builders/text-area";
 import { chips, type GmtChips } from "~/widgets/primitives/chips/chips";
 import { grow } from "~/widgets/primitives/grow/grow";
 import { handle, type GmtHandle } from "~/widgets/primitives/handle/handle";
@@ -73,8 +73,7 @@ import {
   NULL_REASON_TEXT,
   chargeTermsOf,
   dayMarks,
-  explainExpiryNull,
-  explainNull,
+  freeTimeFacts,
   formatCharges,
   formatFreeTime,
   freeDaysOf,
@@ -85,22 +84,15 @@ import {
   summaryText,
   termsOf,
   tiersOf,
-  type ChargeTermsArg,
-  type ChargesResult,
   type FreeTimeLedgerArgs,
-  type FreeTimeResult,
   type LedgerState,
   type TermsArg,
 } from "./free-time-ledger";
-import { GMT_MODULES } from "./gmt-modules";
-import {
-  layoutWidth,
-  onWidthChange,
-  placeLabel,
-  thinTickLabels,
-} from "./label-fit";
+import { onWidthChange, thinTickLabels } from "./label-fit";
+import { placeGate } from "./ledger-gate";
 import type { PlateSpec } from "./ledger-widgets";
-import { onceDestroy, WidgetLoadError, type MountFn } from "./widget-mount";
+import { loadFreeTimeLib, type FreeTimeLib } from "./ledger-lib";
+import { onceDestroy, type MountFn } from "./widget-mount";
 import { codeSpan } from "./widget-ui";
 
 export type { FreeTimeLedgerArgs } from "./free-time-ledger";
@@ -447,44 +439,6 @@ export function renderFreeTimeLedgerTemplate(
   );
 }
 
-type ExpiryFn = (
-  clockStart: string,
-  freeDays: number,
-  options: TermsArg,
-) => FreeTimeResult | null;
-type ChargesFn = (
-  clockStart: string,
-  clockEnd: string,
-  freeDays: number,
-  options: ChargeTermsArg & { tiers?: number[] },
-) => ChargesResult | null;
-
-interface Modules {
-  freeTimeExpiry: ExpiryFn;
-  chargeableDays: ChargesFn;
-  isValidInstant: (value: string) => boolean;
-  isValidTimeZone: (value: string) => boolean;
-  isValidBusinessCalendar: (value: unknown) => boolean;
-}
-
-async function loadModules(): Promise<Modules> {
-  const [intermodal, precision, zoned, calendar] = await Promise.all([
-    GMT_MODULES["intermodal/calculate"](),
-    GMT_MODULES["precision/validate"](),
-    GMT_MODULES["zoned/validate"](),
-    GMT_MODULES["calendar/validate"](),
-  ]);
-  return {
-    freeTimeExpiry: intermodal["freeTimeExpiry"] as ExpiryFn,
-    chargeableDays: intermodal["chargeableDays"] as ChargesFn,
-    isValidInstant: precision["isValidInstant"] as (v: string) => boolean,
-    isValidTimeZone: zoned["isValidTimeZone"] as (v: string) => boolean,
-    isValidBusinessCalendar: calendar["isValidBusinessCalendar"] as (
-      v: unknown,
-    ) => boolean,
-  };
-}
-
 /** The options object as source text: highlighted HTML and plain text to copy. */
 function optionsSource(
   terms: TermsArg & { chargeBasis?: string },
@@ -560,7 +514,7 @@ interface Controller {
 
 function setupWidget(
   root: HTMLElement,
-  m: Modules,
+  m: FreeTimeLib,
   signal: AbortSignal,
 ): Controller {
   const { el: widgetEl, part: el } = findWidget(root, WIDGET_NAME);
@@ -652,22 +606,14 @@ function setupWidget(
       gate.hidden = true;
       return;
     }
-    gate.hidden = false;
-    const pct = canvas.toPercent(ms);
-    gate.style.setProperty("--gmt-gate-at", String(pct));
-    const chip = el("expiry-chip");
     const local = zone === null ? "" : formatLocal(ms, zone);
-    chip.textContent = local === "" ? "expires" : `expires ${local}`;
-    gate.dataset["edge"] = "start";
-    if (trackEl.clientWidth > 0) {
-      const side = placeLabel({
-        atPx: (pct / 100) * trackEl.clientWidth,
-        labelPx: layoutWidth(chip),
-        trackPx: trackEl.clientWidth,
-        offsetPx: 10,
-      });
-      gate.dataset["edge"] = side;
-    }
+    placeGate(
+      gate,
+      el("expiry-chip"),
+      trackEl,
+      canvas.toPercent(ms),
+      local === "" ? "expires" : `expires ${local}`,
+    );
   }
 
   function drawBar(startMs: number, endMs: number, invalid: boolean): void {
@@ -694,13 +640,7 @@ function setupWidget(
     const endMs = toEpochMs(s.clockEnd);
     const zoneOk = m.isValidTimeZone(s.zone);
 
-    const freeTime = m.freeTimeExpiry(s.clockStart, days, terms);
-    const charges = m.chargeableDays(s.clockStart, s.clockEnd, days, {
-      ...chargeTerms,
-      ...(tiers === undefined ? {} : { tiers: tiers ?? [] }),
-    });
-    const reason = charges === null ? explainNull(s, m) : null;
-    const expiryReason = freeTime === null ? explainExpiryNull(s, m) : null;
+    const { freeTime, charges, reason, expiryReason } = freeTimeFacts(s, m);
 
     el("lane-label").textContent = zoneOk ? s.zone : "no zone";
     const cells = zoneOk ? dayCells(canvas, s.zone, startMs, endMs) : [];
@@ -968,13 +908,8 @@ export const mountFreeTimeLedger: MountFn<FreeTimeLedgerArgs> = async (
   signal,
 ) => {
   defineElements();
-  let modules: Modules;
-  try {
-    modules = await loadModules();
-  } catch (cause) {
-    // Loud, not inert: the host decides what to show (see `WidgetLoadError`).
-    throw new WidgetLoadError(cause);
-  }
+  // `loadFreeTimeLib` throws a `WidgetLoadError`: loud, not inert (see `WidgetLoadError`).
+  const modules = await loadFreeTimeLib();
   if (signal.aborted) return onceDestroy(() => {});
 
   const controller = setupWidget(root, modules, signal);

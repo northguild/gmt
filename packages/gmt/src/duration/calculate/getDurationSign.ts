@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../validate/isValidDuration";
+import { durationOf } from "../../internal/inputChecks";
 
 /**
  * Report whether an ISO 8601 duration is negative, zero-length, or positive.
@@ -23,12 +22,14 @@ import { isValidDuration } from "../validate/isValidDuration";
  * @example getDurationSign("not a duration") // null
  */
 export function getDurationSign(value: string): number | null {
-  if (!isValidDuration(value)) {
+  const duration = durationOf(value);
+
+  if (duration === null) {
     return null;
   }
 
   try {
-    return Temporal.Duration.from(value).sign;
+    return duration.sign;
   } catch {
     return null;
   }

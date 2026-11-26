@@ -9,7 +9,7 @@
 import { html, type SafeHtml } from "../../builders/html";
 import styles from "./crossing-connector.module.css";
 
-const NBSP = " ";
+const NBSP = "\u00a0";
 
 interface CrossingConnectorOptions {
   elapsedId: string;

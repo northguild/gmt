@@ -18,7 +18,7 @@ describe("affected: which checks a change runs", () => {
   it.each([
     {
       name: "notes in context/ run nothing",
-      changes: ["context/dox/built.md", "context/skills.md"],
+      changes: ["context/dox/built/index.md", "context/skills.md"],
       checks: [],
     },
     {
@@ -42,14 +42,31 @@ describe("affected: which checks a change runs", () => {
       checks: ["deps"],
     },
     {
+      name: "a polyfill-bugs record runs the native-suite tag test",
+      changes: ["context/domination/polyfill-bugs/h-q.md"],
+      checks: ["deps", "build:gmt-oxlint", "build:gmt", "test:dox"],
+    },
+    {
+      name: "the polyfill-bugs index runs the native-suite tag test",
+      changes: ["context/domination/js-temporal-polyfill-bugs.md"],
+      checks: ["deps", "build:gmt-oxlint", "build:gmt", "test:dox"],
+    },
+    {
       name: "CONTRIBUTING.md runs the Dox tests and the build they need",
       changes: ["CONTRIBUTING.md"],
-      checks: ["build:gmt", "test:dox"],
+      checks: ["build:gmt-oxlint", "build:gmt", "test:dox"],
     },
     {
       name: "an edited README runs stats, the API surface and the Dox tests",
       changes: [{ path: "README.md", status: "M" }],
-      checks: ["build:gmt", "dox-pages", "stats", "api-surface", "test:dox"],
+      checks: [
+        "build:gmt-oxlint",
+        "build:gmt",
+        "dox-pages",
+        "stats",
+        "api-surface",
+        "test:dox",
+      ],
     },
     {
       name: "an edited Dox guide skips the listing checks",
@@ -57,6 +74,7 @@ describe("affected: which checks a change runs", () => {
         { path: "apps/dox/src/content/docs/guides/zones.mdx", status: "M" },
       ],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -74,6 +92,7 @@ describe("affected: which checks a change runs", () => {
       ],
       checks: [
         "markers",
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -90,6 +109,7 @@ describe("affected: which checks a change runs", () => {
       changes: ["apps/dox/src/content/docs/guides/zones.mdx"],
       checks: [
         "markers",
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -129,17 +149,23 @@ describe("affected: which checks a change runs", () => {
     {
       name: "a repo script runs its own check and the Dox tests",
       changes: [{ path: "scripts/deps.mjs", status: "M" }],
-      checks: ["format", "deps", "build:gmt", "test:dox"],
+      checks: ["format", "deps", "build:gmt-oxlint", "build:gmt", "test:dox"],
     },
     {
       name: "the licence check script runs its own check and the Dox tests, which copy scripts/",
       changes: [{ path: "scripts/licences.mjs", status: "M" }],
-      checks: ["format", "licences", "build:gmt", "test:dox"],
+      checks: [
+        "format",
+        "licences",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "test:dox",
+      ],
     },
     {
       name: "the scripts/ licence runs the licence check and the Dox tests, which copy scripts/",
       changes: [{ path: "scripts/LICENSE", status: "M" }],
-      checks: ["licences", "build:gmt", "test:dox"],
+      checks: ["licences", "build:gmt-oxlint", "build:gmt", "test:dox"],
     },
     {
       name: "a top-level folder's licence runs only the licence check",
@@ -154,7 +180,14 @@ describe("affected: which checks a change runs", () => {
         { path: "CONTRIBUTING.md", status: "M" },
         { path: "scripts/test-markers.mjs", status: "M" },
       ],
-      checks: ["format", "deps", "markers", "build:gmt", "test:dox"],
+      checks: [
+        "format",
+        "deps",
+        "markers",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "test:dox",
+      ],
     },
     {
       name: "the formatter's config runs only the format check",
@@ -168,6 +201,7 @@ describe("affected: which checks a change runs", () => {
         "format",
         "markers",
         "docs-check",
+        "ui-standards",
         "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
@@ -184,6 +218,7 @@ describe("affected: which checks a change runs", () => {
       name: "a package changelog runs the checks of the Dox page it becomes",
       changes: [{ path: "packages/gmt/CHANGELOG.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -198,6 +233,7 @@ describe("affected: which checks a change runs", () => {
       name: "a plugin's changelog runs the checks of the Dox page it becomes",
       changes: [{ path: "packages/gmt-biome/CHANGELOG.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -209,14 +245,26 @@ describe("affected: which checks a change runs", () => {
       ],
     },
     {
+      name: "the zone matrix runner runs its own tests and the Dox tests, which copy scripts/",
+      changes: [{ path: "scripts/zone-matrix/cells.mjs", status: "M" }],
+      checks: [
+        "format",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "test:dox",
+        "test:zone-matrix",
+      ],
+    },
+    {
       name: "a deleted script skips the format check",
       changes: [{ path: "scripts/deps.mjs", status: "D" }],
-      checks: ["deps", "build:gmt", "test:dox"],
+      checks: ["deps", "build:gmt-oxlint", "build:gmt", "test:dox"],
     },
     {
       name: "the DST guide's source runs the checks of the Dox page it becomes",
       changes: [{ path: "docs/dst-disambiguation.md", status: "M" }],
       checks: [
+        "build:gmt-oxlint",
         "build:gmt",
         "dox-pages",
         "build:dox",
@@ -233,6 +281,7 @@ describe("affected: which checks a change runs", () => {
       checks: [
         "format",
         "bundle-size",
+        "build:gmt-oxlint",
         "build:gmt",
         "build:dox",
         "dox-dist",

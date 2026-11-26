@@ -1,4 +1,4 @@
-import { parseHttpDate } from "../parse/parseHttpDate";
+import { httpDateInstantOf } from "../../internal/httpDateFields";
 
 /**
  * Return true when `value` is a real HTTP header date: the RFC 9110 §5.6.7 HTTP-date that
@@ -41,5 +41,5 @@ export function isValidHttpDate(value: string): boolean;
 export function isValidHttpDate(value: {} | null | undefined | void): boolean;
 export function isValidHttpDate(value: unknown): value is string;
 export function isValidHttpDate(value: unknown): boolean {
-  return typeof value === "string" && parseHttpDate(value) !== "";
+  return httpDateInstantOf(value) !== null;
 }

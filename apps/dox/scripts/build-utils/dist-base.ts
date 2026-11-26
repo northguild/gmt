@@ -144,6 +144,46 @@ export function badUrlsInHtml(html: string): BaseFailure[] {
   return dedupe(out);
 }
 
+/**
+ * Whether a URL links to a Dox page without the trailing slash: root-absolute or on the site's
+ * origin, under `/gmt`, and with no dot in its last path segment (a dot names a file).
+ */
+function isPageLinkWithoutSlash(value: string): boolean {
+  let pathname: string;
+  if (value.startsWith("/") && !value.startsWith("//"))
+    pathname = value.split(/[?#]/)[0];
+  else if (value.startsWith(`${ORIGIN}/`))
+    pathname = value.slice(ORIGIN.length).split(/[?#]/)[0];
+  else return false;
+  if (!underBase(pathname) || pathname.endsWith("/")) return false;
+  return !pathname.slice(pathname.lastIndexOf("/") + 1).includes(".");
+}
+
+/**
+ * Every link (`<a>` or `<area>` href) to a Dox page that lacks the trailing slash the static host
+ * serves the page at. Such a link costs a redirect, and search engines crawl and report the page
+ * under both URLs. A file (a dot in the last path segment, such as `llms.txt` or a `.md` twin) and
+ * any URL outside `/gmt` pass.
+ */
+export function pageLinksWithoutSlash(html: string): BaseFailure[] {
+  const out: BaseFailure[] = [];
+  for (const tag of html.matchAll(
+    /<(a|area)\b((?:"[^"]*"|'[^']*'|[^>"'])*)>/gi,
+  )) {
+    const href = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i.exec(
+      tag[2],
+    );
+    if (href === null) continue;
+    const value = (href[1] ?? href[2] ?? href[3]).trim();
+    if (!isPageLinkWithoutSlash(value)) continue;
+    out.push({
+      value,
+      where: `<${tag[1].toLowerCase()}> href (page link without trailing slash)`,
+    });
+  }
+  return dedupe(out);
+}
+
 export function badUrlsInCss(css: string): BaseFailure[] {
   const out: BaseFailure[] = [];
   check(cssUrls(css), "url()", out);
@@ -183,6 +223,35 @@ export function badLinksInMarkdown(md: string): BaseFailure[] {
   if (prose.includes(LEGACY_HOST))
     out.push({ value: LEGACY_HOST, where: "names the old host" });
   return dedupe(out);
+}
+
+/**
+ * The Markdown form of `pageLinksWithoutSlash`, for the `.md` twins and `llms*.txt`: every inline
+ * link, reference definition, raw `href` and bare `northguild.dev/gmt/…` URL to a Dox page that
+ * lacks the trailing slash. Fenced code and inline code spans are skipped; an image passes because
+ * its last segment has a dot.
+ */
+export function pageLinksWithoutSlashInMarkdown(md: string): BaseFailure[] {
+  const out: BaseFailure[] = [];
+  const prose = withoutFences(md).replace(/(`+)(?:(?!\1)[\s\S])+?\1(?!`)/g, "");
+  const seen = new Set<string>();
+  const found = (value: string, where: string) => {
+    if (seen.has(value)) return;
+    seen.add(value);
+    if (isPageLinkWithoutSlash(value))
+      out.push({ value, where: `${where} (page link without trailing slash)` });
+  };
+  for (const m of prose.matchAll(/\]\(\s*<?([^)\s>]+)>?/g))
+    found(m[1], "markdown link");
+  for (const m of prose.matchAll(/^[ \t]{0,3}\[[^\]]+\]:[ \t]*<?([^\s>]+)/gm))
+    found(m[1], "markdown reference");
+  for (const m of prose.matchAll(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/g))
+    found(m[1] ?? m[2] ?? "", "raw href");
+  for (const m of prose.matchAll(
+    /(?<![(<"'])https:\/\/northguild\.dev\/gmt(?:\/[^\s)<>"'\]`]*)?/g,
+  ))
+    found(m[0].replace(/[.,;:!?]+$/, ""), "bare URL");
+  return out;
 }
 
 export function badRedirectRules(text: string): BaseFailure[] {

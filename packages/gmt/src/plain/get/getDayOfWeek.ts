@@ -1,5 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 
 /**
  * Return the current ISO day of the week as a number in the system timeZone.
@@ -14,7 +14,7 @@ import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
  * @example getDayOfWeek() // null (when system timeZone unavailable)
  */
 export function getDayOfWeek(): number | null {
-  const timeZone = getSystemTimeZone();
+  const timeZone = systemTimeZone();
   if (!timeZone) return null;
 
   try {

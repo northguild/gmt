@@ -17,6 +17,11 @@
  * always read "late by" thousands of hours. "Use my clock" is one click
  * away.
  *
+ * **The clock is a switch.** "Live clock" is on while the face ticks on the second and off
+ * while it holds the last reading it showed. Turning it off keeps every value; turning it on
+ * reads the clock again. It starts off under `prefers-reduced-motion`, and the bare page,
+ * which opens pinned, has no clock to tick, so it starts off too.
+ *
  * **What is spoken.** The face, the verdict and the chart repaint every second in live mode
  * and on every slider step, so none of them is a live region. A separate, visually hidden
  * status is written to when a reader finishes a change, when the verdict changes kind and
@@ -37,6 +42,7 @@ import {
   fieldGrid,
   findWidget,
   hint,
+  hold,
   html,
   idScope,
   lane,
@@ -44,6 +50,7 @@ import {
   section,
   select,
   setHtml,
+  switchField,
   textInput,
   verdict as verdictBlock,
   widget,
@@ -74,6 +81,7 @@ import {
   CUSTOM_PRESET_ID,
   axisWindow,
   collectCountdownFacts,
+  floorToSecond,
   countdownNullReason,
   countdownNullText,
   matchPreset,
@@ -88,6 +96,7 @@ import {
   type CutoffCountdownArgs,
   type VerdictKind,
 } from "./cutoff-countdown";
+import { msToNextSecond } from "./clock-change-common";
 import { loadCutoffLib } from "./cutoff-lib";
 import {
   dayTickLabel,
@@ -112,6 +121,8 @@ const NBSP = " ";
 const READING_YOUR_CLOCK = "Reading your clock…";
 const NOW_LIVE = "Now is your clock, live.";
 const NOW_PINNED = "Now is pinned.";
+const NOW_PAUSED = "Now is your clock, paused.";
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 /** The widest face value, so the face keeps its width from one reading to the next. */
 const FACE_SAMPLE = "−8888 h 88 min 88 s";
 /** Live ticks between two spoken summaries: one a minute. */
@@ -121,8 +132,17 @@ const SPEAK_EVERY_TICKS = 60;
 // Markup
 // ---------------------------------------------------------------------------
 
+/** The words each verdict kind can write, the longest of each, so the slot is as tall as the
+ *  tallest verdict and a reading that crosses the cut-off moves nothing below it. */
+const VERDICT_SAMPLES: readonly string[] = [
+  "Closed: now is the cut-off itself. The window to meet a cut-off is half-open, so at 88:88:88.888 it has already closed.",
+  "On time: 88 h 88 min 88 s left.",
+  "Late by 88 h 88 min 88 s.",
+  READING_YOUR_CLOCK,
+];
+
 /** The verdict block for a verdict kind; a blank one keeps the slot's height. */
-function verdictSlot(kind: VerdictKind | "reading", text: string): SafeHtml {
+function verdictOf(kind: VerdictKind | "reading", text: string): SafeHtml {
   const tone: VerdictTone =
     kind === "on-time"
       ? "good"
@@ -134,6 +154,32 @@ function verdictSlot(kind: VerdictKind | "reading", text: string): SafeHtml {
     title: kind === "reading" ? READING_YOUR_CLOCK : text === "" ? NBSP : text,
     detail: "",
   });
+}
+
+/** The verdict, held at the height of the tallest one. */
+function verdictSlot(kind: VerdictKind | "reading", text: string): SafeHtml {
+  return hold(
+    verdictOf(kind, text),
+    VERDICT_SAMPLES.map((sample) => verdictOf("late", sample)),
+  );
+}
+
+/**
+ * The widest the chip reads anywhere on the axis, for the range to size its box by, so the chip
+ * keeps its width while the thumb moves. The time is tabular and so fixed in width; the length
+ * is the longest of the whole-hour reading and the one just short of the next hour.
+ */
+function widestChip(nowTime: string, win: AxisWindow | null): string {
+  const reach =
+    win === null ? 0 : Math.round((win.endMs - win.startMs) / 60_000);
+  const hours = Math.floor(reach / 60);
+  const lengths = [
+    durationText(`PT${hours}H`),
+    durationText(`PT${Math.max(hours - 1, 0)}H59M`),
+    durationText(`PT${Math.min(reach, 59)}M`),
+  ];
+  const longest = lengths.reduce((a, b) => (b.length > a.length ? b : a), "");
+  return `${nowTime} · −${longest}`;
 }
 
 function ruleText(cutoffTime: string): string {
@@ -270,13 +316,13 @@ export function renderCutoffCountdownTemplate(
       })}`,
     )}${buttonRow(
       html`${button({ id: id("use-clock"), label: "Use my clock" })}${button({ id: id("snap"), label: "Now = the cut-off" })}`,
-    )}${nowMode.html}`,
+    )}${switchField({ id: id("live"), label: "Live clock", checked: live, gate: "hold" })}${nowMode.html}`,
   );
 
   const read = section(
     { id: id("read"), heading: "2. Late or on time", level: 4 },
     html`${grow(
-      html`<div id="${id("verdict-slot")}">${verdictSlot(live ? "reading" : "none", "")}</div>`,
+      html`<div id="${id("verdict-slot")}" data-gate="verdict">${verdictSlot(live ? "reading" : "none", "")}</div>`,
     )}<div class="${styles.status}" role="status" aria-label="Cut-off announcement" id="${id("status")}"></div>${countdownFace(
       {
         id: id("face"),
@@ -286,7 +332,7 @@ export function renderCutoffCountdownTemplate(
         samples: [FACE_SAMPLE],
         live,
       },
-    )}<div class="${styles.axis}" id="${id("axis-slot")}">${blankAxis()}</div>${range(
+    )}<div class="${styles.axis}" id="${id("axis-slot")}" data-gate="drawn">${blankAxis()}</div>${range(
       {
         id: id("slider"),
         label: "Drag now",
@@ -402,22 +448,6 @@ function safeEpochMs(text: string): number | null {
   }
 }
 
-/** Floors a real instant string to the whole second, for a live reading.
- *  Sub-second precision from `Temporal.Now.instant()` is real but not
- *  meaningful here, and left in it would print as noise in the duration
- *  text every single tick. Presentation only: the floored instant is
- *  still a real instant, and is what `isPastCutoff`/`timeToCutoff` are
- *  then asked about, never a result computed by this rounding. */
-function floorToSecond(text: string): string {
-  try {
-    return Temporal.Instant.fromEpochMilliseconds(
-      Math.floor(epochMs(text) / 1000) * 1000,
-    ).toString();
-  } catch {
-    return text;
-  }
-}
-
 interface Controller {
   readState(): CountdownState;
   apply(args: CutoffCountdownArgs): void;
@@ -441,10 +471,13 @@ function setupWidget(
   const nowEl = el<HTMLInputElement>("now");
   const useClockEl = el<HTMLButtonElement>("use-clock");
   const snapEl = el<HTMLButtonElement>("snap");
+  const liveEl = el<HTMLInputElement>("live");
+  const media =
+    typeof matchMedia === "function" ? matchMedia(REDUCED_MOTION) : null;
 
   let mode: "pinned" | "live" = "pinned";
   let window_: AxisWindow | null = null;
-  let interval: ReturnType<typeof setInterval> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   let destroyed = false;
   let announcedKind: VerdictKind | undefined;
   let ticks = 0;
@@ -465,9 +498,9 @@ function setupWidget(
   }
 
   function stopLive(): void {
-    if (interval !== undefined) {
-      clearInterval(interval);
-      interval = undefined;
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
     }
   }
 
@@ -482,8 +515,11 @@ function setupWidget(
   }
 
   function showMode(): void {
-    el("now-mode").textContent = mode === "live" ? NOW_LIVE : NOW_PINNED;
-    faceEl.closest("figure")!.dataset["live"] = String(mode === "live");
+    const ticking = timer !== undefined;
+    el("now-mode").textContent =
+      mode === "pinned" ? NOW_PINNED : ticking ? NOW_LIVE : NOW_PAUSED;
+    faceEl.closest("figure")!.dataset["live"] = String(ticking);
+    liveEl.checked = ticking;
   }
 
   function drawSlider(
@@ -530,7 +566,9 @@ function setupWidget(
     // The chip is short ("16:45 · +1 h 15 min") so it fits a phone-width
     // box; aria-valuetext keeps the whole sentence. The range writes both
     // from one formatter, so the spoken sentence goes on last.
-    rangeEl.formatValue = () => chip;
+    const reading = rangeEl.value;
+    const widest = hasValue ? widestChip(nowTime, win) : "";
+    rangeEl.formatValue = (n) => (n === reading ? chip : widest);
     rangeEl.input?.setAttribute("aria-valuetext", sentence);
   }
 
@@ -626,33 +664,55 @@ function setupWidget(
     if (flipped) speak(spoken);
   }
 
-  function readLiveNow(): void {
-    nowEl.value = floorToSecond(clock());
+  /** Reads the clock into the Now box and returns the raw reading. */
+  function readLiveNow(): string {
+    const raw = clock();
+    nowEl.value = floorToSecond(raw);
+    return raw;
   }
 
-  function startLive(): void {
+  /**
+   * Reads the clock once and makes it Now. With `tick` the face then follows it on the second;
+   * without, it holds that reading, and the switch is off.
+   */
+  function startLive(tick: boolean): void {
     stopLive();
     mode = "live";
     ticks = 0;
-    readLiveNow();
+    const raw = readLiveNow();
     recomputeWindow();
+    if (tick) timer = setTimeout(tickLive, msToNextSecond(raw));
     render();
-    interval = setInterval(() => {
-      readLiveNow();
-      // Recompute the window only once the live reading actually leaves
-      // it: not on every tick, and never while dragging.
-      const nowMs = safeEpochMs(readState().now);
-      if (
-        window_ &&
-        nowMs !== null &&
-        (nowMs < window_.startMs || nowMs > window_.endMs)
-      ) {
-        recomputeWindow();
-      }
-      render();
-      ticks += 1;
-      if (ticks % SPEAK_EVERY_TICKS === 0) speak(spoken);
-    }, 1000);
+  }
+
+  function tickLive(): void {
+    const raw = readLiveNow();
+    timer = setTimeout(tickLive, msToNextSecond(raw));
+    // Recompute the window only once the live reading actually leaves
+    // it: not on every tick, and never while dragging.
+    const nowMs = safeEpochMs(readState().now);
+    if (
+      window_ &&
+      nowMs !== null &&
+      (nowMs < window_.startMs || nowMs > window_.endMs)
+    ) {
+      recomputeWindow();
+    }
+    render();
+    ticks += 1;
+    if (ticks % SPEAK_EVERY_TICKS === 0) speak(spoken);
+  }
+
+  /** The reader's switch: on reads the clock again and ticks, off holds the last reading. */
+  function setTicking(on: boolean): void {
+    if (on) {
+      startLive(true);
+      syncPreset();
+    } else if (mode === "live") {
+      stopLive();
+      showMode();
+    }
+    speak(spoken);
   }
 
   function switchToPinned(): void {
@@ -704,6 +764,10 @@ function setupWidget(
     "change",
     (e) => {
       const target = e.target;
+      if (target === liveEl) {
+        setTicking(liveEl.checked);
+        return;
+      }
       if (target === presetEl) {
         applyPreset();
         speak(spoken);
@@ -728,7 +792,7 @@ function setupWidget(
     (e) => {
       const target = e.target;
       if (target === useClockEl) {
-        startLive();
+        startLive(!(media?.matches ?? false));
         syncPreset();
         speak(spoken);
         return;
@@ -749,6 +813,14 @@ function setupWidget(
     { signal },
   );
 
+  media?.addEventListener(
+    "change",
+    () => {
+      if (mode === "live") setTicking(!media.matches);
+    },
+    { signal },
+  );
+
   return {
     readState,
     apply(args) {
@@ -763,7 +835,7 @@ function setupWidget(
     },
     start(initial) {
       if (initial === "live") {
-        startLive();
+        startLive(!(media?.matches ?? false));
       } else {
         recomputeWindow();
         render();

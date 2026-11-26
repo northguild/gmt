@@ -97,6 +97,18 @@ describe("DoxChat server-rendered page", () => {
     await expectNoAxeViolations(body);
   });
 
+  it("holds the clock's place on the server, hidden from assistive tech", async () => {
+    // The reader's time is unknown on the server. The strip keeps the clock's place so the chat
+    // under it does not move when the time arrives (the height is read in
+    // first-paint-layout.browser.test.ts); nothing reads it out meanwhile.
+    const body = serverPage(<DoxPage />);
+    expect(within(body).queryByRole("time")).not.toBeInTheDocument();
+    expect(
+      within(body).getByRole("time", { hidden: true }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(body);
+  });
+
   it("shows no reset time on the server, where the reader's zone is unknown", async () => {
     // Printing one here would hydrate against a different string in the
     // browser (#418). The chip and the banner's "Back …" arrive after mount.

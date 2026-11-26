@@ -1,5 +1,5 @@
 import type { Interval } from "../../types";
-import { intersectIntervals } from "./intersectIntervals";
+import { intersectIntervalPair } from "../../internal/intervalNanoseconds";
 
 /**
  * Return the part of `interval` that lies inside `bounds`, or null when none of it does.
@@ -26,7 +26,7 @@ export function clampInterval(
   bounds: Interval,
 ): Interval | null {
   try {
-    return intersectIntervals(interval, bounds);
+    return intersectIntervalPair(interval, bounds);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

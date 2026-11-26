@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenContainsSpan } from "../../internal";
-import { isValidTime } from "../validate";
 
 /**
  * Return true when the half-open interval B `[bStart, bEnd)` lies within the half-open interval
@@ -49,21 +49,19 @@ export function intervalEngulfsTime(
     return false;
   }
 
-  if (
-    !isValidTime(aStart) ||
-    !isValidTime(aEnd) ||
-    !isValidTime(bStart) ||
-    !isValidTime(bEnd)
-  ) {
+  const aS = plainTimeOf(aStart);
+
+  const aE = plainTimeOf(aEnd);
+
+  const bS = plainTimeOf(bStart);
+
+  const bE = plainTimeOf(bEnd);
+
+  if (aS === null || aE === null || bS === null || bE === null) {
     return false;
   }
 
   try {
-    const aS = Temporal.PlainTime.from(aStart);
-    const aE = Temporal.PlainTime.from(aEnd);
-    const bS = Temporal.PlainTime.from(bStart);
-    const bE = Temporal.PlainTime.from(bEnd);
-
     if (Temporal.PlainTime.compare(aS, aE) > 0) {
       return false;
     }

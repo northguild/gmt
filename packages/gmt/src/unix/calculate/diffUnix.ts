@@ -1,4 +1,5 @@
 import type { DateTimeUnit } from "../../internal/temporalTypes";
+import { roundingOptionsOf } from "../../internal/typedOptions";
 import {
   addToZoned,
   frameZoned,
@@ -11,8 +12,8 @@ import {
   resolveUnixEpochUnit,
   unixEpochToInstant,
 } from "../../internal/unixEpochValue";
-import { getLargestDateTimeDurationUnit } from "../../plain/calculate/getLargestDateTimeDurationUnit";
-import { isValidDateTimeDurationUnit } from "../../plain/validate";
+import { largestDateTimeDurationUnit } from "../../internal/resolveDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, RoundingOptions } from "../../types";
 import type { UnixUnit } from "../validate/isValidUnixUnit";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -112,7 +113,7 @@ export function diffUnix(
       typeof unit === "string" ? resolveDurationUnit(unit) : "",
     );
 
-    if (!plurals.every(isValidDateTimeDurationUnit)) {
+    if (!plurals.every(isDateTimeDurationUnitName)) {
       return null;
     }
 
@@ -123,7 +124,7 @@ export function diffUnix(
       return null;
     }
 
-    const largestUnit = getLargestDateTimeDurationUnit(plurals);
+    const largestUnit = largestDateTimeDurationUnit(plurals);
     if (largestUnit === "") return null;
 
     try {
@@ -132,9 +133,7 @@ export function diffUnix(
         frameZoned(instant2, frame),
         {
           largestUnit,
-          smallestUnit: options?.smallestUnit,
-          roundingIncrement: options?.roundingIncrement,
-          roundingMode: options?.roundingMode,
+          ...roundingOptionsOf(options),
         },
       );
 

@@ -1,12 +1,13 @@
-import { Temporal } from "../../internal/temporal";
+import { booleanOption } from "../../internal/typedOptions";
 import {
   cycleFieldValue,
   isValidAmount,
   timeCycleFieldBounds,
 } from "../../internal";
 import type { TimeCycleField } from "../../types";
-import { isValidTime, isValidTimeCycleField } from "../validate";
-import { setTime } from "./setTime";
+import { plainTimeOf } from "../../internal/inputChecks";
+import { withTimeFields } from "../../internal/readSetFields";
+import { isTimeCycleFieldName } from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -58,24 +59,22 @@ export function cycleTime(
     return "";
   }
 
-  if (
-    !isValidTime(value) ||
-    !isValidTimeCycleField(field) ||
-    !isValidAmount(amount)
-  ) {
+  const time = plainTimeOf(value);
+  if (time === null || !isTimeCycleFieldName(field) || !isValidAmount(amount)) {
     return "";
   }
 
   try {
-    const time = Temporal.PlainTime.from(value);
     const bounds = timeCycleFieldBounds(field);
     const newValue = cycleFieldValue(
       time[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
-    return setTime(value, { [field]: newValue });
+    return (
+      withTimeFields(time, { [field]: newValue }, "constrain")?.toString() ?? ""
+    );
   } catch {
     return "";
   }

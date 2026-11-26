@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
+import { weekNumberOf } from "../../internal/weekNumber";
 
 /**
  * Calculate the week number based on configurable week start day.
@@ -41,30 +40,9 @@ export function getWeekNumber(
   dateStr: string,
   weekStartsOn: "monday" | "sunday" = "monday",
 ): number | null {
-  if (
-    !isValidDate(dateStr) ||
-    (weekStartsOn !== "monday" && weekStartsOn !== "sunday")
-  )
+  const date = plainDateOf(dateStr);
+  if (date === null || (weekStartsOn !== "monday" && weekStartsOn !== "sunday"))
     return null;
 
-  try {
-    const date = Temporal.PlainDate.from(dateStr);
-
-    if (weekStartsOn === "monday") {
-      const isoWeek = date.weekOfYear;
-      return isoWeek ?? null;
-    }
-
-    // UTS #35 week of year, first day Sunday, minimal days 1: a week belongs to the week-year of
-    // its Saturday, and week 1 is the one whose Saturday falls in 1–7 January. Counted on day of
-    // year so a week ending past +275760-09-13 still resolves.
-    const daysToSaturday = 6 - (date.dayOfWeek % 7);
-    const saturdayDayOfYear = date.dayOfYear + daysToSaturday;
-
-    if (saturdayDayOfYear > date.daysInYear) return 1;
-
-    return Math.floor((saturdayDayOfYear - 1) / 7) + 1;
-  } catch {
-    return null;
-  }
+  return weekNumberOf(date, weekStartsOn);
 }

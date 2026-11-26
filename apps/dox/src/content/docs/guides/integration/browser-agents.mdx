@@ -1,0 +1,115 @@
+---
+title: Page Tools for Browser Agents
+description: Each tool page offers one read-only WebMCP tool, so an AI agent running in Chrome can call the page's gmt functions and read the answer as JSON.
+sidebar:
+  order: 4
+industries: [core]
+---
+
+Every page under [Tools](/tools/) offers one **page tool**: a read-only tool that an AI agent
+running in your browser can find and call. The agent sends the same values the page's controls
+take. The tool runs the same gmt functions the page runs and returns the answer as JSON, so the
+agent and the page always agree. The tool never moves the controls on the page or changes
+anything else.
+
+Page tools use [WebMCP](https://webmachinelearning.github.io/webmcp/), a draft from the W3C Web
+Machine Learning Community Group. A page registers its tool with
+`document.modelContext.registerTool`, and an agent in the same tab lists the tools and calls one.
+Only tool pages offer a tool. Guides, reference pages and the home page offer none.
+
+## Browser support
+
+| Browser | Page tools |
+| ------- | ---------- |
+| Chrome, with WebMCP turned on | Yes. Turn it on at `chrome://flags/#enable-webmcp-testing`. Chrome's WebMCP origin trial can also turn it on for this site. |
+| Chrome, with WebMCP off | No. The page works as usual. |
+| Firefox, Safari | No. The page works as usual. |
+
+The page checks for WebMCP before it loads the tool, so a browser without WebMCP downloads
+nothing extra.
+
+## An example call
+
+The [Cut-off Ruler](/tools/cutoff-ruler/) offers `check_eta_against_cutoff`. It reads one
+departure's "two days before" three ways: as calendar days, as exact hours and at a fixed local
+time. The tool's description tells the agent what each value means. The agent calls it with the
+page's first example:
+
+```json
+{
+  "anchor": "2024-04-08T18:00:00+10:00",
+  "timeZone": "Australia/Sydney",
+  "days": 2,
+  "atLocalTime": "17:00"
+}
+```
+
+The tool answers:
+
+```json
+{
+  "ok": true,
+  "tool": "check_eta_against_cutoff",
+  "input": {
+    "anchor": "2024-04-08T18:00:00+10:00",
+    "timeZone": "Australia/Sydney",
+    "days": 2,
+    "atLocalTime": "17:00"
+  },
+  "result": {
+    "readings": [
+      {
+        "key": "calendar",
+        "label": "2 calendar days (P2D)",
+        "offset": "P2D",
+        "at": "2024-04-06T18:00:00+11:00[Australia/Sydney]",
+        "hoursBefore": "PT49H"
+      },
+      {
+        "key": "exact",
+        "label": "48 exact hours (PT48H)",
+        "offset": "PT48H",
+        "at": "2024-04-06T19:00:00+11:00[Australia/Sydney]",
+        "hoursBefore": "PT48H"
+      },
+      {
+        "key": "pinned",
+        "label": "2 days before at 17:00",
+        "offset": "P2D",
+        "at": "2024-04-06T17:00:00+11:00[Australia/Sydney]",
+        "hoursBefore": "PT50H",
+        "atLocalTime": "17:00"
+      }
+    ],
+    "departure": "2024-04-08T18:00:00+10:00[Australia/Sydney]"
+  },
+  "notes": [],
+  "link": "https://northguild.dev/gmt/tools/cutoff-ruler/?w=cutoffruler&wa=%7B%22anchor%22%3A%222024-04-08T18%3A00%3A00%2B10%3A00%22%2C%22timeZone%22%3A%22Australia%2FSydney%22%2C%22days%22%3A%222%22%2C%22atLocalTime%22%3A%2217%3A00%22%7D"
+}
+```
+
+Sydney's clocks went back an hour on 7 April 2024, between the cut-off and the departure. That
+is why two calendar days come to 49 hours and not 48.
+
+## What an answer holds
+
+- `input` is what the tool answered for. If the call left out a value, `input` shows the value
+  the tool used in its place.
+- `result` holds the values the page shows, as the gmt functions return them.
+- `notes` holds the sentences the page shows beside its answer, such as why a value is empty,
+  and any the tool adds, such as which year it used when the call named none.
+- `link` is a full URL that opens the page with the same values.
+
+The tool refuses a call it cannot answer and says why. It does not throw an error:
+
+- `{ "ok": false, "tool": "...", "error": "invalid-input", "issues": [...] }` names each value that is missing or
+  out of range, with a message for each.
+- `{ "ok": false, "tool": "...", "error": "unavailable", "message": "..." }` means the page could not load the
+  library, for example because the network dropped.
+
+The [Give Me Temporal slides](/slides/give-me-temporal/) offer three read-only tools of their own, which list the slides, read one slide's text and read an upstream filing a slide cites.
+
+## See also
+
+- [AI Agent Skills](/guides/integration/skills/) — guidance for coding agents that write code with gmt
+- [Tools](/tools/) — every tool page, each with its own page tool

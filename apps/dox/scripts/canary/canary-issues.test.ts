@@ -1,14 +1,19 @@
 import {
+  BODY_LIMIT,
   CANARY_LABEL,
   DRY_RUN_LABEL,
+  NATIVE_LEGS as DERIVED_NATIVE_LEGS,
+  SWAP_LEGS as DERIVED_SWAP_LEGS,
   SWAP_SOURCES,
   WORKFLOW_SOURCES,
   applyForce,
   compatStates,
   findings,
+  foldedComment,
   marker,
   planIssueActions,
   removableEverywhere,
+  rollingMarker,
   swapReady,
 } from "../../../../scripts/lib/canary-issues.mjs";
 
@@ -61,17 +66,21 @@ const check = (workarounds: Workaround[], current = true) => ({
   workarounds,
 });
 
-const BROWSER_LEGS = ["chromium", "firefox", "webkit"] as const;
+/** The macOS WebKit leg's engine line, as its verdicts print it. */
+const MACOS_ENGINE = "macOS WebKit 26.6 \u00b7 macOS 15.7.2";
+const BROWSER_LEGS = ["chromium", "firefox", "webkit", "webkit-macos"] as const;
 type BrowserLeg = (typeof BROWSER_LEGS)[number];
 const BROWSER_ENGINE_IDS: Record<BrowserLeg, string> = {
   chromium: "v8",
   firefox: "firefox",
   webkit: "webkit",
+  "webkit-macos": "webkit",
 };
 const BROWSER_ENGINES: Record<BrowserLeg, string> = {
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 /** The same probes run in one browser of the native suite: no snapshot, the browser's engine. */
@@ -97,9 +106,9 @@ const everywhere = (workarounds: Workaround[], current = true) => ({
   ),
 });
 
-/** The four engines' names in the order the compat sources run, as the bodies list them. */
+/** The five engines' names in the order the compat sources run, as the bodies list them. */
 const EVERY_ENGINE =
-  "Node v24.11.0, Chromium 153.0.8010.12, Firefox 155.0, WebKit 26.6";
+  "Node v24.11.0, Chromium 153.0.8010.12, Firefox 155.0, WebKit 26.6, macOS WebKit 26.6 \u00b7 macOS 15.7.2";
 
 const mismatchRow = (n: number, over: Record<string, unknown> = {}) => ({
   scan: "grid",
@@ -163,12 +172,19 @@ const couldNotRun = (source: string, message: string) => ({
 const cleanCheck = () =>
   check([workaround("D1", "still-needed"), workaround("D17", "out-of-scope")]);
 
-const NATIVE_LEGS = ["node", "chromium", "firefox", "webkit"] as const;
+const NATIVE_LEGS = [
+  "node",
+  "chromium",
+  "firefox",
+  "webkit",
+  "webkit-macos",
+] as const;
 const ENGINES = {
   node: "Node v26.10.0 · V8 14.6.202.34-node.34 · ICU 78.3 · tz 2026c",
   chromium: "Chromium 153.0.8010.12",
   firefox: "Firefox 155.0",
   webkit: "WebKit 26.6",
+  "webkit-macos": "macOS WebKit 26.6 \u00b7 macOS 15.7.2",
 };
 
 interface NativeOptions {
@@ -233,7 +249,7 @@ const native = (
   staleTags,
 });
 
-/** The four legs, all clean. */
+/** Every native-suite leg, all clean. */
 const cleanNative = () =>
   Object.fromEntries(
     NATIVE_LEGS.map((leg) => [`native-suite-${leg}`, native(leg)]),
@@ -266,6 +282,23 @@ const swapSweep = (differingZones = 0) => ({
   differingTruncated: differingZones > 50,
 });
 
+/** The calendar sweep: `differing` names calendars, each with its year count. */
+const calendarSweep = (differingCalendars = 0) => ({
+  status: "ran" as const,
+  from: "-003000-01-01",
+  through: "+005000-12-31",
+  calendars: 16,
+  years: 128762,
+  differingCalendars,
+  differing: Array.from({ length: differingCalendars }, (_, i) => ({
+    calendar: `cal${i + 1}`,
+    years: i + 1,
+    first: 1502,
+    example: "year 1502: candidate a; reference b",
+  })),
+  differingTruncated: false,
+});
+
 interface SwapOptions {
   version?: string;
   pinned?: string;
@@ -273,6 +306,7 @@ interface SwapOptions {
   both?: number;
   fixed?: number;
   sweep?: unknown;
+  calendarSweep?: unknown;
   entryLoaded?: unknown;
 }
 
@@ -280,6 +314,8 @@ interface SwapOptions {
 const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
   const { version = "1.0.7", failed = 0, both = 0, fixed = 0 } = options;
   const sweep = "sweep" in options ? options.sweep : swapSweep();
+  const calendars =
+    "calendarSweep" in options ? options.calendarSweep : calendarSweep();
   return {
     source: `temporal-polyfill-swap-${leg}`,
     status: "ran" as const,
@@ -306,6 +342,7 @@ const swapLeg = (leg: SwapLeg, options: SwapOptions = {}) => {
     failing: [],
     failingTruncated: false,
     sweep: leg === "node" ? sweep : null,
+    calendarSweep: leg === "node" ? calendars : null,
   };
 };
 
@@ -360,19 +397,6 @@ const issue = (number: number, body: string, labels = [CANARY_LABEL]) => ({
   labels: labels.map((name) => ({ name })),
 });
 
-/** The synthetic row a forced mismatch carries (marked `dry-run` so it cannot pass for a real mismatch), as the groups table shows it. */
-const FORCED_EXAMPLE = {
-  scan: "dry-run",
-  calendar: "iso8601",
-  op: "forced",
-  row: 0,
-  iso: "1970-01-01",
-  input: "dry run",
-  native: "dry run",
-  expected: "dry run",
-  gmt: "forced mismatch",
-};
-
 const D2_KEY = "temporal-compat/removable/D2";
 const D2_MARKER = `<!-- gmt-canary key="${D2_KEY}" -->`;
 
@@ -382,8 +406,26 @@ const removableD2 = () =>
     "temporal-oracle": oracle(),
   }) as never;
 
+/**
+ * One `open` action per finding, as the single-issue shape read before the rolling issue. The
+ * finding tests below check each finding's own title, key, labels and body, which the rolling
+ * issue carries unchanged as a section; the rolling shape has its own tests further down.
+ */
+const planWithoutReport = (
+  verdicts: Parameters<typeof findings>[0],
+  _open: unknown,
+  context: Parameters<typeof findings>[1],
+) =>
+  findings(verdicts, context).map((f) => ({
+    kind: "open" as const,
+    key: f.key,
+    title: f.title,
+    labels: f.labels,
+    body: `${marker(f.key)}\n${f.body}`,
+  }));
+
 const plan = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
-  planIssueActions(withNative(verdicts), open, ORACLE_CONTEXT);
+  planWithoutReport(withNative(verdicts), open, ORACLE_CONTEXT);
 
 const rowsSection = (body: string) => {
   const start = body.indexOf("### Rows");
@@ -401,17 +443,20 @@ describe("constants and marker", () => {
         "temporal-compat-chromium",
         "temporal-compat-firefox",
         "temporal-compat-webkit",
+        "temporal-compat-webkit-macos",
         "temporal-oracle",
         "native-suite-node",
         "native-suite-chromium",
         "native-suite-firefox",
         "native-suite-webkit",
+        "native-suite-webkit-macos",
         "temporal-polyfill-swap-node",
         "temporal-polyfill-swap-chromium",
         "temporal-polyfill-swap-firefox",
         "temporal-polyfill-swap-webkit",
       ],
       "leap-seconds": ["leap-seconds"],
+      "us-clock-watch": ["us-clock-watch"],
     });
   });
   it("names the four swap sources", () => {
@@ -427,7 +472,7 @@ describe("constants and marker", () => {
   });
 });
 
-describe("planIssueActions: open, comment, no-op", () => {
+describe("the finding plan: no-op and open", () => {
   it("1: no-op when every group is still needed or out of scope and the oracle is clean", () => {
     expect(
       plan({
@@ -447,59 +492,6 @@ describe("planIssueActions: open, comment, no-op", () => {
     expect(action.labels).toEqual(["canary"]);
     expect(action.title).toBe("Remove workaround D2: summary of D2");
     expect(action.body.split("\n")[0]).toBe(D2_MARKER);
-  });
-
-  it("3: comments on the open issue that carries the marker", () => {
-    const actions = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({
-      kind: "comment",
-      key: D2_KEY,
-      issue: 41,
-    });
-  });
-
-  it("4: opens when the marker is on line 2, not line 1", () => {
-    const actions = plan(removableD2(), [issue(41, `intro\n${D2_MARKER}`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("5: matches a CRLF body", () => {
-    const actions = plan(removableD2(), [issue(41, `${D2_MARKER}\r\nrest`)]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 41 });
-  });
-
-  it("6: opens when the issue lacks the canary label", () => {
-    const actions = plan(removableD2(), [
-      issue(41, `${D2_MARKER}\nbody`, ["temporal-compat"]),
-    ]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("7: a marker for D1 does not match a finding for D10", () => {
-    const verdicts = {
-      "temporal-compat-check": check([workaround("D10", "removable")]),
-      "temporal-oracle": oracle(),
-    };
-    const d1 = '<!-- gmt-canary key="temporal-compat/removable/D1" -->';
-    const actions = plan(verdicts, [issue(41, `${d1}\nbody`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
-  });
-
-  it("8: with two matches, comments on the lowest number", () => {
-    const actions = plan(removableD2(), [
-      issue(50, `${D2_MARKER}\nnewer`),
-      issue(41, `${D2_MARKER}\nolder`),
-    ]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 41 });
-  });
-
-  it("25: planning twice with the same input gives equal output", () => {
-    const verdicts = removableD2();
-    const open = [issue(41, `${D2_MARKER}\nbody`)];
-    expect(plan(verdicts, open)).toEqual(plan(verdicts, open));
   });
 });
 
@@ -527,7 +519,8 @@ describe("removable body", () => {
         "| temporal-compat-check | Node v24.11.0 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-chromium | Chromium 153.0.8010.12 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
-        "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n\n" +
+        "| temporal-compat-webkit | WebKit 26.6 | removable | 2 of 2 pass |\n" +
+        `| temporal-compat-webkit-macos | ${MACOS_ENGINE} | removable | 2 of 2 pass |\n\n` +
         "### Removal steps",
     );
   });
@@ -562,16 +555,6 @@ describe("removable body", () => {
         RUN,
     );
     expect(body().endsWith(`Run: ${RUN}`)).toBe(true);
-  });
-
-  it("the comment says still removable, gives the snapshot sentence and the run link", () => {
-    const [action] = plan(removableD2(), [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      `Still removable on this run on every engine in its scope (${EVERY_ENGINE}; temporal-polyfill 1.0.8).\n\n` +
-        "pnpm compat:snapshot is due in the removal PR: once the group's repros are deleted, run it and commit apps/dox/src/data/temporal-compat.json; validate (snapshot --check) fails until you do.\n\n" +
-        `Run: ${RUN}`,
-    );
   });
 
   it("a group with no dash in its title uses the whole title as the summary", () => {
@@ -631,6 +614,7 @@ describe("removable on every engine in scope", () => {
       ["temporal-compat-chromium", true, "removable"],
       ["temporal-compat-firefox", true, "still-needed"],
       ["temporal-compat-webkit", true, "removable"],
+      ["temporal-compat-webkit-macos", true, "removable"],
     ]);
   });
 
@@ -684,13 +668,6 @@ describe("removable on every engine in scope", () => {
         "| temporal-compat-firefox | Firefox 155.0 | removable | 2 of 2 pass |\n" +
         "| temporal-compat-webkit | WebKit 26.6 | out of scope | 2 of 2 pass |",
     );
-    const [, comment] = [
-      action,
-      plan(verdicts, [issue(7, `${action.body.split("\n")[0]}\nbody`)])[0],
-    ];
-    expect(comment.body).toContain(
-      "Still removable on this run on every engine in its scope (Firefox 155.0; temporal-polyfill 1.0.8).",
-    );
   });
 
   it("a Firefox-only group removable in Firefox but failing in WebKit stays closed: a failing probe counts on any engine", () => {
@@ -710,6 +687,7 @@ describe("removable on every engine in scope", () => {
       ["temporal-compat-chromium", false, "out-of-scope"],
       ["temporal-compat-firefox", true, "removable"],
       ["temporal-compat-webkit", false, "still-needed"],
+      ["temporal-compat-webkit-macos", false, "out-of-scope"],
     ]);
   });
 
@@ -853,7 +831,7 @@ describe("untagged mismatch", () => {
     );
   });
 
-  it("26: 300 groups with 50 rows show the first 50 groups and keep body and comment under 65536 characters", () => {
+  it("26: 300 groups with 50 rows show the first 50 groups and keep the body under 65536 characters", () => {
     const example = mismatchRow(1, { input: "x".repeat(400) });
     const groups = Array.from({ length: 300 }, (_, i) => ({
       key: `grid hebrew op${i}`,
@@ -869,17 +847,6 @@ describe("untagged mismatch", () => {
     expect(body).toContain("| grid hebrew op49 |");
     expect(body).not.toContain("| grid hebrew op50 |");
     expect(body.length).toBeLessThan(65536);
-
-    const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
-      withOracle(o) as never,
-      [issue(9, marked)],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toContain("### Groups (first 50 of 300)");
-    expect(action.body).not.toContain("| grid hebrew op50 |");
-    expect(action.body.length).toBeLessThan(65536);
   });
 
   it("26b: exactly 50 groups keep the plain Groups heading", () => {
@@ -892,19 +859,6 @@ describe("untagged mismatch", () => {
     const { body } = open(withOracle(o));
     expect(body).toContain("### Groups\n");
     expect(body).toContain("| grid hebrew op49 |");
-  });
-
-  it("the comment gives the count and the groups table", () => {
-    const marked = `<!-- gmt-canary key="temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
-      withOracle(oracle(3)) as never,
-      [issue(9, marked)],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toContain("Seen again on this run: 3 untagged.\n\n");
-    expect(action.body).toContain("| grid hebrew addMonth | 3 |");
-    expect(action.body.endsWith(`Run: ${RUN}`)).toBe(true);
   });
 });
 
@@ -944,6 +898,7 @@ describe("could not run", () => {
         "- **temporal-compat-chromium**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-compat-firefox**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-compat-webkit**: no verdict file: an earlier step or job failed\n" +
+        "- **temporal-compat-webkit-macos**: no verdict file: an earlier step or job failed\n" +
         "- **temporal-oracle**: no Temporal\n",
     );
   });
@@ -953,24 +908,6 @@ describe("could not run", () => {
     expect(actions.map((a) => a.key)).toEqual([
       "temporal-oracle/could-not-run",
     ]);
-  });
-
-  it("comments with the same list while the finding persists", () => {
-    const key = "temporal-oracle/could-not-run";
-    const [action] = planIssueActions(
-      withNative({
-        "temporal-compat-check": cleanCheck(),
-        "temporal-oracle": null,
-      }),
-      [issue(12, `<!-- gmt-canary key="${key}" -->\nold`)],
-      ORACLE_CONTEXT,
-    );
-    expect(action).toEqual({
-      kind: "comment",
-      key,
-      issue: 12,
-      body: `- **temporal-oracle**: no verdict file: an earlier step or job failed\n\nRun: ${RUN}`,
-    });
   });
 
   it("a could-not-run source gives no other finding of its kind", () => {
@@ -987,7 +924,7 @@ describe("could not run", () => {
 
 describe("leap-second findings", () => {
   const leapPlan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
-    planIssueActions({ "leap-seconds": verdict } as never, open, LEAP_CONTEXT);
+    planWithoutReport({ "leap-seconds": verdict } as never, open, LEAP_CONTEXT);
   const KEY = "leap-seconds/table-difference";
   const DIFFERENCE = "row 29: fixture difference";
 
@@ -1021,20 +958,6 @@ describe("leap-second findings", () => {
       "packages/gmt/src/internal/leapSeconds.ts no longer matches IANA leap-seconds.list (https://data.iana.org/time-zones/tzdb/leap-seconds.list).",
     );
     expect(action.body).not.toContain("Leap_Second.dat");
-  });
-
-  it("the same finding with the issue open as #77 comments on 77", () => {
-    const actions = leapPlan(leap([DIFFERENCE]), [
-      issue(77, `<!-- gmt-canary key="${KEY}" -->\nbody`),
-    ]);
-    expect(actions).toEqual([
-      {
-        kind: "comment",
-        key: KEY,
-        issue: 77,
-        body: `Still differs on this run (Updated through IERS Bulletin C 72):\n\n- ${DIFFERENCE}\n\nRun: ${RUN}`,
-      },
-    ]);
   });
 
   it("a null leap verdict opens one leap-seconds could-not-run issue", () => {
@@ -1092,7 +1015,7 @@ describe("applyForce and forced findings", () => {
       "**Dry run.** Forced by a manual dispatch (--force-removable=D2); nothing here is a real finding. Close this issue once checked.",
     );
     expect(action.body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; still needed (2 of 2 probes fail) on Chromium 153.0.8010.12; still needed (2 of 2 probes fail) on Firefox 155.0; still needed (2 of 2 probes fail) on WebKit 26.6.",
+      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; still needed (2 of 2 probes fail) on Chromium 153.0.8010.12; still needed (2 of 2 probes fail) on Firefox 155.0; still needed (2 of 2 probes fail) on WebKit 26.6; still needed (2 of 2 probes fail) on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
     expect(action.body).toContain(
       "| temporal-compat-check | Node v24.11.0 | still needed (2 of 2 probes fail) | 0 of 2 pass |",
@@ -1119,7 +1042,7 @@ describe("applyForce and forced findings", () => {
       "temporal-oracle/could-not-run",
     ]);
     expect(actions[0].body).toContain(
-      "Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; removable on Chromium 153.0.8010.12; no verdict (the compat page failed in firefox: boom) on temporal-compat-firefox; removable on WebKit 26.6.",
+      "Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0; removable on Chromium 153.0.8010.12; no verdict (the compat page failed in firefox: boom) on temporal-compat-firefox; removable on WebKit 26.6; removable on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
     expect(actions[0].body).toContain(
       "| temporal-compat-firefox | — | no verdict (the compat page failed in firefox: boom) | — |",
@@ -1136,34 +1059,8 @@ describe("applyForce and forced findings", () => {
     );
     const [action] = forcedOpen(verdicts);
     expect(action.body).toContain(
-      "Real state on this run: out of scope on Node v24.11.0; out of scope on Chromium 153.0.8010.12; out of scope on Firefox 155.0; out of scope on WebKit 26.6.",
+      "Real state on this run: out of scope on Node v24.11.0; out of scope on Chromium 153.0.8010.12; out of scope on Firefox 155.0; out of scope on WebKit 26.6; out of scope on macOS WebKit 26.6 \u00b7 macOS 15.7.2.",
     );
-  });
-
-  it("18: an open dry-run issue #60 gets the comment", () => {
-    const { verdicts } = applyForce(stillNeededD2() as never, {
-      removable: "D2",
-    });
-    const actions = forcedOpen(verdicts, [
-      issue(
-        60,
-        '<!-- gmt-canary key="dry-run/temporal-compat/removable/D2" -->\nbody',
-        ["canary", "canary-dry-run"],
-      ),
-    ]);
-    expect(actions).toHaveLength(1);
-    expect(actions[0]).toMatchObject({ kind: "comment", issue: 60 });
-    expect(actions[0].body).toContain(
-      "Forced removable for a dry run. Real state on this run: still needed (2 of 2 probes fail) on Node v24.11.0;",
-    );
-  });
-
-  it("19: an open real D2 issue never takes the dry-run comment", () => {
-    const { verdicts } = applyForce(stillNeededD2() as never, {
-      removable: "D2",
-    });
-    const actions = forcedOpen(verdicts, [issue(41, `${D2_MARKER}\nbody`)]);
-    expect(actions.map((a) => a.kind)).toEqual(["open"]);
   });
 
   it("19b: a real removable D2 and a forced D2 give two findings, real first", () => {
@@ -1330,30 +1227,6 @@ describe("applyForce and forced findings", () => {
     );
   });
 
-  it("22c: a second forced mismatch run comments with the dry-run opening, not an unreal count", () => {
-    const { verdicts } = applyForce(
-      {
-        "temporal-compat-check": cleanCheck(),
-        "temporal-oracle": oracle(),
-      } as never,
-      { mismatch: true },
-    );
-    const marked = `<!-- gmt-canary key="dry-run/temporal-oracle/untagged-mismatch" -->\nbody`;
-    const [action] = planIssueActions(
-      verdicts,
-      [issue(60, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
-      ORACLE_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      "Forced mismatch for a dry run. Real counts on this run: 0 untagged of 410000 comparisons.\n\n" +
-        "| Scan, calendar, op | Rows | Example |\n| --- | --- | --- |\n" +
-        `| dry-run iso8601 forced | 1 | \`${JSON.stringify(FORCED_EXAMPLE)}\` |\n\n` +
-        `Run: ${RUN}`,
-    );
-    expect(action.body).not.toContain("Seen again");
-  });
-
   it("22b: a forced mismatch comes after a real one", () => {
     const { verdicts } = applyForce(
       {
@@ -1372,7 +1245,7 @@ describe("applyForce and forced findings", () => {
     const { verdicts } = applyForce({ "leap-seconds": leap() } as never, {
       leapDifference: true,
     });
-    const actions = planIssueActions(verdicts, [], LEAP_CONTEXT);
+    const actions = planWithoutReport(verdicts, [], LEAP_CONTEXT);
     expect(actions).toHaveLength(1);
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
@@ -1386,24 +1259,6 @@ describe("applyForce and forced findings", () => {
     );
     expect(action.body.split("\n")[1]).toBe(
       "**Dry run.** Forced by a manual dispatch (--force-leap-difference); nothing here is a real finding. Close this issue once checked.",
-    );
-  });
-
-  it("23c: a second forced leap run comments with the forced line and the run link", () => {
-    const { verdicts } = applyForce({ "leap-seconds": leap() } as never, {
-      leapDifference: true,
-    });
-    const marked = `<!-- gmt-canary key="dry-run/leap-seconds/table-difference" -->\nbody`;
-    const [action] = planIssueActions(
-      verdicts,
-      [issue(61, marked, [CANARY_LABEL, DRY_RUN_LABEL])],
-      LEAP_CONTEXT,
-    );
-    expect(action.kind).toBe("comment");
-    expect(action.body).toBe(
-      "Still differs on this run (Updated through IERS Bulletin C 72):\n\n" +
-        "- dry run: forced difference (no real row differs)\n\n" +
-        `Run: ${RUN}`,
     );
   });
 
@@ -1422,7 +1277,7 @@ describe("applyForce and forced findings", () => {
       },
     ]);
     expect(verdicts).toEqual(input);
-    const actions = planIssueActions(verdicts as never, [], LEAP_CONTEXT);
+    const actions = planWithoutReport(verdicts as never, [], LEAP_CONTEXT);
     expect(actions).toHaveLength(1);
     expect(actions[0]).toMatchObject({
       kind: "open",
@@ -1472,7 +1327,7 @@ describe("findings", () => {
     ).toEqual([
       D2_KEY,
       "temporal-oracle/untagged-mismatch",
-      "native-suite/untagged-failure",
+      "native-suite/untagged-failure/node",
       "native-suite/untagged-host-failure",
       "native-suite/control-only-failure",
       "native-suite/stale-tag",
@@ -1498,7 +1353,9 @@ const HOST =
 const CONTROL =
   "Each row failed on temporal-polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
 
-const FAILURE_KEY = "native-suite/untagged-failure";
+/** The untagged-failure key of one engine: each engine gets its own issue. */
+const failureKey = (leg: string) => `native-suite/untagged-failure/${leg}`;
+const FAILURE_KEY = failureKey("node");
 const HOST_KEY = "native-suite/untagged-host-failure";
 const CONTROL_KEY = "native-suite/control-only-failure";
 const STALE_KEY = "native-suite/stale-tag";
@@ -1538,13 +1395,13 @@ describe("native suite findings", () => {
     expect(actions).toHaveLength(1);
     const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
-    expect(action.key).toBe(FAILURE_KEY);
+    expect(action.key).toBe(failureKey("chromium"));
     expect(action.title).toBe(
       "Native Temporal: GMT tests fail on Chromium 153",
     );
     expect(action.labels).toEqual(["canary", "temporal-compat"]);
     expect(action.body.split("\n")[0]).toBe(
-      `<!-- gmt-canary key="${FAILURE_KEY}" -->`,
+      `<!-- gmt-canary key="${failureKey("chromium")}" -->`,
     );
     expect(action.body.match(/^### /gm)).toHaveLength(1);
     expect(action.body).toContain(
@@ -1559,21 +1416,27 @@ describe("native suite findings", () => {
     expect(action.body).toContain(`\n\n${TRIAGE}\n\nRun: ${RUN}`);
   });
 
-  it("two legs untagged: both sections, titled in leg order, one finding", () => {
-    const [finding] = findings(
+  it("two legs untagged: one finding per engine, in leg order, each with its own section", () => {
+    const [node, chromium, ...rest] = findings(
       withLegs({
         chromium: native("chromium", { untagged: 1 }),
         node: native("node", { untagged: 1 }),
       }),
       ORACLE_CONTEXT,
     );
-    expect(finding.title).toBe(
-      "Native Temporal: GMT tests fail on Node 26, Chromium 153",
+    expect(rest).toEqual([]);
+    expect([node.key, chromium.key]).toEqual([
+      failureKey("node"),
+      failureKey("chromium"),
+    ]);
+    expect(node.title).toBe("Native Temporal: GMT tests fail on Node 26");
+    expect(chromium.title).toBe(
+      "Native Temporal: GMT tests fail on Chromium 153",
     );
-    expect(finding.body.match(/^### /gm)).toHaveLength(2);
-    expect(finding.body.indexOf(`### ${ENGINES.node}`)).toBeLessThan(
-      finding.body.indexOf(`### ${ENGINES.chromium}`),
-    );
+    expect(node.body.match(/^### /gm)).toEqual(["### "]);
+    expect(node.body).toContain(`### ${ENGINES.node}`);
+    expect(chromium.body.match(/^### /gm)).toEqual(["### "]);
+    expect(chromium.body).toContain(`### ${ENGINES.chromium}`);
   });
 
   it("a truncated leg says first N of M", () => {
@@ -1583,16 +1446,6 @@ describe("native suite findings", () => {
     );
     expect(finding.body).toContain(`### ${ENGINES.node} (first 50 of 60)`);
     expect(finding.body.match(/chromium test|node test \d+/g)).toHaveLength(50);
-  });
-
-  it("the comment holds the same tables and not the paragraph", () => {
-    const [finding] = findings(
-      withLegs({ firefox: native("firefox", { untagged: 1 }) }),
-      ORACLE_CONTEXT,
-    );
-    expect(finding.comment).toBe(
-      `### Firefox 155.0\n\n| file | test | message |\n| --- | --- | --- |\n| \`src/firefox/file1.test.ts\` | \`firefox test 1\` | \`message 1\` |\n\nRun: ${RUN}`,
-    );
   });
 
   it("a message with a pipe, a newline and a backtick stays inside its cell", () => {
@@ -1620,17 +1473,6 @@ describe("native suite findings", () => {
     );
     expect(finding.key).toBe("temporal-oracle/could-not-run");
     expect(finding.body).toContain("- **native-suite-node**: needs Node 26");
-  });
-
-  it("an open issue carrying the marker gets a comment, not a new issue", () => {
-    const verdicts = withLegs({ node: native("node", { untagged: 1 }) });
-    const [action] = plan(verdicts, [
-      issue(70, `<!-- gmt-canary key="${FAILURE_KEY}" -->\nold`),
-    ]);
-    expect(action.kind).toBe("comment");
-    if (action.kind !== "comment") return;
-    expect(action.issue).toBe(70);
-    expect(action.key).toBe(FAILURE_KEY);
   });
 
   it("--force-native-failure with node ran: a dry-run finding on node with the synthetic row", () => {
@@ -1683,7 +1525,7 @@ describe("native suite findings", () => {
       { nativeFailure: true },
     );
     expect(findings(verdicts, ORACLE_CONTEXT).map((f) => f.key)).toEqual([
-      FAILURE_KEY,
+      failureKey("chromium"),
       `dry-run/${FAILURE_KEY}`,
     ]);
   });
@@ -1851,11 +1693,10 @@ describe("native suite findings", () => {
 
   it.each`
     key
-    ${FAILURE_KEY}
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
-    "body size: 4 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
+    "body size: 5 legs of 50 rows with 300-character messages stay under 65,536 for $key, every leg cut to the same count",
     ({ key }) => {
       const message = "m".repeat(300);
       const options = optionsOf(key, message);
@@ -1865,29 +1706,28 @@ describe("native suite findings", () => {
           chromium: native("chromium", options),
           firefox: native("firefox", options),
           webkit: native("webkit", options),
+          "webkit-macos": native("webkit-macos", options),
         }),
         key,
       );
       const shown = finding.body.match(/m{300}/g)?.length ?? 0;
       expect(shown).toBeGreaterThan(0);
       expect(shown).toBeLessThan(200);
-      expect(shown % 4).toBe(0);
-      const perLeg = shown / 4;
+      expect(shown % NATIVE_LEGS.length).toBe(0);
+      const perLeg = shown / NATIVE_LEGS.length;
       for (const engine of Object.values(ENGINES)) {
         expect(finding.body).toContain(`### ${engine} (first ${perLeg} of 60)`);
       }
       expect(finding.body.length).toBeLessThan(65_536);
-      expect(finding.comment.length).toBeLessThan(65_536);
     },
   );
 
   it.each`
     key
-    ${FAILURE_KEY}
     ${HOST_KEY}
     ${CONTROL_KEY}
   `(
-    "body size: 4 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
+    "body size: 5 legs of 60 rows with 365-character names and 300-character messages stay under 65,536 for $key",
     ({ key }) => {
       const longName = (
         leg: (typeof NATIVE_LEGS)[number],
@@ -1914,18 +1754,48 @@ describe("native suite findings", () => {
           chromium: longName("chromium", options),
           firefox: longName("firefox", options),
           webkit: longName("webkit", options),
+          "webkit-macos": longName("webkit-macos", options),
         }),
         key,
       );
       expect(finding.body.length).toBeLessThan(65_536);
-      expect(finding.comment.length).toBeLessThan(65_536);
       expect(finding.body).toMatch(
         /### Node v26.10.0[^\n]* \(first \d+ of 60\)/,
       );
       expect(finding.body).toMatch(/### Firefox 155.0 \(first \d+ of 60\)/);
       expect(finding.body).toMatch(/### WebKit 26.6 \(first \d+ of 60\)/);
+      expect(finding.body).toMatch(
+        /### macOS WebKit 26.6 \u00b7 macOS 15.7.2 \(first \d+ of 60\)/,
+      );
     },
   );
+
+  it("body size: 5 legs of 60 rows with 365-character names give five untagged findings, each under 65,536 with one section", () => {
+    const longName = (leg: (typeof NATIVE_LEGS)[number]) => {
+      const v = native(leg, { untagged: 60, message: "m".repeat(300) });
+      return {
+        ...v,
+        untagged: v.untagged.map((r, i) => ({
+          ...r,
+          file: `src/${leg}/${"d".repeat(120)}${i}.test.ts`,
+          test: `${i} ${"t".repeat(365 - String(i).length - 1)}`,
+        })),
+      };
+    };
+    const verdicts = withLegs({
+      node: longName("node"),
+      chromium: longName("chromium"),
+      firefox: longName("firefox"),
+      webkit: longName("webkit"),
+      "webkit-macos": longName("webkit-macos"),
+    });
+    for (const leg of NATIVE_LEGS) {
+      const [finding] = only(verdicts, failureKey(leg));
+      expect(finding.body.length).toBeLessThan(65_536);
+      expect(finding.body.match(/^### /gm)).toEqual(["### "]);
+      expect(finding.body).toContain(`### ${ENGINES[leg]}`);
+    }
+  });
 
   it("body size: stale tags with 365-character names stay under 65,536 and say how many rows were left out", () => {
     const stale = (leg: (typeof NATIVE_LEGS)[number]) =>
@@ -1946,7 +1816,6 @@ describe("native suite findings", () => {
       STALE_KEY,
     );
     expect(finding.body.length).toBeLessThan(65_536);
-    expect(finding.comment.length).toBeLessThan(65_536);
     expect(finding.body).toMatch(/### Divergence rows \(first \d+ of 600\)/);
     expect(finding.body).toContain(
       "Remove each row from KNOWN_NATIVE_FAILURES",
@@ -2010,37 +1879,51 @@ describe("swapReady", () => {
   };
 
   it.each`
-    label                                      | verdicts                                                        | reason
-    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}              | ${"temporal-polyfill-swap-chromium: the swap pass did not load the candidate"}
-    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}              | ${"temporal-polyfill-swap-firefox: the swap pass did not load the candidate"}
-    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                 | ${"temporal-polyfill-swap-node: the swap pass did not load the candidate"}
-    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}     | ${"temporal-polyfill-swap-webkit: the swap pass did not load the candidate"}
-    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}             | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
-    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                      | ${"temporal-polyfill-swap-node: the failed count is missing"}
-    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}          | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
-    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}          | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
-    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}        | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))} | ${"offset sweep: the differing zone count is missing"}
-    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}       | ${"offset sweep: the differing zone count is missing"}
+    label                                      | verdicts                                                                       | reason
+    ${"chromium entryLoaded is false"}         | ${cleanSwap({ chromium: { entryLoaded: false } })}                             | ${"temporal-polyfill-swap-chromium: the swap pass did not load the candidate"}
+    ${"firefox entryLoaded is missing"}        | ${changed("firefox", (v) => delete v.entryLoaded)}                             | ${"temporal-polyfill-swap-firefox: the swap pass did not load the candidate"}
+    ${"node entryLoaded is the string true"}   | ${cleanSwap({ node: { entryLoaded: "true" } })}                                | ${"temporal-polyfill-swap-node: the swap pass did not load the candidate"}
+    ${"entry not loaded beats failing tests"}  | ${cleanSwap({ webkit: { entryLoaded: false, failed: 5 } })}                    | ${"temporal-polyfill-swap-webkit: the swap pass did not load the candidate"}
+    ${"webkit failed count is missing"}        | ${changed("webkit", (v) => delete v.counts.failed)}                            | ${"temporal-polyfill-swap-webkit: the failed count is missing"}
+    ${"node counts are missing"}               | ${changed("node", (v) => delete v.counts)}                                     | ${"temporal-polyfill-swap-node: the failed count is missing"}
+    ${"chromium failed count is the string 0"} | ${changed("chromium", (v) => (v.counts.failed = "0"))}                         | ${"temporal-polyfill-swap-chromium: the failed count is missing"}
+    ${"firefox failed count is null"}          | ${changed("firefox", (v) => (v.counts.failed = null))}                         | ${"temporal-polyfill-swap-firefox: the failed count is missing"}
+    ${"sweep differingZones is missing"}       | ${changed("node", (v) => delete v.sweep.differingZones)}                       | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is undefined"}     | ${changed("node", (v) => (v.sweep.differingZones = undefined))}                | ${"offset sweep: the differing zone count is missing"}
+    ${"sweep differingZones is the string 0"}  | ${changed("node", (v) => (v.sweep.differingZones = "0"))}                      | ${"offset sweep: the differing zone count is missing"}
+    ${"calendar count is missing"}             | ${changed("node", (v) => delete v.calendarSweep.differingCalendars)}           | ${"calendar sweep: the differing calendar count is missing"}
+    ${"calendar count is the string 0"}        | ${changed("node", (v) => (v.calendarSweep.differingCalendars = "0"))}          | ${"calendar sweep: the differing calendar count is missing"}
+    ${"the sweep compared no zone"}            | ${changed("node", (v) => (v.sweep.zones = 0))}                                 | ${"offset sweep: it compared no zone"}
+    ${"the sweep lost its zone count"}         | ${changed("node", (v) => delete v.sweep.zones)}                                | ${"offset sweep: the zone count is missing"}
+    ${"the sweep compared no calendar"}        | ${changed("node", (v) => (v.calendarSweep.calendars = 0))}                     | ${"calendar sweep: it compared no calendar"}
+    ${"the sweep lost its calendar count"}     | ${changed("node", (v) => delete v.calendarSweep.calendars)}                    | ${"calendar sweep: the calendar count is missing"}
+    ${"the sweep read no year"}                | ${changed("node", (v) => (v.calendarSweep.years = 0))}                         | ${"calendar sweep: it compared no year"}
+    ${"the sweep lost its year count"}         | ${changed("node", (v) => delete v.calendarSweep.years)}                        | ${"calendar sweep: the year count is missing"}
+    ${"no zone beats a differing zone count"}  | ${changed("node", (v) => ((v.sweep.zones = 0), (v.sweep.differingZones = 3)))} | ${"offset sweep: it compared no zone"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });
 
   it.each`
-    label                                  | verdicts                                                                                                               | reason
-    ${"node verdict missing"}              | ${{ ...cleanSwap(), "temporal-polyfill-swap-node": null }}                                                             | ${"temporal-polyfill-swap-node: did not run"}
-    ${"chromium could not run"}            | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
-    ${"webkit key absent"}                 | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
-    ${"versions differ"}                   | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
-    ${"three tests fail on webkit"}        | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the candidate"}
-    ${"one test fails on node"}            | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the candidate"}
-    ${"sweep could not run"}               | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
-    ${"sweep is null on node"}             | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
-    ${"two zones differ"}                  | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
-    ${"one zone differs"}                  | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
-    ${"a missing leg beats a failing one"} | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
-    ${"versions beat failures"}            | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
-    ${"failures beat the sweep"}           | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the candidate"}
+    label                                          | verdicts                                                                                                               | reason
+    ${"node verdict missing"}                      | ${{ ...cleanSwap(), "temporal-polyfill-swap-node": null }}                                                             | ${"temporal-polyfill-swap-node: did not run"}
+    ${"chromium could not run"}                    | ${{ ...cleanSwap(), "temporal-polyfill-swap-chromium": couldNotRun("temporal-polyfill-swap-chromium", "no browser") }} | ${"temporal-polyfill-swap-chromium: did not run"}
+    ${"webkit key absent"}                         | ${Object.fromEntries(Object.entries(cleanSwap()).filter(([k]) => !k.endsWith("webkit")))}                              | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions differ"}                           | ${cleanSwap({ firefox: { version: "1.0.8" } })}                                                                        | ${"legs ran different versions: 1.0.7, 1.0.8"}
+    ${"three tests fail on webkit"}                | ${cleanSwap({ webkit: { failed: 3 } })}                                                                                | ${"temporal-polyfill-swap-webkit: 3 tests fail on the candidate"}
+    ${"one test fails on node"}                    | ${cleanSwap({ node: { failed: 1 } })}                                                                                  | ${"temporal-polyfill-swap-node: 1 test fails on the candidate"}
+    ${"sweep could not run"}                       | ${cleanSwap({ node: { sweep: { status: "could-not-run", message: "no Intl" } } })}                                     | ${"offset sweep: did not run"}
+    ${"sweep is null on node"}                     | ${cleanSwap({ node: { sweep: null } })}                                                                                | ${"offset sweep: did not run"}
+    ${"calendar sweep could not run"}              | ${cleanSwap({ node: { calendarSweep: { status: "could-not-run", message: "no Temporal" } } })}                         | ${"calendar sweep: did not run"}
+    ${"calendar sweep is null on node"}            | ${cleanSwap({ node: { calendarSweep: null } })}                                                                        | ${"calendar sweep: did not run"}
+    ${"one calendar differs"}                      | ${cleanSwap({ node: { calendarSweep: calendarSweep(1) } })}                                                            | ${"calendar sweep: 1 calendar differs (cal1)"}
+    ${"two calendars differ"}                      | ${cleanSwap({ node: { calendarSweep: calendarSweep(2) } })}                                                            | ${"calendar sweep: 2 calendars differ (cal1, cal2)"}
+    ${"the offset sweep beats the calendar sweep"} | ${cleanSwap({ node: { sweep: swapSweep(1), calendarSweep: calendarSweep(1) } })}                                       | ${"offset sweep: 1 zone differs"}
+    ${"two zones differ"}                          | ${cleanSwap({ node: { sweep: swapSweep(2) } })}                                                                        | ${"offset sweep: 2 zones differ"}
+    ${"one zone differs"}                          | ${cleanSwap({ node: { sweep: swapSweep(1) } })}                                                                        | ${"offset sweep: 1 zone differs"}
+    ${"a missing leg beats a failing one"}         | ${{ ...cleanSwap({ node: { failed: 4 } }), "temporal-polyfill-swap-webkit": null }}                                    | ${"temporal-polyfill-swap-webkit: did not run"}
+    ${"versions beat failures"}                    | ${cleanSwap({ node: { failed: 4 }, webkit: { version: "1.0.9" } })}                                                    | ${"legs ran different versions: 1.0.7, 1.0.9"}
+    ${"failures beat the sweep"}                   | ${cleanSwap({ chromium: { failed: 2 }, node: { sweep: swapSweep(5) } })}                                               | ${"temporal-polyfill-swap-chromium: 2 tests fail on the candidate"}
   `("is not ready when $label", ({ verdicts, reason }) => {
     expect(swapReady(verdicts)).toEqual({ ready: false, reason });
   });
@@ -2066,10 +1949,11 @@ describe("swap legs skipped on purpose", () => {
   });
 
   it("no swap verdicts without the flag is a could-not-run issue naming the four swap sources", () => {
-    const keys = planIssueActions(withoutSwap(base), [], ORACLE_CONTEXT);
-    expect(keys.map((a) => a.key)).toEqual(["temporal-oracle/could-not-run"]);
-    const [action] = keys;
+    const actions = planIssueActions(withoutSwap(base), [], ORACLE_CONTEXT);
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
     if (action.kind !== "open") throw new Error("expected open");
+    expect(action.findings).toEqual(["temporal-oracle/could-not-run"]);
     for (const source of SWAP_SOURCES) expect(action.body).toContain(source);
   });
 
@@ -2158,31 +2042,14 @@ describe("swap findings", () => {
     expect(swapPlan(cleanSwap({ webkit: { failed: 2 } }))).toEqual([]);
   });
 
-  it("a differing sweep files nothing", () => {
-    expect(swapPlan(cleanSwap({ node: { sweep: swapSweep(3) } }))).toEqual([]);
+  it("a differing calendar sweep files nothing", () => {
+    expect(
+      swapPlan(cleanSwap({ node: { calendarSweep: calendarSweep(1) } })),
+    ).toEqual([]);
   });
 
-  it("comments on the open issue, naming the new version, and does not open another", () => {
-    const actions = swapPlan(
-      cleanSwap({
-        node: { version: "1.0.8" },
-        chromium: { version: "1.0.8" },
-        firefox: { version: "1.0.8" },
-        webkit: { version: "1.0.8" },
-      }),
-      [issue(77, `${READY_MARKER}\nold body`)],
-    );
-    expect(actions).toHaveLength(1);
-    const [action] = actions;
-    if (action.kind !== "comment") throw new Error("expected comment");
-    expect(action.issue).toBe(77);
-    expect(action.key).toBe("temporal-polyfill-swap/ready");
-    expect(
-      action.body.startsWith(
-        `temporal-polyfill 1.0.8 also passes (run ${RUN}).\n\ntemporal-polyfill 1.0.8 passes the GMT suite`,
-      ),
-    ).toBe(true);
-    expect(action.body).not.toContain("gmt-canary");
+  it("a differing sweep files nothing", () => {
+    expect(swapPlan(cleanSwap({ node: { sweep: swapSweep(3) } }))).toEqual([]);
   });
 
   it("opens a new issue when the open canary issue has another marker", () => {
@@ -2203,7 +2070,7 @@ describe("swap findings", () => {
     expect(action.body).toBe(
       [
         READY_MARKER,
-        `temporal-polyfill 1.0.7 passes the GMT suite on every runtime against the pinned 1.0.6, and it passed every check on this run: ${RUN}`,
+        `temporal-polyfill 1.0.7 passes the GMT suite on every runtime against the pinned 1.0.6, and it passed every check on this run.`,
         "",
         "| Runtime | Tests | Fail on 1.0.7 only | Fail on both | Fail on 1.0.6 only |",
         "| --- | --- | --- | --- | --- |",
@@ -2212,7 +2079,9 @@ describe("swap findings", () => {
         "| Firefox 155.0 | 71337 | 0 | 0 | 0 |",
         "| WebKit 26.6 | 71337 | 0 | 1 | 2 |",
         "",
-        "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+        "Offset sweep: every one of 418 zones matches `Intl.DateTimeFormat` at 12:00 UTC each day from 1970-01-01 to ten years past the run date (tz 2026e).",
+        "",
+        "Calendar sweep: every one of 16 calendars matches the built-in Temporal on the first day, months and days of each year from -003000-01-01 to +005000-12-31.",
         "",
         "To raise the pin:",
         "",
@@ -2223,6 +2092,8 @@ describe("swap findings", () => {
         "Type errors are not checked here: run `pnpm typecheck` after step 1. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](https://github.com/northguild/gmt/blob/main/context/domination/research/temporal-polyfill-swap.md).",
         "",
         "A person raises the pin. CI opens issues, never pull requests.",
+        "",
+        `Run: ${RUN}`,
       ].join("\n"),
     );
     expect(action.body.length).toBeLessThan(65_536);
@@ -2289,6 +2160,25 @@ describe("swap could not run", () => {
     );
   });
 
+  it("a Node leg that ran but whose calendar sweep could not run lists the sweep, with no swap finding", () => {
+    const actions = plan({
+      ...base(),
+      ...cleanSwap({
+        node: {
+          calendarSweep: { status: "could-not-run", message: "no Temporal" },
+        },
+      }),
+    });
+    expect(actions.map((a) => a.key)).toEqual([
+      "temporal-oracle/could-not-run",
+    ]);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body).toContain(
+      "- **temporal-polyfill-swap-node**: calendar sweep: no Temporal\n",
+    );
+  });
+
   it("a Node leg that ran but whose sweep could not run lists the sweep, with no swap finding", () => {
     const actions = plan({
       ...base(),
@@ -2351,27 +2241,9 @@ describe("swap could not run", () => {
     );
   });
 
-  it("comments on the open could-not-run issue", () => {
-    const key = "temporal-oracle/could-not-run";
-    const [action] = plan(
-      {
-        ...base(),
-        ...cleanSwap(),
-        "temporal-polyfill-swap-webkit": null,
-      },
-      [issue(31, `<!-- gmt-canary key="${key}" -->\nold`)],
-    );
-    expect(action).toEqual({
-      kind: "comment",
-      key,
-      issue: 31,
-      body: `- **temporal-polyfill-swap-webkit**: ${MISSING}\n\nRun: ${RUN}`,
-    });
-  });
-
   it("the leap-seconds workflow does not read swap sources", () => {
     expect(
-      planIssueActions({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
+      planWithoutReport({ "leap-seconds": leap() } as never, [], LEAP_CONTEXT),
     ).toEqual([]);
   });
 });
@@ -2382,12 +2254,12 @@ describe("swap force", () => {
     "temporal-compat-check": cleanCheck(),
     "temporal-oracle": oracle(),
   });
-  const forcedPlan = (swap: unknown) => {
+  const forcedPlan = (swap: unknown, open: unknown[] = []) => {
     const { verdicts } = applyForce(
       withNative({ ...base(), ...(swap as object) }),
       { swapReady: true },
     );
-    return planIssueActions(verdicts as never, [], ORACLE_CONTEXT);
+    return planWithoutReport(verdicts as never, open as never, ORACLE_CONTEXT);
   };
 
   it("marks the first swap leg that ran", () => {
@@ -2444,6 +2316,9 @@ describe("swap force", () => {
     expect(dry.body).toContain(
       "Forced for a dry run. Real result on this run: every check passed.",
     );
+    expect(dry.body).toContain(
+      "temporal-polyfill 1.0.7 passes the GMT suite on every runtime against the pinned 1.0.6, and it passed every check on this run.",
+    );
   });
 
   it("forced with webkit failing files only the dry run and states the real reason", () => {
@@ -2452,9 +2327,16 @@ describe("swap force", () => {
     const [dry] = actions;
     if (dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain(
-      "Forced for a dry run. Real result on this run: temporal-polyfill-swap-webkit: 2 tests fail on the candidate.",
+      "Forced for a dry run. Real result on this run: not ready to swap. The first check that blocks it: temporal-polyfill-swap-webkit: 2 tests fail on the candidate.",
     );
+    expect(dry.body).toContain(
+      "temporal-polyfill 1.0.7 was checked against the pinned 1.0.6 on this run.",
+    );
+    expect(dry.body).not.toContain("passed every check");
     expect(dry.body).toContain("| WebKit 26.6 | 71337 | 2 | 0 | 0 |");
+    expect(dry.title).toBe(
+      "[dry run] Swap to temporal-polyfill 1.0.7: not ready, forced to preview the ready issue",
+    );
   });
 
   it("a forced run with differing zones does not claim the sweep matched", () => {
@@ -2462,9 +2344,21 @@ describe("swap force", () => {
     const dry = actions.find((a) => a.key === DRY_KEY);
     if (!dry || dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain(
-      "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to 2036-11-04 (tz 2026e).",
+      "Offset sweep: 2 of 418 zones differ from `Intl.DateTimeFormat` at 12:00 UTC on some day from 1970-01-01 to ten years past the run date (tz 2026e).",
     );
     expect(dry.body).not.toContain("every one of 418 zones matches");
+  });
+
+  it("a forced run with differing calendars does not claim the calendar sweep matched", () => {
+    const actions = forcedPlan(
+      cleanSwap({ node: { calendarSweep: calendarSweep(2) } }),
+    );
+    const dry = actions.find((a) => a.key === DRY_KEY);
+    if (!dry || dry.kind !== "open") throw new Error("expected open");
+    expect(dry.body).toContain(
+      "Calendar sweep: 2 of 16 calendars differ from the built-in Temporal in some year from -003000-01-01 to +005000-12-31.",
+    );
+    expect(dry.body).not.toContain("every one of 16 calendars matches");
   });
 
   it("shows a leg that did not run as 'did not run' in the dry-run table", () => {
@@ -2476,17 +2370,911 @@ describe("swap force", () => {
     if (!dry || dry.kind !== "open") throw new Error("expected open");
     expect(dry.body).toContain("| Firefox | did not run |  |  |  |");
   });
+});
 
-  it("never comments on the real issue", () => {
-    const { verdicts } = applyForce(
-      withNative({ ...base(), ...cleanSwap({ webkit: { failed: 1 } }) }),
-      { swapReady: true },
-    );
-    const actions = planIssueActions(
-      verdicts as never,
-      [issue(9, '<!-- gmt-canary key="temporal-polyfill-swap/ready" -->\nx')],
+describe("the macOS WebKit leg", () => {
+  it("is one list of legs, with the swap check on four", () => {
+    expect(DERIVED_NATIVE_LEGS).toEqual([
+      "node",
+      "chromium",
+      "firefox",
+      "webkit",
+      "webkit-macos",
+    ]);
+    expect(DERIVED_SWAP_LEGS).toEqual([
+      "node",
+      "chromium",
+      "firefox",
+      "webkit",
+    ]);
+  });
+
+  it.each`
+    engine                                                              | label
+    ${"Node v26.12.1 \u00b7 V8 14.6.1 \u00b7 ICU 78.3 \u00b7 tz 2026e"} | ${"Node 26"}
+    ${"Chromium 153.0.8010.12"}                                         | ${"Chromium 153"}
+    ${"WebKit 26.6"}                                                    | ${"WebKit 26"}
+    ${"macOS WebKit 26.6 \u00b7 macOS 15.7.2"}                          | ${"macOS WebKit 26"}
+  `(
+    "the engine line '$engine' titles the issue '$label'",
+    ({ engine, label }) => {
+      const leg = engine.startsWith("macOS") ? "webkit-macos" : "webkit";
+      const [f] = findings(
+        withLegs({ [leg]: { ...native(leg, { untagged: 1 }), engine } }),
+        ORACLE_CONTEXT,
+      );
+      expect(f.title).toBe(`Native Temporal: GMT tests fail on ${label}`);
+    },
+  );
+
+  it("an engine line with no version titles the issue with the leg name", () => {
+    const [f] = findings(
+      withLegs({
+        "webkit-macos": {
+          ...native("webkit-macos", { untagged: 1 }),
+          engine: "(no version)",
+        },
+      }),
       ORACLE_CONTEXT,
     );
-    expect(actions.map((a) => [a.kind, a.key])).toEqual([["open", DRY_KEY]]);
+    expect(f.title).toBe("Native Temporal: GMT tests fail on webkit-macos");
+  });
+
+  it("keys the two WebKit legs apart: separate issues, titled by their own label", () => {
+    const found = findings(
+      withLegs({
+        webkit: native("webkit", { untagged: 1 }),
+        "webkit-macos": native("webkit-macos", { untagged: 1 }),
+      }),
+      ORACLE_CONTEXT,
+    ).filter((f) => f.key.startsWith("native-suite/untagged-failure/"));
+    expect(found.map((f) => [f.key, f.title])).toEqual([
+      [
+        "native-suite/untagged-failure/webkit",
+        "Native Temporal: GMT tests fail on WebKit 26",
+      ],
+      [
+        "native-suite/untagged-failure/webkit-macos",
+        "Native Temporal: GMT tests fail on macOS WebKit 26",
+      ],
+    ]);
+  });
+
+  it.each`
+    key            | title
+    ${HOST_KEY}    | ${"Native suite: tests fail on both engines in WebKit 26, macOS WebKit 26"}
+    ${CONTROL_KEY} | ${"Native suite: tests fail only on the polyfill in WebKit 26, macOS WebKit 26"}
+  `(
+    "the $key title lists both WebKit labels when both legs have rows",
+    ({ key, title }) => {
+      const options = optionsOf(key, "m");
+      const [f] = findings(
+        withLegs({
+          webkit: native("webkit", options),
+          "webkit-macos": native("webkit-macos", options),
+        }),
+        ORACLE_CONTEXT,
+      ).filter((x) => x.key === key);
+      expect(f.title).toBe(title);
+    },
+  );
+
+  it("a missing native-suite-webkit-macos verdict is a could-not-run line, and nothing else", () => {
+    const verdicts = {
+      ...(withLegs({}) as object),
+      "native-suite-webkit-macos": null,
+    };
+    const [f] = findings(verdicts as never, ORACLE_CONTEXT);
+    expect(f.key).toBe("temporal-oracle/could-not-run");
+    expect(f.body).toContain(
+      "- **native-suite-webkit-macos**: no verdict file: an earlier step or job failed\n",
+    );
+    expect(f.body).not.toContain("**native-suite-webkit**");
+  });
+});
+
+describe("workarounds scoped to WebKit, with two WebKit legs", () => {
+  const d18 = (state: State) =>
+    workaround("D18", state, { engines: ["webkit"] });
+  const states = (verdicts: unknown) =>
+    compatStates(verdicts as never).map((s) => [s.everywhere]);
+
+  it("D18 removable on webkit but no webkit-macos verdict: not removable", () => {
+    const verdicts = {
+      ...everywhere([d18("removable")]),
+      "temporal-compat-webkit-macos": null,
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[false]]);
+    expect(plan(verdicts).map((a) => a.key)).not.toContain(
+      "temporal-compat/removable/D18",
+    );
+  });
+
+  it("D18 removable on webkit, still needed on webkit-macos: not removable", () => {
+    const verdicts = {
+      ...everywhere([d18("removable")]),
+      "temporal-compat-webkit-macos": browserCompat("webkit-macos", [
+        d18("still-needed"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[false]]);
+  });
+
+  it("D18 removable on both WebKit legs, out of scope elsewhere: removable everywhere", () => {
+    const verdicts = {
+      ...everywhere([d18("out-of-scope")]),
+      "temporal-compat-webkit": browserCompat("webkit", [d18("removable")]),
+      "temporal-compat-webkit-macos": browserCompat("webkit-macos", [
+        d18("removable"),
+      ]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[true]]);
+  });
+
+  it("D16 with no engines needs all five compat sources", () => {
+    const d16 = (state: State) => workaround("D16", state);
+    const verdicts = {
+      ...everywhere([d16("removable")]),
+      "temporal-oracle": oracle(),
+    };
+    expect(states(verdicts)).toEqual([[true]]);
+    const [row] = compatStates(verdicts as never);
+    expect(row.engines.map((e) => e.source)).toEqual([
+      "temporal-compat-check",
+      "temporal-compat-chromium",
+      "temporal-compat-firefox",
+      "temporal-compat-webkit",
+      "temporal-compat-webkit-macos",
+    ]);
+    expect(
+      states({ ...verdicts, "temporal-compat-webkit-macos": null }),
+    ).toEqual([[false]]);
+  });
+});
+
+describe("US clock-change watch findings", () => {
+  const WATCH_CONTEXT = { workflow: "us-clock-watch", runUrl: RUN } as const;
+  const ran = (
+    differences: string[] = [],
+    extra: Record<string, unknown> = {},
+  ) => ({
+    status: "ran" as const,
+    differences,
+    ...extra,
+  });
+  const watch = (
+    over: Partial<Record<"federal" | "state" | "tz", unknown>> = {},
+    top: Record<string, unknown> = {},
+  ) => ({
+    source: "us-clock-watch" as const,
+    status: "ran" as const,
+    federal: ran([], { congress: 119 }),
+    state: ran(),
+    tz: ran([], { release: "2026f", snapshotRelease: "2026e" }),
+    ...over,
+    ...top,
+  });
+  const watchPlan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planWithoutReport(
+      { "us-clock-watch": verdict } as never,
+      open,
+      WATCH_CONTEXT,
+    );
+  const opened = (verdict: unknown) =>
+    watchPlan(verdict).map((a) => {
+      if (a.kind !== "open") throw new Error("expected open");
+      return a;
+    });
+
+  it("a clean run files nothing", () => {
+    expect(watchPlan(watch())).toEqual([]);
+  });
+
+  it("each kind of difference opens its own issue", () => {
+    const actions = opened(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"]),
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+        tz: ran(["America/New_York"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(actions.map((a) => a.key)).toEqual([
+      "us-clock-watch/federal",
+      "us-clock-watch/state",
+      "us-clock-watch/tz-us-zone",
+    ]);
+    expect(actions.map((a) => a.title)).toEqual([
+      "Federal bills on the clock-change subject changed",
+      "State bills on the clock-change subject changed",
+      "A tz release changed the rules of a US zone",
+    ]);
+    for (const action of actions) {
+      expect(action.labels).toEqual(["canary"]);
+      expect(action.body.split("\n")[0]).toBe(
+        `<!-- gmt-canary key="${action.key}" -->`,
+      );
+      expect(action.body.endsWith(`Run: ${RUN}`)).toBe(true);
+    }
+  });
+
+  it("the bill issues list what changed since the carried snapshot and ask only for a review", () => {
+    const [federal, state] = opened(
+      watch({
+        federal: ran(["new: S 7: To adopt permanent standard time"], {
+          since: "2026-11-09T07:20:00Z",
+        }),
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+      }),
+    );
+    expect(federal.body).toContain(
+      "whose latest action changed since the snapshot of 2026-11-09.",
+    );
+    expect(state.body).toContain(
+      "whose latest action changed since the last snapshot.",
+    );
+    expect(federal.body).toContain(
+      "### Differences\n\n- new: S 7: To adopt permanent standard time",
+    );
+    expect(federal.body).toContain("Review the change.");
+    expect(federal.body).toContain("Nothing else to run");
+    expect(federal.body).not.toContain("refresh");
+    expect(federal.body).not.toContain("CORE-90 phase 2");
+  });
+
+  it("the tz issue names the zones, both releases, and the phase-2 signal", () => {
+    const [tz] = opened(
+      watch({
+        tz: ran(["America/Detroit", "America/New_York"], {
+          release: "2026f",
+          snapshotRelease: "2026e",
+        }),
+      }),
+    );
+    expect(tz.body).toContain(
+      "A tz release changed a US zone's rules. This is the signal to build the US clock-change checker: CORE-90 phase 2, #341.",
+    );
+    expect(tz.body).toContain("Release 2026f; the snapshot has 2026e.");
+    expect(tz.body).toContain("- America/Detroit\n- America/New_York");
+    expect(tz.body).toContain("node scripts/us-clock-watch.mjs snapshot-tz");
+  });
+
+  it("a source that could not run files one could-not-run issue naming it", () => {
+    const actions = opened(
+      watch({
+        federal: {
+          status: "could-not-run",
+          message: "secret `CONGRESS_GOV_API_KEY` is not set",
+        },
+        state: ran(["new: Texas 2025 HB 9: Relating to standard time"]),
+      }),
+    );
+    expect(actions.map((a) => a.key)).toEqual([
+      "us-clock-watch/state",
+      "us-clock-watch/could-not-run",
+    ]);
+    expect(actions[1].body).toContain(
+      "- **federal**: secret `CONGRESS_GOV_API_KEY` is not set",
+    );
+  });
+
+  it("a whole-run could-not-run verdict files the could-not-run issue", () => {
+    const actions = opened(couldNotRun("us-clock-watch", "cannot run: boom"));
+    expect(actions.map((a) => a.key)).toEqual(["us-clock-watch/could-not-run"]);
+  });
+
+  it("a missing verdict files a could-not-run issue", () => {
+    const actions = watchPlan(null);
+    expect(actions.map((a) => a.key)).toEqual(["us-clock-watch/could-not-run"]);
+  });
+
+  it("forcing a difference opens a labelled dry-run issue and leaves real ones alone", () => {
+    const { verdicts, skipped } = applyForce(
+      { "us-clock-watch": watch() } as never,
+      { usClockDifference: true },
+    );
+    expect(skipped).toEqual([]);
+    const actions = planWithoutReport(verdicts, [], WATCH_CONTEXT);
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("dry-run/us-clock-watch/federal");
+    expect(action.title.startsWith("[dry run] ")).toBe(true);
+    expect(action.labels).toEqual(["canary", "canary-dry-run"]);
+    expect(action.body).toContain("--force-us-clock-difference");
+  });
+
+  it("forcing a difference when the watch did not run says so and files nothing", () => {
+    const { skipped } = applyForce(
+      { "us-clock-watch": couldNotRun("us-clock-watch", "x") } as never,
+      { usClockDifference: true },
+    );
+    expect(skipped.map((s) => s.flag)).toEqual(["--force-us-clock-difference"]);
+  });
+});
+
+describe("the rolling issue", () => {
+  const ROLL = rollingMarker("temporal-oracle");
+  const D2_TITLE = "Remove workaround D2: summary of D2";
+  const MISMATCH_TITLE =
+    "Oracle: GMT differs from native Temporal on untagged rows";
+  const LEAP_TITLE = "Leap-second table differs from the IERS table";
+  const LEAP_ROLL = rollingMarker("leap-seconds");
+  /** D2 removable and one oracle mismatch: two findings of one run. */
+  const twoFindings = () =>
+    withNative({
+      "temporal-compat-check": check([workaround("D2", "removable")]),
+      "temporal-oracle": oracle(1),
+    });
+  /** The findings marker an earlier run left, written out. */
+  const findingsMarker = (pairs: [string, string][]) =>
+    `<!-- gmt-canary findings=${JSON.stringify(pairs)} -->`;
+  const rollingIssue = (
+    number: number,
+    pairs: [string, string][],
+    marker_ = ROLL,
+    labels = [CANARY_LABEL],
+  ) => issue(number, `${marker_}\n${findingsMarker(pairs)}\nold`, labels);
+  const bothPairs: [string, string][] = [
+    [D2_KEY, D2_TITLE],
+    ["temporal-oracle/untagged-mismatch", MISMATCH_TITLE],
+  ];
+  const run = (verdicts: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planIssueActions(verdicts as never, open, ORACLE_CONTEXT);
+
+  it("writes the hidden markers", () => {
+    expect(rollingMarker("leap-seconds")).toBe(
+      '<!-- gmt-canary rolling="leap-seconds" -->',
+    );
+    expect(foldedComment(540)).toBe(
+      "The canary now files one issue for each run. Its findings are in #540. Closing this issue.",
+    );
+  });
+
+  it("a clean run with nothing open does nothing", () => {
+    expect(
+      run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("opens one issue holding every finding of the run, in sections", () => {
+    const actions = run(twoFindings());
+    expect(actions).toHaveLength(1);
+    const [action] = actions;
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.key).toBe("temporal-oracle");
+    expect(action.title).toBe("Canary findings: temporal-oracle");
+    expect(action.labels).toEqual(["canary", "temporal-compat"]);
+    expect(action.findings).toEqual([
+      D2_KEY,
+      "temporal-oracle/untagged-mismatch",
+    ]);
+    const lines = action.body.split("\n");
+    expect(lines[0]).toBe(ROLL);
+    expect(lines[1]).toBe(findingsMarker(bothPairs));
+    expect(lines[2]).toBe(
+      "This issue lists every finding from the latest run of the `temporal-oracle` canary. A failing run rewrites it and adds a comment. A clean run closes it.",
+    );
+    expect(lines[4]).toBe(`Latest run: ${RUN}`);
+    expect(action.body).toContain(`\n## ${D2_TITLE}\n\n`);
+    expect(action.body).toContain(`\n## ${MISMATCH_TITLE}\n\n`);
+    expect(action.body.indexOf(`## ${D2_TITLE}`)).toBeLessThan(
+      action.body.indexOf(`## ${MISMATCH_TITLE}`),
+    );
+    expect(action.body).toContain("### Engines");
+    expect(action.body).toContain("### Groups");
+  });
+
+  it("names the run once, not once per section", () => {
+    const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body.match(/Run: /g)).toBeNull();
+    expect(action.body.match(new RegExp(RUN, "g"))).toHaveLength(1);
+  });
+
+  it("reads a title that was stored with its angle brackets escaped", () => {
+    const stored = `${ROLL}\n<!-- gmt-canary findings=[["k/old","A --\\u003e B"]] -->\nold`;
+    const [, comment] = run(twoFindings(), [issue(77, stored)]);
+    expect(comment).toMatchObject({
+      body: expect.stringContaining("1 gone (A --> B)"),
+    });
+    const [action] = run(twoFindings());
+    if (action.kind !== "open") throw new Error("expected open");
+    expect(action.body.split("\n")[1]).not.toMatch(/-->.+-->/);
+  });
+
+  it("rewrites the open rolling issue and comments with what changed", () => {
+    const actions = run(twoFindings(), [rollingIssue(77, bothPairs)]);
+    expect(actions.map((a) => a.kind)).toEqual(["edit", "comment"]);
+    const [edit, comment] = actions;
+    if (edit.kind !== "edit" || comment.kind !== "comment")
+      throw new Error("x");
+    expect(edit).toMatchObject({
+      key: "temporal-oracle",
+      issue: 77,
+      title: "Canary findings: temporal-oracle",
+      labels: ["canary", "temporal-compat"],
+      removeLabels: [],
+    });
+    expect(edit.body.split("\n")[0]).toBe(ROLL);
+    expect(edit.body).toContain(`## ${D2_TITLE}`);
+    expect(comment).toEqual({
+      kind: "comment",
+      key: "temporal-oracle",
+      issue: 77,
+      body: `Since the last run: 2 still there.\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("removes a canary label no finding of this run carries, and keeps a person's label", () => {
+    const [edit] = run(
+      withNative({
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": couldNotRun("temporal-oracle", "no Temporal"),
+      }),
+      [
+        rollingIssue(77, bothPairs, ROLL, [
+          CANARY_LABEL,
+          "temporal-compat",
+          "priority",
+        ]),
+      ],
+    );
+    if (edit.kind !== "edit") throw new Error("expected edit");
+    expect(edit.labels).toEqual(["canary"]);
+    expect(edit.removeLabels).toEqual(["temporal-compat"]);
+  });
+
+  it("the comment names what is new, still there and gone", () => {
+    const [, comment] = run(twoFindings(), [
+      rollingIssue(77, [
+        [D2_KEY, D2_TITLE],
+        ["leap/old", "An old finding"],
+        ["leap/older", "An older finding"],
+      ]),
+    ]);
+    expect(comment).toMatchObject({
+      kind: "comment",
+      body: `Since the last run: 1 new (${MISMATCH_TITLE}), 1 still there, 2 gone (An old finding; An older finding).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("the comment lists three titles at most", () => {
+    const old: [string, string][] = ["a", "b", "c", "d", "e"].map((x) => [
+      `k/${x}`,
+      `Old ${x}`,
+    ]);
+    const [, comment] = run(twoFindings(), [rollingIssue(77, old)]);
+    expect(comment).toMatchObject({
+      body: `Since the last run: 2 new (${D2_TITLE}; ${MISMATCH_TITLE}), 5 gone (Old a; Old b; Old c; and 2 more).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("an open rolling issue with no findings marker counts every finding as new", () => {
+    const [, comment] = run(twoFindings(), [issue(77, `${ROLL}\nhand edited`)]);
+    expect(comment).toMatchObject({
+      body: `Since the last run: 2 new (${D2_TITLE}; ${MISMATCH_TITLE}).\n\nRun: ${RUN}`,
+    });
+  });
+
+  it("an unreadable findings marker counts every finding as new", () => {
+    const [, comment] = run(twoFindings(), [
+      issue(77, `${ROLL}\n<!-- gmt-canary findings=[oops -->\nx`),
+    ]);
+    expect(comment).toMatchObject({
+      body: expect.stringContaining("Since the last run: 2 new"),
+    });
+  });
+
+  it("matches a CRLF body and the lowest number; ignores a marker on line 2 or without the canary label", () => {
+    const crlf = issue(60, `${ROLL}\r\n${findingsMarker(bothPairs)}\r\nx`);
+    expect(run(twoFindings(), [crlf]).map((a) => a.kind)).toEqual([
+      "edit",
+      "comment",
+    ]);
+    const two = run(twoFindings(), [
+      rollingIssue(80, bothPairs),
+      rollingIssue(50, bothPairs),
+    ]);
+    expect(
+      two.map((a) => [
+        a.kind,
+        "issue" in a ? a.issue : 0,
+        "reason" in a ? a.reason : "",
+      ]),
+    ).toEqual([
+      ["edit", 50, ""],
+      ["comment", 50, ""],
+      ["close", 80, "folded"],
+    ]);
+    const late = issue(61, `intro\n${ROLL}`);
+    expect(run(twoFindings(), [late]).map((a) => a.kind)).toEqual(["open"]);
+    const unlabelled = rollingIssue(62, bothPairs, ROLL, ["temporal-compat"]);
+    expect(run(twoFindings(), [unlabelled]).map((a) => a.kind)).toEqual([
+      "open",
+    ]);
+  });
+
+  it("another workflow's rolling issue is left alone", () => {
+    const other = rollingIssue(90, [], LEAP_ROLL);
+    expect(run(twoFindings(), [other]).map((a) => a.kind)).toEqual(["open"]);
+  });
+
+  it("a clean run comments that it was clean and closes the rolling issue", () => {
+    const actions = run(
+      withNative({
+        "temporal-compat-check": cleanCheck(),
+        "temporal-oracle": oracle(),
+      }),
+      [rollingIssue(77, bothPairs)],
+    );
+    expect(actions).toEqual([
+      {
+        kind: "close",
+        key: "temporal-oracle",
+        issue: 77,
+        reason: "clean",
+        body: `This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: ${RUN}`,
+      },
+    ]);
+  });
+
+  describe("per-finding issues that are already open", () => {
+    const legacy = (number: number, key: string) =>
+      issue(number, `<!-- gmt-canary key="${key}" -->\nbody`);
+
+    it("the first run opens the rolling issue, then closes each old issue as folded in", () => {
+      const actions = run(twoFindings(), [
+        legacy(539, D2_KEY),
+        legacy(541, "native-suite/untagged-failure/node"),
+        legacy(542, "temporal-polyfill-swap/ready"),
+        legacy(543, "dry-run/temporal-oracle/could-not-run"),
+      ]);
+      expect(actions.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["open", 0],
+        ["close", 539],
+        ["close", 541],
+        ["close", 542],
+      ]);
+      expect(actions[1]).toEqual({
+        kind: "close",
+        key: "temporal-oracle",
+        issue: 539,
+        reason: "folded",
+      });
+    });
+
+    it("an old issue is folded in beside an open rolling issue too", () => {
+      const actions = run(twoFindings(), [
+        rollingIssue(77, bothPairs),
+        legacy(539, D2_KEY),
+      ]);
+      expect(actions.map((a) => a.kind)).toEqual(["edit", "comment", "close"]);
+    });
+
+    it("the old issues of another workflow stay open", () => {
+      const actions = run(twoFindings(), [
+        legacy(30, "leap-seconds/table-difference"),
+        legacy(31, "us-clock-watch/federal"),
+      ]);
+      expect(actions.map((a) => a.kind)).toEqual(["open"]);
+    });
+
+    it("a clean run closes the old issues as clean", () => {
+      const actions = run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+        [legacy(539, D2_KEY)],
+      );
+      expect(actions).toEqual([
+        {
+          kind: "close",
+          key: "temporal-oracle",
+          issue: 539,
+          reason: "clean",
+          body: `This run found nothing, so this issue is closed. A later run opens a new one if it finds something.\n\nRun: ${RUN}`,
+        },
+      ]);
+    });
+
+    it("a per-finding issue without the canary label is not touched", () => {
+      const other = issue(40, `<!-- gmt-canary key="${D2_KEY}" -->\nx`, [
+        "bug",
+      ]);
+      expect(run(twoFindings(), [other]).map((a) => a.kind)).toEqual(["open"]);
+    });
+
+    it("the leap-seconds and us-clock-watch workflows fold their own old issues", () => {
+      const leapActions = planIssueActions(
+        { "leap-seconds": leap(["row 29"]) } as never,
+        [legacy(30, "leap-seconds/table-difference")],
+        LEAP_CONTEXT,
+      );
+      expect(leapActions.map((a) => a.kind)).toEqual(["open", "close"]);
+      const watch = planIssueActions(
+        { "us-clock-watch": couldNotRun("us-clock-watch", "x") } as never,
+        [
+          legacy(31, "us-clock-watch/tz-us-zone"),
+          legacy(32, "temporal-oracle/could-not-run"),
+        ],
+        { workflow: "us-clock-watch", runUrl: RUN },
+      );
+      expect(watch.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["open", 0],
+        ["close", 31],
+      ]);
+    });
+  });
+
+  describe("dry runs", () => {
+    const forced = () =>
+      applyForce(
+        withNative({
+          "temporal-compat-check": check([workaround("D2", "still-needed")]),
+          "temporal-oracle": oracle(),
+        }),
+        { removable: "D2" },
+      ).verdicts;
+    const DRY_ROLL = rollingMarker("dry-run/temporal-oracle");
+
+    it("a forced finding goes to its own rolling issue, apart from the real one", () => {
+      const actions = run({
+        ...forced(),
+        "temporal-oracle": oracle(1),
+      });
+      expect(actions.map((a) => [a.kind, a.key])).toEqual([
+        ["open", "temporal-oracle"],
+        ["open", "dry-run/temporal-oracle"],
+      ]);
+      const dry = actions[1];
+      if (dry.kind !== "open") throw new Error("expected open");
+      expect(dry.title).toBe("[dry run] Canary findings: temporal-oracle");
+      expect(dry.labels).toEqual(["canary", "canary-dry-run"]);
+      expect(dry.body.split("\n")[0]).toBe(DRY_ROLL);
+      expect(dry.body).toContain("--force-removable=D2");
+    });
+
+    it("a clean real run never closes an open dry-run issue", () => {
+      const actions = run(
+        withNative({
+          "temporal-compat-check": cleanCheck(),
+          "temporal-oracle": oracle(),
+        }),
+        [rollingIssue(70, [], DRY_ROLL, ["canary", "canary-dry-run"])],
+      );
+      expect(actions).toEqual([]);
+    });
+
+    it("an open dry-run issue is rewritten and commented on, while a clean real group closes its own issue", () => {
+      const actions = run(forced(), [
+        rollingIssue(70, [], DRY_ROLL, ["canary", "canary-dry-run"]),
+        rollingIssue(71, bothPairs),
+      ]);
+      expect(actions.map((a) => [a.kind, "issue" in a ? a.issue : 0])).toEqual([
+        ["close", 71],
+        ["edit", 70],
+        ["comment", 70],
+      ]);
+    });
+  });
+
+  describe("the 65,536-character limit", () => {
+    const big = (n: number, size: number) =>
+      withNative({
+        "leap-seconds": leap(
+          Array.from({ length: n }, (_, i) => `row ${i}: ${"x".repeat(size)}`),
+        ),
+      });
+
+    it("a body that fits is kept whole", () => {
+      const [action] = planIssueActions(big(3, 20), [], LEAP_CONTEXT);
+      expect(action.body).not.toContain("Cut to fit");
+    });
+
+    it("cuts the section that does not fit and says so in the body", () => {
+      const [action] = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      if (action.kind !== "open") throw new Error("expected open");
+      expect(action.body.length).toBeLessThanOrEqual(65_536);
+      expect(action.body).toContain(
+        `Cut to fit GitHub's 65,536-character limit: ${LEAP_TITLE}. The full result is in the run: ${RUN}`,
+      );
+      expect(action.body).toContain("- row 0: ");
+      expect(action.body).not.toContain("- row 1999: ");
+    });
+
+    it("shares the room fairly: a short section stays whole beside a huge one", () => {
+      const verdicts = withNative({
+        "temporal-compat-check": check([workaround("D2", "removable")]),
+        "temporal-oracle": couldNotRun("temporal-oracle", "x".repeat(200_000)),
+      });
+      const [small] = findings(verdicts, ORACLE_CONTEXT);
+      const [action] = planIssueActions(verdicts, [], ORACLE_CONTEXT);
+      if (action.kind !== "open") throw new Error("expected open");
+      expect(action.body.length).toBeLessThanOrEqual(65_536);
+      expect(action.body).toContain(small.body.replace(/\n\nRun: .*$/, ""));
+      expect(action.body).toContain(
+        `Cut to fit GitHub's 65,536-character limit: Canary temporal-oracle could not run.`,
+      );
+    });
+
+    it("cuts the same way on every run", () => {
+      const a = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      const b = planIssueActions(big(2000, 100), [], LEAP_CONTEXT);
+      expect(a).toEqual(b);
+    });
+  });
+});
+
+describe("event findings: a change reported once stays until a person closes the issue", () => {
+  const CTX = { workflow: "us-clock-watch", runUrl: RUN } as const;
+  const ROLL = rollingMarker("us-clock-watch");
+  const ran = (differences: string[] = []) => ({
+    status: "ran" as const,
+    differences,
+  });
+  const watch = (federal: string[] = [], state: string[] = []) => ({
+    source: "us-clock-watch" as const,
+    status: "ran" as const,
+    federal: ran(federal),
+    state: ran(state),
+    tz: { ...ran(), release: "2026f", snapshotRelease: "2026e" },
+  });
+  const plan = (verdict: unknown, open: ReturnType<typeof issue>[] = []) =>
+    planIssueActions({ "us-clock-watch": verdict } as never, open, CTX);
+  /** The issue the first run opens, as GitHub would hold it. */
+  const openedBy = (verdict: unknown, number = 70) => {
+    const [first] = plan(verdict);
+    if (first?.kind !== "open") throw new Error("expected open");
+    return issue(number, first.body, [CANARY_LABEL]);
+  };
+  const edited = (actions: ReturnType<typeof plan>) => {
+    const edit = actions.find((a) => a.kind === "edit");
+    if (edit?.kind !== "edit") throw new Error("expected edit");
+    return edit;
+  };
+
+  it("the first run opens the issue and stores the lines in a hidden marker", () => {
+    const [open] = plan(watch(["bill A advanced"]));
+    if (open?.kind !== "open") throw new Error("expected open");
+    expect(open.findings).toEqual(["us-clock-watch/federal"]);
+    expect(open.body).toContain("<!-- gmt-canary events=");
+    expect(open.body).toContain("- bill A advanced");
+  });
+
+  it("a clean run keeps an issue that lists an event: it rewrites the body and comments", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(), [open]);
+    expect(actions.map((a) => a.kind)).toEqual(["edit", "comment"]);
+    const edit = edited(actions);
+    expect(edit.findings).toEqual(["us-clock-watch/federal"]);
+    expect(edit.body).toContain("- bill A advanced");
+    expect(edit.body).toContain("<!-- gmt-canary events=");
+    expect(edit.body.split("\n")[0]).toBe(ROLL);
+  });
+
+  it("a run with a different new event adds it and keeps the earlier one", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(["bill B introduced"]), [open]);
+    const edit = edited(actions);
+    expect(edit.body).toContain("- bill A advanced\n- bill B introduced");
+    const comment = actions.find((a) => a.kind === "comment");
+    expect(comment?.body).toContain("1 new (Federal bills");
+  });
+
+  it("an event on another source joins the list; a line seen twice is kept once", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const actions = plan(watch(["bill A advanced"], ["state bill C"]), [open]);
+    const edit = edited(actions);
+    expect(edit.findings).toEqual([
+      "us-clock-watch/federal",
+      "us-clock-watch/state",
+    ]);
+    expect(edit.body.match(/- bill A advanced/g)).toHaveLength(1);
+    expect(edit.body).toContain("- state bill C");
+  });
+
+  it("a repeated line is still there, not new", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const comment = plan(watch(["bill A advanced"]), [open]).find(
+      (a) => a.kind === "comment",
+    );
+    expect(comment?.body).toContain("Since the last run: 1 still there.");
+  });
+
+  it("state findings still drop once gone, even beside a kept event", () => {
+    const open = openedBy(watch(["bill A advanced"]));
+    const withTz = {
+      ...watch(),
+      tz: {
+        ...ran(["Rule changed"]),
+        release: "2026f",
+        snapshotRelease: "2026e",
+      },
+    };
+    const first = plan(withTz, [open]);
+    expect(edited(first).findings).toEqual([
+      "us-clock-watch/tz-us-zone",
+      "us-clock-watch/federal",
+    ]);
+    const tzIssue = issue(70, edited(first).body, [CANARY_LABEL]);
+    const next = plan(watch(), [tzIssue]);
+    expect(edited(next).findings).toEqual(["us-clock-watch/federal"]);
+    expect(edited(next).body).not.toContain("Rule changed");
+    const comment = next.find((a) => a.kind === "comment");
+    expect(comment?.body).toContain("1 gone");
+  });
+
+  it("a clean run with no event on the issue closes it", () => {
+    const stateOnly = {
+      ...watch(),
+      tz: {
+        ...ran(["Rule changed"]),
+        release: "2026f",
+        snapshotRelease: "2026e",
+      },
+    };
+    const open = openedBy(stateOnly);
+    const actions = plan(watch(), [open]);
+    expect(actions.map((a) => a.kind)).toEqual(["close"]);
+  });
+
+  it("a person closing the issue clears the events: the next run opens a fresh one", () => {
+    expect(plan(watch(["bill D"])).map((a) => a.kind)).toEqual(["open"]);
+    expect(plan(watch())).toEqual([]);
+  });
+
+  it("the old per-finding issue of an event key is left open", () => {
+    const old = issue(
+      31,
+      '<!-- gmt-canary key="us-clock-watch/federal" -->\nold',
+      [CANARY_LABEL],
+    );
+    expect(plan(watch(["bill A"]), [old]).map((a) => a.kind)).toEqual(["open"]);
+    expect(plan(watch(), [old])).toEqual([]);
+  });
+
+  it("a duplicate rolling issue's events are merged in before it is folded", () => {
+    const a = openedBy(watch(["bill A"]), 70);
+    const b = openedBy(watch(["bill B"]), 71);
+    const actions = plan(watch(), [a, b]);
+    const edit = edited(actions);
+    expect(edit.body).toContain("- bill A\n- bill B");
+    expect(actions.map((x) => x.kind)).toEqual(["edit", "comment", "close"]);
+  });
+
+  it("lines that pass the stored budget drop oldest first, and the body says so", () => {
+    let open = openedBy(watch(["line 0"]));
+    for (let i = 1; i <= 40; i++) {
+      const edit = edited(
+        plan(watch([`line ${i} ${"x".repeat(1_900)}`]), [open]),
+      );
+      open = issue(70, edit.body, [CANARY_LABEL]);
+    }
+    const final = edited(plan(watch(), [open]));
+    expect(final.body.length).toBeLessThanOrEqual(BODY_LIMIT);
+    expect(final.body).toContain("Older lines dropped to fit GitHub's");
+    expect(final.body).not.toContain("- line 0\n");
+    expect(final.body).toContain("line 40 ");
+  });
+
+  it("an unreadable events marker is treated as no events", () => {
+    const broken = issue(
+      70,
+      `${ROLL}\n<!-- gmt-canary events=[oops] -->\nold`,
+      [CANARY_LABEL],
+    );
+    expect(plan(watch(), [broken]).map((a) => a.kind)).toEqual(["close"]);
   });
 });

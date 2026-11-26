@@ -1,13 +1,13 @@
 {
   "entries": {
     "root": {
-      "minified": 443400
+      "minified": 533000
     },
     "isValidDate": {
       "minified": 67000
     },
     "formatDate": {
-      "minified": 70500
+      "minified": 97400
     },
     "businessDaysBetween": {
       "minified": 69600
@@ -16,13 +16,13 @@
       "minified": 70600
     },
     "chargeableDays": {
-      "minified": 82700
+      "minified": 97400
     },
     "operatingTimeBetween": {
-      "minified": 86400
+      "minified": 102000
     },
     "dutyViolations": {
-      "minified": 110900
+      "minified": 126800
     }
   },
   "absent": {

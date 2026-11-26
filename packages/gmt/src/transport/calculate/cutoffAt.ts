@@ -1,4 +1,4 @@
-import { Temporal } from "../../internal/temporal";
+import { durationFrom } from "../../internal/durationFrom";
 import {
   cutoffAtResolved,
   resolveCutoffTime,
@@ -61,16 +61,15 @@ export interface CutoffOptions {
  *   whatever the clock does. This is the advance-filing shape.
  * - **The anchor is the caller's event.** Loading, departure and arrival are different
  *   instants, and the same offset from the wrong one is late by days. `cutoffAt` never guesses
- *   which event a rule means. The anchor is exact: an instant (`Z`/offset) or a zoned string.
- *   Its bracket never supplies the zone — `timeZone` alone is the local frame — and is not
- *   checked, with one exception: an offset written to the minute that is the bracketed zone's
- *   sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for −00:44:30) names the instant the
- *   zone gives, as `Temporal.ZonedDateTime.from` reads it. The anchor is not cached: a
+ *   which event a rule means. The anchor is exact: an instant (`Z`/offset) with no
+ *   annotation of any kind. `timeZone` alone is the local frame. The anchor is not cached: a
  *   rescheduled departure is a new call.
  * - **Non-business days roll as the caller says.** With `calendar`, a cut-off on a weekend or
  *   holiday moves by `roll`, as `rollDate` moves it. Every industry answers "what if it lands
  *   on a non-working day" differently, so the convention is always explicit — there is no
- *   default: `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled
+ *   default: no standard supplies one (ISDA 2021 §2.3.8 applies the convention "specified" and
+ *   stops there; ISO 20022 makes a non-working-day adjustment optional with no default), so
+ *   `calendar` without `roll`, or `roll` without `calendar`, returns `""`. The rolled
  *   day keeps the cut-off's local time of day. `calendar.timeZone` is not read; `timeZone` is
  *   the local frame. `"endOfMonth"` is `rollDate`'s schedule tool, not a cut-off convention.
  * - **The order is not checked.** `cutoffAt` does not check that the cut-off comes before the
@@ -86,7 +85,7 @@ export interface CutoffOptions {
  * - An offset with seconds (`-00:44:30`) returns `""`. A written zone cannot carry seconds (RFC
  *   9557 §4.1), so the result could not name it. Pass the IANA name.
  *
- * @param anchor ISO 8601 instant or zoned datetime string of the event the deadline counts back from
+ * @param anchor ISO 8601 instant string of the event the deadline counts back from
  * @param offset ISO 8601 duration before the anchor
  * @param options The zone the cut-off is read in, the time of day it is pinned to, and how it rolls off a non-business day
  * @returns ISO 8601 zoned datetime string of the cut-off, or "" on invalid input
@@ -133,7 +132,7 @@ export function cutoffAt(
     try {
       const found = cutoffAtResolved(
         instantFrom(anchor),
-        Temporal.Duration.from(offset),
+        durationFrom(offset),
         local.time,
         shared,
       );

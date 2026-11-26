@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return true when `value`'s local calendar day falls `offsetDays` days from
@@ -27,12 +26,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isZonedRelativeDay("invalid", 0) // false
  */
 export function isZonedRelativeDay(value: string, offsetDays: number): boolean {
-  if (!isValidZonedDateTime(value) || !Number.isInteger(offsetDays)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null || !Number.isInteger(offsetDays)) {
     return false;
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     const today = Temporal.Now.zonedDateTimeISO(
       zonedDateTime.timeZoneId,
     ).toPlainDate();

@@ -19,6 +19,20 @@
 export const MIN_FRAMES = 5;
 
 /**
+ * Whether the sampled frames show the root at rest: they reach back at least `holdMs` before the
+ * last frame, and every frame in that final `holdMs` is not growing (`g === 0`) and holds the last
+ * frame's height to within 0.01 px. It is the load pass's predicate without its minimum run time.
+ * An empty list is not at rest.
+ */
+export function heldAtRest(frames, holdMs) {
+  const last = frames.at(-1);
+  if (!last || last.t - frames[0].t < holdMs) return false;
+  return frames
+    .filter((f) => f.t >= last.t - holdMs)
+    .every((f) => f.g === 0 && Math.abs(f.h - last.h) < 0.01);
+}
+
+/**
  * Problems with one grow-measure page load, before any statistic is read.
  * `status` is the HTTP status of the navigation (null when there was no
  * response), `rootFound` whether `rootSelector` matched an element once the
@@ -277,19 +291,22 @@ export async function blockOffSite(target, base) {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The pages the Tab walk visits: every page outside `/reference/`, plus the first function page and
- * the first type page in sorted order. Reference pages share one template and each carries the full
- * sidebar, so one of each stands for the 940.
+ * The pages the Tab walk visits: every page outside `/reference/`, plus the first function page of
+ * each namespace and the first type page in sorted order. A reference page carries only its own
+ * namespace's tree (`src/lib/lean-sidebar.ts`), so one function page per namespace stands for its
+ * namespace's pages.
  */
 export function tabWalkPages(allPages) {
   const sorted = [...allPages].sort();
   const outside = sorted.filter((p) => !p.startsWith("/reference/"));
   // /reference/<namespace>/<category>/<function>/ is a function page; /reference/types/<Name>/ a type.
-  const fn = sorted.find((p) =>
-    /^\/reference\/(?!types\/)[^/]+\/[^/]+\/[^/]+\/$/.test(p),
-  );
+  const firstByNamespace = new Map();
+  for (const p of sorted) {
+    const m = /^\/reference\/(?!types\/)([^/]+)\/[^/]+\/[^/]+\/$/.exec(p);
+    if (m && !firstByNamespace.has(m[1])) firstByNamespace.set(m[1], p);
+  }
   const type = sorted.find((p) => /^\/reference\/types\/[^/]+\/$/.test(p));
-  return [...outside, ...[fn, type].filter(Boolean)];
+  return [...outside, ...firstByNamespace.values(), ...[type].filter(Boolean)];
 }
 
 /** Most Tab presses one control may take in a row before it counts as holding focus. A date field

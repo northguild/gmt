@@ -16,6 +16,7 @@ import {
   useRef,
   useState,
   ViewTransition,
+  type ReactNode,
   type RefObject,
 } from "react";
 import {
@@ -48,6 +49,8 @@ export function WidgetRail({
   collapsed = false,
   railId,
   focusTitleRef,
+  idle,
+  className,
 }: {
   widget: RailWidget | null;
   onClose: () => void;
@@ -61,7 +64,13 @@ export function WidgetRail({
    *  takes focus on its title. A widget the model opens never does — the
    *  reader may be typing. Cleared once consumed. */
   focusTitleRef: RefObject<boolean>;
+  /** What the rail holds while no widget is mounted, in place of the examples panel: a name for
+   *  the region and its content. The deck's slides pass their own questions. */
+  idle?: { label: string; content: ReactNode };
+  /** An extra class for the rail, for a host that lays it out its own way (the deck). */
+  className?: string;
 }) {
+  const railClass = className ? `gmt-hive-rail ${className}` : "gmt-hive-rail";
   const titleRef = useRef<HTMLParagraphElement>(null);
   const toolCallId = widget?.toolCallId;
   useEffect(() => {
@@ -113,12 +122,12 @@ export function WidgetRail({
         default="none"
       >
         <aside
-          className="gmt-hive-rail"
+          className={railClass}
           id={railId}
-          aria-label="Examples"
+          aria-label={idle?.label ?? "Examples"}
           data-collapsed={collapsed || undefined}
         >
-          <ExamplesPanel onPick={onPick} />
+          {idle ? idle.content : <ExamplesPanel onPick={onPick} />}
         </aside>
       </ViewTransition>
     );
@@ -136,7 +145,7 @@ export function WidgetRail({
       exit="gmt-rail-out"
       default="none"
     >
-      <aside className="gmt-hive-rail" id={railId} aria-label="Widget panel">
+      <aside className={railClass} id={railId} aria-label="Widget panel">
         <Artifact className="gmt-hive-artifact">
           <ArtifactHeader className="gmt-hive-artifact-header">
             <ArtifactTitle
@@ -154,7 +163,7 @@ export function WidgetRail({
               >
                 {copied ? "Copied" : "Copy link to this view"}
               </button>
-              <ArtifactClose onClick={onClose} />
+              <ArtifactClose onClick={onClose} data-cue="" />
             </ArtifactActions>
           </ArtifactHeader>
           <div className="gmt-hive-artifact-body">

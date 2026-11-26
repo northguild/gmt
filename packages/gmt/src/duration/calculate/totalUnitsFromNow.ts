@@ -7,7 +7,7 @@ import {
 } from "../../internal/lengthFromNow";
 import { resolveDurationUnit } from "../../internal/resolveDurationUnit";
 import { normalizeZoneFrame } from "../../internal/zoneFrame";
-import { isValidDateTimeDurationUnit } from "../../plain/validate/isValidDateTimeDurationUnit";
+import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit } from "../../types";
 
 /**
@@ -70,11 +70,11 @@ export function totalUnitsFromNow(
     }
 
     const resolvedUnit = resolveDurationUnit(unit);
-    if (!isValidDateTimeDurationUnit(resolvedUnit)) {
+    if (!isDateTimeDurationUnitName(resolvedUnit)) {
       return null;
     }
 
-    const amounts = readLengthUnits(units, isValidDateTimeDurationUnit);
+    const amounts = readLengthUnits(units, isDateTimeDurationUnitName);
     if (amounts === null) {
       return null;
     }

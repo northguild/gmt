@@ -1,7 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { cachedFormatter } from "../../internal/formatterCache";
-import { resolveRequiredLocale } from "../../internal/resolveLocale";
-import { Temporal } from "../../internal/temporal";
+import { monthNamesFor } from "../../internal/localeNames";
 
 /**
  * The calendar-name styles supported by GMT's locale name lookups.
@@ -45,37 +43,5 @@ export function getLocaleMonthNames(
   locale: string | string[],
   style: LocaleNameStyle = "long",
 ): string[] {
-  try {
-    const resolvedLocale = resolveRequiredLocale(locale);
-    if (resolvedLocale === null) return [];
-
-    try {
-      const resolved: "long" | "short" | "narrow" =
-        style === "short" || style === "narrow" ? style : "long";
-      // One formatter for the twelve dates. A PlainDate formats its own wall-clock fields
-      // (Temporal `PlainDate.prototype.toLocaleString`); the same date's UTC midnight in a
-      // `timeZone: "UTC"` formatter shows the same fields.
-      const formatter = cachedFormatter("DateTimeFormat", resolvedLocale, {
-        month: resolved,
-        calendar: "gregory",
-        timeZone: "UTC",
-      });
-      const names: string[] = [];
-      for (let month = 1; month <= 12; month++) {
-        const date = Temporal.PlainDate.from(
-          `2024-${String(month).padStart(2, "0")}-15`,
-        );
-        names.push(
-          formatter.format(date.toZonedDateTime("UTC").epochMilliseconds),
-        );
-      }
-      return names;
-    } catch {
-      return [];
-    }
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return [];
-  }
+  return monthNamesFor(locale, style);
 }

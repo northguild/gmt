@@ -1,0 +1,530 @@
+{
+  "date": {
+    "sha256": "9e43211130a2c0b5341d94f8c59a40d90a81ce5a4d4c182ede03b4edbc7ddc85",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:48.261485952Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ]
+    ]
+  },
+  "local": {
+    "sha256": "2a7a60cb300555f4a3bcc272ee70b4e8ed747ca6f3272a2ae1542f21210b1a77",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:50.161488261Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ]
+    ]
+  },
+  "utc": {
+    "sha256": "23e0d0736e6c668d6dcc77975641534a62d450aec8dfd09aaa57e3790644e318",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:52.003490161Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28"
+      ]
+    ]
+  },
+  "offset": {
+    "sha256": "c2014e466a4dd0cf40e8fd84d2798bcc262b898ee3cdf65161ca561b1dff5904",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:53.821492003Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ]
+    ]
+  },
+  "zoned": {
+    "sha256": "b568d8707b0469e03a8282d57f7aa4d5d00ef69404786e21a45610ff75865e26",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:55.676493821Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        }
+      ],
+      [
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        },
+        {
+          "threw": "RangeError: Invalid time value"
+        }
+      ]
+    ]
+  },
+  "object": {
+    "sha256": "727a134549631f5d634387b4b6eae0dfeaea262a5f0b56114cd97b77ccf52452",
+    "command": "cd scripts/zone-matrix && fnm exec --using=26 -- node date-kinds.mjs",
+    "instant": "2026-11-20T05:44:57.531495676Z",
+    "libraries": {},
+    "nodes": [
+      {
+        "node": "22",
+        "version": "v22.23.5",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "24",
+        "version": "v24.22.3",
+        "tzdata": "2026e"
+      },
+      {
+        "node": "26",
+        "version": "v26.13.1",
+        "tzdata": "2026e"
+      }
+    ],
+    "zones": [
+      "Pacific/Niue",
+      "America/New_York",
+      "UTC",
+      "Europe/London",
+      "Asia/Kolkata",
+      "Asia/Kathmandu",
+      "Asia/Shanghai",
+      "Australia/Lord_Howe",
+      "Pacific/Chatham",
+      "Pacific/Apia",
+      "Europe/Helsinki"
+    ],
+    "values": [
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ],
+      [
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-28",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27",
+        "2027-03-27"
+      ]
+    ]
+  }
+}

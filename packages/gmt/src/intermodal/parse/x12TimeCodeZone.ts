@@ -1,52 +1,5 @@
+import { x12ZoneOf } from "../../internal/x12TimeCodes";
 import type { X12NamedZone, X12ZoneTimeCode } from "../../types/edi";
-
-/**
- * X12 data element 623 code → the zone its definition names, release 008010, read from Stedi's
- * X12-licensed dictionary (https://www.stedi.com/edi/x12-008010/element/623); the X12 text was
- * not reached. Each comment quotes the definition. Typed by `X12ZoneTimeCode`, so a missing code
- * fails typecheck.
- */
-const X12_TIME_CODE_ZONE: Readonly<Record<X12ZoneTimeCode, X12NamedZone>> = {
-  // "Alaska Daylight Time", "Alaska Standard Time", "Alaska Time"
-  AD: { zone: "Alaska", daylight: true },
-  AS: { zone: "Alaska", daylight: false },
-  AT: { zone: "Alaska", daylight: null },
-  // "Central Daylight Time", "Central Standard Time", "Central Time"
-  CD: { zone: "Central", daylight: true },
-  CS: { zone: "Central", daylight: false },
-  CT: { zone: "Central", daylight: null },
-  // "Eastern Daylight Time", "Eastern Standard Time", "Eastern Time"
-  ED: { zone: "Eastern", daylight: true },
-  ES: { zone: "Eastern", daylight: false },
-  ET: { zone: "Eastern", daylight: null },
-  // "Hawaii-Aleutian Daylight Time", "Hawaii-Aleutian Standard Time", "Hawaii-Aleutian Time"
-  HD: { zone: "Hawaii-Aleutian", daylight: true },
-  HS: { zone: "Hawaii-Aleutian", daylight: false },
-  HT: { zone: "Hawaii-Aleutian", daylight: null },
-  // "Local Time"
-  LT: { zone: "Local", daylight: null },
-  // "Mountain Daylight Time", "Mountain Standard Time", "Mountain Time"
-  MD: { zone: "Mountain", daylight: true },
-  MS: { zone: "Mountain", daylight: false },
-  MT: { zone: "Mountain", daylight: null },
-  // "Newfoundland Daylight Time", "Newfoundland Standard Time", "Newfoundland Time"
-  ND: { zone: "Newfoundland", daylight: true },
-  NS: { zone: "Newfoundland", daylight: false },
-  NT: { zone: "Newfoundland", daylight: null },
-  // "Pacific Daylight Time", "Pacific Standard Time", "Pacific Time"
-  PD: { zone: "Pacific", daylight: true },
-  PS: { zone: "Pacific", daylight: false },
-  PT: { zone: "Pacific", daylight: null },
-  // "Atlantic Daylight Time", "Atlantic Standard Time", "Atlantic Time"
-  TD: { zone: "Atlantic", daylight: true },
-  TS: { zone: "Atlantic", daylight: false },
-  TT: { zone: "Atlantic", daylight: null },
-};
-
-/** Whether `code` is an own key of the table: `"toString"` and `"__proto__"` are not codes. */
-function isZoneTimeCode(code: unknown): code is X12ZoneTimeCode {
-  return typeof code === "string" && Object.hasOwn(X12_TIME_CODE_ZONE, code);
-}
 
 /**
  * Read the zone an X12 time code (data element 623) names.
@@ -107,7 +60,5 @@ function isZoneTimeCode(code: unknown): code is X12ZoneTimeCode {
 export function x12TimeCodeZone(timeCode: X12ZoneTimeCode): X12NamedZone;
 export function x12TimeCodeZone(timeCode: unknown): X12NamedZone | null;
 export function x12TimeCodeZone(timeCode: unknown): X12NamedZone | null {
-  if (!isZoneTimeCode(timeCode)) return null;
-  // A copy, so a caller cannot change the table through a result.
-  return { ...X12_TIME_CODE_ZONE[timeCode] };
+  return x12ZoneOf(timeCode);
 }

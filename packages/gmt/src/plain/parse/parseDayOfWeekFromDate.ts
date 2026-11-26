@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "../validate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return the day of week (1-7) for a given ISO 8601 date string.
@@ -16,12 +15,12 @@ import { isValidDate } from "../validate";
  * @example parseDayOfWeekFromDate("invalid") // null
  */
 export function parseDayOfWeekFromDate(value: string): number | null {
-  if (!isValidDate(value)) {
+  const date = plainDateOf(value);
+  if (date === null) {
     return null;
   }
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.dayOfWeek;
   } catch {
     return null;

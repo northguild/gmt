@@ -1,0 +1,73 @@
+/*
+ * The title's schedule card (`TalkSchedule.astro`): a calendar page with the day beside the start
+ * time, the doors time, the zone and the venue. The page is the Earth clock's date window at a fixed width, centred on the slot's height;
+ * its drawing rules are in `earth-clock.css`. The card's panel look is the shared one in `slides.css`.
+ */
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-schedule {
+  display: inline-flex;
+  gap: var(--gmt-deck-space-xl);
+  align-items: center;
+  justify-self: start;
+  padding: var(--gmt-deck-space-lg) var(--gmt-deck-space-xl)
+    var(--gmt-deck-space-lg) var(--gmt-deck-space-lg);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-page {
+  flex: none;
+  inline-size: 12cqi;
+  block-size: auto;
+  overflow: visible;
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-slot {
+  display: grid;
+  align-content: center;
+  gap: var(--gmt-deck-space-xs);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-slot :is(p, address) {
+  margin: 0;
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-event {
+  font-family: var(--gmt-font-display);
+  font-size: max(0.9rem, 1.9cqi);
+  letter-spacing: 0.06em;
+  color: var(--gmt-cyan-bright);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-date {
+  font-size: max(0.8rem, 1.6cqi);
+  color: var(--gmt-ice);
+}
+
+/* The start is the card's headline: the largest line. */
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-when {
+  padding-block-start: var(--gmt-deck-space-xs);
+  font-family: var(--gmt-font-display);
+  font-size: max(1.6rem, 5cqi);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--gmt-ice-bright);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-doors {
+  font-size: var(--gmt-deck-text-md);
+  color: var(--gmt-ice);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-zone {
+  font-size: var(--gmt-deck-text-md);
+  color: var(--gmt-ice-dim);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-venue {
+  padding-block-start: var(--gmt-deck-space-sm);
+  font-size: var(--gmt-deck-text-md);
+  font-style: normal;
+  color: var(--gmt-ice);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-talk-venue a {
+  color: var(--gmt-cyan-bright);
+}

@@ -7,8 +7,9 @@
  * - `ledgerLane` is a mono label beside a track (`drawn track`) that holds the `cells` list
  *   (`role="list"`, written empty; the mount fills it with `dayColumns`) and what the tool adds:
  *   a gate, a bar, the handles.
- * - `ledgerBar` is the half-open bar: a solid start edge and a dashed end edge. It is drawn
- *   only; the handles on its edges carry the name, the value and the keys.
+ * - `ledgerBar` is the half-open bar: a solid start edge and a dashed end edge. One bar the mount
+ *   places carries no name (the handles on its edges carry the name, the value and the keys);
+ *   bars placed with `from` and `to` take a `label` of their own.
  * - `ledgerHandles` lays the kit's handle track over the lane, so a handle's percent is the
  *   canvas's percent.
  * - `ledgerGate` is a vertical line with a chip that flips to the other side near the edge.
@@ -63,10 +64,24 @@ export function ledgerLane(
 
 interface LedgerBarOptions {
   id: string;
+  /**
+   * Where the bar sits, as percents of the track. Give both and the bar is drawn at once, so
+   * several can share one track; leave them out and the mount places one bar through
+   * `--gmt-bar-from` / `--gmt-bar-to`.
+   */
+  from?: number;
+  to?: number;
+  /** Names a placed bar in words. A bar with a label is an image the reader can find; one without is decoration. */
+  label?: string;
 }
 
 export function ledgerBar(o: LedgerBarOptions): SafeHtml {
-  return html`<div class="${styles.bar}" id="${o.id}" data-invalid="false" aria-hidden="true" hidden></div>`;
+  const placed = o.from !== undefined && o.to !== undefined;
+  const named = placed && o.label !== undefined;
+  return html`<div class="${styles.bar}" id="${o.id}" data-invalid="false"
+    ${named ? html`role="img" aria-label="${o.label ?? ""}"` : html`aria-hidden="true"`}
+    ${placed ? html`style="--gmt-bar-from: ${String(o.from)}; --gmt-bar-to: ${String(o.to)}"` : html`hidden`}
+  ></div>`;
 }
 
 interface LedgerGateOptions {

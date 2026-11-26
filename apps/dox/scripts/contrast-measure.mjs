@@ -38,9 +38,11 @@
  * same footing, against their own bar of 4.5:1: the text colour over the pixels
  * the halo leaves behind the glyphs. The halo is a text-shadow, so the
  * hidden-glyph pass keeps it for labels and drops it everywhere else.
- * `--canada-fixture` and `--morocco-fixture` serve a Worker answer (a .json
- * file) to a check page, so its labels show an offset; without one the labels
- * carry the NO SIGNAL mark. Both states belong in a run.
+ * `--canada-fixture`, `--morocco-fixture` and `--us-fixture` serve a Worker
+ * answer (a .json file) to a check page, so its labels show an offset; without
+ * one the labels carry the NO SIGNAL mark. Both states belong in a run. The
+ * Sunshine Protection Act page is measured in both its views (Today, then
+ * Proposals).
  *
  * Usage (serve a built `dist` first; `astro preview` or any static server):
  *
@@ -92,6 +94,7 @@ const FLOOR = 7;
 const FIXTURES = {
   canada: opt("canada-fixture", ""),
   morocco: opt("morocco-fixture", ""),
+  us: opt("us-fixture", ""),
 };
 const BORDER_FLOOR = 3;
 const VERBOSE = flag("verbose");
@@ -127,6 +130,20 @@ const ALL_PAGES = [
   { id: "dox-chat", path: "/dox/" },
   { id: "dox-chat+timetable", path: "/dox/", open: "showTimetableReader" },
   { id: "dox-chat+x12", path: "/dox/", open: "showX12TimeReader" },
+  { id: "dox-chat+ssim", path: "/dox/", open: "showSsimDateReader" },
+  { id: "dox-chat+gtfstime", path: "/dox/", open: "showGtfsTimeReader" },
+  { id: "dox-chat+ptpclock", path: "/dox/", open: "showPtpClockConverter" },
+  {
+    id: "dox-chat+reporttime",
+    path: "/dox/",
+    open: "showReportTimeResolver",
+  },
+  { id: "dox-chat+jdcount", path: "/dox/", open: "showJulianDayCounter" },
+  {
+    id: "dox-chat+dpmeter",
+    path: "/dox/",
+    open: "showDoublePrecisionMeter",
+  },
   {
     id: "check:canada-2026-clock-change",
     path: "/check/canada-2026-clock-change/",
@@ -135,6 +152,11 @@ const ALL_PAGES = [
     id: "check:morocco-2026-clock-change",
     path: "/check/morocco-2026-clock-change/",
   },
+  {
+    id: "check:us-sunshine-protection-act",
+    path: "/check/us-sunshine-protection-act/",
+    views: ["Proposals"],
+  },
   ...toolSlugs.map((slug) => ({
     id: `tool:${slug}`,
     path: `/tools/${slug}/`,
@@ -142,7 +164,7 @@ const ALL_PAGES = [
   })),
 ];
 
-const PAGES_ARG = applyPageContract({
+const PAGES_ARG = await applyPageContract({
   gate: GATE,
   pages: [...new Set(ALL_PAGES.map((p) => p.path))],
 });
@@ -249,7 +271,12 @@ function collect() {
     }
     return false;
   };
-  /** Rect clipped to every scrolling or clipping ancestor. */
+  /**
+   * Rect clipped to every scrolling or clipping ancestor's client (padding) box, never its border
+   * box: text cannot paint over a border or a classic scrollbar, so those pixels are not "behind"
+   * the glyph. An element with no client box (an inline element, where `overflow` does not apply)
+   * clips to its border box instead, and one with no box at all is skipped, so no glyph is dropped.
+   */
   const clip = (e, r) => {
     let [l, t, rr, b] = [r.left, r.top, r.right, r.bottom];
     for (
@@ -261,13 +288,19 @@ function collect() {
       if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
       if (p === document.body) continue;
       const pb = p.getBoundingClientRect();
+      const noClient = p.clientWidth === 0 && p.clientHeight === 0;
+      if (noClient && pb.width === 0 && pb.height === 0) continue;
+      const cl = noClient ? pb.left : pb.left + p.clientLeft;
+      const ct = noClient ? pb.top : pb.top + p.clientTop;
+      const cw = noClient ? pb.width : p.clientWidth;
+      const ch = noClient ? pb.height : p.clientHeight;
       if (cs.overflowX !== "visible") {
-        l = Math.max(l, pb.left);
-        rr = Math.min(rr, pb.right);
+        l = Math.max(l, cl);
+        rr = Math.min(rr, cl + cw);
       }
       if (cs.overflowY !== "visible") {
-        t = Math.max(t, pb.top);
-        b = Math.min(b, pb.bottom);
+        t = Math.max(t, ct);
+        b = Math.min(b, ct + ch);
       }
     }
     return rr - l > 1 && b - t > 1 ? [l, t, rr - l, b - t] : null;
@@ -399,18 +432,28 @@ function collect() {
   }
   // Disabled fields: the dashed border, measured on its own box edges.
   const borders = [];
-  for (const e of document.querySelectorAll(
+  for (const field of document.querySelectorAll(
     "input:disabled:not([type=range]), select:disabled, textarea:disabled",
   )) {
-    if (hiddenChain(e) || tiny(e)) continue;
+    if (hiddenChain(field) || tiny(field)) continue;
+    // A switchField's native input is drawn at opacity 0 over its track (the aria-hidden span
+    // after it); the track is the edge a reader sees, so that is what is measured. Any other
+    // transparent field is measured on itself.
+    const track = field.nextElementSibling;
+    const e =
+      field.matches('input[role="switch"]') &&
+      opacityOf(field) === 0 &&
+      track?.matches('[aria-hidden="true"]')
+        ? track
+        : field;
     const b = e.getBoundingClientRect();
     if (b.width < 2) continue;
     const cs = getComputedStyle(e);
     const w = parseFloat(cs.borderTopWidth) || 1;
     borders.push({
-      kind: `border ${label(e)}`,
-      target: label(e),
-      selector: window.__gmtCssPath(e),
+      kind: `border ${label(field)}`,
+      target: label(field),
+      selector: window.__gmtCssPath(field),
       color: rgba(cs.borderTopColor),
       style: cs.borderTopStyle,
       chrome: isChrome(e),
@@ -472,11 +515,17 @@ async function setup(page, theme, p) {
 
 /** A check page may be given a Worker answer, so its labels show an offset. */
 async function serveFixture(page, p) {
-  const word = p.id.includes("morocco") ? "morocco" : "canada";
+  const word = p.id.includes("morocco")
+    ? "morocco"
+    : p.id.includes("us-sunshine")
+      ? "us"
+      : "canada";
   const file = p.id.startsWith("check:") ? FIXTURES[word] : "";
   if (!file) return;
   const body = readFileSync(file, "utf8");
-  await page.route(`**/api/${word}-clock-change`, (route) =>
+  const api =
+    word === "us" ? "sunshine-protection-act" : `${word}-clock-change`;
+  await page.route(`**/api/${api}`, (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -486,13 +535,28 @@ async function serveFixture(page, p) {
   );
 }
 
-/** The zone map draws when it scrolls into view: bring it there, wait for it, and go back to the top. */
+/**
+ * The zone map draws when it scrolls into view: bring the shown one there, wait for it, and go
+ * back to the top. A checker's map has `map-svg`; the US page's views each have a `us-section`
+ * whose `data-map` turns `drawn` (or `failed`) once its boundary file is in.
+ */
 async function drawMap(page) {
-  const section = page.locator(gate("map-section"));
+  const section = page
+    .locator(`${gate("map-section")}, ${gate("us-section")}`)
+    .filter({ visible: true })
+    .first();
   if ((await section.count()) === 0) return;
   await section.scrollIntoViewIfNeeded();
   await page
-    .waitForSelector(gate("map-svg"), { timeout: 20000 })
+    .waitForFunction(
+      ([svg, us]) =>
+        document.querySelector(svg) ||
+        [...document.querySelectorAll(us)].some(
+          (s) => s.checkVisibility() && s.dataset.map,
+        ),
+      [gate("map-svg"), gate("us-section")],
+      { timeout: 20000 },
+    )
     .catch(() => {});
   await page.waitForTimeout(800);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -500,6 +564,11 @@ async function drawMap(page) {
 
 /** States to measure for a page: the default, plus every preset and a sentinel pass for tools. */
 async function statesFor(page, p) {
+  if (p.views)
+    return [
+      { name: "default" },
+      ...p.views.map((v) => ({ name: `view:${v}`, view: v })),
+    ];
   if (!p.tool) return [{ name: "default" }];
   const select = presetSelect(page);
   const presets = (await select.count())
@@ -513,6 +582,11 @@ async function statesFor(page, p) {
 }
 
 async function applyState(page, st) {
+  if (st.view) {
+    // A view's map is fetched when the view is first shown.
+    await page.getByRole("radio", { name: st.view }).click();
+    await drawMap(page);
+  }
   if (st.preset)
     await presetSelect(page)
       .selectOption(st.preset)

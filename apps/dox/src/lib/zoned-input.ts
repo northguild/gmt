@@ -31,10 +31,13 @@
  *     2024-10-24T09:00:00-04:00[-04:00]        valid
  *     2024-10-24T09:00:00-0400[-0400]          invalid   (basic offset; GMT takes ±HH:MM only)
  *     2024-10-24T09:00:00-04:00[America/New_York]  valid
+ *     1960-06-01T11:15:30-00:44:30[-00:44:30]      invalid   (an offset zone has no seconds)
  *
  * The offset case is the one worth noticing: a numeric offset cannot simply be
  * given `[UTC]`, because the two disagree. It becomes its own bracket instead,
- * which preserves the instant the model actually meant.
+ * which preserves the instant the model actually meant. An offset with seconds
+ * cannot be a bracket at all, so that instant is written in the fallback zone:
+ * `1960-06-01T11:15:30-00:44:30` becomes `1960-06-01T12:00:00+00:00[UTC]`.
  *
  * ## Why an offset is added and not just a bracket
  *
@@ -53,8 +56,11 @@
  * kind of half-fix that looks correct in a test that asks the wrong question.
  */
 
-/** A trailing numeric offset, e.g. `-04:00` or `+09:00`, at the very end. */
-const TRAILING_OFFSET = /([+-]\d{2}:?\d{2})$/;
+import { Temporal } from "@northguild/gmt";
+
+/** A trailing numeric offset, e.g. `-04:00` or `+09:00`, at the very end,
+ *  with any seconds (`-00:44:30`, Monrovia before 1972) in group 2. */
+const TRAILING_OFFSET = /([+-]\d{2}:?\d{2})(:?\d{2}(?:[.,]\d{1,9})?)?$/;
 
 /**
  * @param value Whatever arrived — from a tool call, or a `?wa=` permalink.
@@ -76,6 +82,18 @@ export function normaliseZonedInput(
   if (trimmed.includes("[")) return trimmed;
 
   const offset = TRAILING_OFFSET.exec(trimmed);
+  if (offset?.[2] !== undefined) {
+    /* An offset with seconds cannot be its own bracket: Temporal's offset time
+       zones are whole minutes. The instant it names is written in the fallback
+       zone instead, so the moment the model meant is kept to the second. */
+    try {
+      return Temporal.Instant.from(trimmed)
+        .toZonedDateTimeISO(fallbackZone)
+        .toString();
+    } catch {
+      return trimmed;
+    }
+  }
   if (offset) {
     // `[UTC]` would contradict the offset; the offset becomes the zone. GMT
     // accepts only the extended `±HH:MM` form, so a basic `+0900` gains its colon.

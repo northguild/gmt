@@ -3,6 +3,8 @@ import {
   STORED_MAX_LINES,
   capStoredInput,
   completeStoredLine,
+  storedBadge,
+  storedFix,
 } from "./clock-change-stored-lines";
 import { DOX_TOOL_DOCS } from "./dox-tools";
 
@@ -169,4 +171,58 @@ describe("the chat's description of the saved-events form", () => {
       expect(purpose.match(/up to (\d+) pasted/g)).toHaveLength(1);
     },
   );
+});
+
+describe("offsets with seconds", () => {
+  // Readings classifyStoredZoned returns for these strings.
+  const NY = {
+    kind: "offsetMismatch",
+    storedOffset: "-05:00",
+    zoneOffset: "-04:56:02",
+    atStoredOffset: "1880-01-01T17:00:00Z",
+    atZoneOffset: "1880-01-01T16:56:02Z",
+  };
+  const MONROVIA = {
+    kind: "offsetMismatch",
+    storedOffset: "+00:00",
+    zoneOffset: "-00:44:30",
+    atStoredOffset: "1960-06-01T11:15:30Z",
+    atZoneOffset: "1960-06-01T12:00:00Z",
+  };
+
+  it("says how far off to the second", () => {
+    expect(storedBadge(NY, false).label).toBe("Shows 3 min 58 s off");
+    expect(storedBadge(MONROVIA, false).label).toBe("Shows 44 min 30 s off");
+  });
+
+  it("puts the zone's offset with seconds on the kept local time", () => {
+    expect(
+      storedFix("1880-01-01T12:00:00-05:00[America/New_York]", NY),
+    ).toEqual({
+      keepLocal: "1880-01-01T12:00:00-04:56:02[America/New_York]",
+      localHm: "12:00",
+      oldLocal: "12:03:58",
+    });
+    expect(
+      storedFix("1960-06-01T11:15:30+00:00[Africa/Monrovia]", MONROVIA),
+    ).toEqual({
+      keepLocal: "1960-06-01T11:15:30-00:44:30[Africa/Monrovia]",
+      localHm: "11:15",
+      oldLocal: "10:31",
+    });
+  });
+
+  it("replaces a stored offset that itself has seconds", () => {
+    const fix = storedFix("1880-01-01T12:00:00-04:56:03[America/New_York]", {
+      kind: "offsetMismatch",
+      storedOffset: "-04:56:03",
+      zoneOffset: "-04:56:02",
+      atStoredOffset: "1880-01-01T16:56:03Z",
+      atZoneOffset: "1880-01-01T16:56:02Z",
+    });
+    expect(fix?.keepLocal).toBe(
+      "1880-01-01T12:00:00-04:56:02[America/New_York]",
+    );
+    expect(fix?.oldLocal).toBe("12:00:01");
+  });
 });

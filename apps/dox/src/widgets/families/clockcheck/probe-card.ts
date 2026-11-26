@@ -90,6 +90,15 @@ function placeCell(zone: string, when?: string): SafeHtml {
   return html`<span class="${styles.city}">${cityOf(zone)}</span><code class="${styles.zoneid}">${zoneId(zone)}</code>${when === undefined ? null : html`<small class="${styles.when}">${when}</small>`}`;
 }
 
+/**
+ * An offset column's head: the label on one line and its note under it. The comma between them is
+ * for assistive technology ("Correct, tzdb 2026c or later"); the note stands under the label on
+ * screen, so no bracket is drawn.
+ */
+function offsetHead(label: string, note: string): SafeHtml {
+  return html`<span class="${styles.label}">${label}</span><span class="${styles.aside}">,</span> <span class="${styles.note}">${note}</span>`;
+}
+
 function yoursCell(id: string): SafeHtml {
   return html`<span id="${id}">${noSignal()}</span>`;
 }
@@ -131,13 +140,13 @@ export function probeCard(config: ProbeConfig, text: VerdictText): SafeHtml {
         { key: "place", header: "Place", align: "start", numeric: false },
         {
           key: "correct",
-          header: `Correct (${text.correctNote})`,
+          header: offsetHead("Correct", text.correctNote),
           align: "end",
           numeric: true,
         },
         {
           key: "yours",
-          header: `Yours (${text.yoursNote})`,
+          header: offsetHead("Yours", text.yoursNote),
           align: "end",
           numeric: true,
         },

@@ -2,13 +2,12 @@ import type { SmallestUnit } from "../../internal/temporalTypes";
 import {
   frameInstant,
   frameZoned,
-  instantFrom,
   zonedUnitStart,
   zoneFrame,
 } from "../../internal";
-import { isValidInstant } from "../../precision/validate";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { ZoneBucketUnit } from "../../types";
-import { isValidZoneBucketUnit } from "../validate";
+import { isZoneBucketUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
 /**
@@ -24,11 +23,8 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  *   accepts. Weeks start on Monday (ISO 8601), matching `startOfZoned` and `intervalCountZoned`.
  *   `isValidZoneBucketUnit` narrows a candidate unit, singular or plural, so a unit out of config
  *   can be told apart from a bad instant.
- * - `value` is any instant `isValidInstant` accepts — `Z`, an offset, or a bracketed zone.
- *   Only its instant is read: a bracketed zone in `value` is *not* the zone the boundary is
- *   computed in, `timeZone` is, and the two may differ freely. An offset written to the minute
- *   that is the bracketed zone's sub-minute offset rounded (`-00:45[Africa/Monrovia]`, for
- *   −00:44:30) names the instant the zone gives, as `isValidInstant` describes.
+ * - `value` is an instant `isValidInstant` accepts — `Z` or an offset, with no annotation of
+ *   any kind. The zone the boundary is computed in is `timeZone`, never one written in `value`.
  * - The boundary is a real instant in the zone, so it survives the days a local boundary does
  *   not exist: a local day whose midnight is skipped by a spring-forward starts at 01:00, and
  *   a wall hour repeated by a fall-back floors to whichever pass `value` was in.
@@ -70,16 +66,18 @@ export function floorToZone(
 
   const frame = zoneFrame(timeZone);
 
+  const instant = instantOf(value);
+
   if (
-    !isValidInstant(value) ||
-    !isValidZoneBucketUnit(resolvedUnit) ||
+    instant === null ||
+    !isZoneBucketUnitName(resolvedUnit) ||
     frame === null
   ) {
     return "";
   }
 
   try {
-    const zoned = frameZoned(instantFrom(value), frame);
+    const zoned = frameZoned(instant, frame);
     const start = zonedUnitStart(zoned, resolvedUnit);
 
     return start ? frameInstant(start, frame).toString() : "";

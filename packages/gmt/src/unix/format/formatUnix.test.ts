@@ -1,8 +1,8 @@
 import { expectDateTimeEqual, MustTestLocales } from "../../test";
-import { getSystemTimeZone } from "../../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../../internal/resolveLocale";
 import { formatUnix } from "./formatUnix";
 
-vi.mock("../../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../../internal/resolveLocale", { spy: true });
 
 // Base: 2024-02-29T00:00:00Z (Thursday — leap day)
 const REF_MS = 1709164800000;
@@ -11,7 +11,7 @@ const REF_S = 1709164800;
 describe("formatUnix", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
   });
 
   // ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ describe("formatUnix", () => {
     });
 
     it("defaults to system timezone when no timeZone is provided", () => {
-      vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+      vi.mocked(systemTimeZone).mockReturnValue("UTC");
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
@@ -101,8 +101,8 @@ describe("formatUnix", () => {
       ).toBe("February 29, 2024 at 12:00:00 AM");
     });
 
-    it("uses getSystemTimeZone() when timeZone is 'local'", () => {
-      vi.mocked(getSystemTimeZone).mockReturnValue("Europe/Paris");
+    it("reads the system time zone when timeZone is 'local'", () => {
+      vi.mocked(systemTimeZone).mockReturnValue("Europe/Paris");
       expect(
         formatUnix(REF_MS, MustTestLocales.enUS, {
           dateStyle: "long",
@@ -288,12 +288,11 @@ describe("formatUnix with inherited options", () => {
   );
 });
 
-// ECMA-402 GetOption converts an option to a string once (ToString, step 2 after the one Get), so
-// an object option is asked for its value once and that answer is both checked and used: a long
-// month and a numeric day in en-US are "March 15"; a second ToString would answer "narrow" and
-// print "M 15".
+// ECMA-402 GetOption would turn an object option into its ToString. A function accepts a
+// string for a string option and nothing else, so it returns its sentinel and the caller's
+// toString() is never run.
 describe("formatUnix with an option that is an object", () => {
-  it("calls month.toString() once and formats with its first answer, long", () => {
+  it("returns the sentinel for month given as an object, and never calls its toString()", () => {
     let coercions = 0;
     const month = {
       toString() {
@@ -305,24 +304,24 @@ describe("formatUnix with an option that is an object", () => {
       month,
       day: "numeric",
     } as never);
-    expect({ out, coercions }).toEqual({ out: "March 15", coercions: 1 });
+    expect({ out, coercions }).toEqual({ out: "", coercions: 0 });
   });
 });
 
 // A mocked row must not leak: the module is replaced with a spy for the whole file, and Vitest
 // restores only spies it created itself, so each file resets this one explicitly.
-describe("getSystemTimeZone after a mocked row", () => {
+describe("the system time zone after a mocked row", () => {
   afterEach(() => {
-    vi.mocked(getSystemTimeZone).mockReset();
+    vi.mocked(systemTimeZone).mockReset();
   });
 
   it("returns the mocked zone while a row replaces it", () => {
-    vi.mocked(getSystemTimeZone).mockReturnValue("Pacific/Kiritimati");
-    expect(getSystemTimeZone()).toBe("Pacific/Kiritimati");
+    vi.mocked(systemTimeZone).mockReturnValue("Pacific/Kiritimati");
+    expect(systemTimeZone()).toBe("Pacific/Kiritimati");
   });
 
   it("returns the host's own zone again in the next row", () => {
-    expect(getSystemTimeZone()).toBe(
+    expect(systemTimeZone()).toBe(
       Intl.DateTimeFormat().resolvedOptions().timeZone,
     );
   });

@@ -52,7 +52,7 @@ const MOTION_WAIT_MS = 2000;
 /** How long the contrast check waits for the emulated state to reach the page. */
 const EMULATION_WAIT_MS = 2000;
 
-const run = parseSweep({
+const run = await parseSweep({
   gate: GATE,
   pages: distPages(GATE),
   defaults: { widths: "1440" },
@@ -272,7 +272,17 @@ async function checkForcedColors(page) {
         if (!el.checkVisibility({ checkVisibilityCSS: true })) continue;
         const r = el.getBoundingClientRect();
         if (r.width <= 2 || r.height <= 2) continue;
-        const c = getComputedStyle(el);
+        // A switchField's input is transparent over its track (the aria-hidden span after it):
+        // the track is what the reader sees, so its edge, and its outline when the input has
+        // focus, are the control's. Any other transparent control is judged on itself.
+        const track = el.nextElementSibling;
+        const seen =
+          el.matches('input[role="switch"]') &&
+          getComputedStyle(el).opacity === "0" &&
+          track?.matches('[aria-hidden="true"]')
+            ? track
+            : el;
+        const c = getComputedStyle(seen);
         const border = ["Top", "Right", "Bottom", "Left"].some(
           (side) =>
             c[`border${side}Style`] !== "none" &&
@@ -280,7 +290,7 @@ async function checkForcedColors(page) {
         );
         if (border) continue;
         el.focus({ focusVisible: true });
-        const f = getComputedStyle(el);
+        const f = getComputedStyle(seen);
         const outline =
           f.outlineStyle !== "none" &&
           (f.outlineStyle === "auto" || parseFloat(f.outlineWidth) > 0);

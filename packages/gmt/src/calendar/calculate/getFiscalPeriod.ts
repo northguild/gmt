@@ -8,7 +8,7 @@ import {
 } from "../../internal";
 import { isObject } from "../../internal/isObject";
 import type { FiscalCalendar } from "../../types";
-import { isValidFiscalCalendar } from "../validate";
+import { isFiscalCalendarRecord } from "../../internal/unitNames";
 
 /** Days in a fiscal week. */
 const DAYS_PER_WEEK = 7;
@@ -115,7 +115,7 @@ export function getFiscalPeriod(
       yearLabel: calendar.yearLabel,
     };
 
-    if (!isValidFiscalCalendar(fields)) return null;
+    if (!isFiscalCalendarRecord(fields)) return null;
 
     const date = zonelessCalendarDate(value);
     if (!date) return null;

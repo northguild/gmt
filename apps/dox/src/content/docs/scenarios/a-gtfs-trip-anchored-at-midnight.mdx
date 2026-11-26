@@ -1,0 +1,38 @@
+---
+title: "A GTFS Trip Anchored at Midnight"
+description: A feed import adds each stop time to local midnight, and on the day the clocks go forward every stop of that service day shows an hour late.
+industries: [rail]
+---
+
+import Scenario from "~/components/Scenario.astro";
+
+<Scenario
+  title="A GTFS Trip Anchored at Midnight"
+  description="A feed import adds each stop time to local midnight, and on the day the clocks go forward every stop of that service day shows an hour late."
+  naiveCode={`// The naive approach: add the stop time to local midnight of the service day
+import { parseGtfsTime } from "@northguild/gmt/rail/parse";
+import { resolveLocal } from "@northguild/gmt/instant/convert";
+import { addUtc } from "@northguild/gmt/utc/calculate";
+
+const record = parseGtfsTime("08:00:00");
+// { seconds: 28800, dayOverflow: 0 }
+
+const midnight = resolveLocal("2026-03-29T00:00:00", "Europe/Berlin");
+// "2026-03-28T23:00:00Z"
+
+if (record !== null) addUtc(midnight, { days: record.dayOverflow, seconds: record.seconds });
+// "2026-03-29T07:00:00Z" — 09:00 in Berlin`}
+  explanation={`A GTFS time counts from noon minus 12 hours of the service day. On most days that is local midnight. On 29 March 2026 the clocks in Berlin go forward at 02:00, so noon minus 12 hours is 23:00 on 28 March, and a stop at 08:00:00 is 06:00 UTC, which reads 08:00 in Berlin. An import that adds the time to local midnight gets 07:00 UTC, which reads 09:00. Every stop of that service day shows an hour late, not only the ones after the change: 00:30:00 is 23:30 on 28 March under GTFS and 00:30 under a midnight anchor. Nothing in the stored value shows it, and the feed looks fine until the departure board and the trains disagree twice a year. In October the same import is an hour early, because the clocks go back and the day has an extra hour. gtfsToInstant takes the service date and the agency's zone and counts from the right point.`}
+  gmtCode={`import { gtfsToInstant } from "@northguild/gmt/rail/convert";
+
+gtfsToInstant("20260329", "08:00:00", "Europe/Berlin");
+// "2026-03-29T06:00:00Z" — 08:00 in Berlin`}
+  brokenSpecId="resolveLocal"
+  fixedSpecId="gtfsToInstant"
+/>
+
+The fix is to count from noon minus 12 hours of the service day, in the agency's zone. See
+[Rail: GTFS Service Days](/guides/industries/rail-gtfs-service-days/#from-a-record-to-an-instant)
+for the rule, and [Rail mistakes](/mistakes/rail/) for the others that come with it.
+
+[Try it in the GTFS Service Day Clock](/tools/gtfs-service-day-clock/?w=gtfsday&wa=%7B%22preset%22%3A%22spring-forward%22%7D).

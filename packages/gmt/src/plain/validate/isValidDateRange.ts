@@ -1,5 +1,5 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "./isValidDate";
+import { booleanOption } from "../../internal/typedOptions";
+import { plainDateOf } from "../../internal/inputChecks";
 import { isObject, isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -38,8 +38,8 @@ export interface IsValidDateRangeProps {
 /**
  * Return whether `value1` is before `value2`.
  *
- * - Validates both dates with `isValidDate`, so each endpoint's RFC 9557 annotations are read as
- *   `Temporal.PlainDate.from` reads them (an elective `[foo=bar]` or `[u-ca=iso8601]` is ignored).
+ * - Validates both dates with `isValidDate`, so an annotation of any kind on either endpoint
+ *   (`[foo=bar]`, `[u-ca=iso8601]`, a time zone) returns `false`.
  * - Rejects leap seconds in either date.
  *
  * @param props The two values to compare and how equal values are treated
@@ -56,14 +56,15 @@ export function isValidDateRange(props: IsValidDateRangeProps): boolean {
     const { value1, value2, options } = props;
     if (!isOptionsArgument(options)) return false;
 
-    if (!isValidDate(value1) || !isValidDate(value2)) {
+    const date1 = plainDateOf(value1);
+
+    const date2 = plainDateOf(value2);
+
+    if (date1 === null || date2 === null) {
       return false;
     }
 
     try {
-      const date1 = Temporal.PlainDate.from(value1);
-      const date2 = Temporal.PlainDate.from(value2);
-
       const isLessThan =
         date1.year < date2.year ||
         (date1.year === date2.year && date1.month < date2.month) ||
@@ -76,7 +77,7 @@ export function isValidDateRange(props: IsValidDateRangeProps): boolean {
         date1.month === date2.month &&
         date1.day === date2.day;
 
-      if (options?.allowEqual) {
+      if (booleanOption(options?.allowEqual, false)) {
         return isLessThan || isEqual;
       }
 

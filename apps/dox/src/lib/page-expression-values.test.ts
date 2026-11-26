@@ -21,6 +21,7 @@ const PAGES = [
   "bundle-size.mdx",
   "upstream.mdx",
   "compare/behaviour.mdx",
+  "install.mdx",
   "migrate/index.mdx",
   "migrate/date-fns.mdx",
   "migrate/luxon.mdx",

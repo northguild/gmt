@@ -1,4 +1,4 @@
-import { Temporal } from "../../internal/temporal";
+import { booleanOption } from "../../internal/typedOptions";
 import {
   cycleFieldValue,
   dateCycleFieldBounds,
@@ -6,12 +6,13 @@ import {
   timeCycleFieldBounds,
 } from "../../internal";
 import type { DateTimeCycleField, Overflow } from "../../types";
+import { plainDateTimeOf } from "../../internal/inputChecks";
+import { withDateTimeFields } from "../../internal/readSetFields";
+import { resolveOverflow } from "../../internal/resolveOverflow";
 import {
-  isValidDateCycleField,
-  isValidDateTime,
-  isValidDateTimeCycleField,
-} from "../validate";
-import { setDateTime } from "./setDateTime";
+  isDateCycleFieldName,
+  isDateTimeCycleFieldName,
+} from "../../internal/unitNames";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -70,29 +71,31 @@ export function cycleDateTime(
     return "";
   }
 
+  const dateTime = plainDateTimeOf(value);
   if (
-    !isValidDateTime(value) ||
-    !isValidDateTimeCycleField(field) ||
+    dateTime === null ||
+    !isDateTimeCycleFieldName(field) ||
     !isValidAmount(amount)
   ) {
     return "";
   }
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
-    const bounds = isValidDateCycleField(field)
+    const bounds = isDateCycleFieldName(field)
       ? dateCycleFieldBounds(field, dateTime)
       : timeCycleFieldBounds(field);
     const newValue = cycleFieldValue(
       dateTime[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
-    return setDateTime(
-      value,
-      { [field]: newValue },
-      { overflow: options?.overflow },
+    return (
+      withDateTimeFields(
+        dateTime,
+        { [field]: newValue },
+        resolveOverflow(options?.overflow),
+      )?.toString() ?? ""
     );
   } catch {
     return "";

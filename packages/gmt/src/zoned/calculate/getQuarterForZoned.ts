@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the quarter of the year (1-4) for a given zoned ISO datetime.
@@ -16,12 +15,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example getQuarterForZoned("invalid") // null
  */
 export function getQuarterForZoned(value: string): number | null {
-  if (!isValidZonedDateTime(value)) {
+  const zdt = zonedDateTimeOf(value);
+  if (zdt === null) {
     return null;
   }
 
   try {
-    const zdt = zonedDateTimeFrom(value);
     return Math.floor((zdt.month - 1) / 3) + 1;
   } catch {
     return null;

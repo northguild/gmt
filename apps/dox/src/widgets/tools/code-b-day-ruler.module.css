@@ -1,0 +1,159 @@
+/*
+ * Code B Day Ruler: what only this tool needs. The sections, fields, preset, range, holds,
+ * code frame and the timeline (lanes, bands, ticks) are the kit's. This sheet lays the controls
+ * out, sets the two readout cards and fixes the ruler's label column.
+ *
+ * The two years are told apart by more than colour: each readout has its year in its header
+ * over a coloured bottom edge, and each lane draws its own series. A hatched band alternates
+ * with a solid one, so the month edges show without colour. Amber is the sentinel's alone.
+ * No accent is a left edge.
+ */
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* A group that needs the whole row: the preset and the day slider. */
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.stack {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+/* The two readouts sit side by side and stack below 30rem of their own container. The first
+   card's left edge is the row's left edge and the second card's right edge is its right edge. */
+.pair {
+  container: pair / inline-size;
+  min-inline-size: 0;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+
+  @container pair (inline-size < 30rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.readout {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+/* The year, over its colour: a bottom edge, never a left one. */
+.head {
+  --series: var(--gmt-series-1);
+
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--gmt-space-2);
+  padding-block-end: var(--gmt-space-1);
+  border-block-end: 3px solid var(--series);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--gmt-ice);
+  white-space: nowrap;
+
+  &[data-series="2"] {
+    --series: var(--gmt-series-2);
+  }
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--gmt-space-1) var(--gmt-space-3);
+  align-items: baseline;
+  margin: 0;
+  min-inline-size: 0;
+
+  & > dt {
+    color: var(--gmt-ice-dim);
+    font-size: var(--gmt-text-xs);
+  }
+
+  & > dd {
+    margin: 0;
+    min-inline-size: 0;
+  }
+}
+
+.mono {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.date {
+  display: block;
+  font-size: var(--gmt-text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* A bracketed NO SIGNAL: amber is for this state only. */
+.lost {
+  color: var(--gmt-signal-ink);
+}
+
+.sentence {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The label column is wide enough for `8888 · 366 days` in mono and fixed, so a typed year
+   never changes the lane's width. The queries in the lane and its ticks read this container. */
+.ruler {
+  --gmt-timeline-label-w: 9rem;
+
+  container: ruler / inline-size;
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.calls {
+  min-inline-size: 0;
+}
+
+@media (forced-colors: active) {
+  .head {
+    border-block-end-color: CanvasText;
+
+    &[data-series="2"] {
+      border-block-end-style: double;
+    }
+  }
+
+  .lost {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .head {
+    border-block-end-width: 4px;
+  }
+}

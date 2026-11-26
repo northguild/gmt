@@ -1,6 +1,6 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
+import { dateTimeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTimeInterval } from "./validate";
-import { isValidDateTime } from "../validate";
 
 /**
  * Split a datetime interval at arbitrary `points`, producing consecutive sub-intervals.
@@ -55,7 +55,8 @@ export function intervalSplitAtDateTime(
       return [];
     }
 
-    if (!isValidDateTimeInterval(start, end)) {
+    const bounds = dateTimeIntervalOf(start, end);
+    if (bounds === null) {
       return [];
     }
 
@@ -63,17 +64,21 @@ export function intervalSplitAtDateTime(
       return [];
     }
 
-    if (!points.every((point) => isValidDateTime(point))) {
-      return [];
+    const parsedPoints: Temporal.PlainDateTime[] = [];
+    for (let index = 0; index < points.length; index++) {
+      if (!(index in points)) {
+        continue;
+      }
+      const point = points[index];
+      const parsedPoint = plainDateTimeOf(point);
+      if (parsedPoint === null) {
+        return [];
+      }
+      parsedPoints[index] = parsedPoint;
     }
 
     try {
-      const startVal = Temporal.PlainDateTime.from(start);
-      const endVal = Temporal.PlainDateTime.from(end);
-
-      const parsedPoints = points.map((point) =>
-        Temporal.PlainDateTime.from(point),
-      );
+      const [startVal, endVal] = bounds;
 
       const inRangePoints = parsedPoints.filter(
         (point) =>

@@ -49,7 +49,7 @@ import {
   type RailEventView,
 } from "~/widgets/families/ledger/clock-plot";
 import { dayColumns } from "~/widgets/families/ledger/day-columns";
-import { handoffLink } from "~/widgets/families/ledger/handoff-link";
+import { handoffRow } from "~/widgets/families/ledger/handoff-link";
 import {
   axisTicks,
   ledgerAxis,
@@ -80,6 +80,7 @@ import {
   permalinkOf,
   presetState,
   readArgs,
+  NO_INTERVAL_TEXT,
   readClocks,
   summaryText,
   zoneLabel,
@@ -123,8 +124,6 @@ const PLATE_SAMPLES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const EMPTY_TEXT = "Add an event with an instant to draw the clocks.";
-const NO_INTERVAL_TEXT =
-  "The library returned no interval for these events and options.";
 
 interface Option {
   value: string;
@@ -342,11 +341,10 @@ export function renderDemurrageClockTemplate(
       { gate: "frame" },
     )}<p role="status" aria-label="Reading summary" id="${id("summary")}">${srOnly("")}</p>${grow(
       html`<div id="${id("reason")}"></div>`,
-    )}<div class="${styles.handoff}">${handoffLink({
+    )}${handoffRow({
       id: id("handoff"),
       label: "Count the days in the Free Time Ledger",
-      describedBy: id("handoff-hint"),
-    })}<p class="${styles.hint}" id="${id("handoff-hint")}"></p></div>`,
+    })}`,
   );
 
   const returns = section(

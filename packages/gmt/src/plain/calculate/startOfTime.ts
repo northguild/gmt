@@ -1,11 +1,12 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import type { SmallestUnit } from "../../internal/temporalTypes";
+import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { defaultFractionalDigits } from "../../internal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import type { FractionalDigit } from "../../types";
-import { isValidTime } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
+import { fractionalDigitsOption } from "../../internal/typedOptions";
 
 /**
  * Units `startOfTime` accepts: a Temporal time unit, or `"day"` for midnight, each singular or plural.
@@ -65,13 +66,15 @@ export function startOfTime(
       return "";
     }
 
-    const fractionalSecondDigits = optionsArg?.fractionalSecondDigits;
+    const fractionalSecondDigits = fractionalDigitsOption(
+      optionsArg?.fractionalSecondDigits,
+    );
     const resolvedUnit = resolveDateTimeUnit(unit);
 
-    if (!isValidTime(value) || !supported.includes(resolvedUnit)) return "";
+    const source = plainTimeOf(value);
+    if (source === null || !supported.includes(resolvedUnit)) return "";
 
     try {
-      const source = Temporal.PlainTime.from(value);
       const result =
         resolvedUnit === "day"
           ? new Temporal.PlainTime()

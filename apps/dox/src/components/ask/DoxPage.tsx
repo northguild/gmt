@@ -17,14 +17,8 @@
  * the open sheet folds it from the start. CSS makes that call (gmt-hive.css),
  * so the server-rendered page is already right and nothing snaps shut on load.
  */
-import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { cue } from "~/lib/sound/cue";
 import { starterWidgetCall, type CHAT_STARTERS } from "~/lib/chat-constants";
 import { DoxChat, type DoxChatHandle } from "./DoxChat";
 import { ExamplesBar } from "./ExamplesBar";
@@ -34,8 +28,8 @@ import { useBrains } from "./use-brains";
 import { useEscLayer } from "./use-esc-layer";
 import { ChatErrorBoundary } from "./ChatErrorBoundary";
 import { RailResizer } from "./RailResizer";
-import { WidgetRail, type RailWidget } from "./WidgetRail";
-import { isSameWidget, resolveWidget } from "./widget-registry";
+import { WidgetRail } from "./WidgetRail";
+import { useRailWidget } from "./use-rail-widget";
 
 /** Which Worker this page is talking to.
  *
@@ -43,8 +37,9 @@ import { isSameWidget, resolveWidget } from "./widget-registry";
  * `window.location` made the server render one value and the client render
  * another, which React reports as a hydration mismatch (#418) — this is
  * client-only state, so it has to arrive in a second pass. `null` is the
- * pre-mount state and renders nothing, which is also why the badge cannot
- * flicker from the wrong label to the right one. */
+ * pre-mount state: the badge holds its place, unseen and hidden from assistive
+ * tech, so the strip keeps its height and the chat under it never moves, and
+ * the label shows only once it is known. */
 type Environment = "local" | "live";
 
 function useEnvironment(): Environment | null {
@@ -64,10 +59,8 @@ export default function DoxPage() {
 
   /* The rail's state lives here rather than in `DoxChat`: it is this host's
      chrome, and the dock will lay widgets out its own way. One at a time. */
-  const [railWidget, setRailWidget] = useState<RailWidget | null>(null);
-  /* Read by `showWidget`, which is stable (no deps) and so cannot see state. */
-  const railWidgetRef = useRef<RailWidget | null>(null);
-  railWidgetRef.current = railWidget;
+  const rail = useRailWidget();
+  const { railWidget, openRef: railWidgetRef } = rail;
 
   const railId = useId();
   const chatRef = useRef<DoxChatHandle>(null);
@@ -86,48 +79,33 @@ export default function DoxPage() {
     [],
   );
 
+  /* A widget that does not open (an unknown tool, input that fails the schema,
+     or the one already open) asks for no focus: the receipt in the transcript
+     has already said so. */
   const showWidget = useCallback(
     (toolCallId: string, toolName: string, input: unknown) => {
-      /* The single dispatch point. An unknown tool name or input that fails the
-         schema resolves to a reason, and the rail simply never opens — the
-         receipt in the transcript has already said so. */
-      const resolved = resolveWidget(toolName, input);
-      if (!resolved.ok) {
+      if (!rail.showWidget(toolCallId, toolName, input))
         focusTitleRef.current = false;
-        return;
-      }
-      /* A starter pill seeds its widget on click; the model's own call for the
-         same widget and the same arguments must not remount it (and reset
-         anything the reader has already dragged). */
-      if (isSameWidget(railWidgetRef.current, resolved.entry, resolved.args)) {
-        focusTitleRef.current = false;
-        return;
-      }
-      /* In a transition so the rail's <ViewTransition> slides it in (and the
-         previous widget out); a plain setState would swap it with no motion. */
-      startTransition(() => {
-        setRailWidget({
-          toolCallId,
-          toolName,
-          entry: resolved.entry,
-          args: resolved.args,
-        });
-      });
     },
-    [],
+    [rail.showWidget],
   );
 
   const closeWidget = useCallback(() => {
-    closedToolRef.current = railWidgetRef.current?.toolName ?? null;
-    startTransition(() => setRailWidget(null));
-  }, []);
+    closedToolRef.current = rail.closeWidget();
+  }, [rail.closeWidget]);
 
   /* A card does exactly what a pill did: send the question, and only if it
      went, open the seeded widget. Focus follows the card to the widget title.
      On a phone the sheet folds away again, so closing lands on the bar. */
   const pickExample = useCallback(
     (starter: (typeof CHAT_STARTERS)[number]) => {
-      if (!chatRef.current?.send(starter.text)) return;
+      /* A pill carries `data-cue`, so the press hook leaves it to this handler. A press that
+         opens the rail is the rail's opening Felt slide (the effect below); every other press that
+         stays on the page, a swap from one widget to another or a question not sent, is a
+         button's press ping, the Distant sonar. */
+      const sent = chatRef.current?.send(starter.text) === true;
+      if (!sent || railWidgetRef.current !== null) cue("press");
+      if (!sent) return;
       focusTitleRef.current = true;
       setExamplesOpen(false);
       const call = starterWidgetCall(starter);
@@ -153,6 +131,16 @@ export default function DoxPage() {
     returnsFocus: true,
     el: railEl,
   });
+
+  /* The rail's open and close Felt slide: null to a widget opens it, a widget back to null
+     closes it, and one widget swapped for another is neither (slice 6's `ready`). The cue follows
+     the commit, so a cancelled open is silent. */
+  const railWasOpenRef = useRef(false);
+  useEffect(() => {
+    const isOpen = railWidget !== null;
+    if (isOpen !== railWasOpenRef.current) cue(isOpen ? "open" : "close");
+    railWasOpenRef.current = isOpen;
+  }, [railWidget]);
 
   /* Closing a widget returns focus: to its card when the examples panel is
      visible, otherwise (phone, conversation started, sheet folded) to the bar.
@@ -180,19 +168,22 @@ export default function DoxPage() {
           {/* The reader's local time, in the app's date format. */}
           <HeaderClock />
           {/* Standing status rather than a control, so it keeps the corner. */}
-          {environment && (
-            <span
-              className="gmt-hive-env"
-              data-env={environment}
-              title={
-                environment === "local"
+          {/* One element before and after mount, so the label fades in. */}
+          <span
+            className="gmt-hive-env"
+            data-env={environment ?? undefined}
+            data-pending={environment ? undefined : ""}
+            aria-hidden={environment ? undefined : true}
+            title={
+              environment === null
+                ? undefined
+                : environment === "local"
                   ? "Pointed at a Worker on this machine"
                   : "Pointed at the deployed Worker"
-              }
-            >
-              ● {environment}
-            </span>
-          )}
+            }
+          >
+            ● {environment ?? "live"}
+          </span>
         </div>
       </div>
       <div
@@ -247,6 +238,7 @@ export default function DoxPage() {
                   <button
                     type="button"
                     className="gmt-hive-boundary-reload gmt-sonar-focus"
+                    data-cue=""
                     onClick={() => {
                       reset();
                       closeWidget();

@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://northguild.dev/worktree/schema/v1.json
+# Team settings for worktree, written by `worktree config --project` from your git config.
+# Review it, commit it to the default branch, and everyone shares these settings.
+# Settings that belong to one person never go in this file.
+
+defaultSourceBranch: origin/main
+
+branchPrefix:
+  feature: feature/
+  bugfix: fix/
+  chore: chore/

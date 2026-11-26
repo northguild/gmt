@@ -1,4 +1,5 @@
 import { Temporal } from "./temporal";
+import { durationFrom } from "./durationFrom";
 import { calendarDateAdd } from "./temporalCompat";
 
 const NANOSECONDS_PER_HOUR = 3_600_000_000_000n;
@@ -43,7 +44,7 @@ export function plainDateAdd(
     milliseconds,
     microseconds,
     nanoseconds,
-  } = Temporal.Duration.from(duration);
+  } = durationFrom(duration);
   const timeNanoseconds =
     BigInt(hours) * NANOSECONDS_PER_HOUR +
     BigInt(minutes) * NANOSECONDS_PER_MINUTE +

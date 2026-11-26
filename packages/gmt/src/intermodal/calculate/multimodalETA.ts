@@ -4,9 +4,9 @@ import { formatHourDuration } from "../../internal/hourDurationString";
 import {
   type Leg,
   type ScheduleDeliveryOptions,
-  scheduleDelivery,
 } from "../../transport/calculate/scheduleDelivery";
 import { isObject } from "../../internal/isObject";
+import { scheduleDeliveryValue } from "../../internal/deliverySchedule";
 
 /** What `multimodalETA` returns: the end-to-end ETA, with the time moving and the time waiting kept apart. */
 export interface MultimodalJourney {
@@ -69,6 +69,9 @@ function snapshotLeg(leg: unknown): unknown {
  *
  * A truck→ship→rail move spends its time two ways: moving, and sitting at a handoff. The two are
  * forecast differently and fail differently, so one opaque total hides the part a planner needs.
+ * Published schedules give the opaque total: DCSA Commercial Schedules 1.0.4 gives a route's
+ * `transitTime` as one integer of days that "includes stop-over time during transhipments and
+ * waiting time at connection points" (`PointToPoint.transitTime`).
  * `multimodalETA` schedules the legs with `scheduleDelivery` and splits the elapsed time from the
  * first departure to the ETA into the two.
  *
@@ -128,7 +131,7 @@ export function multimodalETA(
       return null;
     }
     const snapshot = legs.map(snapshotLeg) as Leg[];
-    const schedule = scheduleDelivery(snapshot, options);
+    const schedule = scheduleDeliveryValue(snapshot, options);
     if (schedule === null) {
       return null;
     }

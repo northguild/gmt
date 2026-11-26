@@ -1,4 +1,4 @@
-import { isValidEpochNanoseconds } from "../../internal";
+import { truncateEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 
 /**
  * Storage precision a nanosecond value can be truncated to.
@@ -11,11 +11,6 @@ import { isValidEpochNanoseconds } from "../../internal";
  * | `us` | Microseconds — the precision of PostgreSQL `timestamptz` and MySQL `DATETIME(6)`. |
  */
 export type NanosecondTruncationUnit = "ms" | "us";
-
-const NANOSECONDS_PER_UNIT: Record<NanosecondTruncationUnit, bigint> = {
-  ms: 1_000_000n,
-  us: 1_000n,
-};
 
 /**
  * Truncate nanoseconds since the Unix epoch to the precision a store can actually hold.
@@ -46,16 +41,5 @@ export function truncateNanoseconds(
   nanoseconds: bigint,
   unit: NanosecondTruncationUnit,
 ): bigint {
-  if (!isValidEpochNanoseconds(nanoseconds)) {
-    return 0n;
-  }
-
-  if (unit !== "ms" && unit !== "us") {
-    return 0n;
-  }
-
-  const divisor = NANOSECONDS_PER_UNIT[unit];
-  const remainder = ((nanoseconds % divisor) + divisor) % divisor;
-
-  return nanoseconds - remainder;
+  return truncateEpochNanoseconds(nanoseconds, unit);
 }

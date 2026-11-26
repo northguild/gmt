@@ -2,7 +2,7 @@
 /**
  * Story dependency tooling for the epic trackers.
  *
- *   node scripts/deps.mjs check          validate both trackers; exit 1 on drift
+ *   node scripts/deps.mjs check          validate the three trackers; exit 1 on drift
  *   node scripts/deps.mjs sync           regenerate the domination `Blocked by` column and
  *                                        `context/domination/issues/index.md`
  *   node scripts/deps.mjs ready          list stories nothing is blocking (a `Waiting` row is not one)
@@ -11,14 +11,18 @@
  * The domination column is derived from two inputs: the story IDs named in each story's
  * `## What gmt provides (do not re-implement)` section in `issues/<ID>.md`, minus the ones
  * whose tracker `Status` is already `Done`. So it shrinks as the epic lands, and an empty
- * cell means "nothing is stopping you". The full, permanent graph lives in the issue files
- * — use `whoneeds` to read it back.
+ * cell means "nothing is stopping you". Only an open story has an issue file: the finalizer
+ * deletes it when the story closes, so `whoneeds` reads the graph of the open stories.
  *
  * Dox works the same way, one level down. Its dependency lines are prose inside each
  * sub-story's description block (`Depends on DOX-B1a (the component) and ...`), and its
  * tracker rows are GitHub issues that bundle several sub-stories. So an issue's cell is the
  * union of its sub-stories' dependencies, mapped back to issue numbers. Every Dox story is
  * done and `context/dox/issues/` no longer exists, so today every Dox cell is `—`.
+ *
+ * The canary tracker's `Blocked by` cell is written by hand: canary stories are few and name
+ * their blockers in the row. `check` makes sure each one is a story some tracker knows and is
+ * not already `Done`.
  */
 
 import { existsSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
@@ -28,6 +32,7 @@ const DOMINATION_ISSUES = "context/domination/issues";
 const DOMINATION_INDEX = `${DOMINATION_ISSUES}/index.md`;
 const DOX = "context/dox/tracker.md";
 const DOX_ISSUES = "context/dox/issues";
+const CANARY = "context/canary/tracker.md";
 
 const DOX_SUB = /\bitem (DOX-[A-E]\d+[a-z]?)\b/;
 const DOX_ID = /\bDOX-[A-E]\d+[a-z]?\b/g;
@@ -93,7 +98,7 @@ function dependsSentence(paragraph) {
  * Dependencies each dox sub-story declares, keyed by sub-story ID.
  *
  * The folder is optional: once every Dox story was done its issue specs were folded into
- * `context/dox/built.md`, so with no issue files there are no declared dependencies and
+ * `context/dox/built/`, so with no issue files there are no declared dependencies and
  * every `Blocked by` cell is `—`. New Dox work restores a file here with a `Depends on` line.
  */
 function doxSubDeps() {
@@ -178,6 +183,7 @@ function doxIssueDeps(rows) {
  */
 const DOMINATION_COLUMNS = { Story: 1, "Blocked by": 4 };
 const DOX_COLUMNS = { Story: 1, "Blocked by": 2, "GitHub Issue": 3 };
+const CANARY_COLUMNS = { Story: 1, "Blocked by": 3, "GitHub Issue": 4 };
 
 /**
  * Fail loudly when a tracker's header row is not the shape the index-based code assumes.
@@ -248,6 +254,12 @@ const doxTracker = () =>
     idColumn: DOX_COLUMNS.Story,
     depColumn: DOX_COLUMNS["Blocked by"],
     columns: DOX_COLUMNS,
+  });
+const canaryTracker = () =>
+  parseTracker(CANARY, {
+    idColumn: CANARY_COLUMNS.Story,
+    depColumn: CANARY_COLUMNS["Blocked by"],
+    columns: CANARY_COLUMNS,
   });
 
 /**
@@ -389,9 +401,11 @@ function check() {
   const known = new Set(rows.map((r) => r.id));
   const done = doneSet(rows);
 
-  // Every story in the tracker has an issue file, and vice versa.
+  // Every open story has an issue file, and every issue file has a tracker row. A `Done`
+  // story's file is deleted at close; `/optimize` reports one left behind.
   for (const r of rows) {
-    if (!declared.has(r.id)) problems.push(`${r.id}: no issues/${r.id}.md`);
+    if (!done.has(r.id) && !declared.has(r.id))
+      problems.push(`${r.id}: no issues/${r.id}.md`);
   }
   for (const id of declared.keys()) {
     if (!known.has(id)) problems.push(`${id}: issue file has no tracker row`);
@@ -469,6 +483,23 @@ function check() {
     }
   }
 
+  // Canary: the hand-written cell names stories some tracker knows, none of them Done.
+  const canary = canaryTracker();
+  const allStatus = new Map(
+    [...rows, ...dox.rows, ...canary.rows].map((r) => [r.id, r.status]),
+  );
+  for (const r of canary.rows) {
+    for (const d of r.deps.map(bareId)) {
+      const status = allStatus.get(d);
+      if (status === undefined)
+        problems.push(`canary ${r.id}: blocked by unknown story ${d}`);
+      else if (status.startsWith("Done"))
+        problems.push(
+          `canary ${r.id}: ${d} is Done — remove it from Blocked by`,
+        );
+    }
+  }
+
   for (const w of warnings) console.warn(`  warning: ${w}`);
   if (problems.length) {
     console.error(
@@ -478,7 +509,7 @@ function check() {
   }
   const suffix = warnings.length ? `, ${warnings.length} unresolved` : "";
   console.log(
-    `deps check: ${rows.length} domination + ${dox.rows.length} dox rows OK${suffix}`,
+    `deps check: ${rows.length} domination + ${dox.rows.length} dox + ${canary.rows.length} canary rows OK${suffix}`,
   );
 }
 
@@ -511,6 +542,13 @@ function ready() {
   const doxReady = doxOpen.filter((r) => isReady(r.cells[2]));
   console.log(`\nDox — ${doxReady.length} ready of ${doxOpen.length} open:`);
   for (const r of doxReady) console.log(`  ${r.id}`);
+
+  const canaryOpen = open(canaryTracker().rows);
+  const canaryReady = canaryOpen.filter((r) => isReady(r.cells[3]));
+  console.log(
+    `\nCanary — ${canaryReady.length} ready of ${canaryOpen.length} open:`,
+  );
+  for (const r of canaryReady) console.log(`  ${r.id}`);
 }
 
 /** Reverse lookup against the permanent graph in the issue files. */

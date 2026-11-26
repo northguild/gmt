@@ -68,12 +68,18 @@ import type { PunctualityBoardArgs } from "~/lib/punctuality-board-mount";
 import type { EtaDriftArgs } from "~/lib/eta-drift-mount";
 import type { DepartureBoardArgs } from "~/lib/departure-board-mount";
 import type { DtmDecoderArgs } from "~/lib/dtm-decoder-mount";
+import type { Hl7Args } from "~/lib/hl7-timestamp-reader-mount";
 import type { X12TimeReaderArgs } from "~/lib/x12-time-reader-mount";
 import type { ZonePlannerArgs } from "~/lib/zone-planner-mount";
 import type { GnssWeekDecoderArgs } from "~/lib/gnss-week-decoder-mount";
 import type { SatelliteClockConverterArgs } from "~/lib/satellite-clock-converter-mount";
 import type { GnssRolloverCheckerArgs } from "~/lib/gnss-rollover-checker-mount";
 import type { LeapSecondTimelineArgs } from "~/lib/leap-second-timeline-mount";
+import type { TerrestrialTimeStackArgs } from "~/lib/terrestrial-time-stack-mount";
+import type { JulianDayCounterArgs } from "~/lib/julian-day-counter-mount";
+import type { DoublePrecisionMeterArgs } from "~/lib/double-precision-meter-mount";
+import type { CcsdsTimeCodeDecoderArgs } from "~/lib/ccsds-time-code-decoder-mount";
+import type { DayRulerArgs } from "~/lib/code-b-day-ruler-mount";
 import type { ElapsedVsClockArgs } from "~/lib/elapsed-vs-clock-mount";
 import type { IdTimestampDecoderArgs } from "~/lib/id-timestamp-decoder-mount";
 import type { ColumnTimestampBridgeArgs } from "~/lib/column-timestamp-bridge-mount";
@@ -82,12 +88,25 @@ import type { DatabaseTimestampReaderArgs } from "~/lib/database-timestamp-reade
 import type { ExpiryArgs } from "~/lib/expiry-calculator-mount";
 import type { LeapDayArgs } from "~/lib/leap-day-birthday-mount";
 import type { StoredTimeAuditArgs } from "~/lib/stored-time-audit-mount";
+import type { Tai64nLogReaderArgs } from "~/lib/tai64n-log-reader-mount";
+import type { FixTimestampReaderArgs } from "~/lib/fix-timestamp-reader-mount";
+import type { FhirArgs } from "~/lib/fhir-date-checker-mount";
+import type { SsimDateReaderArgs } from "~/lib/ssim-date-reader-mount";
+import type { ReportTimeResolverArgs } from "~/lib/report-time-resolver-mount";
+import type { SwiftValueDateReaderArgs } from "~/lib/swift-value-date-reader-mount";
+import type { GtfsTimeReaderArgs } from "~/lib/gtfs-time-reader-mount";
+import type { GtfsServiceDayClockArgs } from "~/lib/gtfs-service-day-clock-mount";
+import type { GtfsTripBoardArgs } from "~/lib/gtfs-trip-board-mount";
+import type { PtpClockArgs } from "~/lib/ptp-clock-converter-mount";
+import type { ScheduleCheckerArgs } from "~/lib/schedule-checker";
+import type { BoardArgs } from "~/lib/opening-hours-board-mount";
 import type { HolidayRuleBuilderArgs } from "~/lib/holiday-rule-builder-mount";
 import type { ObservanceComparatorArgs } from "~/lib/observance-comparator-mount";
 import type { MovingFeastsArgs } from "~/lib/moving-feasts-mount";
 import type { CanadaClockChangeArgs } from "~/lib/canada-clock-change-mount";
 import type { DurationParserBenchArgs } from "~/lib/duration-parser-bench-mount";
 import type { MoroccoClockChangeArgs } from "~/lib/morocco-clock-change-mount";
+import type { SunshineActArgs } from "~/lib/sunshine-protection-act-mount";
 import {
   showBillingDeadlinesInput,
   showBlDateStampInput,
@@ -104,6 +123,7 @@ import {
   showDepartureBoardInput,
   showDstInspectorInput,
   showDtmDecoderInput,
+  showHl7TimestampReaderInput,
   showEpcisEventReaderInput,
   showElapsedVsClockInput,
   showGnssRolloverCheckerInput,
@@ -121,6 +141,24 @@ import {
   showLeapDayBirthdayInput,
   showExpiryCalculatorInput,
   showDatabaseTimestampReaderInput,
+  showTai64nLogReaderInput,
+  showFixTimestampReaderInput,
+  showSsimDateReaderInput,
+  showReportTimeResolverInput,
+  showJulianDayCounterInput,
+  showDoublePrecisionMeterInput,
+  showCcsdsTimeCodeDecoderInput,
+  showCodeBDayRulerInput,
+  showFhirDateCheckerInput,
+  showSwiftValueDateReaderInput,
+  showGtfsTimeReaderInput,
+  showGtfsServiceDayClockInput,
+  showGtfsTripBoardInput,
+  showPtpClockConverterInput,
+  showScheduleCheckerInput,
+  showOpeningHoursBoardInput,
+  showUsSunshineProtectionActInput,
+  showTerrestrialTimeStackInput,
   showDwellLedgerInput,
   showEtaDriftInput,
   showFreeTimeLedgerInput,
@@ -634,6 +672,31 @@ const dtmEntry = defineWidget<DtmDecoderArgs>({
     checkZones([zone1, zone2, zone3, zone4].filter((z): z is string => !!z)),
 });
 
+const hl7Entry = defineWidget<Hl7Args>({
+  title: "HL7 timestamp reader",
+  kind: "hl7",
+  parse: (input) => {
+    const result = showHl7TimestampReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: every argument is a control
+     value. Only the four zones are checked here; a value the library does not
+     read is the widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/hl7-timestamp-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderHl7TimestampReaderTemplate(idPrefix, args),
+      mount: m.mountHl7TimestampReader,
+    })),
+  validate: ({ zone1, zone2, zone3, zone4 }) =>
+    checkZones([zone1, zone2, zone3, zone4].filter((z): z is string => !!z)),
+});
+
 const x12TimeEntry = defineWidget<X12TimeReaderArgs>({
   title: "X12 time reader",
   kind: "xtime",
@@ -886,6 +949,472 @@ const storedAuditEntry = defineWidget<StoredTimeAuditArgs>({
     })),
 });
 
+const tai64nEntry = defineWidget<Tai64nLogReaderArgs>({
+  title: "TAI64N log reader",
+  kind: "tai64n",
+  parse: (input) => {
+    const result = showTai64nLogReaderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* No `validate`: a line the library does not read is this widget's own NO SIGNAL row. */
+  load: () =>
+    import("~/lib/tai64n-log-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderTai64nLogReaderTemplate(idPrefix, args),
+      mount: m.mountTai64nLogReader,
+    })),
+});
+
+const fixTimestampEntry = defineWidget<FixTimestampReaderArgs>({
+  title: "FIX timestamp reader",
+  kind: "fixstamp",
+  parse: (input) => {
+    const result = showFixTimestampReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { stamp, instant } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(stamp === undefined ? {} : { stamp }),
+        ...(instant === undefined ? {} : { write: instant }),
+      },
+    };
+  },
+  /* No `validate`: a stamp the library does not read is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/fix-timestamp-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderFixTimestampReaderTemplate(idPrefix, args),
+      mount: m.mountFixTimestampReader,
+    })),
+});
+
+const fhirEntry = defineWidget<FhirArgs>({
+  title: "FHIR Date Checker",
+  kind: "fhir",
+  parse: (input) => {
+    const result = showFhirDateCheckerInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount: the one argument is a control
+     value. A value the library does not read is the widget's own NO SIGNAL, with
+     its reason. */
+  load: () =>
+    import("~/lib/fhir-date-checker-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderFhirDateCheckerTemplate(idPrefix, args),
+      mount: m.mountFhirDateChecker,
+    })),
+});
+
+const ssimEntry = defineWidget<SsimDateReaderArgs>({
+  title: "SSIM Date Reader",
+  kind: "ssim",
+  parse: (input) => {
+    const result = showSsimDateReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, yearWindow, locale, date } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(yearWindow === undefined ? {} : { window: String(yearWindow) }),
+        ...(locale === undefined ? {} : { locale }),
+        ...(date === undefined ? {} : { date }),
+      },
+    };
+  },
+  /* No `validate`: a date the library does not read is this widget's own NO SIGNAL state, and a call with no window opens with the window blank. */
+  load: () =>
+    import("~/lib/ssim-date-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderSsimDateReaderTemplate(idPrefix, args),
+      mount: m.mountSsimDateReader,
+    })),
+});
+
+const reportTimeEntry = defineWidget<ReportTimeResolverArgs>({
+  title: "Report Time Resolver",
+  kind: "reporttime",
+  parse: (input) => {
+    const result = showReportTimeResolverInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const {
+      group,
+      reference,
+      itemB,
+      itemC,
+      yearWindow,
+      metarPreset,
+      notamPreset,
+    } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(metarPreset === undefined ? {} : { metarPreset }),
+        ...(notamPreset === undefined ? {} : { notamPreset }),
+        ...(group === undefined ? {} : { group }),
+        ...(reference === undefined ? {} : { ref: reference }),
+        ...(itemB === undefined ? {} : { b: itemB }),
+        ...(itemC === undefined ? {} : { c: itemC }),
+        ...(yearWindow === undefined ? {} : { window: String(yearWindow) }),
+      },
+    };
+  },
+  /* No `validate`: a group the library does not read is this widget's own NO SIGNAL state. A call with no `reference` opens with Reference blank and a call with no `yearWindow` opens with the window blank. */
+  load: () =>
+    import("~/lib/report-time-resolver-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderReportTimeResolverTemplate(idPrefix, args),
+      mount: m.mountReportTimeResolver,
+    })),
+});
+
+const swiftDateEntry = defineWidget<SwiftValueDateReaderArgs>({
+  title: "SWIFT Value Date Reader",
+  kind: "swiftdate",
+  parse: (input) => {
+    const result = showSwiftValueDateReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, date } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(date === undefined ? {} : { date }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/swift-value-date-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderSwiftValueDateReaderTemplate(idPrefix, args),
+      mount: m.mountSwiftValueDateReader,
+    })),
+});
+
+const gtfsTimeEntry = defineWidget<GtfsTimeReaderArgs>({
+  title: "GTFS Time Reader",
+  kind: "gtfstime",
+  parse: (input) => {
+    const result = showGtfsTimeReaderInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { value, seconds, dayOverflow } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(value === undefined ? {} : { value }),
+        ...(seconds === undefined ? {} : { seconds }),
+        ...(dayOverflow === undefined ? {} : { dayOverflow }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-time-reader-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsTimeReaderTemplate(idPrefix, args),
+      mount: m.mountGtfsTimeReader,
+    })),
+});
+
+const gtfsServiceDayEntry = defineWidget<GtfsServiceDayClockArgs>({
+  title: "GTFS Service Day Clock",
+  kind: "gtfsday",
+  parse: (input) => {
+    const result = showGtfsServiceDayClockInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { serviceDate, time, timeZone, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(serviceDate === undefined ? {} : { serviceDate }),
+        ...(time === undefined ? {} : { time }),
+        ...(timeZone === undefined ? {} : { timeZone }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a date the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-service-day-clock-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsServiceDayClockTemplate(idPrefix, args),
+      mount: m.mountGtfsServiceDayClock,
+    })),
+});
+
+const gtfsTripBoardEntry = defineWidget<GtfsTripBoardArgs>({
+  title: "GTFS Trip Board",
+  kind: "gtfstrip",
+  parse: (input) => {
+    const result = showGtfsTripBoardInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { stopTimes, date, zone, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(stopTimes === undefined ? {} : { stopTimes }),
+        ...(date === undefined ? {} : { date }),
+        ...(zone === undefined ? {} : { zone }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a row or time the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/gtfs-trip-board-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderGtfsTripBoardTemplate(idPrefix, args),
+      mount: m.mountGtfsTripBoard,
+    })),
+});
+
+const ptpClockEntry = defineWidget<PtpClockArgs>({
+  title: "PTP Clock Converter",
+  kind: "ptpclock",
+  parse: (input) => {
+    const result = showPtpClockConverterInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { seconds, nanoseconds, offset, instant } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(seconds === undefined ? {} : { seconds }),
+        ...(nanoseconds === undefined ? {} : { nanoseconds }),
+        ...(offset === undefined ? {} : { offset }),
+        ...(instant === undefined ? {} : { instant }),
+      },
+    };
+  },
+  /* No `validate`: a value the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/ptp-clock-converter-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderPtpClockConverterTemplate(idPrefix, args),
+      mount: m.mountPtpClockConverter,
+    })),
+});
+
+const scheduleCheckerEntry = defineWidget<ScheduleCheckerArgs>({
+  title: "Operating Schedule Checker",
+  kind: "schedule",
+  parse: (input) => {
+    const result = showScheduleCheckerInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { schedule, start, end, preset } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(schedule === undefined ? {} : { schedule }),
+        ...(start === undefined ? {} : { start }),
+        ...(end === undefined ? {} : { end }),
+        ...(preset === undefined ? {} : { preset }),
+      },
+    };
+  },
+  /* No `validate`: a schedule the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/schedule-checker-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderScheduleCheckerTemplate(idPrefix, args),
+      mount: m.mountScheduleChecker,
+    })),
+});
+
+// ui-standards-ok: one registry row per tool; the parse and load shape is the registry's own
+const openingHoursBoardEntry = defineWidget<BoardArgs>({
+  title: "Opening Hours Board",
+  kind: "hours",
+  parse: (input) => {
+    const result = showOpeningHoursBoardInput.safeParse(input);
+    // ui-standards-ok: the registry row shape every tool uses; parse and load are per tool
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* No `validate`: a schedule the library refuses is this widget's own NO SIGNAL state. */
+  load: () =>
+    import("~/lib/opening-hours-board-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderOpeningHoursBoardTemplate(idPrefix, args),
+      mount: m.mountOpeningHoursBoard,
+    })),
+});
+
+const ttStackEntry = defineWidget<TerrestrialTimeStackArgs>({
+  title: "Terrestrial Time Stack",
+  kind: "ttstack",
+  parse: (input) => {
+    const result = showTerrestrialTimeStackInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/terrestrial-time-stack-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderTerrestrialTimeStackTemplate(idPrefix, args),
+      mount: m.mountTerrestrialTimeStack,
+    })),
+});
+
+const julianDayCounterEntry = defineWidget<JulianDayCounterArgs>({
+  title: "Julian Day Counter",
+  kind: "jdcount",
+  parse: (input) => {
+    const result = showJulianDayCounterInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a value the library does not count is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/julian-day-counter-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderJulianDayCounterTemplate(idPrefix, args),
+      mount: m.mountJulianDayCounter,
+    })),
+});
+
+const doublePrecisionMeterEntry = defineWidget<DoublePrecisionMeterArgs>({
+  title: "Double Precision Meter",
+  kind: "dpmeter",
+  parse: (input) => {
+    const result = showDoublePrecisionMeterInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a value the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/double-precision-meter-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderDoublePrecisionMeterTemplate(idPrefix, args),
+      mount: m.mountDoublePrecisionMeter,
+    })),
+});
+
+const ccsdsTimeCodeDecoderEntry = defineWidget<CcsdsTimeCodeDecoderArgs>({
+  title: "CCSDS Time Code Decoder",
+  kind: "ccsds",
+  parse: (input) => {
+    const result = showCcsdsTimeCodeDecoderInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a code the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/ccsds-time-code-decoder-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderCcsdsTimeCodeDecoderTemplate(idPrefix, args),
+      mount: m.mountCcsdsTimeCodeDecoder,
+    })),
+});
+
+const codeBDayRulerEntry = defineWidget<DayRulerArgs>({
+  title: "Code B Day Ruler",
+  kind: "dayruler",
+  parse: (input) => {
+    const result = showCodeBDayRulerInput.safeParse(input);
+    if (!result.success) {
+      return {
+        ok: false,
+        reason: "The widget was asked for with arguments that don't fit.",
+      };
+    }
+    const { year, compareYear, day } = result.data;
+    return {
+      ok: true,
+      args: {
+        ...(year === undefined ? {} : { year }),
+        ...(compareYear === undefined ? {} : { compare: compareYear }),
+        ...(day === undefined ? {} : { day }),
+      },
+    };
+  },
+  /* Seeded in the template and again by the mount. There is deliberately no `validate`: a year the library does not read is this widget's own NO SIGNAL, with its reason. */
+  load: () =>
+    import("~/lib/code-b-day-ruler-mount").then((m) => ({
+      renderTemplate: (idPrefix, args) =>
+        m.renderCodeBDayRulerTemplate(idPrefix, args),
+      mount: m.mountCodeBDayRuler,
+    })),
+});
+
 const holidayBuilderEntry = defineWidget<HolidayRuleBuilderArgs>({
   title: "Holiday rule builder",
   kind: "holidays",
@@ -1083,6 +1612,45 @@ const moroccoClockEntry = defineWidget<MoroccoClockChangeArgs>({
   },
 });
 
+const sunshineActEntry = defineWidget<SunshineActArgs>({
+  title: "Sunshine Protection Act",
+  kind: "sunshineact",
+  parse: (input) => {
+    const result = showUsSunshineProtectionActInput.safeParse(input);
+    return result.success
+      ? { ok: true, args: result.data }
+      : {
+          ok: false,
+          reason: "The widget was asked for with arguments that don't fit.",
+        };
+  },
+  /* The chat's copy leaves out the guidance cards and keeps the national panel. The mount pins
+     the place once its map has drawn, so the template paints the same everywhere. */
+  load: async () => {
+    const m = await import("~/lib/sunshine-protection-act-mount");
+    return {
+      renderTemplate: (idPrefix) =>
+        m.renderSunshineProtectionActWidgetTemplate(idPrefix),
+      mount: m.mountSunshineProtectionActWidget,
+    };
+  },
+  /* A zone or state outside the page's own lists would open unpinned, so refuse it with the
+     reason. Both lists are literal data, kept out of the chat's first download. */
+  validate: async ({ view }) => {
+    const place = view.kind === "today" ? view.zone : view.state;
+    if (place === undefined) return null;
+    const listed =
+      view.kind === "today"
+        ? (await import("~/lib/us-region-zones.json")).default.zones.includes(
+            place,
+          )
+        : (
+            await import("~/data/sunshine-protection-act-proposals")
+          ).STATE_CODES.includes(place);
+    return listed ? null : `${place} isn't one of the places the page lists.`;
+  },
+});
+
 const cronZoneEntry = defineWidget<CronInAZoneArgs>({
   title: "Cron in a zone",
   kind: "cronzone",
@@ -1255,6 +1823,7 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showDepartureBoard: departureEntry,
   showZonePlanner: plannerEntry,
   showDtmDecoder: dtmEntry,
+  showHl7TimestampReader: hl7Entry,
   showX12TimeReader: x12TimeEntry,
   showDemurrageClock: demurrageEntry,
   showBlDateStamp: blDateEntry,
@@ -1278,6 +1847,24 @@ export const WIDGET_REGISTRY: Record<string, AnyWidgetEntry | undefined> = {
   showLeapDayBirthday: leapDayEntry,
   showExpiryCalculator: expiryEntry,
   showDatabaseTimestampReader: databaseReaderEntry,
+  showTai64nLogReader: tai64nEntry,
+  showFixTimestampReader: fixTimestampEntry,
+  showSsimDateReader: ssimEntry,
+  showReportTimeResolver: reportTimeEntry,
+  showFhirDateChecker: fhirEntry,
+  showSwiftValueDateReader: swiftDateEntry,
+  showGtfsTimeReader: gtfsTimeEntry,
+  showGtfsServiceDayClock: gtfsServiceDayEntry,
+  showGtfsTripBoard: gtfsTripBoardEntry,
+  showPtpClockConverter: ptpClockEntry,
+  showScheduleChecker: scheduleCheckerEntry,
+  showOpeningHoursBoard: openingHoursBoardEntry,
+  showUsSunshineProtectionAct: sunshineActEntry,
+  showTerrestrialTimeStack: ttStackEntry,
+  showJulianDayCounter: julianDayCounterEntry,
+  showDoublePrecisionMeter: doublePrecisionMeterEntry,
+  showCcsdsTimeCodeDecoder: ccsdsTimeCodeDecoderEntry,
+  showCodeBDayRuler: codeBDayRulerEntry,
 };
 
 /** Whether a streamed tool part names a widget this build actually has. */

@@ -11,6 +11,8 @@
  */
 
 import { geoGraticule10 } from "d3-geo";
+import { createCamera, unproject, wrapLng } from "../camera";
+import { G, P, RIM, rayHit, type Vec3 } from "../pinhole";
 import {
   CIVIL_TWILIGHT,
   GAMMA,
@@ -622,5 +624,260 @@ describe("premultiplied output", () => {
       "let blended = mix(premultiply(ring), premultiply(colour), sphereCoverage);",
     );
     expect(source).not.toContain("over(ring,");
+  });
+});
+
+/** The body of a WGSL `fn name(`, from its signature to the next top-level `}`. */
+function fnBody(source: string, name: string): string {
+  const start = source.indexOf(`fn ${name}(`);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const end = source.indexOf("\n}\n", start);
+  return source.slice(start, end);
+}
+
+/** `geoAt`'s normal and derivatives, written once as plain TS: u right, v down. */
+function analytic(u: number, v: number): { n: Vec3; du: Vec3; dv: Vec3 } {
+  const rho2 = u * u + v * v;
+  const w = Math.sqrt(Math.max(0, 1 - rho2));
+  const safeW = Math.max(w, 1e-4);
+  const D = 1 + rho2 / (G * G);
+  const t = (P - w) / D;
+  const dtdu = ((u / safeW) * D - (P - w) * ((2 * u) / (G * G))) / (D * D);
+  const dtdv = ((v / safeW) * D - (P - w) * ((2 * v) / (G * G))) / (D * D);
+  return {
+    n: [P - t, (t * u) / G, (-t * v) / G],
+    du: [-dtdu, (dtdu * u + t) / G, (-dtdu * v) / G],
+    dv: [-dtdv, (dtdv * u) / G, -(dtdv * v + t) / G],
+  };
+}
+
+/**
+ * The whole `geoAt` chain as plain TS, from the same `analytic` terms: latitude un-rotation,
+ * then longitude and latitude with their gradients, all per radius and in degrees.
+ */
+function chain(u: number, v: number, c: number, s: number) {
+  const { n, du, dv } = analytic(u, v);
+  const x1 = n[0] * c + n[2] * s;
+  const y1 = n[1];
+  const z1 = n[2] * c - n[0] * s;
+  const grad = (d: Vec3) => {
+    const dx1 = d[0] * c + d[2] * s;
+    const dy1 = d[1];
+    const dz1 = d[2] * c - d[0] * s;
+    const horizontal = Math.max(x1 * x1 + y1 * y1, 1e-9);
+    const cosLat = Math.sqrt(Math.max(1 - z1 * z1, 1e-9));
+    return [
+      (((x1 * dy1 - y1 * dx1) / horizontal) * 180) / Math.PI,
+      ((dz1 / cosLat) * 180) / Math.PI,
+    ] as const;
+  };
+  return {
+    lng: (Math.atan2(y1, x1) * 180) / Math.PI,
+    lat: (Math.asin(Math.min(1, Math.max(-1, z1))) * 180) / Math.PI,
+    du: grad(du),
+    dv: grad(dv),
+  };
+}
+
+describe("the pinhole", () => {
+  const surface = stripComments(surfaceShader());
+
+  it("carries P, G and RIM from pinhole.ts", () => {
+    const expected = { PINHOLE_P: P, PINHOLE_G: G, PINHOLE_RIM: RIM };
+    for (const [name, value] of Object.entries(expected)) {
+      const match = new RegExp(`const ${name}: f32 = ([0-9.eE+-]+);`).exec(
+        surface,
+      );
+      expect(match, name).not.toBeNull();
+      expect(Number(match?.[1])).toBeCloseTo(value, 15);
+    }
+  });
+
+  it("restates no camera number", () => {
+    for (const build of Object.values(SHADERS)) {
+      /* The three constants themselves carry the digits; everything else must not. */
+      const code = stripComments(build()).replace(
+        /const PINHOLE_\w+: f32 = [^;]+;/g,
+        "",
+      );
+      for (const literal of ["6.61", "6.53", "35786", "6378"]) {
+        expect(code).not.toContain(literal);
+      }
+    }
+  });
+
+  it("has no orthographic depth left", () => {
+    for (const build of Object.values(SHADERS)) {
+      const code = stripComments(build());
+      expect(code).not.toContain("sqrt(max(0.0, 1.0 - u * u - v * v))");
+      const outside = code.includes("fn pinholeNormal(")
+        ? code.replace(fnBody(code, "pinholeNormal"), "")
+        : code;
+      expect(outside).not.toContain("1.0 - u * u - v * v");
+    }
+  });
+
+  it("projectGeo divides by the camera distance", () => {
+    const body = fnBody(surface, "projectGeo");
+    expect(body).toContain("PINHOLE_P - towardsViewer");
+    expect(body).toContain("towardsViewer - PINHOLE_RIM");
+  });
+
+  it("computes the hit once per pixel and hands it to geoAt", () => {
+    expect(fnBody(surface, "geoAt")).not.toContain("pinholeNormal(");
+    expect(fnBody(surface, "geoAt")).toContain("hit: vec3<f32>");
+    expect(fnBody(surface, "fs").match(/pinholeNormal\(/g)).toHaveLength(1);
+    expect(fnBody(surface, "fs")).toContain("geoAt(u, v, radius, normal)");
+    expect(surface.match(/fn pinholeNormal\(/g)).toHaveLength(1);
+  });
+
+  it("maps the normal to shading axes for the elevation", () => {
+    const body = fnBody(surface, "fs");
+    expect(body).toContain("vec3<f32>(normal.y, -normal.z, normal.x)");
+  });
+
+  it("pulls past-the-limb pixels onto the unit circle before the hit", () => {
+    const body = fnBody(surface, "fs");
+    expect(body).toContain("u = u0 / d0;");
+    expect(body).toContain("v = v0 / d0;");
+  });
+
+  it("puts the rim normal's towards-viewer component at RIM on the circle", () => {
+    expect(analytic(1, 0).n[0]).toBeCloseTo(RIM, 12);
+    expect(analytic(0, 1).n[0]).toBeCloseTo(RIM, 12);
+    expect(analytic(Math.SQRT1_2, Math.SQRT1_2).n[0]).toBeCloseTo(RIM, 12);
+  });
+
+  it("transcribes geoAt's latitude un-rotation and derivative lines verbatim", () => {
+    const body = fnBody(surface, "geoAt");
+    for (const line of [
+      "let x1 = hit.x * c + hit.z * s;",
+      "let y1 = hit.y;",
+      "let z1 = hit.z * c - hit.x * s;",
+      "let dtdu = ((u / safeW) * D - (PINHOLE_P - w) * (2.0 * u / (PINHOLE_G * PINHOLE_G))) / (D * D);",
+      "let dtdv = ((v / safeW) * D - (PINHOLE_P - w) * (2.0 * v / (PINHOLE_G * PINHOLE_G))) / (D * D);",
+      "let dXdu = -dtdu;",
+      "let dXdv = -dtdv;",
+      "let dYdu = (dtdu * u + t) / PINHOLE_G;",
+      "let dYdv = dtdv * u / PINHOLE_G;",
+      "let dZdu = -dtdu * v / PINHOLE_G;",
+      "let dZdv = -(dtdv * v + t) / PINHOLE_G;",
+      "let dx1du = dXdu * c + dZdu * s;",
+      "let dx1dv = dXdv * c + dZdv * s;",
+      "let dz1du = dZdu * c - dXdu * s;",
+      "let dz1dv = dZdv * c - dXdv * s;",
+      "let dLngdu = (x1 * dy1du - y1 * dx1du) / horizontal;",
+      "let dLngdv = (x1 * dy1dv - y1 * dx1dv) / horizontal;",
+      "let dLatdu = dz1du / cosLat;",
+      "let dLatdv = dz1dv / cosLat;",
+    ]) {
+      expect(body).toContain(line);
+    }
+  });
+
+  it("transcribes pinholeNormal and geoAt's ray terms verbatim", () => {
+    const normal = fnBody(surface, "pinholeNormal");
+    for (const line of [
+      "let rho2 = u * u + v * v;",
+      "let w = sqrt(max(0.0, 1.0 - rho2));",
+      "let t = (PINHOLE_P - w) / (1.0 + rho2 / (PINHOLE_G * PINHOLE_G));",
+      "return vec3<f32>(PINHOLE_P - t, t * u / PINHOLE_G, -t * v / PINHOLE_G);",
+    ]) {
+      expect(normal).toContain(line);
+    }
+    const geo = fnBody(surface, "geoAt");
+    for (const line of [
+      "let rho2 = u * u + v * v;",
+      "let w = sqrt(max(0.0, 1.0 - rho2));",
+      "let safeW = max(w, 1e-4);",
+      "let D = 1.0 + rho2 / (PINHOLE_G * PINHOLE_G);",
+      "let t = PINHOLE_P - hit.x;",
+      "let horizontal = max(x1 * x1 + y1 * y1, 1e-9);",
+      "let cosLat = sqrt(max(1.0 - z1 * z1, 1e-9));",
+    ]) {
+      expect(geo).toContain(line);
+    }
+  });
+});
+
+describe("the per-pixel Jacobian the WGSL transcribes", () => {
+  it("agrees with central differences of rayHit at 200 seeded pixels", () => {
+    let seed = 20260611;
+    const next = (): number => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 2 ** 32;
+    };
+    const h = 1e-6;
+    const hit = (u: number, v: number): Vec3 => {
+      const out: Vec3 = [0, 0, 0];
+      /* rayHit takes v up; the shader's v is down. */
+      expect(rayHit(u, -v, out)).toBe(true);
+      return out;
+    };
+    for (let i = 0; i < 200; i++) {
+      const rho = Math.sqrt(next()) * 0.98;
+      const angle = next() * 2 * Math.PI;
+      const u = rho * Math.cos(angle);
+      const v = rho * Math.sin(angle);
+      const { n, du, dv } = analytic(u, v);
+      const here = hit(u, v);
+      const uPlus = hit(u + h, v);
+      const uMinus = hit(u - h, v);
+      const vPlus = hit(u, v + h);
+      const vMinus = hit(u, v - h);
+      for (let k = 0; k < 3; k++) {
+        expect(n[k]).toBeCloseTo(here[k]!, 12);
+        const fdU = (uPlus[k]! - uMinus[k]!) / (2 * h);
+        const fdV = (vPlus[k]! - vMinus[k]!) / (2 * h);
+        expect(Math.abs(du[k]! - fdU)).toBeLessThanOrEqual(
+          1e-5 * Math.max(1, Math.abs(fdU)),
+        );
+        expect(Math.abs(dv[k]! - fdV)).toBeLessThanOrEqual(
+          1e-5 * Math.max(1, Math.abs(fdV)),
+        );
+      }
+    }
+  });
+
+  it("agrees with finite differences of camera.unproject through the whole chain", () => {
+    const camera = createCamera([20, 35]);
+    camera.radius = 100;
+    const R = camera.radius;
+    const at = (u: number, v: number) => {
+      const out = unproject(
+        camera,
+        camera.centreX + u * R,
+        camera.centreY + v * R,
+      );
+      expect(out).not.toBeNull();
+      return out!;
+    };
+    const h = 1e-5;
+    for (const [u, v] of [
+      [0, 0],
+      [0.3, -0.4],
+      [-0.6, 0.2],
+      [0.1, 0.8],
+      [-0.5, -0.5],
+    ] as const) {
+      const { lng, lat, du, dv } = chain(u, v, camera.cosPhi, camera.sinPhi);
+      const [gLng, gLat] = at(u, v);
+      expect(wrapLng(lng - camera.rotation[0] - gLng)).toBeCloseTo(0, 6);
+      expect(lat).toBeCloseTo(gLat, 6);
+      const [uPlus, uMinus] = [at(u + h, v), at(u - h, v)];
+      const [vPlus, vMinus] = [at(u, v + h), at(u, v - h)];
+      const fd = (p: [number, number], m: [number, number]) =>
+        [wrapLng(p[0] - m[0]) / (2 * h), (p[1] - m[1]) / (2 * h)] as const;
+      const fdU = fd(uPlus, uMinus);
+      const fdV = fd(vPlus, vMinus);
+      for (let k = 0; k < 2; k++) {
+        expect(Math.abs(du[k]! - fdU[k]!)).toBeLessThanOrEqual(
+          1e-3 * Math.max(1, Math.abs(fdU[k]!)),
+        );
+        expect(Math.abs(dv[k]! - fdV[k]!)).toBeLessThanOrEqual(
+          1e-3 * Math.max(1, Math.abs(fdV[k]!)),
+        );
+      }
+    }
   });
 });

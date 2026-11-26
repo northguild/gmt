@@ -1,10 +1,6 @@
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
-import {
-  halfOpenContainsPoint,
-  halfOpenContainsSpan,
-  parseCalendarDateValue,
-} from "../../internal";
-import { isValidCalendarDate } from "../validate";
+import { halfOpenContainsPoint, halfOpenContainsSpan } from "../../internal";
 
 /**
  * Return true when `pointOrStart` lies in the half-open interval `[intervalStart, intervalEnd)`
@@ -53,33 +49,26 @@ export function intervalContainsDate(
     return false;
   }
 
-  if (
-    !isValidCalendarDate(intervalStart) ||
-    !isValidCalendarDate(intervalEnd) ||
-    !isValidCalendarDate(pointOrStart) ||
-    (pointEnd !== undefined && !isValidCalendarDate(pointEnd))
-  ) {
+  const s = calendarDateOf(intervalStart);
+  const e = calendarDateOf(intervalEnd);
+  const p = calendarDateOf(pointOrStart);
+  const pe = pointEnd === undefined ? undefined : calendarDateOf(pointEnd);
+  if (s === null || e === null || p === null || pe === null) {
     return false;
   }
 
   try {
-    const s = parseCalendarDateValue(intervalStart);
-    const e = parseCalendarDateValue(intervalEnd);
-    const p = parseCalendarDateValue(pointOrStart);
-
     if (Temporal.PlainDate.compare(s, e) > 0) {
       return false;
     }
 
-    if (pointEnd === undefined) {
+    if (pe === undefined) {
       return halfOpenContainsPoint(
         { start: s, end: e },
         p,
         Temporal.PlainDate.compare,
       );
     }
-
-    const pe = parseCalendarDateValue(pointEnd);
 
     if (Temporal.PlainDate.compare(p, pe) > 0) {
       return false;

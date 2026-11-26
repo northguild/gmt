@@ -3,15 +3,14 @@ import {
   stepBusinessDates,
 } from "./businessCalendar";
 import { plainToZoned, zonedWithPlainTime } from "./zonedWallClockOperations";
-import { zonedDateTimeFrom } from "./zonedWallClock";
+import type { Temporal } from "./temporal";
 
 export function adjustZonedBusinessDays(
-  value: string,
+  zoned: Temporal.ZonedDateTime,
   direction: 1 | -1,
   absAmount: number,
 ): string {
   try {
-    const zoned = zonedDateTimeFrom(value);
     const plainDate = zoned.toPlainDate();
     const resultDate = stepBusinessDates(
       plainDate,

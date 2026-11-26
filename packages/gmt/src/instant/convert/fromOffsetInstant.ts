@@ -1,13 +1,5 @@
-import { Temporal } from "../../internal/temporal";
-import {
-  formatUtcOffset,
-  parseInstantNanoseconds,
-  parseUtcOffsetNanoseconds,
-  wallClockAtOffset,
-} from "../../internal";
-import { utcOffset } from "../../regex";
+import { writeOffsetInstant } from "../../internal/offsetInstant";
 import type { OffsetInstant } from "./toOffsetInstant";
-import { isObject } from "../../internal/isObject";
 
 /**
  * Render an instant-plus-offset pair back to the local time it describes.
@@ -61,53 +53,5 @@ import { isObject } from "../../internal/isObject";
  * @example fromOffsetInstant({ instant: "not an instant", offset: "-04:00" }) // ""
  */
 export function fromOffsetInstant(value: OffsetInstant): string {
-  try {
-    if (!isObject(value)) {
-      return "";
-    }
-
-    const epochNanoseconds = parseInstantNanoseconds(value.instant);
-    const offsetNanoseconds = parseUtcOffsetNanoseconds(value.offset);
-
-    if (epochNanoseconds === null || offsetNanoseconds === null) {
-      return "";
-    }
-
-    const offset = formatUtcOffset(offsetNanoseconds);
-
-    if (offset === null) {
-      return "";
-    }
-
-    try {
-      const instant = Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
-
-      if (value.timeZone !== undefined) {
-        // Temporal is the authority on what identifier this is, exactly as it is for a
-        // bracketed zone in `toOffsetInstant` — an unrecognised one throws, and the two
-        // functions have to agree or a pair one produced would not survive the other. The
-        // canonicalised id is what gets tested for an offset, since `"-0400"` and `"+05"` are
-        // offsets too and only Temporal knows that.
-        const zoned = instant.toZonedDateTimeISO(value.timeZone);
-
-        if (utcOffset.test(zoned.timeZoneId)) {
-          return "";
-        }
-
-        return zoned.offset === offset ? zoned.toString() : "";
-      }
-
-      // With no zone, the offset is the only thing that can shift the instant onto a wall
-      // clock (`wallClockAtOffset` keeps both range limits and sub-minute offsets).
-      const wallClock = wallClockAtOffset(instant, offsetNanoseconds);
-
-      return `${wallClock.toString()}${offset}`;
-    } catch {
-      return "";
-    }
-  } catch {
-    // Never throws (Core Rule 3): a hostile
-    // argument is invalid input, not an exception.
-    return "";
-  }
+  return writeOffsetInstant(value);
 }

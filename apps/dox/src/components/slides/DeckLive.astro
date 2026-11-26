@@ -1,0 +1,58 @@
+---
+/**
+ * A live Dox panel on a slide: the real Dox chat and widget rail (`DeckDox`), one component for
+ * every deck. `mode` picks what the slide does, and `live` (the deck's `DeckLiveData`) supplies
+ * the questions, the page tool's call and the Worker's page context:
+ *
+ *  - `answer`: the deck's running question, answered live with its recording as the fallback.
+ *  - `audience`: the deck's ready questions, each playing a recording with no typing and no
+ *    network, and the composer, whose question goes live.
+ *  - `tools`: the page tool called from this page when the slide shows. It runs the tool's own
+ *    `execute`, the path an agent takes, so nothing is recorded and nothing goes over the network.
+ *
+ * `slide` is the id of the slide the panel sits on, the name the presenter's Live or Recorded
+ * line gives the demo. `recorded` is the deck's recordings (its `recorded.ts`).
+ * The presenter's copy of the slides (`presenter`, as `Deck` is given it) gets a static
+ * placeholder (`data-live`, as an island's stand-in is), so no second chat mounts there.
+ */
+import DeckDox, { type DeckDoxMode } from "./DeckDox";
+import type { DeckLiveData } from "~/lib/slides/live-data";
+import { selectRecordings } from "~/lib/slides/replay";
+
+interface Props {
+  mode: DeckDoxMode;
+  slide: string;
+  live: DeckLiveData;
+  recorded: readonly unknown[];
+  /** The deck's venue zone (`DeckEntry.zone`): a recording's date is read in it. */
+  zone: string;
+  presenter?: boolean;
+}
+const { mode, slide, live, recorded, zone, presenter = false } = Astro.props;
+
+const PLACEHOLDER: Record<DeckDoxMode, string> = {
+  answer: "Dox answers here in the live deck.",
+  audience: "The room's questions go to Dox in the live deck.",
+  tools: "The page tool runs here in the live deck.",
+};
+const questions =
+  mode === "answer" ? [live.running] : mode === "audience" ? live.faq : [];
+const recordings = selectRecordings(recorded, questions.map((q) => q.id));
+---
+
+{
+  presenter ? (
+    <p class="gmt-deck-panel" data-live>{PLACEHOLDER[mode]}</p>
+  ) : (
+    <DeckDox
+      client:only="react"
+      mode={mode}
+      demoId={slide}
+      questions={questions}
+      recordings={recordings}
+      pageContext={live.pageContext}
+      zone={zone}
+      tool={mode === "tools" ? live.tool : undefined}
+    />
+  )
+}

@@ -3,11 +3,70 @@ import {
   checkFormatterArguments,
   clearFormatterCache,
 } from "./formatterCache";
+import { isLunisolarTextCompatNeeded } from "./temporalCompat/capabilities";
 
 describe("cachedFormatter", () => {
   beforeEach(() => {
     clearFormatterCache();
   });
+
+  // Compat D33: where the probe for the calendar fails, a chinese or dangi date is refused, and a
+  // refusal is not cached; where it passes, the host's own formatter is returned.
+  it.each`
+    locale               | calendar     | options
+    ${"en-u-ca-chinese"} | ${"chinese"} | ${{ timeZone: "UTC" }}
+    ${"en-u-ca-dangi"}   | ${"dangi"}   | ${{ timeZone: "UTC" }}
+    ${"en"}              | ${"chinese"} | ${{ timeZone: "UTC", calendar: "chinese", dateStyle: "short" }}
+  `(
+    "throws a RangeError for $locale with $options on every call while the $calendar probe fails",
+    ({
+      locale,
+      calendar,
+      options,
+    }: {
+      locale: string;
+      calendar: "chinese" | "dangi";
+      options: object;
+    }) => {
+      const attempt = () => cachedFormatter("DateTimeFormat", locale, options);
+      if (isLunisolarTextCompatNeeded(calendar)) {
+        expect(attempt).toThrow(RangeError);
+        expect(attempt).toThrow(RangeError);
+      } else {
+        expect(attempt).not.toThrow();
+      }
+    },
+  );
+
+  // The argument check validates the caller's options only: a time-only function completes them
+  // afterwards, and the formatter it formats with is the one refused.
+  it("does not refuse a chinese date formatter when only the arguments are checked", () => {
+    expect(() =>
+      checkFormatterArguments("DateTimeFormat", "en-u-ca-chinese", {}),
+    ).not.toThrow();
+  });
+
+  // A formatter whose date parts are thrown away is built without the date refusals, and the
+  // refusing formatter for the same arguments still throws: the two are cached apart.
+  it.each`
+    locale               | why
+    ${"en-u-ca-chinese"} | ${"compat D33"}
+  `(
+    "builds $locale without the date refusal ($why), and still refuses it where the probe fails",
+    ({ locale }: { locale: string }) => {
+      const options = { dateStyle: "full", timeZone: "UTC" } as const;
+      const kept = cachedFormatter("DateTimeFormat", locale, options, false);
+      expect(cachedFormatter("DateTimeFormat", locale, options, false)).toBe(
+        kept,
+      );
+      const attempt = () => cachedFormatter("DateTimeFormat", locale, options);
+      if (isLunisolarTextCompatNeeded("chinese")) {
+        expect(attempt).toThrow(RangeError);
+      } else {
+        expect(attempt).not.toThrow();
+      }
+    },
+  );
 
   it("returns the same formatter for the same plain arguments", () => {
     const options = { dateStyle: "long", timeZone: "UTC" } as const;
@@ -20,15 +79,43 @@ describe("cachedFormatter", () => {
     why                                | locale       | options
     ${"an omitted locale"}             | ${undefined} | ${{ timeZone: "UTC" }}
     ${"a DateTimeFormat with no zone"} | ${"en-GB"}   | ${{ dateStyle: "long" }}
-    ${"an object option value"}        | ${"en-GB"}   | ${{ timeZone: "UTC", month: { toString: () => "long" } }}
     ${"an empty locale array"}         | ${[]}        | ${{ timeZone: "UTC" }}
-    ${"a NaN option value"}            | ${"en-GB"}   | ${{ timeZone: "UTC", unknownOption: NaN }}
-    ${"an Infinity option value"}      | ${"en-GB"}   | ${{ timeZone: "UTC", unknownOption: Infinity }}
   `("builds fresh for $why", ({ locale, options }) => {
     expect(cachedFormatter("DateTimeFormat", locale, options)).not.toBe(
       cachedFormatter("DateTimeFormat", locale, options),
     );
   });
+
+  // Intl would turn an object into its ToString; the gate refuses it before anything is built.
+  it("throws a TypeError for an object option value instead of converting it", () => {
+    expect(() =>
+      cachedFormatter("DateTimeFormat", "en-GB", {
+        timeZone: "UTC",
+        month: { toString: () => "long" },
+      } as never),
+    ).toThrow(TypeError);
+  });
+
+  // Intl refuses a non-finite digit count; the cache never keeps what failed, so each call throws.
+  it.each`
+    label         | value
+    ${"NaN"}      | ${Number.NaN}
+    ${"Infinity"} | ${Number.POSITIVE_INFINITY}
+  `(
+    "throws the RangeError Intl throws for a $label digit count",
+    ({ value }) => {
+      const options = {
+        timeZone: "UTC",
+        fractionalSecondDigits: value,
+      } as never;
+      expect(() => cachedFormatter("DateTimeFormat", "en-GB", options)).toThrow(
+        RangeError,
+      );
+      expect(() => cachedFormatter("DateTimeFormat", "en-GB", options)).toThrow(
+        RangeError,
+      );
+    },
+  );
 
   it("skips an undefined option value, so it shares a formatter with the option left out", () => {
     expect(

@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return true when `value` falls on a Monday–Friday business day in the given timezone.
@@ -27,10 +26,10 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example isZonedBusinessDay("invalid") // false
  */
 export function isZonedBusinessDay(value: string): boolean {
-  if (!isValidZonedDateTime(value)) return false;
+  const zoned = zonedDateTimeOf(value);
+  if (zoned === null) return false;
 
   try {
-    const zoned = zonedDateTimeFrom(value);
     return zoned.dayOfWeek >= 1 && zoned.dayOfWeek <= 5;
   } catch {
     return false;

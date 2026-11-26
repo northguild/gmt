@@ -1,4 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { isDateUnitName } from "../../internal/unitNames";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
 import {
   getUnitSpan,
@@ -13,7 +15,6 @@ import {
   type CalendarDateUnit,
   calendarDateUntil,
 } from "../../internal/temporalCompat";
-import { isValidCalendarDate, isValidDateUnit } from "../validate";
 
 /** The start of the date `unit` holding `source`, or null when it lies before the representable range. */
 function startOfUnitIfRepresentable(
@@ -71,7 +72,7 @@ export function intervalCountDate(
     return null;
   }
 
-  if (!isValidCalendarDate(start) || !isValidCalendarDate(end)) {
+  if (calendarDateOf(start) === null || calendarDateOf(end) === null) {
     return null;
   }
 
@@ -81,7 +82,7 @@ export function intervalCountDate(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidDateUnit(resolvedUnit)) {
+  if (!isDateUnitName(resolvedUnit)) {
     return null;
   }
 

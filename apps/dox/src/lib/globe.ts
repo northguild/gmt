@@ -33,11 +33,8 @@ import type {
   GlobeMarker,
   GlobeOptions,
   GlobeRegion,
-  GlobeTheme,
   LngLat,
   PolygonRings,
-  RendererChoice,
-  Rgba,
 } from "./globe/types";
 import {
   COORDINATES_BY_ID,
@@ -58,7 +55,7 @@ import {
 } from "./zone-filter";
 import { EARTH_ATTRIBUTE } from "./earth-look";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
-import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "./globe-inks";
+import { labelFont, readTheme, rendererOverride } from "./globe/globe-theme";
 import { setHtml } from "~/widgets/builders";
 import type { GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import { renderZoneTooltip } from "./zone-readout";
@@ -67,6 +64,9 @@ import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
 import { withBase } from "./site";
 import { chooseZone } from "./zone-action";
+import { createSlicer, yieldToMain } from "./yield-to-main";
+import { placeTooltip } from "./globe-card";
+import { lockRings } from "./globe-lock";
 
 export interface GlobeHost {
   /** Rotate the globe to bring a zone to centre and select it. */
@@ -84,6 +84,13 @@ export interface GlobeHost {
   getSelected: () => string | null;
   /** Called on every selection change (null when cleared). */
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
+  /**
+   * Lock on to the place just chosen: call `onStart` and ripple the rings from its pin
+   * (`globe-lock.ts`), together. A pin in sight locks at once; one out of sight locks as the globe
+   * brings it to the centre, or at once if the reader takes the globe first or it stops drawing.
+   * A new selection drops a lock still waiting, and stops one still rippling.
+   */
+  lockOn: (onStart: () => void) => void;
   /** Which backend is drawing — read by the smoke script and useful in the console. */
   getRenderer: () => "webgpu" | "canvas2d";
   /**
@@ -91,6 +98,8 @@ export interface GlobeHost {
    * Replaces any earlier callback.
    */
   onInteract: (callback: (kind: GlobeInteraction) => void) => void;
+  /** Called when the reader moves the zoom a step (see `GlobeEngine.onZoom`). Replaces any earlier callback. */
+  onZoom: (callback: (dir: 1 | -1, closeness: number) => void) => void;
   /** `[λ, φ]` in degrees as the camera has it: it looks at longitude −λ, latitude −φ. */
   getRotation: () => readonly [number, number];
   /** Where the Earth's centre sits now, in CSS pixels within the globe's host. */
@@ -143,11 +152,18 @@ export interface GlobeParts {
   tooltip: HTMLElement;
   /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
   zoom: HTMLElement | null;
+  /** Where the lock's rings ripple from a chosen pin (`globe-lock.ts`); absent when the host has none. */
+  lock?: HTMLElement | null;
   /**
    * The right-most x, in host pixels, the tooltip card may reach, or null for
    * no limit. Read on every frame; a pin at or beyond it is hidden.
    */
   tooltipLimit?: () => number | null;
+  /**
+   * The band, in host pixels, the tooltip card keeps to, or null for the page: it flips below its
+   * pin rather than rise past `top`, and hides rather than reach past `bottom`. Read on every frame.
+   */
+  tooltipBand?: () => { top: number; bottom: number | null } | null;
   /** The opt-in engine options a host that frames its own globe passes through. */
   engine?: Pick<
     GlobeOptions,
@@ -156,45 +172,9 @@ export interface GlobeParts {
     | "hitArea"
     | "maxDpr"
     | "pauseWhenHidden"
+    | "pauseWhile"
     | "entrance"
   >;
-}
-
-/** Where the hover card goes, and whether its pin is out of sight behind chrome. */
-export interface TooltipPlacement {
-  /** The card's centre, in host pixels. */
-  x: number;
-  /** True when the pin is at or past `limit`, so the card has nothing to point at. */
-  occluded: boolean;
-}
-
-/**
- * Centre the hover card on its pin, kept inside the host and short of `limit`.
- *
- * Pure so the clamp is tested without a globe. Without a `limit` this is the
- * plain clamp: the card's edges stay `pad` inside the host. With one, the
- * card's right edge also stays at or short of it, and a pin at or past it is
- * `occluded`.
- */
-export function placeTooltip({
-  x,
-  width,
-  cardWidth,
-  pad,
-  limit,
-}: {
-  x: number;
-  width: number;
-  cardWidth: number;
-  pad: number;
-  limit: number | null;
-}): TooltipPlacement {
-  const upper = Math.min(width - pad, limit ?? Infinity) - cardWidth / 2;
-  const lower = cardWidth / 2 + pad;
-  return {
-    x: Math.min(Math.max(x, lower), upper),
-    occluded: limit !== null && x >= limit,
-  };
 }
 
 /**
@@ -224,7 +204,10 @@ export async function initGlobe(
   );
   const reducedMotion = () => reduceMotionQuery?.matches ?? false;
 
+  /* The startup is cut into slices, each yielding to the main thread, so a reader's first input
+     is never queued behind the whole of it (web.dev/articles/long-tasks-devtools). */
   const zones = resolveGlobeZones(getTimeZones());
+  await yieldToMain();
 
   // Default to the viewer's own zone when it can be placed.
   const systemZone = getSystemTimeZone();
@@ -277,6 +260,7 @@ export async function initGlobe(
      hold releases itself if the renderer never gets that far. */
   const releaseClocks = clockPanel ? holdEntrance(clockPanel) : () => {};
 
+  await yieldToMain();
   let engine: GlobeEngineWithHitTest;
   try {
     engine = (await createGlobeEngine(host, {
@@ -300,6 +284,10 @@ export async function initGlobe(
 
   // --- selection -----------------------------------------------------------
   let selectedId: string | null = null;
+  /** The rings a chosen place's pin ripples (`lockOn`). */
+  const lock = parts.lock ? lockRings(parts.lock) : null;
+  /** A lock waiting for the globe to bring its place to the centre. */
+  let pendingLock: (() => void) | null = null;
   let selectedReading: ZoneReading | null = null;
   /* The viewer's own local date, against which the tooltip measures its
      "yesterday / tomorrow" call-out. Refreshed on each tick, not captured
@@ -433,6 +421,8 @@ export async function initGlobe(
   let boundaries: Map<string, PreparedPolygon[]> | null = null;
 
   function setSelected(id: string | null): void {
+    pendingLock = null;
+    lock?.stop();
     selectedId = id;
     selectedReading = id ? readZoneNow(id) : null;
     renderTooltip();
@@ -554,7 +544,9 @@ export async function initGlobe(
       };
       const prepared = new Map<string, PreparedPolygon[]>();
       const raw = new Map<string, PolygonRings[]>();
+      const slicer = createSlicer();
       for (const feature of data.features) {
+        await slicer.turn();
         const tzid = feature?.properties?.tzid;
         if (!tzid) continue;
         const polygons =
@@ -616,10 +608,19 @@ export async function initGlobe(
       tooltip.hidden = true;
       return;
     }
+    const fresh = tooltip.hidden;
     tooltip.hidden = false;
     const at = COORDINATES_BY_ID.get(selectedId);
     const sky = at ? skyAt(at.lat, at.lng, nowMs()) : undefined;
     setHtml(tooltip, renderZoneTooltip(selectedReading, viewerDate, sky));
+    /* A card shown afresh is placed before it paints, and stays unseen until something places
+       it: a pin out of sight, or a globe that has drawn no frame yet (a dawn holds its first one
+       back), leaves it unplaced, and an unplaced card sat in the page's top left. The landing
+       reached from another page shows its card at once, so it showed there. */
+    if (fresh) {
+      tooltip.style.visibility = "hidden";
+      positionTooltip();
+    }
   }
 
   function positionTooltip(): void {
@@ -632,24 +633,29 @@ export async function initGlobe(
       return;
     }
     tooltip.style.opacity = "1";
-    // Clamp inside the stage, and flip below the point near the top edge.
-    const { x, occluded } = placeTooltip({
+    /* In the top layer the card is placed in page pixels, from the frame it is drawn over, so it
+       scrolls with the page by itself: a card moved by script on every scroll would count as a
+       layout shift. */
+    const frame = topLayer ? tooltipFrame() : { left: 0, top: 0 };
+    // Clamp inside the stage, and flip below the point near the top bound.
+    const band = parts.tooltipBand?.() ?? null;
+    const { x, y, below, occluded } = placeTooltip({
       x: at.x,
+      y: at.y,
+      top: band?.top ?? -frame.top,
+      bottom: band?.bottom ?? null,
       width: host.clientWidth,
       // The box's own width, not `offsetWidth`, which rounds: a card clear to the pixel stays clear.
       cardWidth: tooltip.getBoundingClientRect().width,
+      cardHeight: tooltip.offsetHeight,
       pad: 8,
       limit: tooltipLimit(),
     });
     tooltip.toggleAttribute("data-occluded", occluded);
-    /* In the top layer the card is placed in page pixels, from the frame it is drawn over, so it
-       scrolls with the page by itself: a card moved by script on every scroll would count as a
-       layout shift. It flips only where it would leave the top of the page. */
-    const frame = topLayer ? tooltipFrame() : { left: 0, top: 0 };
-    const flip = frame.top + at.y - tooltip.offsetHeight - 16 < 0;
-    tooltip.toggleAttribute("data-below", flip);
+    tooltip.toggleAttribute("data-below", below);
     tooltip.style.left = `${frame.left + x}px`;
-    tooltip.style.top = `${frame.top + at.y + (flip ? 12 : 0)}px`;
+    tooltip.style.top = `${frame.top + y}px`;
+    tooltip.style.removeProperty("visibility");
   }
 
   /* The card's frame, in page pixels: the element it would be placed in outside the top layer. */
@@ -676,9 +682,72 @@ export async function initGlobe(
     window.addEventListener("resize", followScroll, { passive: true });
   }
 
+  // --- the lock ------------------------------------------------------------
+  /** Where the selected zone's pin is now, in host pixels, or null while it is out of sight. */
+  function selectedPin(): { x: number; y: number } | null {
+    const coordinate = selectedId ? COORDINATES_BY_ID.get(selectedId) : null;
+    if (!coordinate) return null;
+    const at = engine.project([coordinate.lng, coordinate.lat]);
+    const limit = tooltipLimit() ?? host.clientWidth;
+    const inside =
+      at.x >= 0 && at.x < limit && at.y >= 0 && at.y <= host.clientHeight;
+    return at.visible && inside ? { x: at.x, y: at.y } : null;
+  }
+
+  function startLock(onStart: () => void): void {
+    pendingLock = null;
+    onStart();
+    const at = selectedPin();
+    if (!lock || !at || reducedMotion()) return;
+    lock.place(at);
+    lock.play();
+  }
+
+  function lockOn(onStart: () => void): void {
+    const waits =
+      selectedId !== null &&
+      COORDINATES_BY_ID.has(selectedId) &&
+      selectedPin() === null &&
+      !engine.isHeld();
+    if (waits) pendingLock = onStart;
+    else startLock(onStart);
+  }
+
+  /* A lock waiting on a flight plays once the pin is within this share of the Earth's radius of
+     its centre: in the flight's long, slow landing, before it has quite stopped. */
+  const LOCK_NEAR = 0.15;
+
+  function followLock(): void {
+    const at = selectedPin();
+    if (pendingLock && at) {
+      const centre = engine.getCentre();
+      if (
+        Math.hypot(at.x - centre.x, at.y - centre.y) <=
+        LOCK_NEAR * centre.radius
+      )
+        startLock(pendingLock);
+      return;
+    }
+    lock?.place(at);
+  }
+
+  // A globe that stops drawing never lands its flight, so a waiting lock plays now.
+  engine.onHold(() => {
+    if (pendingLock) startLock(pendingLock);
+  });
+
+  let interactCallback: ((kind: GlobeInteraction) => void) | null = null;
+  engine.onInteract((kind) => {
+    // A drag, a pinch or a key ends the flight, so a waiting lock plays now. A tap chooses anew.
+    if (pendingLock && kind !== "tap" && kind !== "wheel")
+      startLock(pendingLock);
+    interactCallback?.(kind);
+  });
+
   const frameListeners: (() => void)[] = [];
   engine.onFrame(() => {
     positionTooltip();
+    followLock();
     for (const listener of frameListeners) listener();
   });
 
@@ -711,7 +780,7 @@ export async function initGlobe(
     const stamp = readViewerStamp();
     viewerDate = stamp.date;
     refreshBuckets(stamp);
-    zoneClockList?.tick();
+    void zoneClockList?.tick();
     if (selectedId) {
       selectedReading = readZoneNow(selectedId);
       renderTooltip();
@@ -783,24 +852,14 @@ export async function initGlobe(
     onSelect(callback) {
       selectCallback = callback;
     },
+    lockOn,
     getRenderer: () => engine.renderer,
-    onInteract: (callback) => engine.onInteract(callback),
-    getRotation: () => engine.getRotation(),
-    getCentre: () => {
-      const [lambda, phi] = engine.getRotation();
-      const { x, y } = engine.project([-lambda, -phi]);
-      /* The rim: the point 89.9 degrees from the centre toward north, over the pole if need be. */
-      const lat = (-phi * Math.PI) / 180;
-      const reach = (89.9 * Math.PI) / 180;
-      const north =
-        Math.sin(lat) * Math.cos(reach) + Math.cos(lat) * Math.sin(reach);
-      const over = Math.cos(reach) - Math.sin(lat) * north < 0;
-      const rim = engine.project([
-        -lambda + (over ? 180 : 0),
-        (Math.asin(north) * 180) / Math.PI,
-      ]);
-      return { x, y, radius: Math.hypot(rim.x - x, rim.y - y) };
+    onInteract(callback) {
+      interactCallback = callback;
     },
+    onZoom: (callback) => engine.onZoom(callback),
+    getRotation: () => engine.getRotation(),
+    getCentre: () => engine.getCentre(),
     onFrame: (callback) => {
       frameListeners.push(callback);
     },
@@ -813,6 +872,8 @@ export async function initGlobe(
     },
     destroy() {
       frameListeners.length = 0;
+      pendingLock = null;
+      lock?.stop();
       clearInterval(clockTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("scroll", followScroll, { capture: true });
@@ -854,25 +915,6 @@ function revealCanvas(
   });
 }
 
-/**
- * `?globe=webgpu` or `?globe=canvas2d` pins the backend.
- *
- * Only for verification — `scripts/globe-smoke.mjs` uses it to render the same
- * frame through both and compare. Anything else, including no parameter at all,
- * leaves the engine to choose.
- */
-function rendererOverride(): RendererChoice {
-  try {
-    const value = new URLSearchParams(globalThis.location?.search ?? "").get(
-      "globe",
-    );
-    if (value === "webgpu" || value === "canvas2d") return value;
-  } catch {
-    // No location (a test environment, a worker): take the default.
-  }
-  return "auto";
-}
-
 /** The current epoch-ms. */
 function nowMs(): number {
   return getUnixNow();
@@ -881,162 +923,4 @@ function nowMs(): number {
 function shortLabel(id: string): string {
   const tail = id.split("/").pop() ?? id;
   return tail.replace(/_/g, " ");
-}
-
-/**
- * The label font, taken from the site's own mono token.
- *
- * 12px, not the 10px the canvas-2D globe hard-coded: that was below the site's
- * own 12px floor, and `font-floor.test.ts` missed it only because its patterns
- * never looked at a canvas `font` assignment. Both are fixed.
- */
-function labelFont(host: HTMLElement): string {
-  const style = getComputedStyle(host);
-  const family =
-    style.getPropertyValue("--gmt-font-mono").trim() ||
-    'ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace';
-  return `600 12px ${family}`;
-}
-
-/** The Dox globe's colours, read from the site's CSS custom properties. */
-interface DoxTheme extends GlobeTheme {
-  markerPrimary: Rgba;
-  markerOther: Rgba;
-  markerNightPrimary: Rgba;
-  markerNightOther: Rgba;
-  markerSelected: Rgba;
-  regionFill: Rgba;
-  regionStroke: Rgba;
-}
-
-/**
- * Build the theme from `--gmt-*` tokens.
- *
- * Re-read rather than cached, because `data-theme` flips them, and
- * `gmt-a11y.css` zeroes the atmosphere and haze alphas under reduced
- * transparency and raised contrast, and the imagery under raised contrast and
- * forced colours.
- */
-function readTheme(host: HTMLElement): DoxTheme {
-  const style = getComputedStyle(host);
-  const token = (name: string, fallback: string): string =>
-    style.getPropertyValue(name).trim() || fallback;
-  const number = (name: string, fallback: number): number => {
-    const parsed = Number.parseFloat(token(name, ""));
-    return Number.isFinite(parsed) ? parsed : fallback;
-  };
-  const colour = (name: string, fallback: string, alpha: number): Rgba => {
-    const [r, g, b, a] = parseColour(token(name, fallback)) ?? [1, 1, 1, 1];
-    return [r, g, b, a * alpha];
-  };
-
-  const cyan = "--gmt-cyan";
-  /* The overlay inks are the same in both themes: every marker, ring, label
-     and outline sits on the dark casing (globe/casing.ts), so it is the casing
-     they contrast with, not the page. */
-  const ink = "--gmt-globe-ink";
-  const selected = "--gmt-globe-selected";
-  return {
-    ocean: colour(
-      "--gmt-teal",
-      "#0e7490",
-      number("--gmt-globe-ocean-alpha", 0.05),
-    ),
-    limb: colour(cyan, "#22d3ee", 0.4),
-    grid: colour(cyan, "#22d3ee", number("--gmt-globe-grid-alpha", 0.18)),
-    land: colour(cyan, "#22d3ee", number("--gmt-globe-land-alpha", 0.12)),
-    landStroke: colour(cyan, "#22d3ee", 0.45),
-    day: colour(cyan, "#22d3ee", number("--gmt-globe-day-alpha", 0.26)),
-    night: colour(
-      "--gmt-globe-night",
-      "#03080c",
-      number("--gmt-globe-night-alpha", 0.5),
-    ),
-    atmosphere: colour(
-      cyan,
-      "#22d3ee",
-      number("--gmt-globe-atmosphere-alpha", 0.42),
-    ),
-    haze: colour(cyan, "#22d3ee", number("--gmt-globe-haze-alpha", 0.2)),
-    label: colour(ink, "#cfeaf2", LABEL_ALPHA),
-    casing: colour(
-      "--gmt-globe-casing",
-      "#03080c",
-      number("--gmt-globe-casing-alpha", 0.9),
-    ),
-    imagery: Math.min(Math.max(number("--gmt-globe-imagery-alpha", 1), 0), 1),
-    vectorOverlay: Math.min(
-      Math.max(number("--gmt-globe-vector-overlay", 0), 0),
-      1,
-    ),
-    imageryDuotone: Math.min(
-      Math.max(number("--gmt-globe-imagery-duotone", 0), 0),
-      1,
-    ),
-    markerPrimary: colour("--gmt-globe-marker", "#22d3ee", 1),
-    markerOther: colour(ink, "#cfeaf2", MINOR_MARKER_ALPHA),
-    markerNightPrimary: colour("--gmt-globe-gold", "#fde047", 1),
-    markerNightOther: colour("--gmt-globe-gold", "#fde047", MINOR_MARKER_ALPHA),
-    markerSelected: colour(selected, "#4ade80", 1),
-    regionFill: colour(selected, "#4ade80", 0.12),
-    regionStroke: colour(selected, "#4ade80", 1),
-  };
-}
-
-/**
- * Any CSS colour to `[r, g, b, a]` with channels in 0..1.
- *
- * Hex is handled directly, since every `--gmt-*` colour token is hex today. A
- * 2D canvas parses anything else: assigning to `fillStyle` and reading it back
- * gives a normalised value, which means a token written as `rgb()`, `hsl()` or
- * `oklch()` keeps working. The canvas-2D globe parsed hex only and silently
- * passed anything else through to a draw call, so a token in another notation
- * would have worked there and broken here.
- */
-export function parseColour(value: string): Rgba | null {
-  const hex = parseHex(value);
-  if (hex) return hex;
-
-  const probe = document.createElement("canvas").getContext("2d");
-  if (!probe) return null;
-  /* An unparsable value leaves `fillStyle` at its default, so seeding it with a
-     colour nothing resolves to makes "did not parse" detectable. */
-  probe.fillStyle = "#010203";
-  probe.fillStyle = value;
-  const normalised = probe.fillStyle;
-  if (typeof normalised !== "string" || normalised === "#010203") return null;
-  return parseHex(normalised) ?? parseRgbFunction(normalised);
-}
-
-function parseHex(value: string): Rgba | null {
-  const match = /^#([0-9a-f]{3,8})$/i.exec(value.trim());
-  if (!match) return null;
-  const digits = match[1];
-  const expand = (part: string): number => Number.parseInt(part, 16) / 255;
-  if (digits.length === 3 || digits.length === 4) {
-    const parts = digits.split("").map((c) => expand(c + c));
-    return [parts[0], parts[1], parts[2], parts[3] ?? 1];
-  }
-  if (digits.length === 6 || digits.length === 8) {
-    const parts: number[] = [];
-    for (let i = 0; i < digits.length; i += 2) {
-      parts.push(expand(digits.slice(i, i + 2)));
-    }
-    return [parts[0], parts[1], parts[2], parts[3] ?? 1];
-  }
-  return null;
-}
-
-function parseRgbFunction(value: string): Rgba | null {
-  const match = /^rgba?\(([^)]+)\)$/i.exec(value.trim());
-  if (!match) return null;
-  /* A canvas normalises to `rgba(r, g, b, a)` with 0-255 channels and a 0-1
-     alpha, so there are no percentages to handle here. */
-  const parts = match[1]
-    .split(/[\s,/]+/)
-    .filter((part) => part.length > 0)
-    .map((part) => Number.parseFloat(part));
-  if (parts.length < 3 || parts.some((part) => !Number.isFinite(part)))
-    return null;
-  return [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1];
 }

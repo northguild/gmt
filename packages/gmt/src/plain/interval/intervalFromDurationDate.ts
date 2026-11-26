@@ -1,14 +1,13 @@
+import { durationOf } from "../../internal/inputChecks";
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
-import { isValidDuration } from "../../duration/validate";
 import {
   calendarSystemOfDateValue,
   formatDateInCalendar,
-  parseCalendarDateValue,
   plainDateAdd,
   resolveOverflow,
 } from "../../internal";
 import type { Overflow } from "../../types";
-import { isValidCalendarDate } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -72,11 +71,14 @@ export function intervalFromDurationDate(
     return null;
   }
 
-  if (typeof value !== "string" || !isValidCalendarDate(value)) {
+  const point = calendarDateOf(value);
+  if (typeof value !== "string" || point === null) {
     return null;
   }
 
-  if (!isValidDuration(duration)) {
+  const dur = durationOf(duration);
+
+  if (dur === null) {
     return null;
   }
 
@@ -89,8 +91,6 @@ export function intervalFromDurationDate(
     if (!calendar) {
       return null;
     }
-    const point = parseCalendarDateValue(value);
-    const dur = Temporal.Duration.from(duration);
     const overflow = resolveOverflow(options?.overflow);
 
     const other = plainDateAdd(

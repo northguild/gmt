@@ -1,11 +1,10 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { booleanOption } from "../../internal/typedOptions";
 import { formatWallClockOrZoned } from "../../internal/instantFormatOptions";
 import { normalizeDateTime } from "../../internal/normalizeDateTime";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
-import { toInstantFromUtc } from "../../internal/toInstantFromUtc";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { readDateTimeFormatOptions } from "../../internal/readDateTimeFormatOptions";
-import { optionOrDefault } from "../../internal/optionOrDefault";
 
 /**
  * Options for `formatUtc`. Extends `Intl.DateTimeFormatOptions`; only the
@@ -50,6 +49,11 @@ export interface FormatUtcOptions extends Intl.DateTimeFormatOptions {
  *   identifier only: constructing one with an offset that has seconds throws (ECMA-402, the
  *   `DateTimeFormat` construction step "If parseResult contains more than one MinuteSecond Parse
  *   Node, throw a RangeError exception"). Pass the IANA name.
+ * - A `chinese` or `dangi` date follows the observatory the standard names: Purple Mountain
+ *   Observatory for `chinese`, KASI for `dangi`. A runtime that prints a different date for one of
+ *   them returns `""` for any format with a year, month, day or era in that calendar. A runtime
+ *   that prints the observatory's date keeps its own text. A format with only a time or weekday
+ *   field always returns its text.
  *
  * @param value UTC ISO string to format
  * @param locale optional: BCP 47 locale tag, or a preference list of tags (ECMA-402)
@@ -77,17 +81,15 @@ export function formatUtc(
   try {
     // ECMA-402 CoerceOptionsToObject: undefined is defaults; null is a TypeError.
     if (options === null) return "";
-    if (!isValidUtc(value)) return "";
+    const instant = utcInstantOf(value);
+    if (instant === null) return "";
 
     // Each option is read once (GetOption), inherited ones included.
-    const includeTimeZoneName = optionOrDefault(
+    const includeTimeZoneName = booleanOption(
       options?.includeTimeZoneName,
       false,
     );
     const { timeZone, ...intlOptions } = readDateTimeFormatOptions(options);
-
-    const instant = toInstantFromUtc(value);
-    if (instant === null) return "";
 
     // ECMA-402 throws RangeError for an unknown zone: the sentinel, never a silent UTC.
     const tz = normalizeTimeZone(timeZone);

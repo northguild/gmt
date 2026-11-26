@@ -1,3 +1,4 @@
+import { roundingOptionsOf } from "./typedOptions";
 import { Temporal } from "./temporal";
 import type { RoundingOptions } from "../types";
 
@@ -19,10 +20,13 @@ export function plainDateUntil(
   largestUnit: string,
   options?: RoundingOptions<Temporal.DateUnit>,
 ): Temporal.Duration {
+  // Each option is read once (GetOption).
+  const { smallestUnit, roundingIncrement, roundingMode } =
+    roundingOptionsOf(options);
   return start.until(end, {
     largestUnit: largestUnit as Temporal.DateUnit,
-    smallestUnit: options?.smallestUnit,
-    roundingIncrement: options?.roundingIncrement,
-    roundingMode: options?.roundingMode,
+    smallestUnit,
+    roundingIncrement,
+    roundingMode,
   });
 }

@@ -1,22 +1,26 @@
 import {
+  booleanOption,
+  stringOptionOrDefault,
+} from "../../internal/typedOptions";
+import {
   cycleFieldValue,
   dateCycleFieldBounds,
   isValidAmount,
   timeCycleFieldBounds,
-  zonedDateTimeFrom,
 } from "../../internal";
 import {
-  isValidDateCycleField,
-  isValidDateTimeCycleField,
-} from "../../plain/validate";
+  isDateCycleFieldName,
+  isDateTimeCycleFieldName,
+} from "../../internal/unitNames";
+import { resolveOverflow } from "../../internal/resolveOverflow";
+import { setZonedFields } from "../../internal/setZonedFields";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import type {
   DateTimeCycleField,
   Disambiguation,
   Offset,
   Overflow,
 } from "../../types";
-import { isValidZonedDateTime } from "../validate";
-import { setZoned } from "./setZoned";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -99,26 +103,39 @@ export function cycleZoned(
     return "";
   }
 
+  const zoned = zonedDateTimeOf(value);
   if (
-    !isValidZonedDateTime(value) ||
-    !isValidDateTimeCycleField(field) ||
+    zoned === null ||
+    !isDateTimeCycleFieldName(field) ||
     !isValidAmount(amount)
   ) {
     return "";
   }
 
   try {
-    const zoned = zonedDateTimeFrom(value);
-    const bounds = isValidDateCycleField(field)
+    const bounds = isDateCycleFieldName(field)
       ? dateCycleFieldBounds(field, zoned)
       : timeCycleFieldBounds(field);
     const newValue = cycleFieldValue(
       zoned[field],
       amount,
       bounds,
-      options?.round ?? false,
+      booleanOption(options?.round, false),
     );
-    return setZoned(value, { [field]: newValue }, options);
+    return (
+      setZonedFields(
+        zoned,
+        { [field]: newValue },
+        {
+          overflow: resolveOverflow(options?.overflow),
+          disambiguation: stringOptionOrDefault(
+            options?.disambiguation,
+            "compatible",
+          ),
+          offset: stringOptionOrDefault(options?.offset, "prefer"),
+        },
+      )?.toString() ?? ""
+    );
   } catch {
     return "";
   }

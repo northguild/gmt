@@ -4,9 +4,8 @@ import {
   calendarOfAllZonedValues,
   formatZonedInCalendar,
   halfOpenMerge,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedInterval } from "./validate";
+import { calendarZonedIntervalOf } from "../../internal/intervalChecks";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -65,16 +64,23 @@ export function mergeIntervalsZoned(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          typeof interval.start === "string" &&
-          typeof interval.end === "string" &&
-          isValidCalendarZonedInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.ZonedDateTime;
+      end: Temporal.ZonedDateTime;
+    }> = [];
+    for (const interval of intervals) {
+      if (
+        !isObject(interval) ||
+        typeof interval.start !== "string" ||
+        typeof interval.end !== "string"
+      ) {
+        return [];
+      }
+      const pair = calendarZonedIntervalOf(interval.start, interval.end);
+      if (pair === null) {
+        return [];
+      }
+      parsed.push({ start: pair[0], end: pair[1] });
     }
 
     // D4-zoned reject gate: every endpoint across every interval must agree on a calendar, or there
@@ -87,11 +93,6 @@ export function mergeIntervalsZoned(
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: parseCalendarZonedValue(interval.start),
-        end: parseCalendarZonedValue(interval.end),
-      }));
-
       // Sorted, disjoint, non-touching, non-empty runs; each boundary keeps the ZonedDateTime (and
       // so the zone) of the interval that contributed it.
       return halfOpenMerge(parsed, Temporal.ZonedDateTime.compare).map(

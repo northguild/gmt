@@ -4,11 +4,17 @@ import {
   mockTemporalZonedDateTimeOffsetThrow,
   mockTemporalPlainTimeFromThrow,
 } from "../../test/mocks";
-import { hostileProxy, revokedProxy } from "../../test/hostileValues";
+import { hostileProxy } from "../../test/hostileValues";
+import {
+  HOSTILE_SCHEDULES,
+  OPEN_RANGE,
+  REJECTED_SCHEDULES,
+  nineToFive,
+  valid,
+} from "../../test/operatingScheduleRows";
 import { operatingIntervals } from "./operatingIntervals";
 import { recurringWindows } from "./recurringWindows";
 
-const nineToFive = [{ from: "09:00", to: "17:00" }];
 const weekdays = {
   1: nineToFive,
   2: nineToFive,
@@ -134,29 +140,37 @@ describe("operatingIntervals", () => {
 
     it.each`
       holidays                        | reads
-      ${["2024-07-04[u-ca=iso8601]"]} | ${"an iso8601 annotation"}
       ${["2024-07-04", "2024-07-04"]} | ${"a duplicate"}
-      ${["2024-07-04[foo=bar]"]}      | ${"an elective annotation"}
-    `("normalises a holiday with $reads", ({ holidays }) => {
-      expect(
-        operatingIntervals(
-          { timeZone: "America/New_York", weekly: { 4: nineToFive }, holidays },
-          julyWeek,
-        ),
-      ).toEqual([]);
-    });
-
-    it("matches an override written with an annotation to its date", () => {
+      ${["+002024-07-04"]}            | ${"an expanded year"}
+    `("closes a holiday listed as $reads", ({ holidays }) => {
+      // Thursday 4 July is closed; Friday 5 July is 09:00-17:00 EDT (UTC-4).
       expect(
         operatingIntervals(
           {
             timeZone: "America/New_York",
-            weekly: { 4: nineToFive },
-            overrides: [{ date: "2024-07-04[u-ca=iso8601]", windows: [] }],
+            weekly: { 4: nineToFive, 5: nineToFive },
+            holidays,
           },
           julyWeek,
         ),
-      ).toEqual([]);
+      ).toEqual([
+        { start: "2024-07-05T13:00:00Z", end: "2024-07-05T21:00:00Z" },
+      ]);
+    });
+
+    it("matches an override written with an expanded year to its date", () => {
+      expect(
+        operatingIntervals(
+          {
+            timeZone: "America/New_York",
+            weekly: { 4: nineToFive, 5: nineToFive },
+            overrides: [{ date: "+002024-07-04", windows: [] }],
+          },
+          julyWeek,
+        ),
+      ).toEqual([
+        { start: "2024-07-05T13:00:00Z", end: "2024-07-05T21:00:00Z" },
+      ]);
     });
   });
 
@@ -202,7 +216,6 @@ describe("operatingIntervals", () => {
 
   describe("invalid input", () => {
     const day = { start: "2024-06-10T00:00:00Z", end: "2024-06-11T00:00:00Z" };
-    const valid = { timeZone: "UTC", weekly: { 1: nineToFive } };
 
     it("is not empty for the valid baseline", () => {
       expect(operatingIntervals(valid, day)).toHaveLength(1);
@@ -218,34 +231,19 @@ describe("operatingIntervals", () => {
       );
     });
 
-    it.each`
-      schedule                                                                                                             | reads
-      ${null}                                                                                                              | ${"null"}
-      ${[valid]}                                                                                                           | ${"an array"}
-      ${"UTC"}                                                                                                             | ${"a string"}
-      ${{ weekly: { 1: nineToFive } }}                                                                                     | ${"no timeZone"}
-      ${{ ...valid, timeZone: "Invalid/Zone" }}                                                                            | ${"an invalid zone"}
-      ${{ timeZone: "UTC" }}                                                                                               | ${"no weekly"}
-      ${{ ...valid, weekly: { 8: nineToFive } }}                                                                           | ${"weekday 8"}
-      ${{ ...valid, weekly: { 1: [{ from: "09:00", to: "25:00" }] } }}                                                     | ${"a malformed window"}
-      ${{ ...valid, holidays: "2024-06-10" }}                                                                              | ${"holidays as a string"}
-      ${{ ...valid, holidays: [20240610] }}                                                                                | ${"a numeric holiday"}
-      ${{ ...valid, holidays: ["2024-02-30"] }}                                                                            | ${"an impossible holiday"}
-      ${{ ...valid, holidays: ["2024-06-10T00:00"] }}                                                                      | ${"a date-time holiday"}
-      ${{ ...valid, holidays: ["2024-06-10[u-ca=hebrew]"] }}                                                               | ${"a non-ISO holiday"}
-      ${{ ...valid, holidays: { weekend: [1, 2, 3, 4, 5, 6, 7], holidays: [], timeZone: "UTC" } }}                         | ${"an invalid BusinessCalendar"}
-      ${{ ...valid, holidays: { weekend: [6, 7], holidays: [] } }}                                                         | ${"a BusinessCalendar without a zone"}
-      ${{ ...valid, overrides: { date: "2024-06-10", windows: [] } }}                                                      | ${"overrides not in an array"}
-      ${{ ...valid, overrides: [{ windows: [] }] }}                                                                        | ${"an override without a date"}
-      ${{ ...valid, overrides: [{ date: "2024-06-31", windows: [] }] }}                                                    | ${"an impossible override date"}
-      ${{ ...valid, overrides: [{ date: "2024-06-10" }] }}                                                                 | ${"an override without windows"}
-      ${{ ...valid, overrides: [{ date: "2024-06-10", windows: [{ from: "09:00" }] }] }}                                   | ${"an override with a malformed window"}
-      ${{ ...valid, overrides: [null] }}                                                                                   | ${"a null override"}
-      ${{ ...valid, overrides: [{ date: "2024-06-10", windows: [] }, { date: "2024-06-10", windows: nineToFive }] }}       | ${"two overrides for one date"}
-      ${{ ...valid, overrides: [{ date: "2024-06-10", windows: [] }, { date: "2024-06-10[u-ca=iso8601]", windows: [] }] }} | ${"two spellings of one override date"}
-    `("returns [] for a schedule with $reads", ({ schedule }) => {
-      expect(operatingIntervals(schedule, day)).toEqual([]);
-    });
+    it.each(REJECTED_SCHEDULES)(
+      "returns [] for a schedule with $reads",
+      ({ schedule }) => {
+        expect(operatingIntervals(schedule as never, OPEN_RANGE)).toEqual([]);
+      },
+    );
+
+    it.each(HOSTILE_SCHEDULES)(
+      "returns [] and never throws for $reads",
+      ({ make }) => {
+        expect(operatingIntervals(make() as never, OPEN_RANGE)).toEqual([]);
+      },
+    );
 
     it.each`
       range                                                             | options                        | reads
@@ -286,8 +284,6 @@ describe("operatingIntervals", () => {
     });
 
     it("returns [] rather than throwing for hostile arguments", () => {
-      expect(operatingIntervals(hostileProxy() as never, day)).toEqual([]);
-      expect(operatingIntervals(revokedProxy() as never, day)).toEqual([]);
       expect(
         operatingIntervals(
           { ...valid, holidays: hostileProxy() } as never,

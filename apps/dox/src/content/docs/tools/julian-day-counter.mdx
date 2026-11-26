@@ -1,0 +1,61 @@
+---
+title: Julian Day Counter
+description: One instant written as a two-part Julian Date, a single Julian Date, a Modified Julian Date and seconds since J2000.0, on UTC, TAI, TT or TCG, with a two-day ruler that shows where each kind of day begins.
+industries: [core]
+---
+
+import JulianDayCounter from "../../../components/JulianDayCounter.astro";
+import ToolLayout from "../../../components/ToolLayout.astro";
+
+<ToolLayout useCase="time scales">
+
+<Fragment slot="keypoint">
+
+A JD day begins at noon and an MJD day at midnight, and a single double holds a JD only to about 40 µs. The two-part form keeps every nanosecond.
+
+</Fragment>
+
+<Fragment slot="intro">
+
+A Julian Date counts days from a fixed origin, with the fraction of a day after the point. The same instant has four common spellings: a **two-part JD**, a **single JD**, a **Modified JD** (MJD) and **seconds since J2000.0**. The tool writes one instant all four ways, reads each spelling back to UTC and states the gap in microseconds, so you see what a form keeps and what it drops.
+
+The scale is your choice. A count on UTC, TAI, TT or TCG is a different number for the same instant, and J2000.0 is noon on TT, not noon on a UTC clock. On UTC a day that holds an inserted second still counts as one JD day, so a UTC count is a quasi-JD whose fraction runs a little slower on that day. The library counts days from 1972-01-01 to the end of 9999. TDB is not offered.
+
+The ruler under the plates shows two days around the instant, in three lanes: where each JD day begins, where each midnight falls on the chosen scale, and, off UTC, where the UTC midnights fall. A triangle marks a JD day, a bar marks a midnight and a line with a cap marks the instant. Type an instant that ends in `Z`, or switch to JD, MJD or J2000 s and type a count. A JD may be two numbers joined by `+`, such as `2461041 + 0.5`.
+
+</Fragment>
+
+<JulianDayCounter fullbleed />
+
+<Fragment slot="after">
+
+**To a Julian Date.** [`toJulianDate`](/reference/timescale/convert/toJulianDate/) writes a UTC instant as one Julian Date on a scale. A double for a date in this century keeps about 40 µs, so it returns `null` within about 40 µs of either end of the range, where it cannot hold the instant.
+
+**To a two-part Julian Date.** [`toJulianDateParts`](/reference/timescale/convert/toJulianDateParts/) writes the day count and the fraction as two numbers, so the fraction keeps its precision. It covers the whole range.
+
+**From a Julian Date.** [`fromJulianDate`](/reference/timescale/convert/fromJulianDate/) and [`fromJulianDateParts`](/reference/timescale/convert/fromJulianDateParts/) read a count on a scale back to a UTC instant, or `""` when the count falls outside the range.
+
+**Modified Julian Date.** [`toModifiedJulianDate`](/reference/timescale/convert/toModifiedJulianDate/) and [`fromModifiedJulianDate`](/reference/timescale/convert/fromModifiedJulianDate/) count from midnight, so a whole MJD is a midnight.
+
+**Seconds since J2000.0.** [`toJ2000Seconds`](/reference/timescale/convert/toJ2000Seconds/) and [`fromJ2000Seconds`](/reference/timescale/convert/fromJ2000Seconds/) count seconds from J2000.0. With no scale named, `toJ2000Seconds` counts on TT, and the other three count on UTC. This tool names the scale in every call.
+
+```ts
+toJulianDate("2026-01-01T12:00:00Z", "UTC"); // 2461042
+toJulianDate("2026-01-01T12:00:00Z", "TT"); // 2461042.000800741
+toModifiedJulianDate("2026-01-01T12:00:00Z", "UTC"); // 61041.5
+toJ2000Seconds("2026-01-01T12:00:00Z", "UTC"); // 820540800
+toJ2000Seconds("2026-01-01T12:00:00Z", "TT"); // 820540869.184
+toJulianDateParts("2026-01-01T12:00:00.00002Z", "UTC"); // { jd1: 2461042, jd2: 2.3148148148148147e-10 }
+fromJulianDate(2451545, "TT"); // "2000-01-01T11:58:55.816Z"
+fromModifiedJulianDate(51544.5, "UTC"); // "2000-01-01T12:00:00Z"
+fromJ2000Seconds(0, "TT"); // "2000-01-01T11:58:55.816Z"
+fromJulianDateParts({ jd1: 2461041, jd2: 0.5 }, "UTC"); // "2026-01-01T00:00:00Z"
+```
+
+**Worth trying:** [J2000.0 on TT](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222451545%22%2C%22read%22%3A%22jd%22%2C%22scale%22%3A%22TT%22%7D) — a whole JD that is noon on the TT clock and a little before noon on a UTC clock. [Midnight](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222000-01-01T00%3A00%3A00Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22UTC%22%7D) — the JD ends in .5 and the MJD is a whole number. [Twenty microseconds](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222026-01-01T12%3A00%3A00.00002Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22UTC%22%7D) — the single JD drops them and the two parts keep them. [A leap second](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222016-12-31T23%3A59%3A60.5Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22UTC%22%7D) — the ruler notes the inserted second. [The same instant on TT](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222026-01-01T12%3A00%3A00Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22TT%22%7D) — the JD is no longer a whole number. [Two parts](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%222461041+%2B+0.5%22%2C%22read%22%3A%22jd%22%2C%22scale%22%3A%22UTC%22%7D) — read as one instant, midnight at the start of 2026. [The last day](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%229999-12-31T12%3A00%3A00Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22UTC%22%7D) — the ruler ends where the library's range ends. [Before 1972](/tools/julian-day-counter/?w=jdcount&wa=%7B%22value%22%3A%221971-12-31T23%3A59%3A59Z%22%2C%22read%22%3A%22instant%22%2C%22scale%22%3A%22UTC%22%7D) — the library answers `null` and the tool shows `NO SIGNAL`.
+
+**Reference:** [`toJulianDate`](/reference/timescale/convert/toJulianDate/), [`toJulianDateParts`](/reference/timescale/convert/toJulianDateParts/), [`fromJulianDate`](/reference/timescale/convert/fromJulianDate/), [`fromJulianDateParts`](/reference/timescale/convert/fromJulianDateParts/), [`toModifiedJulianDate`](/reference/timescale/convert/toModifiedJulianDate/), [`fromModifiedJulianDate`](/reference/timescale/convert/fromModifiedJulianDate/), [`toJ2000Seconds`](/reference/timescale/convert/toJ2000Seconds/) and [`fromJ2000Seconds`](/reference/timescale/convert/fromJ2000Seconds/). The guide is [Leap Seconds and TAI](/guides/core-date-operations/leap-seconds-and-tai/).
+
+</Fragment>
+
+</ToolLayout>

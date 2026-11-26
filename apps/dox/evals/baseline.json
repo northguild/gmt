@@ -1,0 +1,45 @@
+{
+  "failures": {
+    "fit.kept": [],
+    "refusal.quiet": [],
+    "retrieval.mrr": [],
+    "retrieval.recallAt10": [],
+    "retrieval.withinK": [],
+    "tools.offered": [],
+    "vocabulary.hit": []
+  },
+  "metrics": {
+    "fit.kept": 1,
+    "refusal.quiet": 1,
+    "retrieval.mrr": 0.623,
+    "retrieval.recallAt10": 1,
+    "retrieval.withinK": 1,
+    "tools.offered": 1,
+    "vocabulary.hit": 1
+  },
+  "ranks": {
+    "lookup-add-business-day": 1,
+    "lookup-camel-leap-second": 5,
+    "lookup-camel-typed-name": 1,
+    "lookup-dst-gap": 1,
+    "lookup-dubai-mumbai-flight": 8,
+    "lookup-duty-violations": 1,
+    "lookup-fiscal-quarter": 1,
+    "lookup-format-date": 1,
+    "lookup-galileo-week": 3,
+    "lookup-glonass-offset": 4,
+    "lookup-gnss-rollover": 3,
+    "lookup-gtfs-past-24": 3,
+    "lookup-lagos-to-singapore-call": 1,
+    "lookup-leap-second-2016": 1,
+    "lookup-leap-second-label": 5,
+    "lookup-local-time-berlin": 2,
+    "lookup-local-time-london": 3,
+    "lookup-nairobi-shift-in-seoul": 4,
+    "lookup-ptp-to-utc": 1,
+    "lookup-swift-century": 3,
+    "lookup-swift-yymmdd": 1,
+    "lookup-tallinn-ferry-hours": 1,
+    "lookup-utc-to-tokyo": 7
+  }
+}

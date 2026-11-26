@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
-import { intervalsOverlap } from "../../interval/compare";
-import { isValidUtc } from "../validate";
+import { intervalRecordsOverlap } from "../../internal/intervalNanoseconds";
+import { utcIntervalRecordOf } from "../../internal/intervalChecks";
 
 /**
  * Return true when the half-open UTC intervals `[aStart, aEnd)` and `[bStart, bEnd)` share at
@@ -42,17 +42,15 @@ export function intervalsOverlapUtc(
     return false;
   }
 
-  if (
-    !isValidUtc(aStart) ||
-    !isValidUtc(aEnd) ||
-    !isValidUtc(bStart) ||
-    !isValidUtc(bEnd)
-  ) {
+  const a = utcIntervalRecordOf(aStart, aEnd);
+  if (a === null) {
     return false;
   }
 
-  return intervalsOverlap(
-    { start: aStart, end: aEnd },
-    { start: bStart, end: bEnd },
-  );
+  const b = utcIntervalRecordOf(bStart, bEnd);
+  if (b === null) {
+    return false;
+  }
+
+  return intervalRecordsOverlap(a, b);
 }

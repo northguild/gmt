@@ -1,17 +1,7 @@
-import { Temporal } from "../../internal/temporal";
 import {
-  frameOffset,
-  isoStringBody,
-  parseInstantNanoseconds,
-  TIME_ZONE_ANNOTATION,
-  writtenOffset,
-  zonedDateTimeFrom,
-  zoneFrame,
+  readInstantOffsetInstant,
+  readZonedOffsetInstant,
 } from "../../internal";
-import { utcOffset } from "../../regex";
-
-/** A leading RFC 9557 time zone annotation: `[zone]` or `[!zone]`, with no `=`. */
-const timeZoneAnnotation = new RegExp(`^${TIME_ZONE_ANNOTATION}`);
 
 /**
  * An absolute instant paired with the local UTC offset in force where the event happened.
@@ -56,11 +46,10 @@ export interface OffsetInstant {
  *   zone at `+02:00` that day. Keep the offset for what already happened; keep the zone for
  *   anything still to be scheduled. `timeZone` is optional because most feeds send no zone.
  * - Accepts a `Z` instant, a bare `±HH:MM` offset, or a bracketed IANA zone, in ISO 8601
- *   extended format with a `T` separator — `isValidInstant`'s grammar. Basic format, a space or
- *   lower-case `t` separator and a lower-case `z` return null. RFC 9557
- *   annotations are read as Temporal reads them (RFC 9557 §3.3, proposal-temporal
- *   `ParseISODateTime`): a calendar (`[u-ca=hebrew]`) or elective (`[x-provenance=estimated]`)
- *   annotation is ignored, and an unknown critical one (`[!foo=bar]`) returns null.
+ *   extended format with a `T` separator. Basic format, a space or
+ *   lower-case `t` separator and a lower-case `z` return null. Annotations are limited to the one time zone bracket: a calendar (`[u-ca=hebrew]`), an
+ *   elective (`[x-provenance=estimated]`) or a critical unknown one (`[!foo=bar]`), or a second
+ *   bracket, returns null.
  * - A bracketed zone whose offset contradicts it (`"...T12:00:00+00:00[Europe/London]"` in
  *   July) returns null. The string states two things that cannot both be true, and guessing
  *   which one the sender meant is exactly the bug the pair exists to prevent.
@@ -116,7 +105,7 @@ export interface OffsetInstant {
  * @example toOffsetInstant("2024-07-15T12:00:00+00:00[Europe/London]") // null (offset contradicts the bracketed zone)
  * @example toOffsetInstant("-271821-04-19T23:59:00-00:01[Europe/London]") // null (a bracketed zone on a local date before Temporal's date range)
  * @example toOffsetInstant("-271821-04-20T00:00:15Z", "Europe/London") // { instant: "-271821-04-20T00:00:15Z", offset: "-00:01:15", timeZone: "Europe/London" }
- * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // { instant: "2024-07-15T16:00:00Z", offset: "-04:00" } — an elective annotation is ignored
+ * @example toOffsetInstant("2024-07-15T12:00:00-04:00[foo=bar]") // null — only the time zone bracket is accepted
  * @example toOffsetInstant("2024-07-15T12:00:00-04:00[!foo=bar]") // null (an unknown critical annotation)
  * @example toOffsetInstant("2024-07-15T12:00:00") // null (no offset designator)
  * @example toOffsetInstant("20240715T120000-0400") // null (basic format)
@@ -130,98 +119,8 @@ export function toOffsetInstant(
   value: string,
   timeZone?: string,
 ): OffsetInstant | null {
-  const epochNanoseconds = parseInstantNanoseconds(value);
-
-  if (epochNanoseconds === null) {
-    return null;
-  }
-
-  const frame = timeZone === undefined ? undefined : zoneFrame(timeZone);
-
-  if (frame === null) {
-    return null;
-  }
-
-  try {
-    // `parseInstantNanoseconds` does not validate the bracket, so a self-contradictory string
-    // parses fine as an instant. `ZonedDateTime.from` is what checks
-    // the two agree, and it runs even when `timeZone` overrides the bracketed zone.
-    // Only a time zone annotation makes the string zoned: it is the first annotation, and the
-    // only kind with no `=` (RFC 9557 §4.1). A calendar or elective annotation alone leaves an
-    // offset-only instant.
-    const body = isoStringBody(value);
-    const bracketed = timeZoneAnnotation.test(value.slice(body.length))
-      ? zonedDateTimeFrom(value)
-      : null;
-
-    // Temporal also accepts a bracketed *offset* time zone (`[-04:00]`), and canonicalises
-    // every spelling of one (`[-0400]`, `[+05]`) to `±HH:MM`. That names no place and must
-    // not reach the `timeZone` field, which would then claim GMT knows where the event
-    // happened when all it has is the offset it already stores. The test is for an offset
-    // because that is the one kind of bracketed identifier to drop; Temporal has already
-    // validated every other one as part of the string.
-    const bracketedZone =
-      bracketed !== null && !utcOffset.test(bracketed.timeZoneId)
-        ? bracketed.timeZoneId
-        : undefined;
-
-    // Where a bracket is present, Temporal's own resolution is the authority on the
-    // instant, not `Temporal.Instant.from`'s literal reading of the offset. For a zone that
-    // did not run on a whole minute the two disagree: RFC 9557 caps a string's offset at
-    // minutes, so `Africa/Monrovia` writes `-00:45` for a real `-00:44:30`, and reading
-    // that literally lands 30 seconds late. `ZonedDateTime.from` resolves the rounded
-    // offset against the zone's true one. For every other zone the two agree exactly, and a
-    // mismatched offset has already thrown.
-    const instant =
-      bracketed !== null
-        ? bracketed.toInstant()
-        : Temporal.Instant.fromEpochNanoseconds(epochNanoseconds);
-
-    // A stored offset with seconds is the pair's offset as it stands. Like an offset identifier it
-    // names no place, so it fills no `timeZone` field.
-    if (frame !== undefined && frame.shiftNanoseconds !== 0n) {
-      return { instant: instant.toString(), offset: frameOffset(frame) };
-    }
-
-    const resolvedZone = frame?.timeZone ?? bracketedZone;
-
-    if (resolvedZone !== undefined) {
-      return offsetInstantInZone(instant, resolvedZone);
-    }
-
-    // No zone, so the only offset on record is the one written in the string — and with a
-    // bracket present Temporal has already read it.
-    if (bracketed !== null) {
-      return { instant: instant.toString(), offset: bracketed.offset };
-    }
-
-    const offset = writtenOffset(instant, body);
-    return offset === null ? null : { instant: instant.toString(), offset };
-  } catch {
-    return null;
-  }
-}
-
-/** The pair read in `zone`; an offset zone names no place, so it fills no `timeZone` field. */
-function offsetInstantInZone(
-  instant: Temporal.Instant,
-  zone: string,
-): OffsetInstant {
-  // `timeZoneId` is the identifier in its IANA casing (ECMA-402
-  // GetAvailableNamedTimeZoneIdentifier matches case-insensitively and returns the database's
-  // spelling), which is what the bracket path and `fromOffsetInstant` already return. A link
-  // name stays a link name: `Asia/Calcutta` is not rewritten to `Asia/Kolkata`.
-  const zoned = instant.toZonedDateTimeISO(zone);
-
-  // An offset `timeZone` (`"-05:00"`, canonicalised by Temporal) sets the offset like a
-  // bracketed offset zone does and, naming no place, fills no `timeZone` field.
-  if (utcOffset.test(zoned.timeZoneId)) {
-    return { instant: instant.toString(), offset: zoned.offset };
-  }
-
-  return {
-    instant: instant.toString(),
-    offset: zoned.offset,
-    timeZone: zoned.timeZoneId,
-  };
+  return (
+    readInstantOffsetInstant(value, timeZone) ??
+    readZonedOffsetInstant(value, timeZone)
+  );
 }

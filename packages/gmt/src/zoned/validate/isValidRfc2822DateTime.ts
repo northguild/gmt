@@ -1,4 +1,4 @@
-import { parseRfc2822 } from "../parse/parseRfc2822";
+import { readRfc2822 } from "../../internal/rfc5322DateTime";
 
 /**
  * Return true when `value` is a real RFC 5322 (RFC 2822) date-time: the date an email `Date:`
@@ -40,5 +40,5 @@ export function isValidRfc2822DateTime(
 ): boolean;
 export function isValidRfc2822DateTime(value: unknown): value is string;
 export function isValidRfc2822DateTime(value: unknown): boolean {
-  return typeof value === "string" && parseRfc2822(value) !== "";
+  return typeof value === "string" && readRfc2822(value) !== "";
 }

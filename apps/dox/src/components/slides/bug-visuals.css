@@ -1,0 +1,338 @@
+/*
+ * The pieces of a bug slide: the visual with its filing receipts, the recorded run every slide shows
+ * code in, the pins' count, a step that replaces the one before it, and one that adds to it.
+ */
+
+/*
+ * A step that replaces the one before it: on the deck's stage the base content and each build share
+ * one cell, and a build the mount has reached hides every earlier one, so the cell holds the
+ * tallest and nothing below it moves. Without `html[data-deck]` (JavaScript off: the page is the
+ * handout) and in print (`slides-print.css`) the steps stand one under another instead.
+ */
+:is(html[data-deck], [data-slide-stage]) .gmt-swap {
+  display: grid;
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-swap > * {
+  grid-area: 1 / 1;
+  min-inline-size: 0;
+
+  /* Starlight's flow margins would add a gap on top of the grid's own. */
+  margin: 0;
+}
+
+/* A picture hides once a later build has been reached. */
+:is(html[data-deck], [data-slide-stage])
+  .gmt-swap
+  /* ui-standards-ok: a state, not a layout; it was `:has()` on main before this story. */
+  > :has(~ .gmt-build[data-reached="true"]) {
+  visibility: hidden;
+}
+
+/*
+ * A step that adds to the one before it: each build stands under the last in one column, and once
+ * the column runs past the slide's foot it slides up by `--gmt-stack-shift`
+ * (`lib/slides/build-stack.ts`) so the newest piece is whole. The stack clips its top edge, and
+ * the pieces leaving it fade there while the column is shifted; one more than half gone
+ * (`data-stack-gone`) fades out whole.
+ */
+:is(html[data-deck], [data-slide-stage]) .gmt-stack {
+  overflow: clip;
+  max-block-size: var(--gmt-stack-room, none);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-stack[data-shifted] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000000 var(--gmt-deck-space-2xl)
+  );
+}
+
+/* The track is its pieces' offset parent: the shift is measured from its top. */
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gmt-deck-space-xl);
+  transform: translateY(var(--gmt-stack-shift, 0));
+  transition: transform var(--gmt-duration-slow) var(--gmt-enter-easing);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track > * {
+  min-inline-size: 0;
+  margin: 0;
+  transition: opacity var(--gmt-duration-med) var(--gmt-enter-easing);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-stack-track > [data-stack-gone] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(html[data-deck], [data-slide-stage]) .gmt-stack-track,
+  :is(html[data-deck], [data-slide-stage]) .gmt-stack-track > * {
+    transition-duration: var(--gmt-deck-fade);
+  }
+}
+
+/*
+ * ---- The bug slides' visuals ----
+ * Each shows its report's own lines as a picture, with the filing as a small receipt in the
+ * corner. Every readout reserves its box, so a rolling counter or a typing line moves nothing.
+ */
+:is(html[data-deck], [data-slide-stage]) .gmt-visual {
+  display: grid;
+  gap: var(--gmt-deck-space-lg);
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.gmt-receipts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gmt-deck-space-xs) var(--gmt-deck-space-lg);
+}
+
+.gmt-receipt {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--gmt-deck-space-md);
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: max(0.75rem, 1.3cqi);
+}
+
+.gmt-receipt a {
+  font-weight: 600;
+}
+
+.gmt-visual > .gmt-receipt {
+  justify-self: end;
+}
+
+.gmt-visual-note {
+  margin: 0;
+  font-size: var(--gmt-deck-text-lg);
+  color: var(--gmt-ice);
+}
+
+.gmt-pins {
+  display: grid;
+  gap: var(--gmt-deck-space-md);
+  justify-items: start;
+}
+
+.gmt-pins p {
+  margin: 0;
+}
+
+.gmt-pins-count {
+  display: flex;
+  align-items: center;
+  gap: var(--gmt-deck-space-lg);
+  font-size: max(1.4rem, 5cqi);
+  color: var(--gmt-ice-bright);
+}
+
+/* The count's flaps are lit like a landed row on the bug slides. */
+.gmt-pins-count .gmt-flap-tile {
+  color: var(--gmt-cyan);
+  border-color: var(--gmt-cyan);
+}
+
+.gmt-pins-split {
+  font-size: var(--gmt-deck-text-lg);
+}
+
+/* On the stage the table stands beside the count, in the room left of the planet: under it, the
+   twelve rows ran past the stage's bottom edge. */
+:is(html[data-deck], [data-slide-stage]) .gmt-pins {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  column-gap: var(--gmt-deck-space-2xl);
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-pins-count {
+  font-size: max(1.2rem, 4cqi);
+  white-space: nowrap;
+}
+
+:is(html[data-deck], [data-slide-stage]) .gmt-pins .gmt-deck-table {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  inline-size: auto;
+  min-inline-size: 26cqi;
+}
+
+/*
+ * ---- A recorded run (`CodeRun`): the one panel every slide shows code in ----
+ * A header naming what ran it, then each step as a test runner prints it: the code, its result, and
+ * beside a wrong result the value expected (beside GMT's result, the filed bug's value). Wrong is red, right green (the deck's
+ * pair in `slides.css`), gmt's sentinel amber (the only amber).
+ */
+:is(html[data-deck], [data-slide-stage]) .gmt-run {
+  display: grid;
+  gap: var(--gmt-deck-space-xs);
+  align-content: start;
+  min-inline-size: 0;
+  padding: var(--gmt-deck-space-sm) var(--gmt-deck-space-xl)
+    var(--gmt-deck-space-md);
+  font-size: var(--gmt-deck-text-lg);
+  line-height: 1.35;
+}
+
+/* The deck's paragraph margin (`slides.css`, same weight, earlier) gives way to the panel's gap. */
+:is(html[data-deck], [data-slide-stage]) .gmt-run > p,
+:is(html[data-deck], [data-slide-stage]) .gmt-familiar-run > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A line waiting its turn keeps its box, so the lines below it never move. */
+.gmt-run [data-after][hidden] {
+  display: block;
+  visibility: hidden;
+}
+
+.gmt-run-head {
+  padding-block-end: var(--gmt-deck-space-xs);
+  border-block-end: 1px solid var(--gmt-border);
+  font-size: var(--gmt-deck-text-sm);
+  color: var(--gmt-ice-dim);
+}
+
+/* A wrapped line of code hangs under its first character, clear of the prompt. */
+.gmt-run-line {
+  padding-inline-start: 2ch;
+  text-indent: -2ch;
+  color: var(--gmt-ice-bright);
+}
+
+.gmt-run-prompt {
+  display: inline-block;
+  inline-size: 2ch;
+  text-indent: 0;
+  color: var(--gmt-ice-dim);
+}
+
+.gmt-run-line code {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+/* A step's result and its expected value share one row while they fit, and wrap when not. */
+.gmt-run-outcome {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gmt-deck-space-2xs) 4ch;
+  padding-inline-start: 2ch;
+}
+
+/* The deck's flow margins give way to the panel's own gap. */
+:is(html[data-deck], [data-slide-stage]) .gmt-run-outcome,
+:is(html[data-deck], [data-slide-stage]) .gmt-run-outcome > p {
+  margin: 0;
+}
+
+/* One label width, so a value wrapped under another starts in the same column; a longer label
+   (a package name) widens its own row rather than running into the value. */
+.gmt-run-result {
+  display: grid;
+  grid-template-columns: minmax(11ch, max-content) minmax(0, auto);
+  column-gap: 1ch;
+  min-inline-size: 0;
+}
+
+.gmt-run .gmt-run-result[hidden] {
+  display: grid;
+}
+
+.gmt-run-value {
+  display: grid;
+  min-inline-size: 0;
+}
+
+/* A step's rows sit together; the next prompt starts a step of its own. */
+:is(html[data-deck], [data-slide-stage])
+  .gmt-run-outcome
+  + :is(.gmt-run-line, .gmt-run-code) {
+  margin-block-start: var(--gmt-deck-space-xs);
+}
+
+/* A run's code block takes the panel's text size and a thin pad, so a step of code, result and
+   expected value stays a few lines tall. */
+:is(html[data-deck], [data-slide-stage]) .gmt-run-code .gmt-deck-code {
+  --ec-codeFontSize: var(--gmt-deck-text-md);
+  --ec-codePadBlk: var(--gmt-deck-space-xs);
+}
+
+.gmt-run-label {
+  display: inline-flex;
+  gap: 1ch;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gmt-deck [data-outcome="wrong"] {
+  color: var(--gmt-deck-wrong-ink);
+}
+
+.gmt-deck [data-outcome="right"],
+.gmt-deck [data-outcome="expected"] {
+  color: var(--gmt-deck-right-ink);
+}
+
+.gmt-deck [data-outcome="lost"] {
+  color: var(--gmt-signal-ink);
+}
+
+.gmt-run-note {
+  padding-block-start: var(--gmt-deck-space-xs);
+  border-block-start: 1px solid var(--gmt-border);
+  color: var(--gmt-ice-dim);
+}
+
+/* The note is prose, not output: a step smaller. */
+.gmt-run-note {
+  font-size: var(--gmt-deck-text-md);
+}
+
+/* Its inline code is a step smaller again, but never under the room floor. */
+.gmt-run-note code {
+  font-size: max(var(--gmt-deck-text-sm), 0.9em);
+}
+
+/* The cursor shows on the line that is typing, and nowhere once the run is through. */
+.gmt-run-cursor {
+  display: inline-block;
+  inline-size: 0.6em;
+  block-size: 1.05em;
+  vertical-align: text-bottom;
+  visibility: hidden;
+  background: var(--gmt-ice);
+}
+
+[data-typing] + .gmt-run-cursor {
+  visibility: visible;
+  animation: gmt-cursor var(--gmt-duration-sweep) steps(2, start) infinite;
+}
+
+@keyframes gmt-cursor {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-typing] + .gmt-run-cursor {
+    animation: none;
+  }
+}

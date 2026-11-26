@@ -1,3 +1,4 @@
+import { isDateUnitName } from "../../internal/unitNames";
 import type { DateUnit } from "../../types";
 
 /**
@@ -19,13 +20,6 @@ import type { DateUnit } from "../../types";
  * @example isValidDateUnit(123) // false
  * @example isValidDateUnit(null) // false
  */
-
 export function isValidDateUnit(unit: unknown): unit is DateUnit {
-  if (typeof unit !== "string") {
-    return false;
-  }
-
-  return (
-    unit === "year" || unit === "month" || unit === "week" || unit === "day"
-  );
+  return isDateUnitName(unit);
 }

@@ -1,0 +1,199 @@
+/*
+ * Terrestrial Time Stack: what only this tool needs. The sections, plates, range, preset, table
+ * and code frame are the kit's, and the drawing is the timescale family's (`scale-stack`); this
+ * sheet lays out the plates, the scales table, the NO SIGNAL slot and the notes.
+ *
+ * Nothing here is a verdict colour. Amber is the sentinel's alone, and an accent edge is never
+ * a single side.
+ */
+
+.controls {
+  display: grid;
+  gap: var(--gmt-space-3);
+  min-inline-size: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+/* The stage: the plates, then the drawing, then the NO SIGNAL slot. It is the container the
+   layout reads. */
+.stage {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--gmt-space-4);
+  min-inline-size: 0;
+}
+
+/* A value and its unit never wrap, so a track has to be as wide as the widest reading at the
+   largest value size: `176.427468382 s` at 2rem is about 21rem with the plate's padding. One
+   column below two of those, two columns below four. A track does not move with its content, so
+   a reading never reflows the row. */
+.platesSlot {
+  min-inline-size: 0;
+
+  & dl {
+    grid-template-columns: minmax(0, 1fr);
+
+    @container (inline-size >= 43rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @container (inline-size >= 86rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+}
+
+.drawingSlot {
+  min-inline-size: 0;
+}
+
+/* The NO SIGNAL slot is always laid out; a reading only makes the pill visible. */
+.signalSlot {
+  display: grid;
+  gap: var(--gmt-space-2);
+  min-inline-size: 0;
+}
+
+.signal {
+  justify-self: start;
+  box-sizing: border-box;
+  padding: var(--gmt-space-2) var(--gmt-space-3);
+  border: 1px solid var(--gmt-signal-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-signal-fill);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-sm);
+  color: var(--gmt-signal-ink);
+  white-space: nowrap;
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+.sentence {
+  margin: 0;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-sm);
+}
+
+/* A held line keeps the room of its longest sentence. */
+.held {
+  display: grid;
+
+  & > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.ghost {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.note {
+  margin: 0;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-sm);
+}
+
+/* The table's cells: tabular figures in the mono face, held by their widest sample. */
+.cell {
+  display: block;
+
+  /* A length, so the code's coloured spans cannot make a line taller than the plain sample that
+     reserves it. */
+  line-height: 1.375rem;
+
+  /* The page styles a bare `code`; the plain sample that reserves this cell has none of it. */
+  padding: 0;
+  border: 0;
+  background: none;
+  min-inline-size: 0;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell * {
+  line-height: inherit;
+}
+
+.wrap {
+  display: block;
+  min-inline-size: 0;
+}
+
+.mono {
+  display: block;
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.scale {
+  font-weight: 600;
+}
+
+.contents {
+  display: contents;
+}
+
+.tag {
+  display: block;
+  color: var(--gmt-ice-dim);
+  font-size: var(--gmt-text-xs);
+
+  &[data-state="off"] {
+    visibility: hidden;
+  }
+}
+
+/* Under 46rem the kit table (`stack`) turns its four rows into labelled blocks. */
+.scales {
+  container-type: inline-size;
+  min-inline-size: 0;
+
+  /* The four columns are held by their widest sample. At 46rem the samples at 0.6em a character
+     (Linux's monospace faces) plus the page's 12px cell padding need more than the table has, so
+     a cell spills and the table scrolls. The 4px padding leaves each column a few pixels spare.
+     The caption takes it too, so its text lines up with the cells. */
+  @container (inline-size >= 46rem) {
+    & caption,
+    & th,
+    & td {
+      padding-inline: var(--gmt-space-1);
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .signal {
+    border-color: CanvasText;
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .scales td::before,
+  .scales th::before {
+    color: CanvasText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .note,
+  .tag,
+  .scales td::before,
+  .scales th::before {
+    color: var(--gmt-ice);
+  }
+
+  .signal {
+    border-color: var(--gmt-signal-ink);
+  }
+}

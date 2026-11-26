@@ -1,5 +1,5 @@
 import { Temporal } from "./temporal";
-import { isValidTime } from "../plain/validate/isValidTime";
+import { plainTimeOf } from "./inputChecks";
 import type { Disambiguation } from "../types";
 import { nextZonedBucketStart, zonedUnitStart } from "./zonedBucket";
 import {
@@ -71,13 +71,9 @@ const SHORT_WALK = 64;
  */
 const OPERATOR_DAY_REACH = 3;
 
-/** Parse a `dayStartTime`: an ISO PlainTime string `isValidTime` accepts, or null. */
+/** Parse a `dayStartTime`: an ISO PlainTime string `plainTimeOf` accepts, or null. */
 export function parseDayStartTime(value: unknown): Temporal.PlainTime | null {
-  if (typeof value !== "string" || !isValidTime(value)) {
-    return null;
-  }
-
-  return Temporal.PlainTime.from(value);
+  return plainTimeOf(value);
 }
 
 /**

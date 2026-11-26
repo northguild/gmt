@@ -187,9 +187,9 @@ starlight-menu-button button:focus-visible {
 
 /* ---- Keyboard focus ----
  *
- * overview.md §3: "Focus must be more visible than default, never less." A 2px
- * cyan outline plus a soft outer glow — brighter than the browser default and
- * unmistakable on prose, sidebar, buttons, and controls.
+ * context/dox/reference/visual-design.md: focus is "more visible than default,
+ * never less". A 2px cyan outline plus a soft outer glow — brighter than the
+ * browser default and unmistakable on prose, sidebar, buttons, and controls.
  */
 :focus-visible {
   outline: 2px solid var(--gmt-cyan);
@@ -217,7 +217,7 @@ starlight-menu-button button:focus-visible {
 
 /* ---- Blocky terminal caret ---- */
 
-/* overview.md §3 "Controls": a blocky terminal caret on text fields. */
+/* context/dox/reference/visual-design.md § "Controls": a blocky terminal caret on text fields. */
 textarea,
 input:not([type="checkbox"], [type="radio"], [type="range"]),
 [contenteditable] {
@@ -355,23 +355,25 @@ textarea::selection {
 /*
  * <pre> horizontal scrollbars — round the bottom corners of track + thumb to
  * seat them inside the code block's border-bottom-radius: var(--gmt-radius-lg)
- * (gmt-content.css:32). Scoped to :horizontal so vertical scrollbars keep the
- * global radius. corner-shape: bevel can't be applied to ::-webkit-scrollbar-*
- * pseudo-elements, so we match with border-radius alone.
+ * (gmt-content.css). A frame with smaller corners sets --gmt-pre-radius on its
+ * pre (code-frame.module.css); scrollbar parts inherit it from the pre. Scoped
+ * to :horizontal so vertical scrollbars keep the global radius. corner-shape:
+ * bevel can't be applied to ::-webkit-scrollbar-* pseudo-elements, so we match
+ * with border-radius alone.
  */
 .sl-markdown-content pre::-webkit-scrollbar-track:horizontal {
   border-start-start-radius: 0;
   border-start-end-radius: 0;
-  border-end-start-radius: var(--gmt-radius-lg);
-  border-end-end-radius: var(--gmt-radius-lg);
+  border-end-start-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
+  border-end-end-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
   corner-shape: bevel;
 }
 
 .sl-markdown-content pre::-webkit-scrollbar-thumb:horizontal {
   border-start-start-radius: 0;
   border-start-end-radius: 0;
-  border-end-start-radius: var(--gmt-radius-lg);
-  border-end-end-radius: var(--gmt-radius-lg);
+  border-end-start-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
+  border-end-end-radius: var(--gmt-pre-radius, var(--gmt-radius-lg));
   corner-shape: bevel;
 }
 

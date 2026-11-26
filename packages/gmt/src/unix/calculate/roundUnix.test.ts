@@ -251,18 +251,18 @@ describe("roundUnix", () => {
     },
   );
 
-  // Temporal GetOption converts the value it reads once: ToString for roundingMode, ToNumber for
-  // roundingIncrement. An option given as an object therefore rounds exactly as the plain value
-  // does, on GMT's own day-rounding path as well as on Temporal's.
+  // Temporal GetOption would convert an object (ToString for roundingMode, ToNumber for
+  // roundingIncrement). The types say string and number, so an object returns the sentinel, on
+  // GMT's own day-rounding path as well as on Temporal's.
   it.each`
-    value            | options                                                                                      | expected         | description
-    ${1718483696000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("floor") }}  | ${1718424000000} | ${"a String floor to the day in New York"}
-    ${1718427600000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("ceil") }}   | ${1718510400000} | ${"a String ceil to the day in New York"}
-    ${1289100600000} | ${{ smallestUnit: "day", timeZone: "America/Goose_Bay", roundingMode: new String("floor") }} | ${1289012400000} | ${"a String floor to the day in Goose Bay"}
-    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingMode: new String("floor") }} | ${1718481600000} | ${"a String floor to the hour in New York"}
-    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingIncrement: new Number(2) }}  | ${1718481600000} | ${"a Number increment of 2 to the hour in New York"}
+    value            | options                                                                                      | expected | description
+    ${1718483696000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("floor") }}  | ${null}  | ${"a String floor to the day in New York"}
+    ${1718427600000} | ${{ smallestUnit: "day", timeZone: "America/New_York", roundingMode: new String("ceil") }}   | ${null}  | ${"a String ceil to the day in New York"}
+    ${1289100600000} | ${{ smallestUnit: "day", timeZone: "America/Goose_Bay", roundingMode: new String("floor") }} | ${null}  | ${"a String floor to the day in Goose Bay"}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingMode: new String("floor") }} | ${null}  | ${"a String floor to the hour in New York"}
+    ${1718483696000} | ${{ smallestUnit: "hour", timeZone: "America/New_York", roundingIncrement: new Number(2) }}  | ${null}  | ${"a Number increment of 2 to the hour in New York"}
   `(
-    "returns $expected for $value with options given as objects: $description",
+    "returns null for $value with options given as objects: $description",
     ({ value, options, expected }) => {
       expect(roundUnix(value, options)).toBe(expected);
     },

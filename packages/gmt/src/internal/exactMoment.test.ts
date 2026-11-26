@@ -5,7 +5,11 @@ import {
   mockTemporalInstantFromThrow,
   mockTemporalZonedDateTimeFromThrow,
 } from "../test/mocks";
-import { readExactMoment, writeExactMoment } from "./exactMoment";
+import {
+  readExactMoment,
+  writeExactMoment,
+  zonedInstantOf,
+} from "./exactMoment";
 
 /** Epoch nanoseconds of a `Z` instant: the independent reading every row is checked against. */
 const ns = (utc: string): bigint => Temporal.Instant.from(utc).epochNanoseconds;
@@ -20,12 +24,10 @@ describe("readExactMoment", () => {
     ${"2024-06-15T10:00:00Z[!UTC]"}                     | ${"2024-06-15T10:00:00Z"}    | ${{ kind: "zone", timeZone: "UTC" }}
     ${"2024-06-15T10:00:00[America/New_York]"}          | ${"2024-06-15T14:00:00Z"}    | ${{ kind: "zone", timeZone: "America/New_York" }}
     ${"2024-06-15T10:00:00Z"}                           | ${"2024-06-15T10:00:00Z"}    | ${{ kind: "utc" }}
-    ${"2024-06-15T10:00:00Z[foo=bar]"}                  | ${"2024-06-15T10:00:00Z"}    | ${{ kind: "utc" }}
     ${"2024-06-15T10:00:00+09:00"}                      | ${"2024-06-15T01:00:00Z"}    | ${{ kind: "offset", offset: "+09:00" }}
     ${"2024-06-15T10:00:00+05:30:15"}                   | ${"2024-06-15T04:29:45Z"}    | ${{ kind: "offset", offset: "+05:30:15" }}
     ${"2024-06-15T10:00:00+05:30:00,5"}                 | ${"2024-06-15T04:29:59.5Z"}  | ${{ kind: "offset", offset: "+05:30:00,5" }}
     ${"2024-06-15T10:00:00-00:00"}                      | ${"2024-06-15T10:00:00Z"}    | ${{ kind: "offset", offset: "-00:00" }}
-    ${"2024-06-15T10:00:00+09:00[u-ca=gregory]"}        | ${"2024-06-15T01:00:00Z"}    | ${{ kind: "offset", offset: "+09:00" }}
     ${"+275760-09-13T10:00:00+10:00[Australia/Sydney]"} | ${"+275760-09-13T00:00:00Z"} | ${{ kind: "zone", timeZone: "Australia/Sydney" }}
     ${"-271821-04-19T19:00:00-05:00"}                   | ${"-271821-04-20T00:00:00Z"} | ${{ kind: "offset", offset: "-05:00" }}
     ${"2024-11-03T01:30:00[America/New_York]"}          | ${"2024-11-03T05:30:00Z"}    | ${{ kind: "zone", timeZone: "America/New_York" }}
@@ -48,6 +50,9 @@ describe("readExactMoment", () => {
     ${"2024-06-15T10:00:00Z[UTC][u-ca=gregory]"}     | ${"a zoned string whose calendar is not ISO"}
     ${"2024-06-15T10:00:00"}                         | ${"no zone and no offset"}
     ${"2024-06-15T10:00:00Z[!foo=bar]"}              | ${"a critical unknown annotation"}
+    ${"2024-06-15T10:00:00Z[foo=bar]"}               | ${"an elective unknown annotation"}
+    ${"2024-06-15T10:00:00+09:00[u-ca=gregory]"}     | ${"a calendar annotation: an offset form has none"}
+    ${"2024-06-15T10:00:00Z[UTC][foo=bar]"}          | ${"a zone and then an annotation"}
     ${"2016-12-31T23:59:60Z"}                        | ${"a leap second"}
     ${"2024-06-15 10:00:00Z"}                        | ${"a space separator"}
     ${"-271821-04-19T23:59:59.999999999Z"}           | ${"one nanosecond before the instant range"}
@@ -135,5 +140,33 @@ describe("writeExactMoment", () => {
   it("returns an empty string when the epoch-nanosecond constructor throws", () => {
     mockTemporalInstantFromEpochNanosecondsThrow();
     expect(writeExactMoment(0n, { kind: "utc" })).toBe("");
+  });
+});
+
+describe("zonedInstantOf", () => {
+  it.each`
+    value                                             | expected                  | why
+    ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam]"}  | ${"2024-06-12T15:00:00Z"} | ${"a zoned string"}
+    ${"2024-06-12T17:00:00+02:00[!Europe/Amsterdam]"} | ${"2024-06-12T15:00:00Z"} | ${"a critical zone"}
+    ${"2024-04-07T02:30:00+11:00[Australia/Sydney]"}  | ${"2024-04-06T15:30:00Z"} | ${"the first of a repeated hour"}
+    ${"2024-04-07T02:30:00+10:00[Australia/Sydney]"}  | ${"2024-04-06T16:30:00Z"} | ${"the second of a repeated hour"}
+    ${"2024-06-12T18:00:00+02:00[+02:00]"}            | ${"2024-06-12T16:00:00Z"} | ${"an offset bracket, as cutoffAt writes for an offset zone"}
+  `("reads $why", ({ value, expected }) => {
+    expect(zonedInstantOf(value)?.toString()).toBe(expected);
+  });
+
+  it.each`
+    value                                                          | why
+    ${"2024-06-12T15:00:00Z"}                                      | ${"a bare Z instant"}
+    ${"2024-06-12T17:00:00+02:00"}                                 | ${"a bare offset instant"}
+    ${"2024-06-12T17:00:00[Europe/Amsterdam]"}                     | ${"a zoned string with no offset"}
+    ${"2024-06-12T17:00:00+02:00[u-ca=iso8601]"}                   | ${"a calendar annotation alone"}
+    ${"2024-06-12T17:00:00+02:00[foo=bar]"}                        | ${"an elective annotation"}
+    ${"2024-06-12T17:00:00+02:00[Europe/Amsterdam][u-ca=iso8601]"} | ${"a calendar annotation after the zone"}
+    ${"2024-06-12T17:00:00+01:00[Europe/Amsterdam]"}               | ${"an offset the zone does not have then"}
+    ${""}                                                          | ${"an empty string"}
+    ${20240612}                                                    | ${"a number"}
+  `("returns null for $why", ({ value }) => {
+    expect(zonedInstantOf(value)).toBeNull();
   });
 });

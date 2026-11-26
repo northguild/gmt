@@ -30,8 +30,9 @@ import {
  *   a week (TOWC 50400; ITOW 83 with TOI 400) gives 604 800 s. That value is TOW 0 of the next
  *   week: pass `week + 1` and 0. When `week` is the counter's last (1023 or 8191), pass week 0,
  *   with `rolloverEra + 1` for an integer era or the same `"rolling"` or `{ notBefore }`.
- * - A week time inside an inserted leap second returns `…T23:59:60Z`. Only this realm's functions
- *   read that string back; other GMT functions reject a second of 60.
+ * - A week time inside an inserted leap second returns `…T23:59:60Z`. Only the `timescale/`,
+ *   `gnss/` and `finance/` functions read that string back; other GMT functions reject a second
+ *   of 60.
  * - GLONASS has no week counter, so it is not a counter here.
  * - A RINEX navigation-file week is a continuous count, not a broadcast week: read it with
  *   `rinexWeekToUtc`. A RINEX NavIC week given to `"IRN-L1NV"` would be 1024 weeks off.

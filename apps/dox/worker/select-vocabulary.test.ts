@@ -4,7 +4,8 @@ import { searchChunks } from "../src/lib/retrieval/search";
 import type { RetrievalChunk } from "../src/lib/retrieval/types";
 import {
   parseSkill,
-  selectVocabulary,
+  chooseSkills,
+  joinSkills,
   VOCABULARY_BUDGET_CHARS,
   type VocabularySkill,
 } from "./select-vocabulary";
@@ -17,9 +18,14 @@ const SKILL_NAMES = [
   "gmt-timezone",
   "gmt-integration",
   "gmt-gnss",
+  "gmt-finance",
+  "gmt-aviation",
+  "gmt-rail",
+  "gmt-iot",
   "gmt-transport",
   "gmt-intermodal",
   "gmt-workforce",
+  "gmt-healthcare",
 ];
 const SKILLS = SKILL_NAMES.map((name) =>
   parseSkill(
@@ -29,11 +35,10 @@ const SKILLS = SKILL_NAMES.map((name) =>
     ),
   ),
 );
-const byName = (name: string) => SKILLS.find((skill) => skill.name === name)!;
 
 const corpus = buildRetrievalCorpus();
-const vocabularyFor = (question: string) =>
-  selectVocabulary(SKILLS, searchChunks(corpus, question));
+const namesFor = (question: string) =>
+  chooseSkills(SKILLS, searchChunks(corpus, question)).map((s) => s.name);
 
 function chunk(overrides: Partial<RetrievalChunk>): RetrievalChunk {
   return {
@@ -125,16 +130,25 @@ describe("parseSkill", () => {
   });
 });
 
-describe("selectVocabulary", () => {
+describe("joinSkills", () => {
+  it("joins bodies with a rule, and is empty for no skills", () => {
+    const a = skill({ body: "A" });
+    const b = skill({ body: "B" });
+    expect(joinSkills([a, b])).toBe("A\n\n---\n\nB");
+    expect(joinSkills([])).toBe("");
+  });
+});
+
+describe("chooseSkills", () => {
   it("returns nothing when no chunk belongs to any skill", () => {
-    expect(selectVocabulary([skill({ modules: ["gnss/"] })], [chunk({})])).toBe(
-      "",
+    expect(chooseSkills([skill({ modules: ["gnss/"] })], [chunk({})])).toEqual(
+      [],
     );
   });
 
   it("always includes the best skill, even over budget", () => {
     const big = skill({ body: "x".repeat(100), modules: ["zoned/"] });
-    expect(selectVocabulary([big], [chunk({})], 10)).toBe(big.body);
+    expect(chooseSkills([big], [chunk({})], 10)).toEqual([big]);
   });
 
   it("leaves out a runner-up that scored under half the best", () => {
@@ -145,17 +159,15 @@ describe("selectVocabulary", () => {
       chunk({ id: "zoned/a/b" }),
       chunk({ id: "gnss/convert/utcToGnss" }),
     ];
-    expect(selectVocabulary([gnss, zoned], chunks)).toBe("ZONED");
+    expect(chooseSkills([gnss, zoned], chunks)).toEqual([zoned]);
   });
 
   it("adds a close runner-up while it fits the budget", () => {
     const zoned = skill({ body: "ZONED", modules: ["zoned/"] });
     const gnss = skill({ body: "GNSS", modules: ["gnss/"] });
     const chunks = [chunk({}), chunk({ id: "gnss/convert/utcToGnss" })];
-    expect(selectVocabulary([gnss, zoned], chunks)).toBe(
-      "ZONED\n\n---\n\nGNSS",
-    );
-    expect(selectVocabulary([gnss, zoned], chunks, 7)).toBe("ZONED");
+    expect(chooseSkills([gnss, zoned], chunks)).toEqual([zoned, gnss]);
+    expect(chooseSkills([gnss, zoned], chunks, 7)).toEqual([zoned]);
   });
 
   it("splits a chunk every skill claims, so it decides nothing", () => {
@@ -163,7 +175,7 @@ describe("selectVocabulary", () => {
     const a = skill({ body: "A", modules: ["types/", "zoned/"] });
     const b = skill({ body: "B", modules: ["types/", "gnss/"] });
     const chunks = [shared, chunk({ id: "gnss/x/y" })];
-    expect(selectVocabulary([a, b], chunks)).toBe("B\n\n---\n\nA");
+    expect(chooseSkills([a, b], chunks)).toEqual([b, a]);
   });
 
   it("matches a guide section by its page, and only by its page", () => {
@@ -181,33 +193,29 @@ describe("selectVocabulary", () => {
       body: "SIBLING",
       pages: ["/guides/intervals/overview/"],
     });
-    expect(selectVocabulary([sibling, page], [guide])).toBe("PAGE");
-    expect(selectVocabulary([sibling, folder], [guide])).toBe("FOLDER");
-    expect(selectVocabulary([sibling], [guide])).toBe("");
+    expect(chooseSkills([sibling, page], [guide])).toEqual([page]);
+    expect(chooseSkills([sibling, folder], [guide])).toEqual([folder]);
+    expect(chooseSkills([sibling], [guide])).toEqual([]);
   });
 
   it("picks the GNSS skill for a GNSS week question", () => {
-    expect(vocabularyFor("GPS week rollover and time of week")).toContain(
-      byName("gmt-gnss").body,
+    expect(namesFor("GPS week rollover and time of week")).toContain(
+      "gmt-gnss",
     );
   });
 
   it("picks only the time-zone skill for a zone conversion question", () => {
-    expect(vocabularyFor("convert a meeting time between time zones")).toBe(
-      byName("gmt-timezone").body,
-    );
+    expect(namesFor("convert a meeting time between time zones")).toEqual([
+      "gmt-timezone",
+    ]);
   });
 
   it("picks the time-zone skill for a DST question", () => {
-    expect(vocabularyFor("what is a DST gap")).toBe(
-      byName("gmt-timezone").body,
-    );
+    expect(namesFor("what is a DST gap")).toEqual(["gmt-timezone"]);
   });
 
   it("picks the interval rules for an interval question", () => {
-    expect(vocabularyFor("merge overlapping intervals")).toContain(
-      byName("gmt-arithmetic").body,
-    );
+    expect(namesFor("merge overlapping intervals")).toContain("gmt-arithmetic");
   });
 
   it("stays within the budget for every real question", () => {
@@ -217,8 +225,7 @@ describe("selectVocabulary", () => {
       "driver hours in a rolling week",
       "convert TAI to UTC",
     ]) {
-      const text = vocabularyFor(question);
-      const chosen = SKILLS.filter((real) => text.includes(real.body));
+      const chosen = chooseSkills(SKILLS, searchChunks(corpus, question));
       expect(chosen.length).toBeGreaterThan(0);
       // One skill may exceed the budget on its own; two together may not.
       if (chosen.length > 1) {

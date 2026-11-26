@@ -17,7 +17,7 @@
  * The reader is `internal/readDurationUnits.ts`.
  */
 import { Temporal } from "../internal/temporal";
-import { getSystemTimeZone } from "../zoned/get/getSystemTimeZone";
+import { systemTimeZone } from "../internal/resolveLocale";
 import { setFakeSystemTime } from "./setFakeSystemTime";
 import {
   addDate,
@@ -145,16 +145,16 @@ const everyRestrictedFunction = (
 
 // getDateIn and getDateAgo start from the system zone: pin it so the expected dates do not move
 // with the host's zone.
-vi.mock("../zoned/get/getSystemTimeZone", { spy: true });
+vi.mock("../internal/resolveLocale", { spy: true });
 
 beforeEach(() => {
   vi.useFakeTimers();
   setFakeSystemTime("2027-06-15T12:00:00Z");
-  vi.mocked(getSystemTimeZone).mockReturnValue("UTC");
+  vi.mocked(systemTimeZone).mockReturnValue("UTC");
 });
 
 afterEach(() => {
-  vi.mocked(getSystemTimeZone).mockReset();
+  vi.mocked(systemTimeZone).mockReset();
   vi.useRealTimers();
 });
 

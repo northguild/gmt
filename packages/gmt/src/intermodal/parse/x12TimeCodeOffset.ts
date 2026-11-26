@@ -1,53 +1,5 @@
+import { x12OffsetOf } from "../../internal/x12TimeCodes";
 import type { X12OffsetTimeCode } from "../../types/edi";
-
-/**
- * X12 data element 623 code → the offset its definition states, release 008010, read from
- * Stedi's X12-licensed dictionary (https://www.stedi.com/edi/x12-008010/element/623); the X12
- * text was not reached. Each comment quotes the definition. The offsets are the standard's data,
- * written out rather than computed: `P` is plus and `M` is minus, and the `13`–`24` run counts
- * down. `25`–`29` were added in release 006010. Typed by `X12OffsetTimeCode`, so a missing code
- * fails typecheck.
- */
-const X12_TIME_CODE_OFFSET: Readonly<Record<X12OffsetTimeCode, string>> = {
-  // "Equivalent to ISO P01" … "P12"
-  "01": "+01:00",
-  "02": "+02:00",
-  "03": "+03:00",
-  "04": "+04:00",
-  "05": "+05:00",
-  "06": "+06:00",
-  "07": "+07:00",
-  "08": "+08:00",
-  "09": "+09:00",
-  "10": "+10:00",
-  "11": "+11:00",
-  "12": "+12:00",
-  // "Equivalent to ISO M12" … "M01": descending, so the code rises as the offset nears UTC.
-  "13": "-12:00",
-  "14": "-11:00",
-  "15": "-10:00",
-  "16": "-09:00",
-  "17": "-08:00",
-  "18": "-07:00",
-  "19": "-06:00",
-  "20": "-05:00",
-  "21": "-04:00",
-  "22": "-03:00",
-  "23": "-02:00",
-  "24": "-01:00",
-  // "Equivalent to ISO M2:30", "M3:30", "P5:30", "P9:30", "P10:30"
-  "25": "-02:30",
-  "26": "-03:30",
-  "27": "+05:30",
-  "28": "+09:30",
-  "29": "+10:30",
-  // "Greenwich Mean Time". X12 gives the name and no ISO designator, so the offset is a GMT
-  // rule: UN/ECE Recommendation 7 ¶12 names the scale "Co-ordinated Universal Time (formerly
-  // known as Greenwich Mean Time)". It is the one zone-name code that resolves to an offset.
-  GM: "+00:00",
-  // "Universal Time Coordinate": UTC itself.
-  UT: "+00:00",
-};
 
 /**
  * Read the UTC offset an X12 time code (data element 623) states.
@@ -105,11 +57,5 @@ const X12_TIME_CODE_OFFSET: Readonly<Record<X12OffsetTimeCode, string>> = {
  * @example x12TimeCodeOffset("ut") // "" (matching is exact)
  */
 export function x12TimeCodeOffset(timeCode: X12OffsetTimeCode): string {
-  if (
-    typeof timeCode !== "string" ||
-    !Object.hasOwn(X12_TIME_CODE_OFFSET, timeCode)
-  ) {
-    return "";
-  }
-  return X12_TIME_CODE_OFFSET[timeCode];
+  return x12OffsetOf(timeCode);
 }

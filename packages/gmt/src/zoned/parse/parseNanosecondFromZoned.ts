@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return the nanosecond (0-999) from a zoned datetime string.
@@ -15,12 +14,12 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example parseNanosecondFromZoned("invalid") // ""
  */
 export function parseNanosecondFromZoned(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return (zonedDateTime.nanosecond ?? 0).toString().padStart(3, "0");
   } catch {
     return "";

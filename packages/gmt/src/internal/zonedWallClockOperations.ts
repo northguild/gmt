@@ -1,5 +1,6 @@
 import type { RoundingMode, SmallestUnit } from "./temporalTypes";
 import { Temporal } from "./temporal";
+import { durationFrom } from "./durationFrom";
 import type { Disambiguation, Offset, Overflow } from "../types";
 import { assertMonthsInRange, calendarDateAdd } from "./temporalCompat";
 import { isValidEpoch } from "./zonedWallClock";
@@ -281,7 +282,7 @@ export function addToZonedDisambiguated(
   const disambiguation = `${options.disambiguation}` as Disambiguation;
   // Validates `disambiguation` even when no wall clock is resolved below.
   DISAMBIGUATION_PROBE.toZonedDateTime("UTC", { disambiguation });
-  const parsed = Temporal.Duration.from(duration);
+  const parsed = durationFrom(duration);
   assertMonthsInRange(parsed.months); // D9
 
   if (disambiguation === "compatible" || !hasDateUnits(parsed)) {

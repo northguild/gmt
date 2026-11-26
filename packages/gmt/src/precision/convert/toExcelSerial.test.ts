@@ -1,4 +1,4 @@
-import { sameInstantBattleCases } from "../../test";
+import { sameInstantOffsetCases } from "../../test";
 import { mockTemporalInstantFromThrow } from "../../test/mocks";
 import { toExcelSerial } from "./toExcelSerial";
 
@@ -97,7 +97,7 @@ describe("toExcelSerial", () => {
     expect(toExcelSerial("1900-03-01T00:00:00Z")).toBe(61);
   });
 
-  it.each(sameInstantBattleCases)(
+  it.each(sameInstantOffsetCases)(
     "returns the same serial for 2024-02-29T00:00:00Z expressed in $timeZone",
     ({ value }) => {
       expect(toExcelSerial(value)).toBe(45351);
@@ -171,13 +171,9 @@ describe("toExcelSerial", () => {
     expect(toExcelSerial(value)).toBeNull();
   });
 
-  // A calendar annotation is read and ignored, as `Temporal.Instant.from` ignores it (an instant has
-  // no calendar): 2024-03-10T12:00:00-05:00 is 2024-03-10T17:00:00Z. Expected value computed from
-  // native Temporal (Chromium 153) epoch nanoseconds.
-  it("returns 45361.708333333336 for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
-    expect(toExcelSerial("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBe(
-      45361.708333333336,
-    );
+  // An instant is `Z` or an offset and nothing after it: a calendar annotation is no part of it.
+  it("returns the sentinel for 2024-03-10T12:00:00-05:00[u-ca=hebrew]", () => {
+    expect(toExcelSerial("2024-03-10T12:00:00-05:00[u-ca=hebrew]")).toBeNull();
   });
 
   it.each`

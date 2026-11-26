@@ -131,7 +131,9 @@ export type { X12TimeReaderArgs } from "./x12-time-reader";
 
 const WIDGET_NAME = "x12-time-reader";
 const STRIP_CAPTION = "The same local time in up to four zones";
-const STRIP_WIDTHS = { instant: 23, third: 28 };
+// The third column holds an instant with an offset, up to `1900-06-15T14:30:00.12+05:21:10` (31
+// characters). It keeps 23 and two lines, and the value breaks between its pieces.
+const STRIP_WIDTHS = { instant: 23, third: 23, thirdLines: 2, offset: 9 };
 const TYPED = ["date", "time", "time-code", "dtp-format", "dtp-value"];
 
 const ELEMENT_FIGURE: FigureValue = {
@@ -318,6 +320,7 @@ export function renderX12TimeReaderTemplate(
         id,
         caption: "What the calls returned, member by member",
         prefix: "member",
+        wraps: true,
         rows: MEMBER_ROWS.map((r) => ({ key: r.key, label: r.label })),
       })}${outputHold({
         id: id("parse-output"),
@@ -447,6 +450,7 @@ export function renderX12TimeReaderTemplate(
         id,
         caption: "What the DTP call returned, member by member",
         prefix: "dtp-member",
+        wraps: true,
         rows: DTP_MEMBER_ROWS.map((r) => ({ key: r.key, label: r.label })),
       })}${callFrameHold({
         id: id("dtp-parse-call"),

@@ -54,8 +54,19 @@ const outLeft = () =>
 const face = () => screen.getByRole("status", { name: "Time to cut-off" });
 const announcement = () =>
   screen.getByRole("status", { name: "Cut-off announcement" });
-const verdictText = (text: string | RegExp) =>
-  screen.getByText(text, { selector: "strong" });
+/** The verdict's words. The hold keeps aria-hidden ghosts of the others, which a role query
+ *  leaves out, as a screen reader does. */
+const verdictText = (text: string | RegExp) => {
+  const hit = screen
+    .getAllByRole("strong")
+    .find((el) =>
+      typeof text === "string"
+        ? el.textContent === text
+        : text.test(el.textContent ?? ""),
+    );
+  if (hit === undefined) throw new Error(`no verdict reads ${String(text)}`);
+  return hit;
+};
 
 async function enter(w: RenderedWidget, box: HTMLElement, value: string) {
   await w.user.clear(box);
@@ -140,7 +151,7 @@ describe("mountCutoffCountdown", () => {
   it("draws day ticks once the window spans several days (C8)", async () => {
     await open({
       cutoff: "2024-06-09T16:00:00+08:00[Asia/Shanghai]",
-      now: "2024-06-15T04:00:00+08:00[Asia/Shanghai]",
+      now: "2024-06-15T04:00:00+08:00",
       timeZone: "Asia/Shanghai",
     });
     expect(screen.getAllByText(/^9 Jun$/).length).toBeGreaterThan(0);
@@ -149,7 +160,7 @@ describe("mountCutoffCountdown", () => {
   it("reads a chat seed as late by 20 minutes", async () => {
     await open({
       cutoff: AMS_CUTOFF,
-      now: "2024-06-12T17:20:00+02:00[Europe/Amsterdam]",
+      now: "2024-06-12T17:20:00+02:00",
       timeZone: "Europe/Amsterdam",
     });
     expect(outPast()).toHaveTextContent("true");
@@ -160,7 +171,7 @@ describe("mountCutoffCountdown", () => {
   it("keeps a seeded zone the list does not carry, and reads through it", async () => {
     await open({
       cutoff: "2024-06-09T16:00:00+03:00[Europe/Helsinki]",
-      now: "2024-06-09T15:00:00+03:00[Europe/Helsinki]",
+      now: "2024-06-09T15:00:00+03:00",
       timeZone: "Europe/Helsinki",
     });
     expect(zoneBox()).toHaveValue("Europe/Helsinki");
@@ -200,7 +211,7 @@ describe("mountCutoffCountdown", () => {
   it("speaks the seconds-level value at 20 s before the cut-off", async () => {
     const w = await open();
     await enter(w, cutoffBox(), AMS_CUTOFF);
-    await enter(w, nowBox(), "2024-06-12T16:59:40+02:00[Europe/Amsterdam]");
+    await enter(w, nowBox(), "2024-06-12T16:59:40+02:00");
     expect(verdictText("On time: 20 s left.")).toBeInTheDocument();
     expect(face()).toHaveTextContent("+20 s");
     expect(screen.getByText("16:59:40 · +20 s")).toBeInTheDocument();
@@ -291,33 +302,146 @@ describe("permalinks", () => {
 });
 
 describe("the live clock", () => {
+  // The widget under test, so a failing test still tears its timer down before the fake clock.
+  let widget: RenderedWidget | null = null;
+
   beforeEach(() => {
     vi.useRealTimers();
-    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
     vi.setSystemTime("2024-06-12T15:20:00Z");
   });
 
+  afterEach(() => {
+    widget?.destroy();
+    widget = null;
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
   const seed = { cutoff: AMS_CUTOFF, timeZone: "Europe/Amsterdam" };
+  const liveSwitch = () => screen.getByRole("switch", { name: "Live clock" });
+
+  /**
+   * user-event and the mount's own module load wait on `setTimeout`, and the timer is fake
+   * here: `settle` runs what is due and yields a real turn until the work is done.
+   */
+  async function settle<T>(work: Promise<T>): Promise<T> {
+    let done = false;
+    const tracked = work.finally(() => {
+      done = true;
+    });
+    while (!done) {
+      await vi.advanceTimersByTimeAsync(1);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    return tracked;
+  }
+
+  async function openLive(args: Record<string, unknown> = seed) {
+    widget = await settle(open(args));
+    return widget;
+  }
+
+  const reducedMotion = () =>
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes("reduce"),
+          media: query,
+          addEventListener() {},
+          removeEventListener() {},
+        }) as unknown as MediaQueryList,
+    );
 
   it("reads the clock, says it is live and counts down each second", async () => {
-    await open(seed);
+    await openLive();
     expect(outLeft()).toHaveTextContent("-PT20M");
     expect(screen.getByText("Now is your clock, live.")).toBeInTheDocument();
+    expect(liveSwitch()).toBeChecked();
     vi.advanceTimersByTime(60_000);
     expect(outLeft()).toHaveTextContent("-PT21M");
   });
 
-  it("a drag switches to pinned and freezes the output", async () => {
-    await open(seed);
+  it("ticks on the second, not a second after the last tick", async () => {
+    vi.setSystemTime("2024-06-12T15:20:00.250Z");
+    await openLive();
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    vi.advanceTimersByTime(749);
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    vi.advanceTimersByTime(1);
+    expect(outLeft()).toHaveTextContent("-PT20M1S");
+    vi.advanceTimersByTime(1000);
+    expect(outLeft()).toHaveTextContent("-PT20M2S");
+  });
+
+  it("a drag switches to pinned, freezes the output and turns the switch off", async () => {
+    await openLive();
     setRange(slider(), -10);
     expect(screen.getByText("Now is pinned.")).toBeInTheDocument();
+    expect(liveSwitch()).not.toBeChecked();
     expect(outLeft()).toHaveTextContent("PT10M");
     vi.advanceTimersByTime(120_000);
     expect(outLeft()).toHaveTextContent("PT10M");
   });
 
+  it("pauses on the last values and resumes from the clock", async () => {
+    const w = await openLive();
+    vi.advanceTimersByTime(2000);
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).not.toBeChecked();
+    expect(screen.getByText("Now is your clock, paused.")).toBeInTheDocument();
+    const held = outLeft().textContent ?? "";
+    const heldNow = (nowBox() as HTMLInputElement).value;
+    vi.advanceTimersByTime(3000);
+    expect(outLeft()).toHaveTextContent(held, { normalizeWhitespace: false });
+    expect((nowBox() as HTMLInputElement).value).toBe(heldNow);
+    expect(vi.getTimerCount()).toBe(0);
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).toBeChecked();
+    expect(screen.getByText("Now is your clock, live.")).toBeInTheDocument();
+    expect(outLeft()).not.toHaveTextContent(held, {
+      normalizeWhitespace: false,
+    });
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("starts paused under reduced motion, holds the reading and can be turned on", async () => {
+    reducedMotion();
+    const w = await openLive();
+    expect(liveSwitch()).not.toBeChecked();
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(5000);
+    expect(outLeft()).toHaveTextContent("-PT20M");
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).toBeChecked();
+    expect(outLeft()).toHaveTextContent("-PT20M5S");
+  });
+
+  it("starts the clock from the pinned page when the switch is turned on", async () => {
+    const w = await openLive({});
+    expect(liveSwitch()).not.toBeChecked();
+    expect(screen.getByText("Now is pinned.")).toBeInTheDocument();
+    await settle(w.user.click(liveSwitch()));
+    expect(liveSwitch()).toBeChecked();
+    expect(screen.getByText("Now is your clock, live.")).toBeInTheDocument();
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it("keeps focus on the switch and on the copy button through a tick", async () => {
+    await openLive();
+    const copy = screen.getByRole("button", { name: "Copy timeToCutoff call" });
+    liveSwitch().focus();
+    vi.advanceTimersByTime(1000);
+    expect(liveSwitch()).toHaveFocus();
+    copy.focus();
+    vi.advanceTimersByTime(1000);
+    expect(copy).toBeInTheDocument();
+    expect(copy).toHaveFocus();
+  });
+
   it("speaks about once a minute, and not each second", async () => {
-    await open(seed);
+    await openLive();
     const status = announcement();
     expect(status).not.toHaveTextContent(/Now is/);
     vi.advanceTimersByTime(30_000);
@@ -327,10 +451,16 @@ describe("the live clock", () => {
   });
 
   it("leaves no timer after the mount is destroyed", async () => {
-    const w = await open(seed);
-    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    const w = await openLive();
+    expect(vi.getTimerCount()).toBe(1);
     w.destroy();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("has no accessibility violations while it ticks", async () => {
+    const w = await openLive();
+    vi.advanceTimersByTime(2000);
+    await settle(expectNoAxeViolations(w.root));
   });
 });
 
@@ -343,7 +473,7 @@ describe("the announcement", () => {
   it("speaks the summary when the reader leaves a field", async () => {
     const w = await open();
     const status = announcement();
-    await enter(w, nowBox(), "2024-06-12T17:30:00+02:00[Europe/Amsterdam]");
+    await enter(w, nowBox(), "2024-06-12T17:30:00+02:00");
     await w.user.tab();
     expect(status).toHaveTextContent(/^Now is /);
   });

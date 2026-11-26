@@ -2,85 +2,48 @@
 
 Copyright (c) 2026 NorthGuild. All rights reserved under [`.agents/LICENSE`](.agents/LICENSE); the root MIT licence does not apply to this file.
 
-`@northguild/gmt` is a Temporal-first date/time library. String-in, string-out. No `Date` object anywhere.
+`@northguild/gmt`: Temporal-first date/time library. String-in, string-out. No `Date`.
 
 ## Context Files
 
-Read these before working in the repo. Each is scoped — load only what you need for the task at hand.
-
-| File                                                                                             | When to read it                                                                                                                                  |
-| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [context/project-overview.md](./context/project-overview.md)                                     | Always — covers what GMT is, why it exists, Temporal API references, and comparison library links                                                |
-| [context/coding-standards.md](./context/coding-standards.md)                                     | When writing or reviewing source code — API contract and sentinel table, calendar & zone semantics (TC39 clamp, zone boundaries), changeset rule |
-| [context/testing-standards/references/index.md](./context/testing-standards/references/index.md) | When writing or reviewing tests                                                                                                                  |
-| [context/jsdoc-standards.md](./context/jsdoc-standards.md)                                       | When adding or updating public function JSDoc                                                                                                    |
-| [context/reference/AUTHORITY_TABLE.md](./context/reference/AUTHORITY_TABLE.md)                   | When planning or reviewing any function that implements a standard — how a rule cites its clause                                                 |
-| [context/reference/LOCAL_TIME_RESOLUTION.md](./context/reference/LOCAL_TIME_RESOLUTION.md)       | When a function takes a local wall time — the disambiguation vocabulary and the canonical DST cases                                              |
-| [context/code-review-checklist.md](./context/code-review-checklist.md)                           | When reviewing a PR                                                                                                                              |
-| [context/linting-packages.md](./context/linting-packages.md)                                     | When working on gmt-eslint, gmt-oxlint, or gmt-biome                                                                                             |
-| [context/dox/index.md](./context/dox/index.md)                                                   | When working on the `apps/dox` documentation site (the Dox epic)                                                                                 |
-| [context/domination/index.md](./context/domination/index.md)                                     | When picking up any epic story — check `Blocked by` in its tracker first                                                                         |
+| File | Read it when |
+| --- | --- |
+| [project-overview](./context/project-overview.md) | Always |
+| [coding-standards](./context/coding-standards/index.md) | Writing or reviewing source: sentinels, calendar and zone semantics, changesets |
+| [testing-standards](./context/testing-standards/references/index.md) | Writing or reviewing tests |
+| [jsdoc-standards](./context/jsdoc-standards.md) | Adding or updating public JSDoc |
+| [AUTHORITY_TABLE](./context/reference/AUTHORITY_TABLE.md) | A function implements a standard |
+| [LOCAL_TIME_RESOLUTION](./context/reference/LOCAL_TIME_RESOLUTION.md) | A function takes a local wall time |
+| [code-review-checklist](./context/code-review-checklist.md) | Reviewing a PR |
+| [linting-packages](./context/linting-packages.md) | Working on gmt-eslint, gmt-oxlint or gmt-biome |
+| [dox](./context/dox/index.md) | Working on `apps/dox` |
+| [domination](./context/domination/index.md) | Picking up an epic story; check `Blocked by` first |
+| [canary](./context/canary/index.md) | A canary or a `CNRY-*` story |
+| [skills](./context/skills.md) | Choosing a skill |
 
 ## Git — Only on an Explicit Instruction
 
-**The default is always: finish the work, leave it unstaged in the working tree,
-and say it is ready.** Do not stage, commit, branch, push or open a pull request
-on your own initiative — not as a checkpoint, not "so nothing is lost", not
-because the work looks finished.
-
-**Do them when the user tells you to, in plain words, in the current session.**
-"Commit this", "push the branch", "open the PR" are instructions: carry them out
-and report what you did. An instruction covers the operation it names for the
-work in hand. It is not a standing licence — a later, separate write needs its
-own instruction. Typing a skill whose job is one of these operations is the
-instruction for that run: `/release` commits, pushes and opens its release PR.
-
-**Never infer the permission.** It has to come from the user, about this
-operation, in their own words:
-
-- A user choosing between approaches is **not** authorising the git operations
-  named in the options. If an agent writes "…and open it as a PR" into a choice
-  it offers, selecting that choice authorises **nothing** — the agent wrote that
-  text, not the user.
-- "Ship it", "land it", "let's go", approving a plan, or agreeing that work is
-  finished are **not** requests to push or open a PR. They are about the work,
-  not about git.
-- Urgency is not a reason on its own. A bug being live in production is a reason
-  to _tell the user_, not to push a fix nobody asked for.
-- A "yes" to a different question is not a yes to this one.
-
-**Destructive and wide-reaching variants have to be asked for by name.**
-`--force` / `--force-with-lease`, a push to `main` or any default branch, a
-rewrite of published history, and `git reset --hard` over uncommitted work are
-authorised only when the user asks for that specific thing. "Push the branch"
-does not authorise force-pushing it.
-
-If one of these seems genuinely necessary and nobody has asked for it, stop and
-ask in plain words.
+Leave finished work **unstaged**. Never stage, commit, branch, push or open a PR on your own initiative; permission is never inferred (a choice between approaches, "ship it", urgency). Force-pushes, pushes to `main` and history rewrites must be asked for by name. Two standing instructions need no new word: merge `origin/main` into the branch, and run `node scripts/pr-meta.mjs --apply` on an open PR. The full policy, with both standing instructions, is [context/git.md](./context/git.md).
 
 ## Core Rules (Quick Reference)
 
-These are the non-negotiables. Full detail is in the context files above.
-
-1. **No `Date` object.** Use `temporal-polyfill` exclusively (`/full/implementation`), imported only through `packages/gmt/src/internal/temporal.ts`.
-2. **String-in, string-out.** Public APIs accept ISO 8601 strings; return strings, numbers, booleans, arrays, `bigint`, or plain objects — never Temporal objects.
-3. **Invalid input returns a sentinel, never throws.** `""` for strings, `null` for numbers and objects, `false` for booleans, `[]` for arrays — the full table (bigint, span, exceptions) is [coding-standards § API Contract](./context/coding-standards.md#api-contract).
-4. **Wrap all Temporal calls in `try-catch`.** `.from()`, `.add()`, `.since()`, etc. throw `RangeError` on bad input. One exception: a zero-argument reader that calls only `Temporal.Now.instant()`, then reads a field through an explicit `"UTC"` conversion or calls `.toString()` with no options, cannot fail, so it has no catch and no sentinel. The exception does not cover a read of the system time zone — see [coding-standards § Scoped exception: the UTC clock readers](./context/coding-standards.md#scoped-exception-the-utc-clock-readers).
-5. **Keep `plain/` and `zoned/` strictly separate.** Never mix `PlainDateTime` and `ZonedDateTime`.
-6. **Full locale matrix for any locale-aware function.** 17 locales, explicit rows, `expectOneOfIcu`/`expectDateTimeEqual` (from `packages/gmt/src/test/icuVariants.ts`) where CLDR wording differs.
-7. **Use pre-built mocks for error-path tests.** See `packages/gmt/src/test/mocks`.
-8. **JSDoc with `@example` on every public function.** Cover valid, invalid, and edge-case inputs.
-9. **TC39 Temporal is the calendar authority.** Arithmetic clamps (`overflow: "constrain"`); parsers reject. See [§ Calendar & zone semantics](./context/coding-standards.md#calendar--zone-semantics).
-10. **Never truncate-and-re-resolve a zoned boundary.** Use `internal/zonedBucket.ts` or `startOfDay()`/`hoursInDay`; test against the probe zones. Same section.
-11. **One changeset rule.** Fix → `patch`, no behaviour change → none, new API → `minor`, breaking change → `minor` with a **Breaking changes** migration section. `major` is never used. See [coding-standards § Changesets](./context/coding-standards.md#changesets).
-12. **Zero known bugs.** A defect found is fixed now, in the same story, and its whole class with it. It is never deferred, pinned with `it.fails`, skipped, or documented as known. No disabled, focused or expected-to-fail test ships; `node scripts/test-markers.mjs check` in `validate` enforces it. That script is a backstop, not the definition of this rule: its checks are lexical, so it catches `it.skip` / `it.fails` reliably but cannot see a carried defect worded any other way, and a green check is never on its own evidence that the rule was met. See [testing standards § Zero known bugs](./context/testing-standards/references/index.md#zero-known-bugs).
-
-13. **Plain English for anything a person reads.** Commit messages, changesets, PR titles, descriptions and review comments, issues and comments on upstream repos, handoff notes, and replies to the user all follow ISO 24495-1:2023 — the reader can find what they need, understand it first time, and act on it. Plain governs how it is said, not how much: depth, numbers and precise domain terms stay. The [`plain-english` skill](./.agents/skills/plain-english/SKILL.md) carries the rules.
+1. **No `Date` object.** `temporal-polyfill` (`/full/implementation`) only, imported through `packages/gmt/src/internal/temporal.ts`.
+2. **String-in, string-out.** Never return Temporal objects.
+3. **Invalid input returns a sentinel, never throws.** Table: [API Contract](./context/coding-standards/api-contract.md#api-contract).
+4. **Wrap every Temporal call in `try-catch`.** One exception: [the UTC clock readers](./context/coding-standards/api-contract.md#scoped-exception-the-utc-clock-readers).
+5. **Keep `plain/` and `zoned/` separate.** Never mix them.
+6. **Full 17-locale matrix** for locale-aware functions; `expectOneOfIcu` / `expectDateTimeEqual` where CLDR differs.
+7. **Pre-built mocks** for error-path tests: `packages/gmt/src/test/mocks`.
+8. **JSDoc with `@example`** on every public function: valid, invalid and edge inputs.
+9. **TC39 Temporal is the calendar authority.** Arithmetic clamps, parsers reject: [Calendar & zone semantics](./context/coding-standards/calendar-and-zones.md#calendar--zone-semantics).
+10. **Never truncate-and-re-resolve a zoned boundary.** Use `internal/zonedBucket.ts`, `startOfDay()` or `hoursInDay`; test the probe zones.
+11. **One changeset rule:** [Changesets](./context/coding-standards/changesets.md#changesets). `major` is never used.
+12. **Zero known bugs.** Fix a defect and its whole class in the same story; ship no `it.fails`, skip or known-defect note. `node scripts/test-markers.mjs check` is a backstop, not the definition: [Zero known bugs](./context/testing-standards/references/index.md#zero-known-bugs).
+13. **Plain English** for anything a person reads (ISO 24495-1:2023): the [`plain-english` skill](./.agents/skills/plain-english/SKILL.md).
+14. **Runtime workarounds follow one frozen approach:** fix to the standard's answer, dormant unless a probe fails, no output change on removal, no GMT copy of CLDR or ICU data. Never change it or add an exception without the owner's word naming the file: [runtime-workarounds](./context/coding-standards/runtime-workarounds.md). The file is locked: a Claude Code hook ([`scripts/frozen.mjs`](./scripts/frozen.mjs)) blocks every agent write to it, to the guard and to `.claude/settings*.json`, and CI fails when its text no longer matches the pinned hash. Only the owner moves the pin, with `node scripts/frozen.mjs pin` in their own terminal.
 
 ## Sessions and Agents
 
-- **A story is `/plan-story`, `/clear`, `/implement`.** Skills: [context/skills.md](./context/skills.md).
-- **One story per session.** Near 200K tokens, `/handoff` and start anew.
-- **Only the main session spawns agents** ([`pipeline`](./.agents/skills/pipeline/SKILL.md)).
-- **Needs Claude Code 2.1.251+.** Older ones run every agent on Sonnet.
-- **Verdicts, not logs:** `pnpm verdict`, `pnpm pr-status`, `pnpm -F dox gates`.
+- A story is `/plan-story`, `/clear`, `/implement`. One story per session; near 200K tokens, `/handoff`.
+- Only the main session spawns agents ([`pipeline`](./.agents/skills/pipeline/SKILL.md)). Needs Claude Code 2.1.251+.
+- Verdicts, not logs: `pnpm verdict`, `pnpm pr-status`, `pnpm -F dox gates`.

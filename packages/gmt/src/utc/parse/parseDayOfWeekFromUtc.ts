@@ -1,6 +1,5 @@
-import { Temporal } from "../../internal/temporal";
 import { frameWallClock, normalizeZoneFrame } from "../../internal/zoneFrame";
-import { isValidUtc } from "../validate";
+import { utcInstantOf } from "../../internal/utcInstant";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -37,13 +36,14 @@ export function parseDayOfWeekFromUtc(
       return null;
     }
 
-    if (!isValidUtc(value)) return null;
+    const instant = utcInstantOf(value);
+    if (instant === null) return null;
 
     const frame = normalizeZoneFrame(options?.timeZone);
     if (frame === null) return null;
 
     try {
-      const dateTime = frameWallClock(Temporal.Instant.from(value), frame);
+      const dateTime = frameWallClock(instant, frame);
       return dateTime.dayOfWeek;
     } catch {
       return null;

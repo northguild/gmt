@@ -15,6 +15,7 @@ const NAMES = [
   "convertUtcToZoned",
   "formatHttpDate",
   "getUtcIn",
+  "getUtcNow",
   "isValidUtc",
 ];
 

@@ -84,4 +84,13 @@ describe("intervalSplitAtTime on a zero-length interval", () => {
       ]);
     },
   );
+
+  it("skips a hole in a sparse list instead of rejecting it", () => {
+    const sparse: string[] = [];
+    sparse[1] = "05:00";
+    expect(intervalSplitAtTime("01:00", "10:00", sparse)).toEqual([
+      { start: "01:00:00", end: "05:00:00" },
+      { start: "05:00:00", end: "10:00:00" },
+    ]);
+  });
 });

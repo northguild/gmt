@@ -24,14 +24,18 @@
   min-inline-size: 0;
   max-inline-size: 100%;
   margin: 0;
-  padding-block: var(--gmt-space-2);
+  padding-block: var(--gmt-space-2)
+    calc(var(--gmt-space-2) - var(--gmt-under-edge));
   padding-inline: var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
-  border-block-end: 3px solid var(--series);
   border-radius: var(--gmt-radius-md);
   corner-shape: bevel;
   background: var(--gmt-surface-widget);
-  box-shadow: inset 0 1px 0 var(--gmt-highlight);
+
+  /* The series under-edge; its width is in the end padding (`--gmt-under-edge`, gmt-tokens.css). */
+  box-shadow:
+    inset 0 1px 0 var(--gmt-highlight),
+    inset 0 var(--gmt-under-edge) 0 var(--series);
 
   &[data-series="1"] {
     --series: var(--gmt-series-1);

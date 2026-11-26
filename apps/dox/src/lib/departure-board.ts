@@ -26,6 +26,7 @@ import {
   type Headway,
   type PunctualityLib,
 } from "./punctuality-widgets";
+import { OFFSET_SOURCE } from "./exact-offset";
 import type { TransportMode } from "./transport-icons";
 
 export const MAX_DEPARTURES = 6;
@@ -406,7 +407,12 @@ export function departureWait(
   made: string,
   lib: PunctualityLib,
 ): string {
-  return made === "" ? "" : lib.scheduleDeviation(after.trim(), made);
+  if (made === "") return "";
+  // The timetable and the arrival may be zoned; `scheduleDeviation` reads instants.
+  return lib.scheduleDeviation(
+    lib.toInstant(after.trim()),
+    lib.toInstant(made),
+  );
 }
 
 const ICON_ALIASES: Readonly<Record<string, TransportMode>> = {
@@ -493,8 +499,9 @@ export function thresholdOf(after: string, connection: string): string {
   }
 }
 
-const MOMENT_PATTERN =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?(?:\[([^\]]+)\])?$/;
+const MOMENT_PATTERN = new RegExp(
+  String.raw`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(Z|${OFFSET_SOURCE})?(?:\[([^\]]+)\])?$`,
+);
 
 /**
  * What is wrong with an arrival the library has already refused, read off the

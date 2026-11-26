@@ -1,11 +1,10 @@
-import { Temporal } from "./temporal";
 import {
   parseBusinessCalendar,
   resolveBusinessCalendar,
   stepBusinessDates,
 } from "./businessCalendar";
 import { isValidAmount } from "./isValidAmount";
-import { isValidDate } from "../plain/validate/isValidDate";
+import { plainDateOf } from "./inputChecks";
 import type { BusinessCalendar } from "../types";
 
 /**
@@ -25,9 +24,10 @@ export function stepBusinessDaysValue(
   calendar: BusinessCalendar | undefined,
 ): string {
   const resolved = resolveBusinessCalendar(calendar);
+  const date = plainDateOf(value);
 
   if (
-    !isValidDate(value) ||
+    date === null ||
     !isValidAmount(amount) ||
     !Number.isInteger(amount) ||
     resolved === null
@@ -37,12 +37,12 @@ export function stepBusinessDaysValue(
 
   try {
     if (amount === 0) {
-      return Temporal.PlainDate.from(value).toString();
+      return date.toString();
     }
 
     const direction: 1 | -1 = amount > 0 ? sign : sign === 1 ? -1 : 1;
     const result = stepBusinessDates(
-      Temporal.PlainDate.from(value),
+      date,
       direction,
       Math.abs(amount),
       resolved,
@@ -68,17 +68,14 @@ export function neighbourBusinessDayValue(
 ): string {
   const resolved = parseBusinessCalendar(calendar);
 
-  if (!isValidDate(value) || resolved === null) {
+  const date = plainDateOf(value);
+
+  if (date === null || resolved === null) {
     return "";
   }
 
   try {
-    const result = stepBusinessDates(
-      Temporal.PlainDate.from(value),
-      direction,
-      1,
-      resolved,
-    );
+    const result = stepBusinessDates(date, direction, 1, resolved);
 
     return result === null ? "" : result.toString();
   } catch {

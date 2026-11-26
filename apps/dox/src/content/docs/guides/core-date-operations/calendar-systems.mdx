@@ -43,6 +43,9 @@ Temporal's `withCalendar` does (`"ethiopic-amete-alem"` writes `[u-ca=ethioaa]`,
 `[u-ca=HEBREW]` reads as `hebrew`). The canonical id is always the one written.
 `gregorian`, `taiwan` and `islamic-tabular` are not calendar ids and return the sentinel.
 `chinese`, `dangi`, `islamic` and `islamic-rgsa` are not supported.
+On a runtime that prints a Chinese or Dangi date the observatory does not (the Purple Mountain Observatory for
+Chinese, KASI for Dangi), a format function given a `chinese` or `dangi` locale or `calendar` option returns its
+empty value for any date field. A weekday alone still prints, and so does a time alone for a value that has a time. A runtime that prints the observatory's date keeps its own text.
 
 ## How annotations are read
 
@@ -149,14 +152,14 @@ to `diffDate*`, `intervalLength*`, `intervalCount*` and `diffZoned*` alike.
 
 `duration/`'s `relativeTo` reads a calendar-annotated string as Temporal's
 `ParseTemporalRelativeToString` does: zoned when it carries a time zone annotation,
-otherwise a date. `utc/` reads a UTC string as `Temporal.Instant.from` does, so a
-`[u-ca=...]` annotation is ignored there:
+otherwise a date. `utc/` reads a UTC string as exactly `...Z`, so any annotation, a
+`[u-ca=...]` calendar included, makes it invalid there:
 
 ```typescript
 import { isValidUtc } from "@northguild/gmt";
 
 isValidUtc("2024-01-01T00:00:00Z[u-ca=hebrew]");
-// true
+// false
 ```
 
 ### Values that name different calendars

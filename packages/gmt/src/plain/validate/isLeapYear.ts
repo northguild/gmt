@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDate } from "./isValidDate";
+import { plainDateOf } from "../../internal/inputChecks";
 
 /**
  * Return true when the given PlainDate falls in a leap year.
@@ -21,10 +20,10 @@ import { isValidDate } from "./isValidDate";
  * @example isLeapYear("2024-03-15T10:00".slice(0, 10)) // true (the date part)
  */
 export function isLeapYear(value: string): boolean {
-  if (!isValidDate(value)) return false;
+  const date = plainDateOf(value);
+  if (date === null) return false;
 
   try {
-    const date = Temporal.PlainDate.from(value);
     return date.inLeapYear;
   } catch {
     return false;

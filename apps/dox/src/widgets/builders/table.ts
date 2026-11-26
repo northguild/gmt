@@ -6,15 +6,22 @@
  * and an optional `<th scope="row">` column. It sits in a scrollable box that is a
  * named `region` with `tabindex="0"`, so a keyboard reader can scroll it (axe
  * `scrollable-region-focusable`). Columns are typed; alignment and numeric state
- * are written as classes on each cell.
+ * are written as classes on each cell. A header that is a camelCase name (`parseDuration`) can
+ * break at its capitals (`identifier`), so several function-named columns fit one box.
  */
 import { gateAttr, type GateOption } from "./gate";
 import { html, type HtmlValue, type SafeHtml } from "./html";
+import { identifier } from "./identifier";
 import styles from "./table.module.css";
 
 export interface Column<K extends string> {
   key: K;
-  header: string;
+  /**
+   * The column's name. A string is escaped; `SafeHtml` passes through, for a head of two lines (a
+   * label and a note). A column of a table with `labelCells` takes a string, because its cells
+   * write the name as an attribute.
+   */
+  header: string | SafeHtml;
   align: "start" | "end";
   numeric: boolean;
 }
@@ -49,6 +56,13 @@ export interface TableOptions<K extends string> extends GateOption {
    * hand-written precedent.
    */
   roles?: boolean;
+  /**
+   * Under 46rem of box the rows become labelled blocks, a name and its value a line each, so a
+   * narrow box never squeezes a column to less than a word. It writes `labelCells` and `roles`
+   * (the stacked parts lose their native table semantics) and needs a string header for every
+   * column. A caller that stacks its table in its own sheet sets those two instead.
+   */
+  stack?: boolean;
 }
 
 export function table<K extends string>(o: TableOptions<K>): SafeHtml {
@@ -60,6 +74,7 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
       .filter(Boolean)
       .join(" ");
   const fixed = o.layout === "fixed";
+  const stacked = o.stack === true;
   const cols = fixed
     ? html`<colgroup
         >${o.columns.map((_, i) => {
@@ -71,16 +86,22 @@ export function table<K extends string>(o: TableOptions<K>): SafeHtml {
       >`
     : html``;
   const role = (name: string): SafeHtml =>
-    o.roles === true ? html` role="${name}"` : html``;
-  const col = (c: Column<K>): SafeHtml =>
-    o.labelCells === true ? html` data-col="${c.header}"` : html``;
-  return html`<div class="${styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
+    o.roles === true || stacked ? html` role="${name}"` : html``;
+  const col = (c: Column<K>): SafeHtml => {
+    if (o.labelCells !== true && !stacked) return html``;
+    if (typeof c.header !== "string")
+      throw new TypeError(
+        `table: column "${c.key}" needs a string header to label its cells`,
+      );
+    return html` data-col="${c.header}"`;
+  };
+  return html`<div class="${stacked ? `${styles.wrap} ${styles.stacked}` : styles.wrap}" role="region" ${gateAttr(o.gate)} aria-label="${o.caption}" tabindex="0"
     ><table class="${fixed ? `${styles.table} ${styles.fixed}` : styles.table}"${role("table")}
       ><caption class="${styles.caption}">${o.caption}</caption
       >${cols}<thead${role("rowgroup")}
         ><tr${role("row")}>${o.columns.map(
           (c) =>
-            html`<th class="${styles.head} ${cls(c)}" scope="col"${role("columnheader")}>${c.header}</th>`,
+            html`<th class="${styles.head} ${cls(c)}" scope="col"${role("columnheader")}>${typeof c.header === "string" ? identifier(c.header) : c.header}</th>`,
         )}</tr
       ></thead
       ><tbody${role("rowgroup")}

@@ -17,15 +17,21 @@ import rehypeBaseLinks from "./src/lib/rehype-base-links.ts";
 import rehypeExternalLinks from "./src/lib/rehype-external-links.ts";
 import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
+import { sitemapLastmod } from "./src/lib/sitemap-lastmod.ts";
+import { versionOgImages } from "./src/lib/og-image-version.ts";
 import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
 import { codeThemes } from "./src/lib/code-themes.ts";
+import { MIGRATE, START_HERE } from "./src/lib/section-order.ts";
 
 // `site` + `base` make every Starlight link, the canonical tag, the sitemap
 // and Pagefind resolve under /gmt/. One module holds both, for the Worker and
 // the scripts too.
+
+/* Where the build writes the pages (`outDir` below), for the sitemap to read. */
+const OUT_DIR = fileURLToPath(new URL("./dist/gmt", import.meta.url));
 
 const gmtPkg = fileURLToPath(
   new URL("../../packages/gmt/dist", import.meta.url),
@@ -138,6 +144,9 @@ export default defineConfig({
     copyRedirects(),
     // Build only: drops a widget's stylesheet link from the pages that do not show the widget.
     pruneWidgetCss(),
+    // Build only: puts ?v=<hash of the PNG> on og:image and twitter:image. It stays above starlight(),
+    // whose Pagefind step runs on the same hook, so Pagefind and the dist gates read the final HTML.
+    versionOgImages(),
     react(),
     starlight({
       title: "@northguild/gmt",
@@ -175,13 +184,16 @@ export default defineConfig({
       //
       // The syntax colours are the site's palette: `code-themes.ts` builds a dark and a light
       // theme from the `--gmt-syntax-*` tokens. Starlight still draws the frames, tabs and
-      // buttons from its own colours (`useStarlightUiThemeColors`), and every token is held to
-      // the 7:1 code-frame floor.
+      // buttons from its own colours (`useStarlightUiThemeColors`).
+      //
+      // The contrast adjustment is off: Expressive Code would measure it against Starlight's
+      // `#23262f` slab, not our code surface, and lighten tokens that already pass there. Each
+      // role is held to 7:1 on the surface the reader sees in `code-themes.test.ts` instead.
       expressiveCode: {
         emitExternalStylesheet: false,
         themes: codeThemes(),
         useStarlightUiThemeColors: true,
-        minSyntaxHighlightingColorContrast: 7,
+        minSyntaxHighlightingColorContrast: 0,
       },
       head: [
         // Hold the first paint until the end-of-page marker (src/components/
@@ -198,15 +210,6 @@ export default defineConfig({
             rel: "expect",
             href: "#gmt-page-end",
             blocking: "render",
-          },
-        },
-        // DOX-A3b: discoverability — let LLMs find the llms.txt surface
-        {
-          tag: "link",
-          attrs: {
-            rel: "alternate",
-            type: "text/plain",
-            href: withBase("/llms.txt"),
           },
         },
         /* Raster fallbacks for the SVG favicon above, generated from it by
@@ -246,64 +249,21 @@ export default defineConfig({
           })();`,
         },
       ],
-      /* Every group starts collapsed except Checks, the last group, which
-         lists the checks for recent tz rule changes. Starlight still opens any group that
+      /* The groups run in the order a reader needs them, first use first; the entries of Start
+         here and Migrate are set in src/lib/section-order.ts. Every group starts collapsed except
+         Checks, which lists the checks for recent tz rule changes. Starlight still opens any group that
          contains the current page (SidebarSublist: open when an entry is
          current or the group is not collapsed), so a page opens only its own
          ancestors. */
       sidebar: [
-        {
-          label: "Start here",
-          collapsed: true,
-          items: [
-            { slug: "install" },
-            { slug: "core-rules" },
-            { slug: "why-gmt" },
-            { slug: "compare", label: "GMT vs. the others" },
-            { slug: "bundle-size" },
-            { slug: "upstream" },
-          ],
-        },
-        {
-          label: "Migrate",
-          collapsed: true,
-          items: [
-            // Short labels: the group already says "Migrate". Page titles stay in full.
-            { slug: "migrate", label: "Overview" },
-            { slug: "migrate/date-fns", label: "From date-fns" },
-            { slug: "migrate/luxon", label: "From Luxon" },
-            { slug: "migrate/dayjs", label: "From Day.js" },
-            { slug: "migrate/moment", label: "From Moment.js" },
-            {
-              slug: "migrate/internationalized-date",
-              label: "From @internationalized/date",
-            },
-            { slug: "migrate/temporal", label: "From native Temporal" },
-            { slug: "compare/behaviour", label: "Behaviour compared" },
-          ],
-        },
-        { label: "Industries", collapsed: true, items: industriesSidebar },
+        { label: "Start here", collapsed: true, items: [...START_HERE] },
+        { label: "Guides", collapsed: true, items: guidesSidebar },
         { label: "API Reference", collapsed: true, items: referenceSidebar },
-        {
-          label: "Guides",
-          collapsed: true,
-          items: guidesSidebar,
-        },
-        {
-          label: "Tools",
-          collapsed: true,
-          items: toolsSidebar,
-        },
-        {
-          label: "Scenarios",
-          collapsed: true,
-          items: scenariosSidebar,
-        },
-        {
-          label: "Mistakes",
-          collapsed: true,
-          items: mistakesSidebar,
-        },
+        { label: "Industries", collapsed: true, items: industriesSidebar },
+        { label: "Tools", collapsed: true, items: toolsSidebar },
+        { label: "Scenarios", collapsed: true, items: scenariosSidebar },
+        { label: "Mistakes", collapsed: true, items: mistakesSidebar },
+        { label: "Migrate", collapsed: true, items: [...MIGRATE] },
         {
           label: "Checks",
           collapsed: false,
@@ -326,7 +286,6 @@ export default defineConfig({
         MobileMenuToggle: "./src/components/MobileMenuToggle.astro",
         Footer: "./src/components/Footer.astro",
         ThemeProvider: "./src/components/ThemeProvider.astro",
-        ThemeSelect: "./src/components/ThemeSelect.astro",
         Hero: "./src/components/Hero.astro",
         PageTitle: "./src/components/PageTitle.astro",
         Sidebar: "./src/components/Sidebar.astro",
@@ -338,9 +297,17 @@ export default defineConfig({
       ],
     }),
     // After starlight(): Starlight adds its own sitemap only when none is configured. /dox/ is
-    // the chat shell and has `noindex`, so it is not listed.
+    // the chat shell and has `noindex`, and a deck's presenter view (`/presenter/`) is `noindex` too,
+    // so neither is listed. `lastmod` is the date in the page's
+    // footer, read from the built HTML (`src/lib/sitemap-lastmod.ts`).
     sitemap({
-      filter: (page) => new URL(page).pathname !== withBase("/dox/"),
+      filter: (page) => {
+        const { pathname } = new URL(page);
+        return (
+          pathname !== withBase("/dox/") && !pathname.endsWith("/presenter/")
+        );
+      },
+      serialize: (item) => sitemapLastmod(OUT_DIR, item),
     }),
   ],
 });

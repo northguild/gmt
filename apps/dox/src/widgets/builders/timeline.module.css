@@ -59,11 +59,65 @@
     --series: var(--gmt-series-4);
   }
 
+  /* A hatched mark: diagonal stripes in the series colour over the same tint, so it reads
+     apart from a solid neighbour without colour. */
+  &[data-pattern="hatch"] {
+    background-image: repeating-linear-gradient(
+      45deg,
+      var(--series) 0,
+      var(--series) 2px,
+      transparent 2px,
+      transparent 7px
+    );
+  }
+
+  /* A crossed mark: stripes both ways. */
+  &[data-pattern="cross"] {
+    background-image:
+      repeating-linear-gradient(
+        45deg,
+        var(--series) 0,
+        var(--series) 2px,
+        transparent 2px,
+        transparent 7px
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        var(--series) 0,
+        var(--series) 2px,
+        transparent 2px,
+        transparent 7px
+      );
+  }
+
+  /* An outline mark: no fill, only its edge. */
+  &[data-pattern="outline"] {
+    background: transparent;
+  }
+
+  /* A dotted mark: a gap, drawn as a box of dots with a dotted edge. */
+  &[data-pattern="dotted"] {
+    border-style: dotted;
+    background-color: transparent;
+    background-image: radial-gradient(var(--series) 1px, transparent 1.5px);
+    background-size: 6px 6px;
+  }
+
   &[data-kind="point"] {
     inline-size: 0.5rem;
     inset-inline-start: calc(var(--gmt-at) * 100% - 0.25rem);
     border-radius: 2px;
     background: var(--series);
+  }
+
+  /* A chosen point: one and a half times the size, in a ring. The ring is an outline in the
+     text colour, so it is a shape and not a colour, and it survives forced colours. */
+  &[data-kind="point"][aria-current="true"] {
+    inline-size: 0.75rem;
+    inset-inline-start: calc(var(--gmt-at) * 100% - 0.375rem);
+    outline: 2px solid currentcolor;
+    outline-offset: 2px;
+    z-index: 1;
   }
 
   &[data-kind="range"] {
@@ -93,6 +147,20 @@
   white-space: nowrap;
 }
 
+/* A tick inside a lane is a label on an opaque plate (a month name on its band). */
+.track > .tick {
+  inset-block-start: 0.25rem;
+  padding-inline: 0.25rem;
+  background: var(--gmt-surface-widget);
+  line-height: 1.25;
+  pointer-events: none;
+
+  /* Below this width a band is narrower than its label's plate, so the label goes. */
+  @container (inline-size < 40rem) {
+    display: none;
+  }
+}
+
 @media (forced-colors: active) {
   .track {
     border-color: CanvasText;
@@ -107,6 +175,10 @@
       background: CanvasText;
     }
 
+    &[data-kind="point"][aria-current="true"] {
+      outline-color: CanvasText;
+    }
+
     &[data-series="2"] {
       border-style: dashed;
     }
@@ -114,6 +186,34 @@
     &[data-series="3"] {
       border-style: double;
     }
+
+    /* Forced colours drop the gradient, so a hatched mark keeps its difference as a dotted edge. */
+    &[data-pattern="hatch"] {
+      background-image: none;
+      border-style: dotted;
+    }
+
+    /* The new patterns keep apart by their edge: a crossed box is double, an outline dashed,
+       a gap dotted. A solid mark keeps its plain edge. */
+    &[data-pattern="cross"] {
+      background-image: none;
+      border-style: double;
+      border-width: 3px;
+    }
+
+    &[data-pattern="outline"] {
+      border-style: dashed;
+    }
+
+    &[data-pattern="dotted"] {
+      background-image: none;
+      border-style: dotted;
+    }
+  }
+
+  .track > .tick {
+    background: Canvas;
+    color: CanvasText;
   }
 
   .label,

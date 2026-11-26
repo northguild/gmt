@@ -1,5 +1,4 @@
-import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 
 /**
  * Return the second (0-59) for a given ISO 8601 datetime string.
@@ -15,10 +14,10 @@ import { isValidDateTime } from "../validate";
  * @example parseSecondFromDateTime("invalid") // ""
  */
 export function parseSecondFromDateTime(value: string): string {
-  if (!isValidDateTime(value)) return "";
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return "";
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     return dateTime.second.toString().padStart(2, "0");
   } catch {
     return "";

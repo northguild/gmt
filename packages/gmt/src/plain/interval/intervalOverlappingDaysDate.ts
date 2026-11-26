@@ -1,11 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { calendarDateOf } from "../../internal/calendarDateString";
 import { Temporal } from "../../internal/temporal";
-import {
-  calendarOfAllDateValues,
-  halfOpenIntersection,
-  parseCalendarDateValue,
-} from "../../internal";
-import { isValidCalendarDate } from "../validate";
+import { calendarOfAllDateValues, halfOpenIntersection } from "../../internal";
 
 /**
  * Return how many distinct calendar dates two date intervals share.
@@ -53,12 +49,15 @@ export function intervalOverlappingDaysDate(
     return null;
   }
 
-  if (
-    !isValidCalendarDate(aStart) ||
-    !isValidCalendarDate(aEnd) ||
-    !isValidCalendarDate(bStart) ||
-    !isValidCalendarDate(bEnd)
-  ) {
+  const aS = calendarDateOf(aStart);
+
+  const aE = calendarDateOf(aEnd);
+
+  const bS = calendarDateOf(bStart);
+
+  const bE = calendarDateOf(bEnd);
+
+  if (aS === null || aE === null || bS === null || bE === null) {
     return null;
   }
 
@@ -69,11 +68,6 @@ export function intervalOverlappingDaysDate(
   }
 
   try {
-    const aS = parseCalendarDateValue(aStart);
-    const aE = parseCalendarDateValue(aEnd);
-    const bS = parseCalendarDateValue(bStart);
-    const bE = parseCalendarDateValue(bEnd);
-
     if (Temporal.PlainDate.compare(aS, aE) > 0) {
       return null;
     }

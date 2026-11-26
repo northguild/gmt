@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen } from "@testing-library/dom";
+import { screen, within } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { lit } from "~/lib/edi-picture";
 import { renderHtml } from "../../test-fixture";
@@ -77,5 +77,74 @@ describe("ediFigure", () => {
       }),
     ).not.toBeInTheDocument();
     await expectNoAxeViolations(host);
+  });
+});
+
+describe("a field with no run", () => {
+  it("draws the brackets and text the figure drew before the run key", () => {
+    const { host } = renderHtml(
+      figureContent({
+        kind: "value",
+        aria: "A",
+        parts: [
+          { text: "20240615", caption: "value", after: "", kind: "value" },
+        ],
+        halves: [
+          {
+            label: "start",
+            fields: [
+              lit("2024", "CCYY", "date"),
+              lit("06", "MM", "date"),
+              lit("14", "HH", "time"),
+              lit(":", ":", "time"),
+              lit("+02", "ZZZ", "offset"),
+              lit("x", "", "neutral"),
+              lit("", "", "none"),
+            ],
+          },
+          {
+            label: "end",
+            fields: [
+              { ...lit("15", "DD", "date"), bracket: "day" },
+              lit("30", "mm", "time"),
+            ],
+          },
+        ],
+        separator: "/",
+        closing: "no offset",
+      }),
+    );
+    // Adjacent fields of one group share a bracket, so each label is drawn once per run of its
+    // group, not once per field. Splitting runs on a `run` key no field has would draw "date"
+    // twice. (`html-diff` against a baseline holds the built EDI pages byte-identical.)
+    const drawn: Record<string, number> = { date: 1, time: 2, zone: 1, day: 1 };
+    for (const [label, count] of Object.entries(drawn)) {
+      expect(within(host).getAllByText(label)).toHaveLength(count);
+    }
+    expect(within(host).getByText("2024")).toBeInTheDocument();
+    expect(within(host).getByText("no offset")).toBeInTheDocument();
+  });
+});
+
+describe("the run key", () => {
+  it("brackets each run of one group on its own", () => {
+    const fraction = (text: string, run: string) => ({
+      ...lit(text, "", "time"),
+      run,
+      bracket: run,
+    });
+    renderHtml(
+      figureContent({
+        kind: "value",
+        aria: "Fractions.",
+        halves: [
+          { label: "", fields: [fraction("100", "ms"), fraction("000", "µs")] },
+        ],
+        separator: "",
+        closing: "",
+      }),
+    );
+    expect(screen.getByText("ms")).toBeInTheDocument();
+    expect(screen.getByText("µs")).toBeInTheDocument();
   });
 });

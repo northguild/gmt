@@ -135,7 +135,8 @@ describe("the template", () => {
     expect(
       within(table)
         .getAllByRole("columnheader")
-        .map((th) => th.textContent?.trim().replace(/\s*\(.*$/, "")),
+        // Each offset head is its label, a hidden comma, and its note.
+        .map((th) => th.textContent?.trim().replace(/,.*$/, "")),
     ).toEqual(["Place", "Correct", "Yours"]);
   });
 
@@ -156,7 +157,7 @@ describe("the template", () => {
     ).toBeInTheDocument();
   });
 
-  it("puts the cards in reading order", () => {
+  it("puts the cards in reading order: servers, minimums beside help, changes", () => {
     const root = host();
     const order = within(root)
       .getAllByRole("heading")
@@ -165,8 +166,10 @@ describe("the template", () => {
       "Key points",
       "Your browser",
       "Live clocks",
-      "Clock changes in 2026 and 2027",
+      "Test your own servers",
+      "Upgrade to at least",
       "How gmt helps",
+      "Clock changes in 2026 and 2027",
       "Did your saved events move?",
     ];
     const at = wanted.map((name) =>
@@ -527,8 +530,11 @@ describe("the mount", () => {
     const controller = new AbortController();
     const answer = await workerAnswer();
     let gets = 0;
-    const fetchFn = vi.fn(async (_url: unknown, init?: RequestInit) => {
+    // Counts the Worker's GETs only: the map fetches its boundary file as well, at every width.
+    const fetchFn = vi.fn(async (url: unknown, init?: RequestInit) => {
       if (init?.method === "POST") return Response.json({ rows: [], zone: "" });
+      if (!String(url).includes("/api/canada-clock-change"))
+        return new Response(null, { status: 404 });
       gets += 1;
       if (gets === 1) throw new TypeError("network");
       return Response.json(citedProbe(answer));

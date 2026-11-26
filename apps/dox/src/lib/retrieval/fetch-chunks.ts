@@ -47,7 +47,7 @@ export function resetChunksMemo(): void {
 
 /**
  * DOX-C1 (#137) — "the Worker fetches the corpus from the static site it is
- * already serving" (overview.md §2 "Hosting"). Same-origin, so no CORS and
+ * already serving" (context/dox/overview.md, Decisions: "Hosting"). Same-origin, so no CORS and
  * no separate deployment coupling: `origin` is the Worker's own request
  * origin, and `/retrieval-chunks.json` is `dox.astro`'s sibling endpoint —
  * see `src/pages/retrieval-chunks.json.ts` — built into the same static

@@ -1,13 +1,13 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
 import { Temporal } from "../../internal/temporal";
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { durationTotal } from "../../internal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import type {
   RelativeDateTimeUnit,
   RelativeTimeFormatOptions,
 } from "../../types";
-import { isValidDateTime } from "../validate";
-import { isObject } from "../../internal/isObject";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding
@@ -59,18 +59,18 @@ export function formatRelativeDateTime(
   try {
     // Temporal GetOptionsObject: options must be an object or omitted; null and other primitives are
     // invalid input.
-    if (!isObject(options)) return "";
-    if (!isValidDateTime(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = plainDateTimeOf(value);
+    if (target === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidDateTime(referenceOption))
+    const referenceOptionParsed = plainDateTimeOf(referenceOption);
+    if (referenceOption !== undefined && referenceOptionParsed === null)
       return "";
 
     try {
-      const target = Temporal.PlainDateTime.from(value);
-      const reference = referenceOption
-        ? Temporal.PlainDateTime.from(referenceOption)
-        : Temporal.Now.plainDateTimeISO();
+      const reference =
+        referenceOptionParsed ?? Temporal.Now.plainDateTimeISO();
 
       const diff = target.since(reference);
       // month/year are calendrical — relativeTo needs a PlainDate

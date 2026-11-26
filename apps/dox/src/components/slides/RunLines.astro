@@ -1,0 +1,73 @@
+---
+/**
+ * A run's lines, laid out like a test runner's: each step's code, then one row with its result (the
+ * lines it printed) and, beside a result that is not right, the value expected, each labelled by
+ * `RunLabel`. A right result needs no Expected: it would repeat the result. `by` names who gave the
+ * results ("GMT"), and a step's `bug` adds what the filed bug gives for the same input, in red. The
+ * row's values share a line while they fit and wrap when they do not.
+ *
+ * A shell command (`$`) is a terminal: inside a `run` visual (`lib/slides/bug-visuals.ts`) it types
+ * out after its prompt, the typed copy hidden from screen readers with the whole command beside it.
+ * A JavaScript call (`>`) is code: it sits in the site's own code block (`DeckCode`), highlighted as
+ * every example on the guides is. Each row after the code shows in turn; a row waiting keeps its
+ * box, so nothing below it moves.
+ */
+import { Code } from "@astrojs/starlight/components";
+import DeckCode from "./DeckCode.astro";
+import RunLabel from "./RunLabel.astro";
+import type { RunStep } from "./types";
+
+interface Props {
+  prompt: "$" | ">";
+  steps: readonly RunStep[];
+  /** Who gave the results, in place of "Result" on their label. */
+  by?: string;
+}
+const { prompt, steps, by } = Astro.props;
+const expects = (s: RunStep) => s.want !== undefined && s.outcome !== "right";
+---
+
+{
+  steps.map((s, i) => (
+    <>
+      {prompt === "$" ? (
+        <p class="gmt-run-line" data-after={i > 0 ? "" : undefined}>
+          <span class="gmt-run-prompt" aria-hidden="true">{prompt}</span>
+          <code aria-hidden="true" data-type data-text={s.code}>{s.code}</code>
+          <span class="gmt-run-cursor" aria-hidden="true" />
+          <span class="gmt-sr-only">{s.code}</span>
+        </p>
+      ) : (
+        <div class="gmt-run-code" data-after={i > 0 ? "" : undefined}>
+          <DeckCode>
+            <Code code={s.code} lang="js" wrap />
+          </DeckCode>
+        </div>
+      )}
+      {(s.out.length > 0 || expects(s) || s.bug) && (
+        <div class="gmt-run-outcome">
+          {s.out.length > 0 && (
+            <p class="gmt-run-result" data-outcome={s.outcome} data-after>
+              <RunLabel outcome={s.outcome} word={by} />
+              <span class="gmt-run-value">
+                {s.out.map((line) => <span>{line}</span>)}
+              </span>
+            </p>
+          )}
+          {expects(s) && (
+            <p class="gmt-run-result" data-outcome="expected" data-after>
+              <RunLabel outcome="expected" />
+              <span class="gmt-run-value">{s.want}</span>
+            </p>
+          )}
+          {s.bug && (
+            <p class="gmt-run-result" data-outcome="wrong" data-after>
+              <RunLabel outcome="wrong" word={s.bug.by} />
+              <span class="gmt-run-value">{s.bug.gives}</span>
+            </p>
+          )}
+        </div>
+      )}
+    </>
+  ))
+}

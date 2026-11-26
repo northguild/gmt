@@ -1,5 +1,5 @@
 import type { EdifactTimeFormat } from "../../types/edi";
-import { parseEdifactTime } from "../parse/parseEdifactTime";
+import { edifactTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when `value` is a UN/EDIFACT `DTM` value (data element 2380) that states a real
@@ -12,7 +12,7 @@ import { parseEdifactTime } from "../parse/parseEdifactTime";
  * | `402` | `HHMMSS` | "Time with seconds: H = Hour; m = Minute; s = Seconds." |
  *
  * - True exactly when `parseEdifactTime` returns a time for the same arguments: the validator
- *   calls the parser, so the two cannot disagree.
+ *   shares the parser's core, so the two cannot disagree.
  * - A value is valid only against its code: `"1430"` is a `401` value and not a `402` one.
  * - Hour 24, minute 60 and second 60 are false.
  * - False for any other code, a code of another kind included; check a code alone with
@@ -31,5 +31,5 @@ export function isValidEdifactTime(
   value: string,
   format: EdifactTimeFormat,
 ): boolean {
-  return parseEdifactTime(value, format) !== "";
+  return edifactTimeText(value, format) !== "";
 }

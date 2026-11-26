@@ -5,6 +5,10 @@ import { resolve } from "node:path";
 import {
   checked,
   contributions,
+  filingGroup,
+  filingGroups,
+  filingKey,
+  filingsForGroup,
   filedByUs,
   filedPrs,
   filings,
@@ -19,14 +23,18 @@ import {
   listings,
   overlayLive,
   totalFilings,
+  TRACKERS,
   TRACKED_REPOS,
   unaffectingGmt,
+  unguardedInGmt,
+  type GitHubFiling,
   type UpstreamFiling,
   type UpstreamListing,
 } from "./upstream-filings";
+import { urlOf } from "../../../../scripts/lib/upstream-trackers.mjs";
 import { getUtcNow, isAfterUtc, isValidUtc } from "@northguild/gmt";
 
-// The literal `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` union members
+// The literal `DefectId` / `ZonedDefectId` / `BoundedWorkDefectId` / `CanaryDefectId` union members
 // `probeRepros.ts` and `repros.ts` declare — the same set `scripts/upstream.mjs check` parses out of
 // the same file, so a filing's `gmtGuard` can never name a group that doesn't exist.
 const reprosSrc = ["probeRepros.ts", "repros.ts"]
@@ -43,7 +51,7 @@ const reprosSrc = ["probeRepros.ts", "repros.ts"]
   .join("\n");
 const knownGuards = new Set<string>();
 for (const m of reprosSrc.matchAll(
-  /export type (?:DefectId|ZonedDefectId|BoundedWorkDefectId) =([^;]+);/g,
+  /export type (?:DefectId|ZonedDefectId|BoundedWorkDefectId|CanaryDefectId) =([^;]+);/g,
 )) {
   for (const lit of m[1].matchAll(/"([^"]+)"/g)) knownGuards.add(lit[1]);
 }
@@ -59,16 +67,48 @@ describe("upstream filings", () => {
     expect(isAfterUtc(checked, getUtcNow())).toBe(false);
   });
 
-  it("gives every filing a URL matching its own repo, kind and number", () => {
+  it("gives every filing a URL matching its own tracker and identity", () => {
     for (const f of filings) {
-      const expected = `https://github.com/${f.repo}/${f.kind === "pr" ? "pull" : "issues"}/${f.number}`;
-      expect(f.url).toBe(expected);
+      expect(f.url, filingKey(f)).toBe(urlOf(f));
     }
   });
 
-  it("has no duplicate repo+number", () => {
-    const keys = filings.map((f) => `${f.repo}#${f.number}`);
+  it("names a known tracker on every filing", () => {
+    for (const f of filings)
+      expect(TRACKERS, filingKey(f)).toContain(f.tracker);
+  });
+
+  it("has no duplicate identity", () => {
+    const keys = filings.map(filingKey);
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("gives a filing only the members of its own tracker", () => {
+    // GitHub's `kind`, `draft`, `reviewDecision` and `mergedAt` mean nothing on the Jira, Chromium
+    // or Bugzilla trackers, so none of those carries them.
+    for (const f of filings) {
+      if (f.tracker === "github") continue;
+      for (const field of [
+        "repo",
+        "number",
+        "kind",
+        "draft",
+        "reviewDecision",
+        "mergedAt",
+      ]) {
+        expect(f, `${filingKey(f)} ${field}`).not.toHaveProperty(field);
+      }
+    }
+  });
+
+  it("groups filings under one heading per repository or tracker", () => {
+    const grouped = filingGroups.reduce(
+      (n, g) => n + filingsForGroup(g.id).length,
+      0,
+    );
+    expect(grouped).toBe(totalFilings);
+    const headings = filingGroups.map((g) => g.name);
+    expect(new Set(headings).size).toBe(headings.length);
   });
 
   it("sums repo counts to the total", () => {
@@ -96,7 +136,7 @@ describe("upstream filings", () => {
       if (f.gmtGuard !== null) {
         expect(
           knownGuards.has(f.gmtGuard),
-          `${f.repo}#${f.number} gmtGuard "${f.gmtGuard}"`,
+          `${filingKey(f)} gmtGuard "${f.gmtGuard}"`,
         ).toBe(true);
       }
     }
@@ -105,12 +145,40 @@ describe("upstream filings", () => {
   it("covers every filing in GMT: exactly one of gmtGuard or gmtNote", () => {
     // A filing with neither would be a defect GMT neither works around nor avoids.
     for (const f of filings) {
-      expect(
-        (f.gmtGuard === null) !== (f.gmtNote === null),
-        `${f.repo}#${f.number}`,
-      ).toBe(true);
+      expect((f.gmtGuard === null) !== (f.gmtNote === null), filingKey(f)).toBe(
+        true,
+      );
     }
-    expect(handledInGmt + unaffectingGmt).toBe(totalFilings);
+    expect(handledInGmt + unaffectingGmt + unguardedInGmt).toBe(totalFilings);
+  });
+
+  it("marks a filing gmtUnguarded only with a gmtNote that says GMT has no workaround", () => {
+    for (const f of filings) {
+      if (f.gmtUnguarded) {
+        expect(f.gmtGuard, filingKey(f)).toBeNull();
+        expect(f.gmtNote, filingKey(f)).toMatch(/GMT has no workaround|WebKit/);
+      } else {
+        // No other note may claim there is no workaround: it would read "Not affected".
+        expect(f.gmtNote ?? "", filingKey(f)).not.toMatch(
+          /GMT has no workaround/i,
+        );
+      }
+    }
+  });
+
+  it("marks the ICU and WebKit calendar filings as not reaching GMT, which runs only the polyfill's Temporal", () => {
+    const byKey = new Map(filings.map((f) => [filingKey(f), f]));
+    for (const key of [
+      "ICU-23609",
+      "ICU-23626",
+      "ICU-23627",
+      "bugs.webkit.org#331725",
+      "bugs.webkit.org#331726",
+    ]) {
+      const f = byKey.get(key);
+      expect(f?.gmtUnguarded, key).toBeUndefined();
+      expect(f?.gmtNote, key).toContain("`temporal-polyfill`");
+    }
   });
 
   it("separates the filings we opened from the ones we only contributed to", () => {
@@ -121,20 +189,18 @@ describe("upstream filings", () => {
 
     for (const f of filings) {
       if (f.role === undefined) continue;
-      expect(["author", "contributor"], `${f.repo}#${f.number}`).toContain(
-        f.role,
-      );
+      expect(["author", "contributor"], filingKey(f)).toContain(f.role);
     }
   });
 
   it("links our own comment on every filing we did not open", () => {
     // Without it the page would show a maintainer's PR with nothing saying what we did on it.
-    // `url` cannot carry the anchor: `scripts/upstream.mjs` rewrites it from repo, kind and number.
+    // `url` cannot carry the anchor: `scripts/upstream.mjs` rewrites it from the entry's identity.
     for (const f of filings) {
-      const label = `${f.repo}#${f.number}`;
+      const label = filingKey(f);
       if (f.role === "contributor") {
         expect(f.contributionUrl, label).toBeTruthy();
-        expect(f.contributionUrl, label).toContain(`/${f.number}#`);
+        expect(f.contributionUrl, label).toContain(f.url);
       } else {
         expect(f.contributionUrl ?? null, label).toBeNull();
       }
@@ -169,9 +235,9 @@ describe("upstream filings", () => {
   });
 
   it("pairs symmetrically: if A pairsWith B, B pairsWith A", () => {
-    const byKey = new Map(filings.map((f) => [`${f.repo}#${f.number}`, f]));
+    const byKey = new Map(filings.map((f) => [filingKey(f), f]));
     for (const f of filings) {
-      const key = `${f.repo}#${f.number}`;
+      const key = filingKey(f);
       for (const partnerKey of f.pairsWith) {
         const partner = byKey.get(partnerKey);
         expect(
@@ -187,7 +253,7 @@ describe("upstream filings", () => {
   });
 
   it("names only filings that exist in dependsOn and closes", () => {
-    const keys = new Set(filings.map((f) => `${f.repo}#${f.number}`));
+    const keys = new Set(filings.map(filingKey));
     for (const f of filings) {
       for (const dep of f.dependsOn) {
         // A dependency may be a filing tracked here, or an upstream number this
@@ -218,8 +284,9 @@ describe("upstream filings", () => {
 describe("overlayLive", () => {
   const filing = (
     number: number,
-    fields: Partial<UpstreamFiling> = {},
-  ): UpstreamFiling => ({
+    fields: Partial<GitHubFiling> = {},
+  ): GitHubFiling => ({
+    tracker: "github",
     repo: "tc39/proposal-temporal",
     number,
     kind: "issue",
@@ -251,7 +318,10 @@ describe("overlayLive", () => {
       { checked: committedAt, filings: [filing(3335), filing(3336)] },
       { checked: liveAt, filings: [filing(3335)] },
     );
-    expect(result.filings.map((f) => f.number)).toEqual([3335, 3336]);
+    expect(result.filings.map(filingKey)).toEqual([
+      "tc39/proposal-temporal#3335",
+      "tc39/proposal-temporal#3336",
+    ]);
   });
 
   it("takes the hand-written fields from the committed file", () => {
@@ -308,7 +378,7 @@ describe("overlayLive", () => {
         filings: [filing(3336), filing(3340, { new: true }), polyfill],
       },
     );
-    expect(result.filings.map((f) => `${f.repo}#${f.number}`)).toEqual([
+    expect(result.filings.map(filingKey)).toEqual([
       "js-temporal/temporal-polyfill#400",
       "tc39/proposal-temporal#3336",
       "tc39/proposal-temporal#3340",
@@ -352,7 +422,8 @@ describe("overlayLive", () => {
 
   it("orders repositories as the tracker lists them, not alphabetically", () => {
     const at = "2026-11-02T10:00:00Z";
-    const make = (repo: string, number: number): UpstreamFiling => ({
+    const make = (repo: string, number: number): GitHubFiling => ({
+      tracker: "github",
       repo,
       number,
       kind: "issue",
@@ -387,7 +458,7 @@ describe("overlayLive", () => {
         ],
       },
     );
-    expect(result.filings.map((f) => `${f.repo}#${f.number}`)).toEqual([
+    expect(result.filings.map(filingKey)).toEqual([
       "js-temporal/temporal-polyfill#400",
       "tc39/proposal-temporal#3336",
       "fullcalendar/temporal-polyfill#130",
@@ -397,8 +468,88 @@ describe("overlayLive", () => {
 
   it("names only tracked repositories in the committed data", () => {
     for (const f of filings) {
-      expect(TRACKED_REPOS).toContain(f.repo);
+      if (f.tracker === "github") expect(TRACKED_REPOS).toContain(f.repo);
     }
+  });
+
+  it("orders every GitHub repository before the other trackers", () => {
+    const at = "2026-11-02T10:00:00Z";
+    const jira = {
+      tracker: "jira",
+      key: "ICU-23619",
+      work: "report",
+      title: "t",
+      url: "https://unicode-org.atlassian.net/browse/ICU-23619",
+      summary: "s",
+      pairsWith: [],
+      closes: [],
+      dependsOn: [],
+      gmtGuard: "D25",
+      gmtNote: null,
+      state: "open",
+      status: "New",
+      resolution: null,
+      fixVersions: [],
+      comments: 0,
+      maintainerComments: 0,
+      createdAt: "2026-11-14",
+      updatedAt: "2026-11-14",
+      closedAt: null,
+    } satisfies UpstreamFiling;
+    const chromium = {
+      tracker: "chromium",
+      id: 585635918,
+      work: "report",
+      title: "t",
+      url: "https://issues.chromium.org/issues/585635918",
+      summary: "s",
+      pairsWith: [],
+      closes: [],
+      dependsOn: [],
+      gmtGuard: "D30",
+      gmtNote: null,
+      state: "open",
+      comments: null,
+      maintainerComments: null,
+      createdAt: "2026-11-14",
+      updatedAt: "2026-11-14",
+      closedAt: null,
+    } satisfies UpstreamFiling;
+    const github: GitHubFiling = {
+      tracker: "github",
+      repo: "nodejs/node",
+      number: 67076,
+      kind: "issue",
+      work: "report",
+      title: "t",
+      url: "https://github.com/nodejs/node/issues/67076",
+      summary: "s",
+      pairsWith: [],
+      closes: [],
+      dependsOn: [],
+      gmtGuard: "D23",
+      gmtNote: null,
+      state: "open",
+      draft: false,
+      reviewDecision: null,
+      comments: 0,
+      maintainerComments: 0,
+      createdAt: "2026-10-28",
+      updatedAt: "2026-10-28",
+      closedAt: null,
+      mergedAt: null,
+    };
+    const result = overlayLive(
+      { checked: at, filings: [chromium, jira, github] },
+      { checked: "2026-11-02T11:00:00Z", filings: [chromium, jira, github] },
+    );
+    expect(result.filings.map(filingKey)).toEqual([
+      "nodejs/node#67076",
+      "ICU-23619",
+      "chromium#585635918",
+    ]);
+    expect(filingGroup(jira).name).toBe("Unicode Jira (ICU and CLDR)");
+    expect(filingGroup(chromium).name).toBe("Chromium issue tracker");
   });
 });
 
@@ -406,18 +557,26 @@ const TEMPORAL_REPOS = [
   "js-temporal/temporal-polyfill",
   "tc39/proposal-temporal",
 ];
-const FILING_ONLY_FIELDS = ["gmtGuard", "gmtNote", "work", "outcome", "role"];
+const FILING_ONLY_FIELDS = [
+  "gmtGuard",
+  "gmtNote",
+  "work",
+  "outcome",
+  "role",
+  "zone",
+];
 
 const listing = (
   number: number,
   fields: Partial<UpstreamListing> = {},
 ): UpstreamListing => ({
+  tracker: "github",
   repo: "example/comparison-list",
   number,
-  kind: "pr",
+  kind: "issue",
   summary: `Summary of ${number}`,
-  title: `Pull request ${number}`,
-  url: `https://github.com/example/comparison-list/pull/${number}`,
+  title: `Issue ${number}`,
+  url: `https://github.com/example/comparison-list/issues/${number}`,
   state: "open",
   draft: false,
   reviewDecision: null,
@@ -451,10 +610,10 @@ describe("upstream listings", () => {
   });
 
   it("is on a project outside Temporal, and shares no key with a filing", () => {
-    const filingKeys = new Set(filings.map((f) => `${f.repo}#${f.number}`));
+    const filingKeys = new Set(filings.map(filingKey));
     for (const l of listings) {
-      expect(TEMPORAL_REPOS, `${l.repo}#${l.number}`).not.toContain(l.repo);
-      expect(filingKeys.has(`${l.repo}#${l.number}`)).toBe(false);
+      expect(TEMPORAL_REPOS, filingKey(l)).not.toContain(l.repo);
+      expect(filingKeys.has(filingKey(l))).toBe(false);
     }
   });
 
@@ -578,6 +737,40 @@ describe("scripts/upstream.mjs check", () => {
     expect(run(committed).ok).toBe(true);
   });
 
+  it("fails on a listing that carries gmtUnguarded", () => {
+    const bad = { ...committed.listings[0], gmtUnguarded: true };
+    const result = run(withListings([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded");
+  });
+
+  const withOnly = (filings: Record<string, unknown>[]) => ({
+    ...committed,
+    filings,
+  });
+  const unguarded = (committed.filings as Record<string, unknown>[]).find(
+    (f) => f.gmtUnguarded === true,
+  )!;
+
+  it("accepts gmtUnguarded beside a gmtNote", () => {
+    expect(unguarded).toBeDefined();
+    expect(run(withOnly([unguarded])).ok).toBe(true);
+  });
+
+  it("fails on gmtUnguarded without a gmtNote", () => {
+    const bad = { ...unguarded, gmtNote: null, gmtGuard: "D1" };
+    const result = run(withOnly([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded needs a gmtNote");
+  });
+
+  it("fails on gmtUnguarded that is not true", () => {
+    const bad = { ...unguarded, gmtUnguarded: false };
+    const result = run(withOnly([bad]));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("gmtUnguarded is written only as true");
+  });
+
   it("fails on a listing that carries gmtGuard", () => {
     const bad = { ...committed.listings[0], gmtGuard: "D1" };
     const result = run(withListings([bad]));
@@ -602,5 +795,95 @@ describe("scripts/upstream.mjs check", () => {
     );
     expect(result.ok).toBe(false);
     expect(result.output).toContain("duplicate");
+  });
+
+  // Each tracker has its own members, and `check` rejects any that belongs to another.
+  const entry = (tracker: string, id?: Record<string, unknown>) => {
+    const found = (committed.filings as Record<string, unknown>[]).find(
+      (f) =>
+        f.tracker === tracker &&
+        (id === undefined || Object.entries(id).every(([k, v]) => f[k] === v)),
+    );
+    expect(found, tracker).toBeDefined();
+    return found!;
+  };
+  const withFilings = (...changed: Record<string, unknown>[]) => {
+    const keys = new Set(
+      changed.map((c) =>
+        JSON.stringify([c.tracker, c.key, c.id, c.repo, c.number]),
+      ),
+    );
+    return {
+      ...committed,
+      filings: [
+        ...(committed.filings as Record<string, unknown>[]).filter(
+          (f) =>
+            !keys.has(
+              JSON.stringify([f.tracker, f.key, f.id, f.repo, f.number]),
+            ),
+        ),
+        ...changed,
+      ],
+    };
+  };
+
+  it("fails on a Jira filing that carries a GitHub member", () => {
+    const bad = { ...entry("jira"), reviewDecision: null };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("does not belong to a jira filing");
+  });
+
+  it("fails on a Chromium filing that carries a Bugzilla status", () => {
+    const bad = { ...entry("chromium"), status: "NEW" };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("does not belong to a chromium filing");
+  });
+
+  it("fails on a GitHub filing without a kind", () => {
+    const { kind: _kind, ...bad } = entry("github");
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("kind");
+  });
+
+  it("fails on a Jira key outside ICU and CLDR", () => {
+    const bad = {
+      ...entry("jira"),
+      key: "ABC-1",
+      url: "https://unicode-org.atlassian.net/browse/ABC-1",
+    };
+    const result = run(withFilings(entry("jira"), bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("not an ICU or CLDR issue key");
+  });
+
+  it("fails on a Chromium filing with comment counts", () => {
+    const bad = { ...entry("chromium"), comments: 2, maintainerComments: 1 };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("null on a Chromium filing");
+  });
+
+  it("fails on a Bugzilla filing on another host", () => {
+    const bad = { ...entry("bugzilla"), host: "bugzilla.example.test" };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("host");
+  });
+
+  it("fails on an unknown tracker", () => {
+    const bad = { ...entry("jira"), tracker: "linear" };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("tracker");
+  });
+
+  it("fails on an open Jira filing that has a resolution", () => {
+    const bad = { ...entry("jira"), state: "open", resolution: "Fixed" };
+    const result = run(withFilings(bad));
+    expect(result.ok).toBe(false);
+    expect(result.output).toContain("resolved as");
   });
 });

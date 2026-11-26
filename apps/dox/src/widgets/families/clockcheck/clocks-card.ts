@@ -2,7 +2,8 @@
  * clocksCard: the "Live clocks" card that sits beside the zone list (`zoneMap`'s `clocks` slot).
  *
  * A notice that is hidden until the browser's own tz data is stale (`wireZoneMap` shows it, under
- * `<prefix>-clocks-notice`), the clocks, and a line saying what they show.
+ * `<prefix>-clocks-notice`), the clocks, and a line saying what they show. A page that does not
+ * check the browser's data (the Sunshine Protection Act page) passes no notice.
  */
 import { html, type SafeHtml } from "../../builders/html";
 import { idScope } from "../../builders/ids";
@@ -13,9 +14,12 @@ import styles from "./clocks-card.module.css";
 interface ClocksCardOptions {
   idPrefix: string;
   zones: readonly string[];
-  stopped: ReadonlySet<string>;
-  /** What the notice says when the data is stale. */
-  notice: SafeHtml;
+  /** See `clocks()`: `null` leaves each clock's class to the page. */
+  stopped: ReadonlySet<string> | null;
+  /** What the notice says when the data is stale. Left out, the card has no notice. */
+  notice?: SafeHtml;
+  /** The line under the clocks. */
+  hint?: string;
 }
 
 export function clocksCard(o: ClocksCardOptions): SafeHtml {
@@ -23,9 +27,9 @@ export function clocksCard(o: ClocksCardOptions): SafeHtml {
   return section(
     { id: id("clocks"), heading: "Live clocks", level: 4, gate: "clocks" },
     html`<div class="${styles.body}">
-      <p class="${styles.notice}" id="${id("clocks-notice")}" hidden>${o.notice}</p>
+      ${o.notice === undefined ? "" : html`<p class="${styles.notice}" id="${id("clocks-notice")}" hidden>${o.notice}</p>`}
       <div class="${styles.list}">${clocks({ idPrefix: o.idPrefix, zones: o.zones, stopped: o.stopped })}</div>
-      <p class="${styles.hint}">Your time, and the time in each zone.</p>
+      <p class="${styles.hint}">${o.hint ?? "Your time, and the time in each zone."}</p>
     </div>`,
   );
 }

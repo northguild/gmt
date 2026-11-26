@@ -3,21 +3,20 @@ import { toProtoTimestamp } from "./toProtoTimestamp";
 
 describe("toProtoTimestamp", () => {
   it.each`
-    iso                                              | seconds          | nanos        | reason
-    ${"1970-01-01T00:00:00Z"}                        | ${0n}            | ${0}         | ${"epoch"}
-    ${"1969-12-31T23:59:59.5Z"}                      | ${-1n}           | ${500000000} | ${"negative seconds, nanos count forward"}
-    ${"1969-12-31T23:59:59.999999999Z"}              | ${-1n}           | ${999999999} | ${"one nanosecond before the epoch"}
-    ${"1969-12-31T23:59:59Z"}                        | ${-1n}           | ${0}         | ${"whole negative second"}
-    ${"2024-03-10T12:34:56.789Z"}                    | ${1710074096n}   | ${789000000} | ${"1710074096 s after the epoch"}
-    ${"2024-03-10T13:34:56.789+01:00[Europe/Paris]"} | ${1710074096n}   | ${789000000} | ${"offset applied first"}
-    ${"0001-01-01T00:00:00Z"}                        | ${-62135596800n} | ${0}         | ${"proto minimum"}
-    ${"9999-12-31T23:59:59.999999999Z"}              | ${253402300799n} | ${999999999} | ${"proto maximum"}
-    ${"9999-12-31T23:59:59Z"}                        | ${253402300799n} | ${0}         | ${"last whole second of the range"}
-    ${"0001-01-01T00:00:00.000000001Z"}              | ${-62135596800n} | ${1}         | ${"one nanosecond past the proto minimum"}
-    ${"0001-01-01T01:00:00+01:00"}                   | ${-62135596800n} | ${0}         | ${"offset lands exactly on the minimum"}
-    ${"9999-12-31T23:59:59+01:00"}                   | ${253402297199n} | ${0}         | ${"offset subtracts 3600 s"}
-    ${"1970-01-01T00:00:00.5+01:00"}                 | ${-3600n}        | ${500000000} | ${"-3599.5 s floors to -3600 s, nanos count forward"}
-    ${"2024-03-10T12:34:56.123456789Z"}              | ${1710074096n}   | ${123456789} | ${"nine fractional digits kept exactly"}
+    iso                                 | seconds          | nanos        | reason
+    ${"1970-01-01T00:00:00Z"}           | ${0n}            | ${0}         | ${"epoch"}
+    ${"1969-12-31T23:59:59.5Z"}         | ${-1n}           | ${500000000} | ${"negative seconds, nanos count forward"}
+    ${"1969-12-31T23:59:59.999999999Z"} | ${-1n}           | ${999999999} | ${"one nanosecond before the epoch"}
+    ${"1969-12-31T23:59:59Z"}           | ${-1n}           | ${0}         | ${"whole negative second"}
+    ${"2024-03-10T12:34:56.789Z"}       | ${1710074096n}   | ${789000000} | ${"1710074096 s after the epoch"}
+    ${"0001-01-01T00:00:00Z"}           | ${-62135596800n} | ${0}         | ${"proto minimum"}
+    ${"9999-12-31T23:59:59.999999999Z"} | ${253402300799n} | ${999999999} | ${"proto maximum"}
+    ${"9999-12-31T23:59:59Z"}           | ${253402300799n} | ${0}         | ${"last whole second of the range"}
+    ${"0001-01-01T00:00:00.000000001Z"} | ${-62135596800n} | ${1}         | ${"one nanosecond past the proto minimum"}
+    ${"0001-01-01T01:00:00+01:00"}      | ${-62135596800n} | ${0}         | ${"offset lands exactly on the minimum"}
+    ${"9999-12-31T23:59:59+01:00"}      | ${253402297199n} | ${0}         | ${"offset subtracts 3600 s"}
+    ${"1970-01-01T00:00:00.5+01:00"}    | ${-3600n}        | ${500000000} | ${"-3599.5 s floors to -3600 s, nanos count forward"}
+    ${"2024-03-10T12:34:56.123456789Z"} | ${1710074096n}   | ${123456789} | ${"nine fractional digits kept exactly"}
   `(
     "returns $seconds s + $nanos ns for $iso ($reason)",
     ({ iso, seconds, nanos }) => {
@@ -55,5 +54,12 @@ describe("toProtoTimestamp", () => {
     ${Symbol("x")}    | ${"symbol"}
   `("returns null for non-string $reason", ({ value }) => {
     expect(toProtoTimestamp(value)).toBeNull();
+  });
+
+  it.each`
+    value
+    ${"2024-03-10T13:34:56.789+01:00[Europe/Paris]"}
+  `("returns null for the annotated '$value'", ({ value }) => {
+    expect(toProtoTimestamp(value)).toBe(null);
   });
 });

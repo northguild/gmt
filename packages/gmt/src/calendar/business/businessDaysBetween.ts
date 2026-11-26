@@ -1,10 +1,9 @@
-import { Temporal } from "../../internal/temporal";
 import {
   businessDaysWithin,
   parseBusinessCalendar,
 } from "../../internal/businessCalendar";
 import { epochDayOfDate } from "../../internal/epochDay";
-import { isValidDate } from "../../plain/validate";
+import { plainDateOf } from "../../internal/inputChecks";
 import type { BusinessCalendar } from "../../types";
 
 /**
@@ -50,13 +49,19 @@ export function businessDaysBetween(
   try {
     const resolved = parseBusinessCalendar(calendar);
 
-    if (!isValidDate(start) || !isValidDate(end) || resolved === null) {
+    const startDate = plainDateOf(start);
+    if (startDate === null) {
+      return null;
+    }
+
+    const endDate = plainDateOf(end);
+    if (endDate === null || resolved === null) {
       return null;
     }
 
     try {
-      const startDay = epochDayOfDate(Temporal.PlainDate.from(start));
-      const endDay = epochDayOfDate(Temporal.PlainDate.from(end));
+      const startDay = epochDayOfDate(startDate);
+      const endDay = epochDayOfDate(endDate);
       const reversed = startDay > endDay;
       const count = reversed
         ? businessDaysWithin(endDay + 1, startDay, resolved)

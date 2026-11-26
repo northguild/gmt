@@ -1,5 +1,5 @@
+import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-import { isValidDateTime } from "../validate";
 
 /**
  * Return the ISO week number for a given ISO 8601 datetime string.
@@ -15,10 +15,10 @@ import { isValidDateTime } from "../validate";
  * @example weekOfYearForDateTime("invalid") // null
  */
 export function weekOfYearForDateTime(value: string): number | null {
-  if (!isValidDateTime(value)) return null;
+  const dateTime = plainDateTimeOf(value);
+  if (dateTime === null) return null;
 
   try {
-    const dateTime = Temporal.PlainDateTime.from(value);
     const date = Temporal.PlainDate.from({
       year: dateTime.year,
       month: dateTime.month,

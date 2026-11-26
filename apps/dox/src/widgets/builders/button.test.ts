@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
 import { button, buttonRow } from "./button";
-import { html } from "./html";
+import { html, raw } from "./html";
 
 describe("button", () => {
   it("is a button named by its label, with no form submit", async () => {
@@ -41,5 +41,48 @@ describe("button", () => {
     await user.keyboard("{Enter}");
     await user.keyboard(" ");
     expect(clicks).toBe(2);
+  });
+
+  it("is a toggle button when it has a pressed state, with the name unchanged", () => {
+    renderHtml(
+      html`${button({ id: "a", label: "Mute sound", pressed: true })}${button({ id: "b", label: "Loud", pressed: false })}${button({ id: "c", label: "Plain" })}`,
+    );
+    expect(
+      screen.getByRole("button", { name: "Mute sound", pressed: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Loud", pressed: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Plain" })).not.toBePressed();
+  });
+
+  it("shows an icon before its label without changing its name", async () => {
+    const fx = renderHtml(
+      button({
+        id: "mute",
+        label: "Mute sound",
+        icon: raw('<svg focusable="false"></svg>'),
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Mute sound" }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(fx.host);
+  });
+
+  it("keeps a hidden label as the name of an icon-only button", async () => {
+    const fx = renderHtml(
+      button({
+        id: "mute",
+        label: "Mute sound",
+        icon: raw('<svg focusable="false"></svg>'),
+        labelHidden: true,
+        pressed: false,
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Mute sound", pressed: false }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(fx.host);
   });
 });

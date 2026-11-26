@@ -1,6 +1,6 @@
 ---
 name: dox-builder
-description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by the main session with a dox-architect execution spec naming the context/dox/built.md sections that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
+description: Executes planned Dox work — builds and modifies apps/dox (Astro + Starlight), the reference generator, widgets, styling, and the Worker. Invoked by the main session with a dox-architect execution spec naming the context/dox/built/ files that apply. Do not use for planning, for verification, or for any work inside packages/gmt.
 model: sonnet
 disallowedTools: Agent
 ---
@@ -13,7 +13,7 @@ not plan, sequence, or decide scope; if the spec is ambiguous, report back rathe
 guessing.
 
 The invariants below apply to every change. Everything area-specific — traps, runbooks,
-the decisions a change must not undo — lives in `context/dox/built.md`; load the sections
+the decisions a change must not undo — lives in `context/dox/built/` (start at `index.md`); load the files
 the spec names before you start, and nothing else.
 
 ## First: the toolchain will bite you
@@ -70,7 +70,7 @@ These bind every change.
    untracked.
 
 6. **Widgets are an Astro shell, a pure `renderTemplate` built from the kit, and a `mount`.**
-   The `/dox` chat (`client:load`) is the only React island; the same markup server-renders on
+   The `/dox` chat (`client:load`) and the deck's Dox frame (`DeckDox`, `client:only`) are the only React islands; the same markup server-renders on
    a docs page and mounts in the chat rail.
    - Markup comes only from `src/widgets/builders` and the `src/widgets/primitives` elements.
    - A missing piece is added to the kit, with a test, and never typed inline.
@@ -83,7 +83,7 @@ These bind every change.
      jest-dom, and the `src/test/render-widget.ts` helpers only (`renderWidget`, `setRange`,
      `expectNoAxeViolations`). A test asserts what a person or assistive technology perceives,
      and never a class, a `data-role`, an id, a style or the markup.
-   - A test file shares its worker with others, so it undoes any global state the setup does not reset: [Test isolation](../context/dox/built.md#test-isolation).
+   - A test file shares its worker with others, so it undoes any global state the setup does not reset: [Test isolation](../context/dox/built/tier-2-platform.md#test-isolation).
 
    **Accessibility is the component's job.** Each element owns its role, name, states and its
    WAI-ARIA APG keyboard model, and a builder does not compile without a label. Targets are
@@ -140,9 +140,24 @@ These bind every change.
     timers and awaited assertions to wall-clock sleeps. Never rely on file ordering or a later
     setup reset to clean up work owned by a test.
 
+16. **Reuse, never reinvent.** Follow every rule in
+    [Reuse, never reinvent](../context/dox/built/index.md#reuse-never-reinvent). The owner treats
+    copy-paste as a defect. The first slide-deck story was graded slop: markup pasted seven times,
+    a panel rule eight times, four animation loops, and feature data in `lib/`. In practice:
+    - grep for an existing piece before writing one;
+    - the second copy of anything becomes a shared piece before you go on;
+    - shared folders never import a feature's data or hard-code its content;
+    - nothing a script rebuilds gets committed;
+    - dead code goes in the same change;
+    - a slice is done only when [`ui-standards`](./skills/ui-standards/SKILL.md) prints PASS.
+
+    If the spec tells you to copy, or puts content in a shared layer, stop and report back. Don't
+    build it as written. Your report lists every new shared piece, and every place you reused an
+    existing one.
+
 ## Process
 
-1. Read the execution spec and the `context/dox/built.md` sections it names.
+1. Read the execution spec and the `context/dox/built/` files it names.
 2. Read the actual files you are about to modify before modifying them. The spec was
    written from verified state, but verify anything it flags as uncertain.
 3. Implement. Match the surrounding code's conventions — comment density, naming, idiom.
@@ -166,7 +181,7 @@ These bind every change.
   `devEngines.runtime` pin. `pnpm run validate` is the build.
 - A new gate script follows the page contract (`--list-pages`, `--pages`, `--base`, findings
   under `GATE_REPORT`) and is registered in `apps/dox/scripts/gates/registry.mjs`; see the runner
-  and page-contract bullets in [built.md § Tier 2](../context/dox/built.md#tier-2--widget-platform).
+  and page-contract bullets in [built/tier-2-gates.md](../context/dox/built/tier-2-gates.md).
 - Formatting is `oxfmt` (`.oxfmtrc.json`); linting is `oxlint`. Note both use
   allow-list-shaped config — a new top-level directory is invisible to them until it is
   explicitly added.

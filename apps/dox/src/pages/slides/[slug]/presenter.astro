@@ -1,0 +1,53 @@
+---
+// The presenter view of a deck, at `/slides/<slug>/presenter/`: the second window on the laptop
+// while the deck runs on the projector (`lib/slides/presenter.ts`). Same slides as the deck,
+// rendered as a hidden source the mount copies from. `noindex`, out of the search index, and out
+// of the sitemap (the filter in `astro.config.mjs` drops every `/presenter/` page). The deck
+// opens it with `T`. The head script marks `html[data-presenter]`, which takes the page's title
+// band away (`components/slides/slides.css`); the site header stays.
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { PRESENTER_HEAD_SCRIPT } from "~/lib/slides/head-script";
+import { KEY_TABLE } from "~/lib/slides/keys";
+import { withBase } from "~/lib/site";
+import { deckRoutes, type DeckRoute } from "~/slides/deck-pages";
+import { deckDialogs } from "~/widgets/builders/deck-controls";
+import { presenterShell } from "~/widgets/builders/presenter";
+
+export const getStaticPaths = deckRoutes;
+
+type Props = DeckRoute;
+const { deck, Deck } = Astro.props;
+const slug = deck.slug;
+---
+
+<StarlightPage
+  frontmatter={{
+    title: `Presenter view: ${deck.title}`,
+    description: `The presenter's window for the talk ${deck.title}: notes, the next slide, the clock and a readiness check.`,
+    template: "splash",
+    pagefind: false,
+    head: [
+      { tag: "meta", attrs: { name: "robots", content: "noindex" } },
+      { tag: "script", content: PRESENTER_HEAD_SCRIPT },
+    ],
+  }}
+>
+  <Deck presenter />
+  <div data-presenter-root data-deck-slug={slug} data-deck-url={withBase(`/slides/${slug}/`)} data-brains-url={withBase("/api/brains")}>
+    <Fragment set:html={presenterShell().value} />
+  </div>
+  <Fragment set:html={deckDialogs(KEY_TABLE).value} />
+</StarlightPage>
+
+<script>
+  import { mountPresenter } from "~/lib/slides/presenter";
+
+  const root = document.querySelector<HTMLElement>("[data-presenter-root]");
+  if (root)
+    mountPresenter(root, {
+      signal: new AbortController().signal,
+      slug: root.dataset.deckSlug ?? "",
+      deckUrl: new URL(root.dataset.deckUrl ?? "./", location.href).href,
+      brainsUrl: new URL(root.dataset.brainsUrl ?? "", location.href).href,
+    });
+</script>

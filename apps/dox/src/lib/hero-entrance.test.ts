@@ -1,7 +1,12 @@
 /**
  * @vitest-environment jsdom
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const sounds = vi.fn((_root: HTMLElement) => () => {});
+vi.mock("./sound/entrance", () => ({
+  entranceSounds: (root: HTMLElement) => sounds(root),
+}));
+
 import { ENTRANCE_MARK, ENTRANCE_MS, runHeroEntrance } from "./hero-entrance";
 
 const html = document.documentElement;
@@ -36,6 +41,7 @@ beforeEach(() => {
   controller = new AbortController();
   clock = 0;
   html.dataset["entrance"] = "wait";
+  sounds.mockClear();
   vi.spyOn(performance, "mark").mockReturnValue({} as PerformanceMark);
 });
 
@@ -141,11 +147,19 @@ describe("runHeroEntrance", () => {
     expect(html.dataset["entrance"]).toBe("done");
   });
 
-  it("leaves a page the failsafe already showed as it is", async () => {
+  it("leaves a page shown static as it is, and silent", async () => {
+    // The failsafe showed it, or the reader came from another page of this site.
     html.dataset["entrance"] = "static";
     start(Promise.resolve(), Promise.resolve());
     await vi.advanceTimersByTimeAsync(ENTRANCE_MS + 10);
     expect(html.dataset["entrance"]).toBe("static");
+    expect(sounds).not.toHaveBeenCalled();
+  });
+
+  it("starts the entrance's sounds when it runs", async () => {
+    start(Promise.resolve(), Promise.resolve());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sounds).toHaveBeenCalledTimes(1);
   });
 
   it("stops the hand-over when the page is torn down mid-entrance", async () => {

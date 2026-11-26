@@ -3,7 +3,7 @@
     {
       "defects": ["D16"],
       "title": "D16 — formatRange drops O and long zone-name widths (ICU-20548)",
-      "trigger": "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and by every browser the native suite runs, so every D16 repro passes on every engine: this check reports Node, and the weekly run's compat check in each browser (the temporal-compat-chromium, -firefox and -webkit verdicts) reports the rest; D16 is removable only when all of them say so",
+      "trigger": "an ICU release that fixes ICU-20548 is bundled by GMT's engines.node floor (>=22.16.0) and by every browser the native suite runs, so every D16 repro passes on every engine: this check reports Node, and the weekly run's compat check in each browser (the temporal-compat-chromium, -firefox, -webkit and -webkit-macos verdicts) reports the rest; D16 is removable only when all of them say so",
       "probes": 6,
       "failing": 4,
       "state": "still-needed"
@@ -20,7 +20,7 @@
     {
       "defects": ["D19"],
       "title": "D19 — ZonedDateTime#equals answers false for two identifiers of one zone where resolvedOptions keeps the identifier (JavaScriptCore)",
-      "trigger": "a temporal-polyfill release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit verdict) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
+      "trigger": "a temporal-polyfill release whose TimeZoneEquals finds the primary identifier on a host whose Intl.DateTimeFormat#resolvedOptions returns the identifier as written, so the D19 probe (Etc/UTC equals UTC, ECMA-402 §6.5) passes in the WebKit the native suite runs: the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts, Linux and macOS) reports it. WebKit is the only engine in D19's scope; this check runs on Node, where D19 is out of scope and never removable",
       "probes": 1,
       "failing": 0,
       "state": "out-of-scope",
@@ -33,6 +33,105 @@
       "probes": 8,
       "failing": 2,
       "state": "still-needed"
+    },
+    {
+      "defects": ["D23"],
+      "title": "D23 — formatToParts and formatRangeToParts abort V8 on a week-of-year year field (nodejs/node#67076)",
+      "trigger": "every V8 the check reads (Node at the engines.node floor, and the temporal-compat-chromium verdict) passes the D23 repro: a gd formatter with year numeric and month short resolves a year, and the Node child-process confirmation of scripts/canary/weekYear.mjs exits 0 with a year part",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed",
+      "engines": ["v8"]
+    },
+    {
+      "defects": ["D24"],
+      "title": "D24 — CLDR date patterns print the week-of-year year where the calendar year is meant (internal/weekYearGuard.ts)",
+      "trigger": "every engine's compat verdict passes every D24 repro, and the weekly sweep of scripts/canary/weekYear.mjs flags no locale, calendar or option set",
+      "probes": 7,
+      "failing": 7,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D25"],
+      "title": "D25 — the japanese calendar prints Japanese eras before 1873-01-01 (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes both D25 repros: en-u-ca-japanese prints 2 BC for ISO -0001-07-10 and 1872 AD for 1872-12-31 (tc39/proposal-intl-era-monthcode#86, tc39/test262#4877)",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D26"],
+      "title": "D26 — an islamic calendar prints a negative year before the Hijra (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes the D26 repro: en-u-ca-islamic-civil prints a different era text for ISO 600-07-10 and 2025-07-10",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D27"],
+      "title": "D27 — ja japanese leaves the era year unpadded under year 2-digit and in Latin digits under another numbering system (internal/yearPrinting.ts, internal/japaneseNumerals.ts)",
+      "trigger": "every engine's compat verdict passes both D27 repros: ja-u-ca-japanese with year 2-digit prints 令和06年 for 2024-07-10, and ja-u-ca-japanese-nu-arab with year numeric prints 令和٦年",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D28"],
+      "title": "D28 — chinese and dangi pad the related year under year 2-digit (internal/yearPrinting.ts)",
+      "trigger": "every engine's compat verdict passes the D28 repro: en-u-ca-chinese with year 2-digit prints the related year 5 for ISO 0005-07-10",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D29"],
+      "title": "D29 — a range drops, repeats or garbles a field of one date (internal/rangeFields.ts)",
+      "trigger": "every engine's compat verdict passes every D29 repro (rangeFieldRepros.ts, one range per upstream defect, so the gate stays on while any one fails), and the weekly sweep of scripts/canary/rangeFields.mjs flags no locale, calendar or option set",
+      "probes": 18,
+      "failing": 18,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D30"],
+      "title": "D30 — islamic and islamic-rgsa resolve as written (internal/formatterCache.ts)",
+      "trigger": "every engine's compat verdict passes both D30 repros: en-u-ca-islamic resolves islamic-tbla and en-u-ca-islamic-rgsa resolves a calendar other than islamic-rgsa (tc39/proposal-intl-era-monthcode#99)",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D31"],
+      "title": "D31 — a coptic date before AM 1 prints 1 - year and no era (internal/copticEra.ts)",
+      "trigger": "every engine's compat verdict passes the D31 repro: en-u-ca-coptic prints the signed year -285 and the same era name as a later date for ISO -0001-07-10 (ICU-23277; unicode-org/icu#4081)",
+      "probes": 1,
+      "failing": 1,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D32"],
+      "title": "D32 — the Islamic era changes in the middle of 1 Muharram of year 1 (internal/islamicEpochEra.ts)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D32 repro: islamic-civil, islamic-tbla and islamic-umalqura print the same era at the first and the last hour of their epoch day in UTC (WebKit 331724)",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
+    },
+    {
+      "defects": ["D33"],
+      "title": "D33 — Chinese and Dangi dates differ by host; a runtime whose probe fails returns the sentinel for a chinese or dangi date format (internal/lunisolarRefusal.ts)",
+      "trigger": "every engine's compat verdict (Node, chromium, firefox, webkit, webkit-macos) passes every D33 text repro: the host's Intl.DateTimeFormat gives the Purple Mountain Observatory and KASI dates, so 2027-02-06 is the Chinese New Year and 2027-02-07 the Dangi one on every host (Intl era/monthCode §1.1 Table 1)",
+      "probes": 6,
+      "failing": 5,
+      "state": "still-needed"
+    },
+    {
+      "defects": ["D34"],
+      "title": "D34 — the Coptic era changes in the middle of 1 Tout AM 1 (internal/copticEra.ts)",
+      "trigger": "the weekly run's compat check in WebKit (the temporal-compat-webkit and temporal-compat-webkit-macos verdicts) passes the D34 repro: en-u-ca-coptic prints the same era at the first and the last hour of ISO 0284-08-29 in UTC (WebKit/WebKit#81144, bug 331724)",
+      "probes": 1,
+      "failing": 0,
+      "state": "out-of-scope",
+      "engines": ["webkit"]
     },
     {
       "defects": ["D9"],

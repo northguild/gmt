@@ -32,7 +32,8 @@ import {
   type ToolLinkItem,
 } from "~/widgets/builders";
 import { callOutput } from "~/widgets/families/gnss/call-output";
-import { callLines, outputOf } from "~/widgets/families/ids/call-lines";
+import { callLines } from "~/widgets/families/gnss/call-lines";
+import { outputOf } from "~/widgets/families/ids/call-lines";
 import { idRows, type IdRowView } from "~/widgets/families/ids/id-rows";
 import {
   instantHero,
@@ -42,7 +43,7 @@ import {
 import { grow } from "~/widgets/primitives/grow/grow";
 import { preset, type GmtPreset } from "~/widgets/primitives/preset/preset";
 import styles from "~/widgets/tools/id-timestamp-decoder.module.css";
-import { callArgs } from "./punctuality-widgets";
+import { cellCallArgs } from "./call-args";
 import {
   BAD_LAYOUT_TEXT,
   CUSTOM_PRESET_ID,
@@ -109,7 +110,7 @@ const LONGEST_ID = "x".repeat(ID_MAX_CHARS);
 
 /** The call a row prints, as the call frame prints it. */
 function callHtml(fn: string, args: readonly unknown[]): SafeHtml {
-  return raw(`${codeSpan("fn", fn)}(${callArgs(args)[0]})`);
+  return raw(`${codeSpan("fn", fn)}(${cellCallArgs(args)[0]})`);
 }
 
 /** The longest call a row prints: the Snowflake call, with all three layout keys. */
@@ -218,12 +219,37 @@ function linksOf(): SafeHtml {
   return toolLinks({ label: "Other tools", links: linkItems() });
 }
 
-function framesOf(copyText: string, code?: SafeHtml): SafeHtml {
+/**
+ * What the default preset's calls fill: how many lines, and the widest line in characters. The
+ * template holds that space before the library loads, so the page does not move when the mount
+ * draws them. The mount test checks both against the real library.
+ */
+export const DEFAULT_CALLS = { lines: 4, widest: 57 } as const;
+
+interface CallsReserve {
+  lines: number;
+  /** The widest line in characters, for a frame drawn before its lines are known. */
+  widest?: number;
+}
+
+/**
+ * The calls frame. `reserve` holds that many lines, and a sizer as wide as the widest line, so
+ * a scroll track shows or not just as it does once the lines are in. Exact in a monospace face.
+ */
+function framesOf(
+  copyText: string,
+  code?: SafeHtml,
+  reserve?: CallsReserve,
+): SafeHtml {
   return codeFrame({
     label: "Calls made",
     copyLabel: "Copy calls",
     copyText,
     ...(code === undefined ? {} : { code }),
+    ...(reserve === undefined ? {} : { minLines: reserve.lines }),
+    ...(reserve?.widest === undefined
+      ? {}
+      : { sizer: "0".repeat(reserve.widest) }),
     gate: "codeframe",
   });
 }
@@ -305,15 +331,19 @@ export function renderIdTimestampDecoderTemplate(
     )}`,
   );
 
+  // Before the library loads, the calls hold the space the default preset's calls fill. A
+  // seeded page reserves nothing: its calls are not known until the library runs them.
+  const reserve = isSeeded(args) ? undefined : DEFAULT_CALLS;
   const calls = section(
     { id: id("calls"), heading: "3. The calls", level: 4 },
     html`${grow(
-      html`<div id="${id("calls-slot")}">${framesOf("")}</div>`,
+      html`<div id="${id("calls-slot")}">${framesOf("", undefined, reserve)}</div>`,
     )}${grow(
       html`<div id="${id("output-slot")}">${callOutput({
         label: "What the calls returned",
         state: "empty",
         lines: [],
+        ...(reserve === undefined ? {} : { minLines: reserve.lines }),
       })}</div>`,
     )}${grow(html`<div id="${id("links")}">${linksOf()}</div>`)}`,
   );
@@ -380,8 +410,10 @@ function setupWidget(
         }),
       );
     } else {
+      // Each fill holds its own line count the way the template holds the default's, so the
+      // loaded frames come out at exactly the height the template held.
       const { code, plain } = callLines(calls);
-      setHtml(el("calls-slot"), framesOf(plain, code));
+      setHtml(el("calls-slot"), framesOf(plain, code, { lines: calls.length }));
       const out = outputOf(hero.kind === "none" ? "sentinel" : "ok", calls);
       setHtml(
         el("output-slot"),
@@ -389,6 +421,7 @@ function setupWidget(
           label: "What the calls returned",
           state: out.state,
           lines: out.lines,
+          minLines: out.lines.length,
         }),
       );
     }

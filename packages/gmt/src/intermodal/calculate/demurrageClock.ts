@@ -1,6 +1,6 @@
 import { Temporal } from "../../internal/temporal";
-import { instantFrom, isObject } from "../../internal";
-import { isValidInstant } from "../../precision/validate/isValidInstant";
+import { isObject } from "../../internal";
+import { instantOf } from "../../internal/instantNanoseconds";
 import type { Interval } from "../../types";
 import { optionOrDefault } from "../../internal/optionOrDefault";
 
@@ -30,7 +30,7 @@ export type ClockEventType =
 export interface ClockEvent {
   /** What happened to the container, as one of the events a charging clock can start or end at. */
   type: ClockEventType;
-  /** The instant it happened, as an ISO 8601 string: `Z`, an offset, or a bracketed zone. */
+  /** The instant it happened, as an ISO 8601 string: `Z` or an offset, with no annotation of any kind. */
   at: string;
 }
 
@@ -137,7 +137,7 @@ const EXPORT_CLOCKS: Record<ClockScope, [ClockEventType, ClockEventType]> = {
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "demurrage", { direction: "export" }) // { start: "2024-07-05T16:00:00Z", end: "2024-07-09T03:00:00Z" } (gate-in full to loaded on board)
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "detention", { direction: "export" }) // { start: "2024-07-01T08:00:00Z", end: "2024-07-05T16:00:00Z" } (empty picked up to gate-in full)
  * @example demurrageClock([{ type: "emptyReleased", at: "2024-07-01T08:00:00Z" }, { type: "gatedIn", at: "2024-07-05T16:00:00Z" }, { type: "loaded", at: "2024-07-09T03:00:00Z" }], "combined", { direction: "export" }) // { start: "2024-07-01T08:00:00Z", end: "2024-07-09T03:00:00Z" }
- * @example demurrageClock([{ type: "gatedOut", at: "2024-06-20T10:30:00+02:00[Africa/Johannesburg]" }, { type: "emptyReturned", at: "2024-06-27T09:00:00Z" }], "detention", { direction: "import", startEvent: "available" }) // { start: "2024-06-20T10:30:00+02:00[Africa/Johannesburg]", end: "2024-06-27T09:00:00Z" } (startEvent is not read for detention; strings are echoed as given)
+ * @example demurrageClock([{ type: "gatedOut", at: "2024-06-20T10:30:00+02:00" }, { type: "emptyReturned", at: "2024-06-27T09:00:00Z" }], "detention", { direction: "import", startEvent: "available" }) // { start: "2024-06-20T10:30:00+02:00", end: "2024-06-27T09:00:00Z" } (startEvent is not read for detention; strings are echoed as given)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }, { type: "gatedOut", at: "2024-06-20T14:30:00Z" }], "demurrage") // null (direction has no default)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }, { type: "gatedOut", at: "2024-06-20T14:30:00Z" }], "demurrage", { direction: "import", startEvent: "available" }) // null (no availability event)
  * @example demurrageClock([{ type: "discharged", at: "2024-06-14T19:00:00Z" }], "demurrage", { direction: "import" }) // null (still in the terminal: no gate-out)
@@ -189,13 +189,26 @@ function selectClock(
 
   // `Array.from` turns a hole into `undefined`, which the check rejects; `every` would skip it.
   const list = Array.from(events) as unknown[];
-  const wellFormed = list.every(
-    (event) =>
-      isObject(event) &&
-      CLOCK_EVENT_TYPES.includes((event as ClockEvent).type) &&
-      typeof (event as ClockEvent).at === "string" &&
-      isValidInstant((event as ClockEvent).at),
-  );
+  // Each `at` is read and parsed once here; the clock below compares those instants and returns
+  // the strings that were checked.
+  const instants: Temporal.Instant[] = [];
+  const texts: string[] = [];
+  const wellFormed = list.every((event, index) => {
+    if (
+      !isObject(event) ||
+      !CLOCK_EVENT_TYPES.includes((event as ClockEvent).type)
+    ) {
+      return false;
+    }
+    const at = (event as ClockEvent).at;
+    const instant = instantOf(at);
+    if (instant === null) {
+      return false;
+    }
+    instants[index] = instant;
+    texts[index] = at;
+    return true;
+  });
   if (!wellFormed) {
     return null;
   }
@@ -207,11 +220,11 @@ function selectClock(
         ? ["gatedOut", "emptyReturned"]
         : [startEvent, scope === "combined" ? "emptyReturned" : "gatedOut"];
 
-  const only = (type: ClockEventType): string | null => {
-    const matches = (list as ClockEvent[]).filter(
-      (event) => event.type === type,
+  const only = (type: ClockEventType): number | null => {
+    const matches = (list as ClockEvent[]).flatMap((event, index) =>
+      event.type === type ? [index] : [],
     );
-    return matches.length === 1 ? matches[0].at : null;
+    return matches.length === 1 ? matches[0] : null;
   };
 
   const start = only(startType);
@@ -220,7 +233,10 @@ function selectClock(
     return null;
   }
 
-  return Temporal.Instant.compare(instantFrom(start), instantFrom(end)) > 0
+  return Temporal.Instant.compare(instants[start], instants[end]) > 0
     ? null
-    : { start, end };
+    : {
+        start: texts[start],
+        end: texts[end],
+      };
 }

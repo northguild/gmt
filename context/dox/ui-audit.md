@@ -1,7 +1,7 @@
-# Dox component cleanup — open items
+# Dox component cleanup: open items
 
-Audit of `apps/dox/src/components`, `src/lib` (client modules) and `src/styles`. **None of
-the phases below has started** (checked 2026-09-11). Read before restructuring components.
+Open cleanup phases for `apps/dox/src/components`, `src/lib` (client modules) and `src/styles`.
+Read before restructuring components.
 
 ## The boundary — keep it
 

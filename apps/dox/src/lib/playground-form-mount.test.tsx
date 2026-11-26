@@ -105,6 +105,21 @@ describe("other field kinds", () => {
     await waitFor(() => expect(screen.getByText(/"UTC"/)).toBeVisible());
   });
 
+  it("a choice of numbers and a word passes the number as a number", async () => {
+    const { user } = open("formatCcsdsAsciiB");
+    const select = screen.getByRole("combobox", {
+      name: "fractionalSecondDigits (optional)",
+    });
+    expect(screen.getByRole("option", { name: "auto" })).toBeVisible();
+    await user.selectOptions(select, "3");
+    await waitFor(() =>
+      expect(screen.getByText("3", { selector: "code span" })).toBeVisible(),
+    );
+    await waitFor(() => expect(result()).not.toHaveTextContent(SENTINEL));
+    await user.selectOptions(select, "auto");
+    await waitFor(() => expect(result()).not.toHaveTextContent(SENTINEL));
+  });
+
   it("an amount and its unit are two named controls in one group", async () => {
     const { user } = open("addDate");
     const group = screen.getByRole("group", { name: "units" });
@@ -192,8 +207,13 @@ describe("repeatable rows", () => {
   it("an enum list row is a list of choices", async () => {
     const { user } = open("getLargestDateDurationUnit");
     const first = screen.getByRole("combobox", { name: "units 1" });
-    expect(first).toHaveValue("months");
-    await user.selectOptions(first, "years");
+    expect(first).toHaveValue("month");
+    const values = within(first)
+      .getAllByRole("option")
+      .map((o) => (o as HTMLOptionElement).value);
+    expect(values).toContain("year");
+    expect(values).not.toContain("years");
+    await user.selectOptions(first, "year");
     await waitFor(() => expect(result()).toHaveTextContent("years"));
   });
 

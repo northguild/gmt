@@ -36,7 +36,9 @@ import type {
 } from "../src/lib/playground-spec";
 import { argToValue, parseCallArgs } from "../src/lib/playground-parsers";
 import {
+  CORE_INDUSTRY,
   INDUSTRIES,
+  INDUSTRY_TAG_IDS,
   OWN_NAMESPACES,
   industryOwning,
 } from "../src/lib/industry-tags";
@@ -57,6 +59,12 @@ import {
   syncTree,
   writeIfChanged,
 } from "./build-utils/generated-files.mjs";
+import {
+  commitDatesKey,
+  loadCommitDates,
+  newestCommit,
+  withLastUpdated,
+} from "./build-utils/commit-dates.mjs";
 import {
   findGaps,
   formatGapReport,
@@ -85,6 +93,10 @@ import {
 import { buildRedirects } from "./build-utils/redirects";
 import { SITE_BASE } from "../src/lib/site";
 import { plainText, referenceHeadTitle } from "./build-utils/reference-title";
+import {
+  uniqueDescriptions,
+  valueKind,
+} from "./build-utils/unique-descriptions";
 import { MOVED_PAGES } from "./build-utils/moved-pages";
 import { RENAMED_FUNCTIONS } from "./build-utils/renamed-functions";
 import {
@@ -1263,7 +1275,11 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
         args.push(p.value === "true" ? "true" : "false");
         break;
       case "enum":
-        args.push(JSON.stringify(p.value));
+        args.push(
+          p.numericOptions?.includes(p.value)
+            ? p.value
+            : JSON.stringify(p.value),
+        );
         break;
       case "array":
         args.push(
@@ -1295,11 +1311,13 @@ export function synthesizeTemplate(spec: PlaygroundSpec): string {
           val = o.value || "0";
           break;
         case "enum":
-          val = o.value
-            ? JSON.stringify(o.value)
-            : o.options?.[0]
-              ? JSON.stringify(o.options[0])
-              : JSON.stringify("");
+          val = o.numericOptions?.includes(o.value)
+            ? o.value
+            : o.value
+              ? JSON.stringify(o.value)
+              : o.options?.[0]
+                ? JSON.stringify(o.options[0])
+                : JSON.stringify("");
           break;
         default:
           val = o.value ? JSON.stringify(o.value) : JSON.stringify("");
@@ -1355,8 +1373,10 @@ function fieldForParam(
         ...opt,
       };
     }
-    const choices = p.options ?? [];
-    const items = raw ? BU.parseArrayArg(raw) : [];
+    const { choices, aliases } = BU.collapseUnitAliases(p.options ?? []);
+    const items = (raw ? BU.parseArrayArg(raw) : []).map((item) =>
+      BU.canonicalChoice(item, aliases),
+    );
     // `parseArrayArg` unquotes each element, so an array of object literals
     // comes back as source text. Quoting it again would pass the source as a
     // string — `mergeCalendars([{ weekend: … }])` is the case.
@@ -1373,6 +1393,7 @@ function fieldForParam(
             ? "number"
             : "string",
       ...(choices.length ? { choices } : {}),
+      ...(Object.keys(aliases).length ? { aliases } : {}),
       items,
       ...opt,
     };
@@ -1393,15 +1414,37 @@ function fieldForParam(
   }
 
   if (p.type === "enum") {
-    const choices = p.options ?? [];
+    const { choices, aliases } = BU.collapseUnitAliases(p.options ?? []);
     if (!choices.length) return null;
-    if (raw !== undefined && !QUOTED_ARG.test(raw)) return null;
+    // A number literal is a choice only where the type lists it as one.
+    if (
+      raw !== undefined &&
+      !QUOTED_ARG.test(raw) &&
+      !(NUMERIC_ARG.test(raw) && p.numericOptions?.includes(raw))
+    )
+      return null;
+    // `"6"` is a string; where the number `6` is the choice, it is not that choice.
+    if (
+      raw !== undefined &&
+      QUOTED_ARG.test(raw) &&
+      p.numericOptions?.includes(argToValue(raw))
+    )
+      return null;
+    const value = p.value ? BU.canonicalChoice(p.value, aliases) : "";
     const seed = omitted
       ? ""
-      : p.value && choices.includes(p.value)
-        ? p.value
+      : value && choices.includes(value)
+        ? value
         : choices[0];
-    return { name: p.name, kind: "enum", seed, choices, ...opt };
+    return {
+      name: p.name,
+      kind: "enum",
+      seed,
+      choices,
+      ...(p.numericOptions?.length ? { numeric: p.numericOptions } : {}),
+      ...(Object.keys(aliases).length ? { aliases } : {}),
+      ...opt,
+    };
   }
 
   if (p.type === "expr") {
@@ -1636,8 +1679,9 @@ export function buildChoiceSeeds(
       const raw = res.objectArg
         ? BU.parseObjectArgEntries(rawArgs[0]).find(([k]) => k === ef.name)?.[1]
         : rawArgs[idx];
-      if (raw === undefined || !QUOTED_ARG.test(raw)) continue;
-      const choice = argToValue(raw);
+      if (raw === undefined) continue;
+      if (!QUOTED_ARG.test(raw) && !ef.numeric?.includes(raw)) continue;
+      const choice = BU.canonicalChoice(argToValue(raw), ef.aliases);
       if (!ef.choices!.includes(choice) || entries[choice]) continue;
 
       // The unit control holds one unit: an object with two keys, or a key the
@@ -2642,6 +2686,18 @@ function titleFields(doc: FnDoc | TypeDoc | RegexDoc): string[] {
   ];
 }
 
+/** The page with its frontmatter `description` replaced. The body keeps the original text. */
+function withDescription(mdx: string, description: string): string {
+  const replaced = mdx.replace(
+    /^description: .*$/m,
+    () => `description: ${JSON.stringify(description)}`,
+  );
+  if (replaced === mdx) {
+    throw new Error("[reference] a page has no frontmatter description line.");
+  }
+  return replaced;
+}
+
 /** The page of a shared type: one that two or more public functions reach. */
 export function renderType(doc: TypeDoc, page: PageContext): string {
   const { usage } = page;
@@ -2920,35 +2976,39 @@ export function buildSidebar(
 }
 
 /**
- * Add `industries: [<id>]` to a page's frontmatter, which `PageTitle.astro` shows as the
- * industry tag under the title. No industry: the page is returned unchanged.
+ * Add `industries: [<ids>]` to a page's frontmatter, which `PageTitle.astro` shows as the
+ * industry tags under the title. Every reference page has at least one tag (a general page is
+ * `core`), so an empty list is a bug in the caller and throws.
  */
 export function withIndustry(
   mdx: string,
-  industry: string | undefined,
+  industries: readonly string[],
 ): string {
-  if (!industry) return mdx;
+  if (industries.length === 0) {
+    throw new Error("[reference] a page needs at least one industry tag.");
+  }
   const close = mdx.indexOf("\n---\n", 4);
   if (!mdx.startsWith("---\n") || close < 0) {
     throw new Error("[reference] a page has no frontmatter to tag.");
   }
-  return `${mdx.slice(0, close)}\nindustries: [${industry}]${mdx.slice(close)}`;
+  return `${mdx.slice(0, close)}\nindustries: [${industries.join(", ")}]${mdx.slice(close)}`;
 }
 
 /**
- * The industry a shared type's page is tagged with: the industry that owns the namespace every
- * public function that reaches the type belongs to, when that is one namespace and some industry
- * owns it. A type any general function reaches, or two industries share, is general and has no
- * tag. `ownerOf` says which industry owns a namespace.
+ * The tags a shared type's page carries: the union of the industries of the namespaces of every
+ * public function that reaches it, in `INDUSTRY_TAG_IDS` order. A namespace no industry owns
+ * counts as `core`. `ownerOf` says which industry owns a namespace. A type nothing reaches has no
+ * namespace to take a tag from, so it is `core`.
  */
-export function typeIndustry(
+export function typeIndustries(
   usedBy: readonly string[],
   ownerOf: (namespace: string) => string | undefined,
-): string | undefined {
-  const namespaces = new Set(usedBy.map((key) => key.split("/")[0]!));
-  if (namespaces.size !== 1) return undefined;
-  const [ns] = [...namespaces];
-  return ownerOf(ns!);
+): string[] {
+  const tags = new Set(
+    usedBy.map((key) => ownerOf(key.split("/")[0]!) ?? CORE_INDUSTRY),
+  );
+  if (tags.size === 0) tags.add(CORE_INDUSTRY);
+  return INDUSTRY_TAG_IDS.filter((id) => tags.has(id));
 }
 
 /** What the root page says about each declared industry, in declared order. */
@@ -2994,7 +3054,13 @@ export function generateReference() {
       `[reference] no published gmt tag (${baseline.none}); no Unreleased badges`,
     );
   }
-  const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}`;
+  // Each page states the commit date of its source, so the dates are an input too.
+  const sourceDates = commitDatesKey(
+    allSourceFiles(gmtSrc).map((file) =>
+      relative(repoRoot, file).split("\\").join("/"),
+    ),
+  );
+  const hash = `${hashFiles(referenceInputs())}|${baselineKey(baseline)}|${sourceDates}`;
   // The MDX tree is gitignored, so a fresh checkout (or a manual `rm -rf`) can
   // leave the generated modules in place while this directory is gone.
   const upToDate =
@@ -3025,6 +3091,7 @@ function referenceInputs(): string[] {
     resolve(gmtSrc, "..", "package.json"),
     fileURLToPath(import.meta.url),
     resolve(appRoot, "scripts", "build-utils", "build-utils.ts"),
+    resolve(appRoot, "scripts", "build-utils", "commit-dates.mjs"),
     resolve(appRoot, "scripts", "build-utils", "doc-gate.ts"),
     resolve(appRoot, "scripts", "build-utils", "index-pages.ts"),
     resolve(appRoot, "scripts", "build-utils", "null-is-empty.ts"),
@@ -3309,6 +3376,30 @@ function runGeneration(baseline: ReleasedBaseline) {
   const moduleSymbols = new Map<string, SymbolEntry[]>();
   const sharedTypes: SymbolEntry[] = [];
 
+  // A page states the commit date of the file it is made from (`build-utils/commit-dates.mjs`),
+  // read for every source in one `git log`.
+  const sourceOf = (doc: { sourcePath: string }) =>
+    `packages/gmt/src/${doc.sourcePath}`;
+  loadCommitDates(dedupedDocs.map(sourceOf));
+  const dated = (mdx: string, doc: { sourcePath: string }) =>
+    withLastUpdated(mdx, newestCommit([sourceOf(doc)]));
+
+  // Pages that would share a meta description get a qualifier in it (`unique-descriptions.ts`).
+  const qualifiedDescriptions = uniqueDescriptions(
+    dedupedDocs.flatMap((d) =>
+      d.kind === "type"
+        ? []
+        : [
+            {
+              id: fnKey(d),
+              description: plainText(d.description),
+              namespace: d.namespace,
+              kind: valueKind(d.name),
+            },
+          ],
+    ),
+  );
+
   for (const doc of dedupedDocs) {
     const unreleased = isUnreleased(baseline, doc.name);
     const withNote = (mdx: string) =>
@@ -3319,14 +3410,14 @@ function runGeneration(baseline: ReleasedBaseline) {
     if (doc.kind === "type") {
       // A single-use type has no page: its function's page documents it.
       if (usage.types.get(doc.name)?.placement.kind !== "page") continue;
-      // Tagged only when every function that reaches the type is in one industry namespace.
-      const typeTag = typeIndustry(
+      // Tagged with the industries of every function that reaches the type.
+      const typeTags = typeIndustries(
         usage.types.get(doc.name)?.usedBy ?? [],
         industryOwning,
       );
       pages.set(
         join(TYPES_SECTION, `${doc.name}.mdx`),
-        withIndustry(withNote(renderType(doc, page)), typeTag),
+        dated(withIndustry(withNote(renderType(doc, page)), typeTags), doc),
       );
       pageRoutes.push(typePageUrl(doc.name));
       sharedTypes.push({
@@ -3366,10 +3457,19 @@ function runGeneration(baseline: ReleasedBaseline) {
     } else {
       mdx = renderRegex(doc);
     }
+    const qualifiedDescription = qualifiedDescriptions.get(fnKey(doc));
+    if (qualifiedDescription !== undefined) {
+      mdx = withDescription(mdx, qualifiedDescription);
+    }
 
     pages.set(
       join(doc.namespace, doc.module, `${doc.name}.mdx`),
-      withIndustry(withNote(mdx), industryOwning(doc.namespace)),
+      dated(
+        withIndustry(withNote(mdx), [
+          industryOwning(doc.namespace) ?? CORE_INDUSTRY,
+        ]),
+        doc,
+      ),
     );
     pageRoutes.push(pageUrl(doc.namespace, doc.module, doc.name));
 
@@ -3402,6 +3502,7 @@ function runGeneration(baseline: ReleasedBaseline) {
         name: d.name,
         url: pageUrl(d.namespace, d.module, d.name),
         description: d.description,
+        sourcePath: sourceOf(d),
       });
       continue;
     }
@@ -3410,6 +3511,7 @@ function runGeneration(baseline: ReleasedBaseline) {
       name: d.name,
       url: typeUrl(usage, d.name)!,
       description: d.description,
+      sourcePath: sourceOf(d),
     };
     if (placement.kind === "page") {
       indexed.sharedTypes.push(entry);
@@ -3421,7 +3523,10 @@ function runGeneration(baseline: ReleasedBaseline) {
   }
   const indexPages = renderIndexPages(indexed);
   for (const index of indexPages) {
-    pages.set(join(...index.file.split("/")), index.mdx);
+    pages.set(
+      join(...index.file.split("/")),
+      withLastUpdated(index.mdx, newestCommit(index.inputs)),
+    );
   }
   // An index route is every proper prefix of a page route, which is how
   // `scripts/api-surface.mjs` derives them too. Anything else is a page with no index above

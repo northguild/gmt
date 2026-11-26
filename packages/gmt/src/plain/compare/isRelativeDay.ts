@@ -1,7 +1,5 @@
-import { addDate } from "../calculate/addDate";
-import { getToday } from "../get/getToday";
-import { isValidDate } from "../validate";
-import { areDatesEqual } from "./areDatesEqual";
+import { plainDateOf } from "../../internal/inputChecks";
+import { todayDate } from "../../internal/todayDate";
 
 /**
  * Return true when `value` falls `offsetDays` days from today, per the
@@ -10,7 +8,7 @@ import { areDatesEqual } from "./areDatesEqual";
  * - Subsumes `isToday`/`isYesterday`/`isTomorrow`: `offsetDays: 0` is
  *   "today", `-1` is "yesterday", `1` is "tomorrow", and any other integer
  *   offset works the same way.
- * - Compares against `getToday()`, so this depends on the **system clock and
+ * - Compares against today, so this depends on the **system clock and
  *   system timeZone**. The same call returns different answers on hosts in
  *   different timeZones at the same instant — a caller needing determinism
  *   (server-side rendering, tests, scheduled jobs) should use
@@ -35,19 +33,19 @@ import { areDatesEqual } from "./areDatesEqual";
  * @example isRelativeDay("invalid", 0) // false
  */
 export function isRelativeDay(value: string, offsetDays: number): boolean {
-  if (!isValidDate(value) || !Number.isInteger(offsetDays)) {
+  const date = plainDateOf(value);
+  if (date === null || !Number.isInteger(offsetDays)) {
     return false;
   }
 
-  const today = getToday();
-  if (today === "") {
+  const today = todayDate();
+  if (today === null) {
     return false;
   }
 
-  const target = addDate(today, { days: offsetDays });
-  if (target === "") {
+  try {
+    return date.equals(today.add({ days: offsetDays }));
+  } catch {
     return false;
   }
-
-  return areDatesEqual(value, target);
 }

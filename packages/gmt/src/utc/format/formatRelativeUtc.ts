@@ -1,14 +1,11 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { Temporal } from "../../internal/temporal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import { frameZoned, normalizeZoneFrame } from "../../internal/zoneFrame";
-import {
-  toInstantFromUtc,
-  toReferenceInstantFromUtc,
-} from "../../internal/toInstantFromUtc";
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
-import { isValidUtc } from "../validate";
-import { isObject } from "../../internal/isObject";
+import { utcInstantOf } from "../../internal/utcInstant";
+import { isOptionsObject } from "../../internal/isObject";
 
 /**
  * Options for `formatRelativeUtc`: the instant the distance is measured from, the unit it is shown
@@ -80,20 +77,25 @@ export function formatRelativeUtc(
   try {
     // Temporal GetOptionsObject: undefined is defaults (the parameter default); anything else that is
     // not an object, including null, is a TypeError.
-    if (!isObject(options)) return "";
-    if (!isValidUtc(value)) return "";
+    if (!isOptionsObject(options)) return "";
+    const target = utcInstantOf(value);
+    if (target === null) return "";
     const frame = normalizeZoneFrame(options.timeZone);
     if (frame === null) return "";
     // Each option is read once (GetOption).
     const referenceOption = options.reference;
-    if (referenceOption !== undefined && !isValidUtc(referenceOption))
-      return "";
+    const parsedReference =
+      referenceOption === undefined ? undefined : utcInstantOf(referenceOption);
+    if (parsedReference === null) return "";
 
-    const target = toInstantFromUtc(value);
-    if (target === null) return "";
-
-    const reference = toReferenceInstantFromUtc(referenceOption);
-    if (reference === null) return "";
+    let reference = parsedReference;
+    if (reference === undefined) {
+      try {
+        reference = Temporal.Now.instant();
+      } catch {
+        return "";
+      }
+    }
 
     try {
       const diff = target.since(reference);

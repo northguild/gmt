@@ -65,8 +65,13 @@ function mount(box: HTMLElement, width: number, height?: number): HTMLElement {
   return box;
 }
 
-/** MutationObserver callbacks run as a microtask. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+/** The next task: MutationObserver callbacks and the `toggle` event have run. */
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+/** After the next paint, when a box a mutation names is read. */
+const settle = async () => {
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await tick();
+};
 
 describe("mountScrollRegions", () => {
   it("makes a code block that overflows a named region the keyboard can reach", async () => {
@@ -107,6 +112,28 @@ describe("mountScrollRegions", () => {
     const captioned = screen.getByRole("table", { name: "Offsets" });
     await userEvent.tab();
     expect(captioned).toHaveFocus();
+  });
+
+  it("gives a value a widget marks a tab stop while it overflows, and no name, so the value is what is read", async () => {
+    const dd = el(
+      "dd",
+      { "data-scrolls": "" },
+      "2024-06-30T12:00:00.000000001Z",
+    );
+    document.body.replaceChildren(
+      el("dl", {}, el("div", {}, el("dt", {}, "Reference"), dd)),
+    );
+    size(dd, 300);
+    mountScrollRegions(document);
+    const value = screen.getByRole("definition");
+    expect(value).not.toHaveAttribute("aria-label");
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    await userEvent.tab();
+    expect(value).toHaveFocus();
+
+    size(dd, 100);
+    report([dd]);
+    expect(value).not.toHaveAttribute("tabindex");
   });
 
   it("removes only what it added when the box fits again", () => {
@@ -166,26 +193,77 @@ describe("mountScrollRegions", () => {
     ).toBeInTheDocument();
   });
 
-  it("labels a box whose first read said it fits, once the browser has laid it out", async () => {
+  it("re-reads a wired value whose text is replaced one level down, and drops the stop when it fits again", async () => {
+    const shown = el("span", {}, "");
+    const dd = el("dd", { "data-scrolls": "" }, shown);
+    document.body.replaceChildren(
+      el("dl", {}, el("div", {}, el("dt", {}, "UTC now"), dd)),
+    );
+    size(dd, 100);
+    mountScrollRegions(document);
+    const value = screen.getByRole("definition");
+    expect(value).not.toHaveAttribute("tabindex");
+
+    size(dd, 300);
+    shown.textContent = "2024-06-30T12:00:00.000000001Z";
+    await settle();
+    expect(value).toHaveAttribute("tabindex", "0");
+
+    size(dd, 100);
+    shown.textContent = "";
+    await settle();
+    expect(value).not.toHaveAttribute("tabindex");
+  });
+
+  it("reads a box a widget adds only after the next paint, never inside the change", async () => {
     const widget = el("section", { "aria-label": "Widget" });
     document.body.replaceChildren(widget);
     mountScrollRegions(document);
 
-    // A box in a closed `<details>` reports a content width of 0 until it is laid out.
+    // Each read of a size makes the browser lay the page out; count them.
     const pre = codeBlock("a much longer line");
     let reads = 0;
     Object.defineProperties(pre, {
-      scrollWidth: { configurable: true, get: () => (reads++ === 0 ? 0 : 300) },
+      scrollWidth: { configurable: true, get: () => (reads++, 300) },
       clientWidth: { configurable: true, get: () => 100 },
       scrollHeight: { configurable: true, get: () => 50 },
       clientHeight: { configurable: true, get: () => 100 },
     });
     widget.replaceChildren(pre);
+    await tick();
+    expect(reads).toBe(0);
     await settle();
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    expect(reads).toBe(1);
     expect(
       screen.getByRole("region", { name: "Code, scrolls sideways" }),
     ).toBeInTheDocument();
+  });
+
+  it("reads every box a resize names before it writes to any", () => {
+    const a = codeBlock("a");
+    const b = codeBlock("b");
+    document.body.replaceChildren(a, b);
+    size(a, 100);
+    size(b, 100);
+    mountScrollRegions(document);
+    const order: string[] = [];
+    for (const [name, box] of [
+      ["a", a],
+      ["b", b],
+    ] as const) {
+      Object.defineProperty(box, "scrollWidth", {
+        configurable: true,
+        get: () => (order.push(`read ${name}`), 300),
+      });
+      const set = box.setAttribute.bind(box);
+      box.setAttribute = (attr, value) => {
+        order.push(`write ${name}`);
+        set(attr, value);
+      };
+    }
+    report([a, b]);
+    expect(order.indexOf("write a")).toBeGreaterThan(order.indexOf("read b"));
+    expect(screen.getAllByRole("region")).toHaveLength(2);
   });
 
   it("reads the boxes inside a details when it opens, with no frame to fall back on", async () => {
@@ -202,7 +280,7 @@ describe("mountScrollRegions", () => {
       expect(screen.queryByRole("region")).not.toBeInTheDocument();
       size(pre, 300);
       await userEvent.click(screen.getByText("Calls"));
-      await settle();
+      await tick();
       expect(
         screen.getByRole("region", { name: "Code, scrolls sideways" }),
       ).toBeInTheDocument();

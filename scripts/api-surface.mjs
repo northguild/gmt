@@ -115,6 +115,7 @@ import { createRequire } from "node:module";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspect } from "node:util";
+import { allDeckRoutes } from "../apps/dox/scripts/lib/deck-folders.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CORPUS = join(ROOT, "apps/dox/src/generated/reference/gmt-corpus.json");
@@ -148,7 +149,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * example, which reads the clock like every other `get/` reader example in the `clock` bucket,
  * minus 19 `// "" (on failure)` examples. The 19 zero-argument UTC and Unix clock readers cannot
  * fail, so they document no failure example
- * (context/coding-standards.md § Scoped exception: the UTC clock readers).
+ * (context/coding-standards/api-contract.md § Scoped exception: the UTC clock readers).
  *
  * `docResults` counted 55, of which 17 are CORE-104's clock results on three guides and a mistakes page:
  * 12 in `core-date-operations/durations.mdx` (the `relativeTo` pair, the from-now forms, the timer
@@ -160,7 +161,7 @@ const PRIVATE_DIRS = new Set(["internal", "test"]);
  * arguments are expressions over a driver value, so they cannot be bound to an input here.
  * `apps/dox/src/lib/databases-guide.test.ts` runs every snippet on that page instead.
  */
-const SKIP_BUDGET = { examples: 184, docResults: 60 };
+const SKIP_BUDGET = { examples: 186, docResults: 60 };
 
 // A Temporal/Intl result formatted by the runtime depends on the zone; examples document UTC.
 if (process.env.TZ !== "UTC") {
@@ -896,10 +897,15 @@ for (const rel of filesUnder(DOX_CONTENT)) {
   if (twin !== "index") siteRoutes.add(`/${twin}.md`);
 }
 for (const rel of filesUnder("apps/dox/src/pages")) {
-  if (rel.includes("[")) continue; // dynamic: its routes are the `.md` twins above
+  if (rel.includes("[")) continue; // dynamic: the `.md` twins above and the decks below
   siteRoutes.add(
     `/${rel.replace(/\.(astro|mdx?|ts|js)$/, "").replace(/(^|\/)index$/, "")}`,
   );
+}
+// src/pages/slides/[slug]/: a deck and its presenter view for each deck folder.
+for (const route of allDeckRoutes()) {
+  siteRoutes.add(route.replace(/\/$/, ""));
+  siteRoutes.add(`${route}presenter`);
 }
 for (const rel of filesUnder("apps/dox/public")) siteRoutes.add(`/${rel}`);
 const siteSections = new Set(

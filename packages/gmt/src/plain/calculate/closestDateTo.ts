@@ -1,6 +1,5 @@
+import { plainDateOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
-
-import { isValidDate } from "../validate";
 
 /**
  * Return the candidate date nearest to `target` by calendar distance.
@@ -25,24 +24,21 @@ import { isValidDate } from "../validate";
  */
 export function closestDateTo(target: string, candidates: string[]): string {
   try {
-    if (
-      !isValidDate(target) ||
-      !Array.isArray(candidates) ||
-      !candidates.length ||
-      !candidates.some(isValidDate)
-    ) {
+    const t = plainDateOf(target);
+    if (t === null || !Array.isArray(candidates) || !candidates.length) {
+      return "";
+    }
+
+    const parsed: Array<{ str: string; date: Temporal.PlainDate }> = [];
+    candidates.forEach((c) => {
+      const date = plainDateOf(c);
+      if (date !== null) parsed.push({ str: c, date });
+    });
+    if (!parsed.length) {
       return "";
     }
 
     try {
-      const t = Temporal.PlainDate.from(target);
-      const validCandidates = candidates.filter(isValidDate);
-
-      const parsed = validCandidates.map((c) => ({
-        str: c,
-        date: Temporal.PlainDate.from(c),
-      }));
-
       const closest = parsed.reduce((best, candidate) => {
         const bestDist = Math.abs(t.until(best.date).days);
         const candDist = Math.abs(t.until(candidate.date).days);

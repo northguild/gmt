@@ -3,9 +3,8 @@ import {
   calendarOfAllZonedValues,
   countZonedLocalDates,
   halfOpenIntersection,
-  parseCalendarZonedValue,
 } from "../../internal";
-import { isValidCalendarZonedDateTime } from "../validate";
+import { calendarZonedOf } from "../../internal/calendarZonedString";
 
 /**
  * Return how many distinct calendar dates two zoned intervals share, counted in the
@@ -69,12 +68,11 @@ export function intervalOverlappingDaysZoned(
   // empty strings, leap seconds (which Temporal would otherwise silently clamp to :59), unknown
   // zones and a calendar annotation before the zone — and, unlike `isValidZonedDateTime`, accepts
   // RFC 9557 calendar annotations.
-  if (
-    !isValidCalendarZonedDateTime(aStart) ||
-    !isValidCalendarZonedDateTime(aEnd) ||
-    !isValidCalendarZonedDateTime(bStart) ||
-    !isValidCalendarZonedDateTime(bEnd)
-  ) {
+  const aS = calendarZonedOf(aStart);
+  const aEnded = calendarZonedOf(aEnd);
+  const bStarted = calendarZonedOf(bStart);
+  const bEnded = calendarZonedOf(bEnd);
+  if (aS === null || aEnded === null || bStarted === null || bEnded === null) {
     return null;
   }
 
@@ -85,12 +83,11 @@ export function intervalOverlappingDaysZoned(
   }
 
   try {
-    const aS = parseCalendarZonedValue(aStart);
     // Boundaries are counted in the start's zone, so the others are re-expressed there —
     // Temporal refuses calendar-unit differences across two zones outright.
-    const aE = parseCalendarZonedValue(aEnd).withTimeZone(aS.timeZoneId);
-    const bS = parseCalendarZonedValue(bStart).withTimeZone(aS.timeZoneId);
-    const bE = parseCalendarZonedValue(bEnd).withTimeZone(aS.timeZoneId);
+    const aE = aEnded.withTimeZone(aS.timeZoneId);
+    const bS = bStarted.withTimeZone(aS.timeZoneId);
+    const bE = bEnded.withTimeZone(aS.timeZoneId);
 
     if (Temporal.ZonedDateTime.compare(aS, aE) > 0) {
       return null;

@@ -1,6 +1,6 @@
+import { dateTimeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenMerge } from "../../internal";
-import { isValidDateTimeInterval } from "./validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -46,22 +46,21 @@ export function mergeIntervalsDateTime(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          isValidDateTimeInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.PlainDateTime;
+      end: Temporal.PlainDateTime;
+    }> = [];
+    for (const interval of intervals) {
+      const bounds = isObject(interval)
+        ? dateTimeIntervalOf(interval.start, interval.end)
+        : null;
+      if (bounds === null) {
+        return [];
+      }
+      parsed.push({ start: bounds[0], end: bounds[1] });
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: Temporal.PlainDateTime.from(interval.start),
-        end: Temporal.PlainDateTime.from(interval.end),
-      }));
-
       const merged = halfOpenMerge(parsed, Temporal.PlainDateTime.compare);
 
       return merged.map((interval) => ({

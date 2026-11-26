@@ -30,6 +30,29 @@ describe("intervalXorAllZoned", () => {
     ]);
   });
 
+  it("skips a hole in a sparse list of intervals", () => {
+    const sparse = [
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-02T00:00:00+00:00[UTC]",
+      },
+    ];
+    sparse[2] = {
+      start: "2024-01-03T00:00:00+00:00[UTC]",
+      end: "2024-01-04T00:00:00+00:00[UTC]",
+    };
+    expect(intervalXorAllZoned(sparse)).toEqual([
+      {
+        start: "2024-01-01T00:00:00+00:00[UTC]",
+        end: "2024-01-02T00:00:00+00:00[UTC]",
+      },
+      {
+        start: "2024-01-03T00:00:00+00:00[UTC]",
+        end: "2024-01-04T00:00:00+00:00[UTC]",
+      },
+    ]);
+  });
+
   it("returns both intervals unchanged for two disjoint intervals", () => {
     expect(
       intervalXorAllZoned([

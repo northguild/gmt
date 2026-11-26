@@ -1,13 +1,16 @@
 import type { RoundingMode, SmallestUnit } from "../../internal/temporalTypes";
-import { Temporal } from "../../internal/temporal";
+import {
+  roundingMembers,
+  fractionalDigitsOption,
+} from "../../internal/typedOptions";
 import {
   defaultFractionalDigits,
-  isObject,
+  isOptionsObject,
   resolveDateTimeUnit,
 } from "../../internal";
-import { isValidTimeUnit } from "../../plain";
+import { isTimeUnitName } from "../../internal/unitNames";
 import type { FractionalDigit } from "../../types";
-import { isValidUtc } from "../validate/isValidUtc";
+import { utcInstantOf } from "../../internal/utcInstant";
 
 /**
  * Round a UTC datetime string to the specified unit.
@@ -75,19 +78,23 @@ export function roundUtc(
   },
 ): string {
   try {
-    if (!isObject(options)) return "";
+    if (!isOptionsObject(options)) return "";
 
-    const { roundingIncrement, roundingMode, fractionalSecondDigits } = options;
+    const { roundingIncrement, roundingMode } = roundingMembers(options);
+    const fractionalSecondDigits = fractionalDigitsOption(
+      options.fractionalSecondDigits,
+    );
     // One read (GetOption): resolveDateTimeUnit returns a value that is not a string unchanged.
     const smallestUnit: unknown = resolveDateTimeUnit(
       options.smallestUnit as unknown,
     );
 
     // Temporal Instant.prototype.round: ValidateTemporalUnitValue(smallestUnit, ~time~)
-    if (!isValidUtc(value) || !isValidTimeUnit(smallestUnit)) return "";
+    const instant = utcInstantOf(value);
+
+    if (instant === null || !isTimeUnitName(smallestUnit)) return "";
 
     try {
-      const instant = Temporal.Instant.from(value);
       const result = instant.round({
         smallestUnit,
         roundingIncrement,

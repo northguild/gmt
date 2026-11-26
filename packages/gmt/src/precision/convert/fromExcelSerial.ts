@@ -10,7 +10,7 @@ import {
   MIN_EXCEL_1904_SERIAL,
   NANOSECONDS_PER_MILLISECOND,
 } from "../../internal";
-import { fromNanoseconds } from "./fromNanoseconds";
+import { zonedStringFromEpochNanoseconds } from "../../internal/instantStringFromEpochNanoseconds";
 import type { ExcelDateSystem } from "./toExcelSerial";
 import { isOptionsArgument } from "../../internal/isObject";
 import { optionOrDefault } from "../../internal/optionOrDefault";
@@ -96,7 +96,7 @@ export function fromExcelSerial(
     }
 
     if (system === "1904") {
-      return fromNanoseconds(
+      return zonedStringFromEpochNanoseconds(
         BigInt(dayMilliseconds) * NANOSECONDS_PER_MILLISECOND +
           EXCEL_1904_EPOCH_NANOSECONDS,
       );
@@ -109,7 +109,7 @@ export function fromExcelSerial(
       return "";
     }
 
-    return fromNanoseconds(
+    return zonedStringFromEpochNanoseconds(
       BigInt(dayMilliseconds) * NANOSECONDS_PER_MILLISECOND +
         (dayMilliseconds >= phantomEnd
           ? EXCEL_1900_EPOCH_NANOSECONDS

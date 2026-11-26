@@ -44,7 +44,7 @@ sources:
 metadata:
   type: core
   library: '@northguild/gmt'
-  library_version: '1.21.0'
+  library_version: '1.23.1'
 ---
 
 # GMT Timezone
@@ -186,7 +186,7 @@ converting between time zones, or doing arithmetic that must respect DST.
     `toOffsetInstant` returns IANA casing (`"asia/kolkata"` gives
     `"Asia/Kolkata"`). `:60` is invalid in every spelling (`T`, `t`, space,
     basic format) and every zoned function returns its sentinel for it rather
-    than reading `:59`; only `timescale/` and `gnss/` accept a listed one (for `gnss/`, see the `gmt-gnss` skill).
+    than reading `:59`; only `timescale/`, `gnss/` and `finance/` accept a listed one (for `gnss/`, see the `gmt-gnss` skill; for `finance/`, the `gmt-finance` skill).
 14. **A zoned value formats in its own zone.** `formatZonedDateTime`,
     `formatZonedRange` and `formatZonedToParts` return `""`/`[]` for a
     `timeZone` option. To show an instant in another zone, use
@@ -207,27 +207,26 @@ converting between time zones, or doing arithmetic that must respect DST.
     `addOperatingTime(start, "PT8H", schedule)` is the SLA deadline. Searches
     stop at `within` (default `"P1Y"`) and return `""` past it; `P1D` is not
     open time and returns `""`.
-16. **A zoned string names one instant in every reader.** Temporal writes a
-    zone's offset rounded to the minute, so a zone with a sub-minute offset
-    (`Africa/Monrovia` stood at −00:44:30 until 1972) is written `-00:45`.
-    Every function that reads a moment (`toNanoseconds`, `spanNs`, `Interval`
-    endpoints, `floorToZone`, `getTimeZoneOffset`, and the `transport/` functions that read one) reads an offset written to the minute as the
-    bracketed zone's real offset when it is that offset rounded (TC39
-    `ToTemporalZonedDateTime`, match-minutes):
-    `1960-01-01T00:20:00-00:45[Africa/Monrovia]` is `01:04:30Z`. So a zoned
-    string GMT wrote reads back as the instant it was written for. Otherwise
-    the written offset fixes the instant. A function that reads only the
-    instant does not validate the bracket, and the bracket never supplies its
-    rendering zone. A function that keeps the zone (`isValidZonedDateTime`,
-    `toOffsetInstant`, every `zoned/` function, a zoned
-    `relativeTo`) rejects a bracket that contradicts the offset, and an offset
+16. **Each kind reads one exact pattern.** A plain string carries no annotation, a
+    UTC string is exactly `...Z`, and an instant is `Z` or `±HH:MM[:SS[.f]]` with
+    nothing after it, so `2024-06-15T10:00:00Z[Europe/London]` returns the
+    sentinel from `toNanoseconds`, `spanNs`, `Interval` endpoints, `floorToZone`,
+    `getTimeZoneOffset` and the `transport/` functions that read an instant. A
+    function that keeps the zone (`isValidZonedDateTime`, `toOffsetInstant`,
+    `transitTime`, every `zoned/` function, a zoned `relativeTo`) takes the zoned
+    body and the zone bracket only, and rejects a bracket that contradicts the
+    offset. Temporal writes a zone's offset rounded to the minute, so a zone with
+    a sub-minute offset (`Africa/Monrovia` stood at −00:44:30 until 1972) is
+    written `-00:45`; a zoned reader matches it against the zone's real offset
+    (TC39 `ToTemporalZonedDateTime`, match-minutes):
+    `1960-01-01T00:20:00-00:45[Africa/Monrovia]` is `01:04:30Z`. An offset
     written with seconds must be the zone's offset exactly:
     `-00:45:00[Africa/Monrovia]` is invalid, `-00:44:30[Africa/Monrovia]` is
     valid. Two limits are Temporal's own. A wall time repeated inside a
     sub-minute offset change, written to the minute, reads as its first pass
     (`1952-10-15T23:59:59-11:20[Pacific/Niue]`); write the offset with seconds
-    to name the second. A zoned read refuses a local date of −271821-04-19,
-    which an instant reader accepts; pass that instant in `Z` form.
+    to name the second. A zoned read refuses a local date of −271821-04-19;
+    pass that instant in `Z` form to an instant reader.
 17. **Daylight time is read from the zone's clock changes.**
     `isInDaylightSaving(zoned)` and `hasDaylightSaving(timeZone, { at })`
     apply one rule, GMT's own definition and not the tz database's daylight

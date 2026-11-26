@@ -16,8 +16,14 @@
  * `items` is the full list. `value` is the text in the box. Events, bubbling:
  * `change` with `detail.value` when a choice is made, and `openchange` with
  * `detail.open` when the list opens or shuts, by any route.
+ *
+ * Sound (DOX-G11): an arrow key that moves the active option plays the list step
+ * (`sound/list-step.ts`, Servo by place), as the listbox does: `listNext` for ArrowDown, `listPrev`
+ * for ArrowUp, pitched by the option it lands on. Scrolling the popup ticks through the listbox
+ * itself.
  */
 import { registerEscLayer } from "~/lib/esc-layers";
+import { stepTo } from "~/lib/sound/list-step";
 import { html, setHtml, type SafeHtml } from "../../builders/html";
 import { gateAttr, type GateOption } from "../../builders/gate";
 import { KitElement, type KitDetail } from "../base";
@@ -167,12 +173,13 @@ export class GmtCombobox extends KitElement {
 
   /**
    * Put focus in the input without opening the list; typing or ArrowDown opens it. The current
-   * text is selected, so the first key replaces it rather than extending a zone's name.
+   * text is selected, so the first key replaces it rather than extending a zone's name. The page
+   * never scrolls to it: a field in a fixed sheet is already in view.
    */
   focusInput(): void {
     this.#clearBlur();
     this.#focusOpens = false;
-    this.#input.focus();
+    this.#input.focus({ preventScroll: true });
     this.#input.select();
     this.#focusOpens = true;
   }
@@ -255,7 +262,10 @@ export class GmtCombobox extends KitElement {
     if (this.#shown.length === 0) return;
     const count = this.#shown.length;
     const from = this.#active < 0 ? (step === 1 ? -1 : 0) : this.#active;
-    this.#setActive((from + step + count) % count);
+    const next = (from + step + count) % count;
+    // A step through the list ticks, as in the listbox; a list of one has nowhere to step.
+    if (next !== this.#active) stepTo(step === 1, next, count);
+    this.#setActive(next);
   }
 
   #choose(value: string): void {

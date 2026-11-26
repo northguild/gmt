@@ -1,6 +1,6 @@
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
-import { getWeekNumber } from "../calculate/getWeekNumber";
-import { isValidDate } from "../validate";
+import { weekNumberOf } from "../../internal/weekNumber";
+import { plainDateOf } from "../../internal/inputChecks";
 import { isOptionsArgument } from "../../internal/isObject";
 
 /**
@@ -39,14 +39,15 @@ export function parseWeekFromDate(
       return null;
     }
 
-    if (!isValidDate(value)) {
+    const date = plainDateOf(value);
+    if (date === null) {
       return null;
     }
     const weekStartsOn = resolveWeekStartsOn(optionsArg?.weekStartsOn);
     if (weekStartsOn === null) return null;
 
     try {
-      return getWeekNumber(value, weekStartsOn);
+      return weekNumberOf(date, weekStartsOn);
     } catch {
       return null;
     }

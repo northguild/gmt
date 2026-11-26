@@ -1,7 +1,7 @@
 /**
  * instant: an instant written so it breaks where a person would break it.
  *
- * The date, the time, the fraction of a second and the zone are each unbreakable and a
+ * The date (a four-digit year, or a sign and six digits, `+275760-09-13`), the time, the fraction of a second and the zone are each unbreakable and a
  * `<wbr>` joins them. A hyphen is otherwise a line-break opportunity, so a narrow plate
  * would split the date itself; and a nanosecond time with an offset is wider than a
  * phone's plate on its own.
@@ -16,7 +16,7 @@ import { gateAttr } from "./gate";
 import { html, type SafeHtml } from "./html";
 import styles from "./instant.module.css";
 
-const INSTANT = /^(\d{4}-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/;
+const INSTANT = /^((?:[+-]\d{6}|\d{4})-\d{2}-\d{2})(T[^.]*?)(?:(\.\d+)(.*))?$/;
 
 export function instant(text: string): SafeHtml {
   const m = INSTANT.exec(text);

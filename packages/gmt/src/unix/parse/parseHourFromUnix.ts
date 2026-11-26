@@ -1,4 +1,4 @@
-import { parseUnitFromUnix } from "./parseUnitFromUnix";
+import { unixUnitString } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
 
@@ -43,7 +43,7 @@ export function parseHourFromUnix(
       return "";
     }
 
-    return parseUnitFromUnix(value, "hour", options);
+    return unixUnitString(value, "hour", options);
   } catch {
     // Never throws (Core Rule 3): a hostile
     // argument is invalid input, not an exception.

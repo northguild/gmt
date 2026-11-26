@@ -1,0 +1,24 @@
+/* The ledger's chip: a short mono note on an opaque surface, in a full bevelled border. The gate
+   chips (`ledger-lane`, `bl-plot`) and the clock plot's reason compose it and add their place
+   and wrapping. Tokens only; the text is the ice ink, never a series colour. */
+
+.root {
+  border: 1px solid var(--gmt-border-strong);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  background: var(--gmt-surface);
+  color: var(--gmt-ice);
+  font-family: var(--gmt-font-mono);
+  font-size: var(--gmt-text-xs);
+}
+
+/* A gate's chip: in the row above the days, 10px from its line, on one line. */
+.gate {
+  /* stylelint-disable-next-line property-no-unknown -- CSS Modules `composes` */
+  composes: root;
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 10px;
+  padding: 0 var(--gmt-space-2);
+  white-space: nowrap;
+}

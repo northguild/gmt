@@ -1,0 +1,230 @@
+{
+  "id": "faq-add-month",
+  "question": "How do I add a month to 31 January with GMT?",
+  "brain": {
+    "id": "gemini-3.5-flash-lite",
+    "label": "3.5 Flash-Lite"
+  },
+  "instant": "2026-11-19T07:40:20.98401714Z",
+  "chunks": [
+    {
+      "at": 0,
+      "chunk": {
+        "type": "data-status",
+        "data": {
+          "text": "Asking 3.5 Flash-Lite…"
+        },
+        "transient": true
+      }
+    },
+    {
+      "at": 3414,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 10,
+          "chunkTitles": [
+            "addZoned",
+            "Plain Arithmetic › Add and subtract",
+            "addDate",
+            "Zoned Operations › Add/subtract a duration",
+            "addDateTime",
+            "FiscalCalendar",
+            "Aviation: Message Times › Choosing the month",
+            "addYearMonth",
+            "Helping fix Temporal › Which bugs GMT still works around",
+            "Calendar Boundaries and Zone-Aware Buckets › Week and period identifiers"
+          ],
+          "chunkUrls": [
+            "/reference/zoned/calculate/addZoned",
+            "/guides/core-date-operations/plain-arithmetic/#add-and-subtract",
+            "/reference/plain/calculate/addDate",
+            "/guides/zoned-date-operations/zoned-operations/#addsubtract-a-duration",
+            "/reference/plain/calculate/addDateTime",
+            "/reference/types/FiscalCalendar",
+            "/guides/industries/aviation-message-times/#choosing-the-month",
+            "/reference/plain/calculate/addYearMonth",
+            "/upstream/#which-bugs-gmt-still-works-around",
+            "/guides/zoned-date-operations/calendar-boundaries/#week-and-period-identifiers"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 9,
+            "corpus": 0,
+            "search": 2,
+            "prompt": 0,
+            "brains": 3406
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3406,
+              "outcome": "answered"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "at": 3414,
+      "chunk": {
+        "type": "start",
+        "messageId": "5UNNNPHODKvwOI8s"
+      }
+    },
+    {
+      "at": 3414,
+      "chunk": {
+        "type": "start-step"
+      }
+    },
+    {
+      "at": 3414,
+      "chunk": {
+        "type": "text-start",
+        "id": "0"
+      }
+    },
+    {
+      "at": 3414,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "To add a month to a date like 31 January where the target month has"
+      }
+    },
+    {
+      "at": 3453,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " fewer days, you use `addDate` and control how overflow is handled using the `overflow` option (`\"constrain\""
+      }
+    },
+    {
+      "at": 3517,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "` or `\"reject\"`).\n\n```typescript\nimport { addDate } from \"@northguild/gmt\";\n\n//"
+      }
+    },
+    {
+      "at": 3561,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " Constrain the result to the last day of the target month\naddDate(\"2024-01-31\", { months"
+      }
+    },
+    {
+      "at": 3609,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": ": 1 }, { overflow: \"constrain\" });\n// \"2024-02-2"
+      }
+    },
+    {
+      "at": 3686,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "9\"\n\n// Reject the operation because 31 February does not exist\naddDate(\"2024-01"
+      }
+    },
+    {
+      "at": 3750,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": "-31\", { months: 1 }, { overflow: \"reject\" });\n// \"\"\n```\n\nFor"
+      }
+    },
+    {
+      "at": 3802,
+      "chunk": {
+        "type": "text-delta",
+        "id": "0",
+        "delta": " more details, see the [`addDate`](/reference/plain/calculate/addDate) reference."
+      }
+    },
+    {
+      "at": 3821,
+      "chunk": {
+        "type": "text-end",
+        "id": "0"
+      }
+    },
+    {
+      "at": 3821,
+      "chunk": {
+        "type": "finish-step"
+      }
+    },
+    {
+      "at": 3821,
+      "chunk": {
+        "type": "finish",
+        "finishReason": "stop"
+      }
+    },
+    {
+      "at": 3821,
+      "chunk": {
+        "type": "data-retrieval",
+        "id": "retrieval",
+        "data": {
+          "totalChunks": 1558,
+          "retrievedCount": 10,
+          "chunkTitles": [
+            "addZoned",
+            "Plain Arithmetic › Add and subtract",
+            "addDate",
+            "Zoned Operations › Add/subtract a duration",
+            "addDateTime",
+            "FiscalCalendar",
+            "Aviation: Message Times › Choosing the month",
+            "addYearMonth",
+            "Helping fix Temporal › Which bugs GMT still works around",
+            "Calendar Boundaries and Zone-Aware Buckets › Week and period identifiers"
+          ],
+          "chunkUrls": [
+            "/reference/zoned/calculate/addZoned",
+            "/guides/core-date-operations/plain-arithmetic/#add-and-subtract",
+            "/reference/plain/calculate/addDate",
+            "/guides/zoned-date-operations/zoned-operations/#addsubtract-a-duration",
+            "/reference/plain/calculate/addDateTime",
+            "/reference/types/FiscalCalendar",
+            "/guides/industries/aviation-message-times/#choosing-the-month",
+            "/reference/plain/calculate/addYearMonth",
+            "/upstream/#which-bugs-gmt-still-works-around",
+            "/guides/zoned-date-operations/calendar-boundaries/#week-and-period-identifiers"
+          ],
+          "brainId": "gemini-3.5-flash-lite",
+          "brainLabel": "3.5 Flash-Lite",
+          "timings": {
+            "usage": 9,
+            "corpus": 0,
+            "search": 2,
+            "prompt": 0,
+            "brains": 3406,
+            "firstToken": 3421,
+            "total": 3834
+          },
+          "attempts": [
+            {
+              "brainId": "gemini-3.5-flash-lite",
+              "ms": 3406,
+              "outcome": "answered"
+            }
+          ],
+          "toolCalled": null
+        }
+      }
+    }
+  ]
+}

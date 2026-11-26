@@ -4,8 +4,9 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * The night sky is decoration, so its code is held small: the meteor (`space-fx.ts`) and the sky
- * (`sky.ts` with `sky-math.ts`) are held to 4 KB (the meteor) and 5 KB (the sky, with the Sun and the Moon) minified and gzipped, as bundled alone.
+ * The night sky is decoration, so its code is held small, minified and gzipped as bundled alone:
+ * the meteor (`space-fx.ts`) to 4,096 bytes, and the sky (`sky.ts` with `sky-math.ts`, the Sun and
+ * the Moon, kept off the solid Earth) to 5,120 bytes.
  */
 
 type BuildResult = {

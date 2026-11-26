@@ -2,8 +2,9 @@
  * The contract between the globe's shell and whichever backend is drawing
  * (#289).
  *
- * Two implementations: `webgpu/renderer-webgpu.ts`, and `canvas2d/` as the
- * fallback for a browser with no WebGPU. Only one of them is ever downloaded —
+ * Two backends: `webgpu/renderer-webgpu.ts`, and `canvas2d/` as the fallback for a browser
+ * with no WebGPU. The fallback draws in a worker where the browser allows it
+ * (`canvas2d/renderer-canvas2d-worker.ts`) and on the main thread otherwise. Only one of them is ever downloaded —
  * the shell reaches each through a dynamic `import()` — so this file holds no
  * backend code and imports neither.
  *
@@ -91,6 +92,11 @@ export interface RendererInit {
 
 export interface GlobeRenderer {
   readonly kind: RendererKind;
+  /**
+   * True when the backend draws in a worker. The page cannot take its canvas back, so if the
+   * worker dies the shell replaces it with the main-thread backend instead of retrying.
+   */
+  readonly offThread?: boolean;
   /** The element the shell binds pointer, wheel and key handlers to. */
   readonly canvas: HTMLCanvasElement;
   /**

@@ -1,5 +1,4 @@
-import { isValidZonedDateTime } from "../validate";
-import { zonedDateTimeFrom } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Convert an ISO 8601 zoned datetime string to a UTC Instant string (ISO).
@@ -14,12 +13,13 @@ import { zonedDateTimeFrom } from "../../internal";
  * @example convertZonedToUtc("invalid") // ""
  */
 export function convertZonedToUtc(value: string): string {
-  if (!isValidZonedDateTime(value)) {
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) {
     return "";
   }
 
   try {
-    return zonedDateTimeFrom(value).toInstant().toString();
+    return zonedDateTime.toInstant().toString();
   } catch {
     return "";
   }

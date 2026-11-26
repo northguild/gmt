@@ -21,7 +21,9 @@ describe("no-throw harness coverage", () => {
       expect.arrayContaining([
         "calendar",
         "duration",
+        "finance",
         "gnss",
+        "healthcare",
         "instant",
         "intermodal",
         "interval",
@@ -176,6 +178,15 @@ describe("signatureOf", () => {
     expect(signatureOf(source, "g").declared).toEqual({
       kinds: ["object"],
       nullable: false,
+    });
+  });
+
+  it("resolves a named union whose members carry JSDoc comments (NotamValidity)", () => {
+    const source =
+      "export function n(value: string): NotamValidity | null {\n  return null;\n}";
+    expect(signatureOf(source, "n").declared).toEqual({
+      kinds: ["object"],
+      nullable: true,
     });
   });
 });

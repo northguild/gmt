@@ -1,5 +1,5 @@
-import { getLocaleWeekendDays, zonedDateTimeFrom } from "../../internal";
-import { isValidZonedDateTime } from "../validate";
+import { getLocaleWeekendDays } from "../../internal";
+import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 
 /**
  * Return true when `value`'s local calendar day falls on a weekend for `locale`.
@@ -31,13 +31,13 @@ export function isZonedWeekend(
   value: string,
   locale: string | string[],
 ): boolean {
-  if (!isValidZonedDateTime(value)) return false;
+  const zonedDateTime = zonedDateTimeOf(value);
+  if (zonedDateTime === null) return false;
 
   const weekendDays = getLocaleWeekendDays(locale);
   if (!weekendDays) return false;
 
   try {
-    const zonedDateTime = zonedDateTimeFrom(value);
     return weekendDays.has(zonedDateTime.dayOfWeek);
   } catch {
     return false;

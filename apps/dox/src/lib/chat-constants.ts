@@ -70,7 +70,7 @@ import type { DoxToolName } from "./dox-tools";
  */
 export const BRAINS = [
   // Workers AI — chosen by live probe through the Worker
-  // (`scripts/probe-brains.ts`; results in context/dox/built.md, "Brains and
+  // (`scripts/eval-live.ts`; results in context/dox/built/tier-6-brains.md, "Brains and
   // budget"): widget calls, refusal of the absent question, link discipline,
   // time to first output and Neurons a question.
   //
@@ -86,7 +86,7 @@ export const BRAINS = [
     model: "@cf/google/gemma-4-26b-a4b-it",
     enableThinking: false,
     maxOutputTokens: 2048,
-    dailyLimit: 40,
+    dailyLimit: 15,
   },
   {
     id: "cf-glm-4.7-flash",
@@ -95,7 +95,7 @@ export const BRAINS = [
     model: "@cf/zai-org/glm-4.7-flash",
     enableThinking: false,
     maxOutputTokens: 2048,
-    dailyLimit: 40,
+    dailyLimit: 20,
   },
   // Gemini — Flash-Lite first: in the probe through the Worker it answered
   // 5 questions of 5 correctly at 2.9 s mean, against 6–10 s for the full
@@ -217,12 +217,15 @@ export interface Brain {
  *   are out — `worker/brains.ts` retires the whole provider at once rather than
  *   spending a doomed request per model to rediscover it.
  * - **It is metered in Neurons, which scale with tokens, not requests.** A Dox
- *   prompt measured 10–19k input tokens a question in the live probe of
- *   2026-10-27, nearly all of it input: Gemma 4 26B costs ~130–180 Neurons a
- *   question and GLM 4.7 Flash ~80–110. Both `dailyLimit`s are a share of the
- *   one pool — 40 of each is about 8,500–11,600 Neurons — so the badge's sum
- *   stays near what the pool actually buys rather than each claiming all of
- *   it.
+ *   prompt is 29–36k input tokens a question, nearly all of it input: a
+ *   `showGlobe` question measured 29,238 input tokens and 33 output tokens,
+ *   267 Neurons on Gemma 4 26B, on 2026-11-18, and the largest live prompt is
+ *   about a quarter bigger. That puts Gemma 4 26B at ~270–350 Neurons a
+ *   question and GLM 4.7 Flash at ~160–200. Both `dailyLimit`s are a share of
+ *   the one pool: 15 Gemma questions are 4,050–5,250 Neurons and 20 GLM
+ *   questions are 3,200–4,000, so the two badges together are 7,250–9,250
+ *   Neurons, at or under the 10,000 the pool holds, rather than each claiming
+ *   all of it.
  *
  * On the Workers **Free** plan, exceeding this fails with an error — it cannot
  * bill. That is the property that keeps Dox 100% free, and it would stop being
@@ -254,9 +257,9 @@ export function findBrain(id: string): Brain | undefined {
  *
  * Sized against the shared pool rather than picked for feel. Three Gemini
  * brains at 20 requests each is ~60 per day for *everyone*; the Workers AI pool
- * adds ~80 more, at the ~130 Neurons a question Gemma 4 26B measured. Against
- * ~140 a cap of 5 lets roughly 28 readers get a full turn before the day is
- * spent. Left at 5 until real
+ * adds ~35 more, at the ~270–350 Neurons a question Gemma 4 26B measured.
+ * Against ~95 a cap of 5 lets roughly 19 readers get a full turn before the day
+ * is spent. Left at 5 until real
  * traffic confirms that figure — a cap raised on a twenty-question probe is the
  * drift this comment warns about. Five questions is already more than a typical
  * reader asks of a documentation bot in one sitting.
@@ -335,6 +338,11 @@ export const EXAMPLE_AREAS = [
   { id: "transport", label: "Transport" },
   { id: "intermodal", label: "Intermodal" },
   { id: "gnss", label: "GNSS" },
+  { id: "finance", label: "Finance" },
+  { id: "healthcare", label: "Healthcare" },
+  { id: "aviation", label: "Aviation" },
+  { id: "rail", label: "Rail" },
+  { id: "iot", label: "IoT" },
 ] as const;
 
 type ExampleArea = (typeof EXAMPLE_AREAS)[number]["id"];
@@ -610,7 +618,7 @@ export const CHAT_STARTERS: readonly {
     // "weekend to Friday" is the preceding roll, which the question names
     // because there is no default.
     args: {
-      anchor: "2024-06-17T18:00:00+02:00[Europe/Amsterdam]",
+      anchor: "2024-06-17T18:00:00+02:00",
       timeZone: "Europe/Amsterdam",
       cutoffs: [
         { name: "gate-in", offset: "P2D", atLocalTime: "17:00" },
@@ -628,7 +636,7 @@ export const CHAT_STARTERS: readonly {
     // land an hour apart. A spring-forward date would make PT48H and 17:00
     // coincide.
     args: {
-      anchor: "2024-04-08T18:00:00+10:00[Australia/Sydney]",
+      anchor: "2024-04-08T18:00:00+10:00",
       timeZone: "Australia/Sydney",
       days: 2,
       atLocalTime: "17:00",
@@ -655,8 +663,8 @@ export const CHAT_STARTERS: readonly {
     args: {
       pairs: [
         {
-          planned: "2024-06-14T09:00:00+01:00[Europe/London]",
-          actual: "2024-06-14T09:15:00+01:00[Europe/London]",
+          planned: "2024-06-14T09:00:00+01:00",
+          actual: "2024-06-14T09:15:00+01:00",
         },
       ],
       late: "PT15M",
@@ -734,6 +742,14 @@ export const CHAT_STARTERS: readonly {
       counter: "IRN-LNAV",
       firmwareNotBefore: "2020-01-01T00:00:00Z",
     },
+  },
+  {
+    text: "An HL7 time of 20240615103000, no offset, from a Kolkata facility. What instant is it?",
+    widget: "showHl7TimestampReader",
+    area: "healthcare",
+    // The question names the IANA zone, so the seed carries it as a literal
+    // field; the value states no zone.
+    args: { value: "20240615103000", zone1: "Asia/Kolkata" },
   },
   {
     text: "How many leap seconds were inserted from 2000 to 2024, and what was TAI - UTC in 2000?",
@@ -834,11 +850,11 @@ export const CHAT_STARTERS: readonly {
     args: { id: "017f22e2-79b0-7cc3-98c4-dc0c0c07398f" },
   },
   {
-    text: "How is 2024-01-01T09:00:00+09:00[Asia/Tokyo] stored in Parquet, Arrow and protobuf?",
+    text: "How is 2024-01-01T09:00:00+09:00 stored in Parquet, Arrow and protobuf?",
     widget: "showColumnTimestampBridge",
     area: "core",
     args: {
-      value: "2024-01-01T09:00:00+09:00[Asia/Tokyo]",
+      value: "2024-01-01T09:00:00+09:00",
       unit: "second",
       zone: "Asia/Tokyo",
     },
@@ -848,6 +864,12 @@ export const CHAT_STARTERS: readonly {
     widget: "showMoroccoClockChange",
     area: "core",
     args: { zone: "Africa/Casablanca" },
+  },
+  {
+    text: "Which US states want to stop changing their clocks, and which already have?",
+    widget: "showUsSunshineProtectionAct",
+    area: "core",
+    args: { view: { kind: "proposals" } },
   },
   {
     text: "When does a `30 1 * * *` cron job run on the night the clocks change in Europe/London?",
@@ -877,6 +899,113 @@ export const CHAT_STARTERS: readonly {
     widget: "showDatabaseTimestampReader",
     area: "core",
     args: { form: "postgresql-timestamptz", value: "2024-03-15 14:30:00+00" },
+  },
+  {
+    text: "What time is @4000000037c219bf2ef02e94?",
+    widget: "showTai64nLogReader",
+    area: "core",
+    args: { values: "@4000000037c219bf2ef02e94" },
+  },
+  {
+    text: "Is the FIX timestamp 20161231-23:59:60.500 a real second, and at what precision?",
+    widget: "showFixTimestampReader",
+    area: "finance",
+    args: { stamp: "20161231-23:59:60.500" },
+  },
+  {
+    text: "How far is TT ahead of UTC at 2026-01-01T00:00:00Z, and how far has TCG drifted from TT?",
+    widget: "showTerrestrialTimeStack",
+    area: "core",
+    args: { value: "2026-01-01T00:00:00Z" },
+  },
+  {
+    text: "Does the SSIM date 01JAN26 read the same as the locale pattern parser's reading, with a window from 2000?",
+    widget: "showSsimDateReader",
+    area: "aviation",
+    args: { value: "01JAN26", yearWindow: 2000, locale: "fr-FR" },
+  },
+  {
+    text: "A METAR says 302350Z and reached us at 00:05 UTC on 1 July 2024. Which day was it observed?",
+    widget: "showReportTimeResolver",
+    area: "aviation",
+    args: { group: "302350Z", reference: "2024-07-01T00:05:00Z" },
+  },
+  {
+    text: "What is the Julian Date of 2026-01-01T12:00:00Z on TT, and why isn't it a whole number?",
+    widget: "showJulianDayCounter",
+    area: "core",
+    args: { value: "2026-01-01T12:00:00Z", read: "instant", scale: "TT" },
+  },
+  {
+    text: "How far does a single Julian Date drift at 2026-06-15T13:47:12.345678912Z?",
+    widget: "showDoublePrecisionMeter",
+    area: "core",
+    args: { value: "2026-06-15T13:47:12.345678912Z" },
+  },
+  {
+    text: "What instant is the CCSDS time code 2016-366T23:59:60.5Z?",
+    widget: "showCcsdsTimeCodeDecoder",
+    area: "core",
+    args: { code: "2016-366T23:59:60.5Z" },
+  },
+  {
+    text: "Which date is CCSDS Code B day 061 in 2024, and in 2026?",
+    widget: "showCodeBDayRuler",
+    area: "core",
+    args: { year: 2024, compareYear: 2026, day: 61 },
+  },
+  {
+    text: "Is 2024-06 a valid FHIR instant?",
+    widget: "showFhirDateChecker",
+    area: "healthcare",
+    // The question gives the value exactly; the widget reads it, so nothing is padded here.
+    args: { value: "2024-06" },
+  },
+  {
+    text: "Which year does SWIFT read the value date 350615 as, and is 750615 a valid value date?",
+    widget: "showSwiftValueDateReader",
+    area: "finance",
+    args: { value: "350615" },
+  },
+  {
+    text: "Is the GTFS stop time 25:35:00 still part of today's service?",
+    widget: "showGtfsTimeReader",
+    area: "rail",
+    args: { value: "25:35:00" },
+  },
+  {
+    text: "GTFS stop 08:00:00 on 20260329 in Berlin: what instant is it, and why does midnight plus 8 h say 09:00?",
+    widget: "showGtfsServiceDayClock",
+    area: "rail",
+    args: { preset: "spring-forward" },
+  },
+  {
+    text: "A GTFS trip from Madrid to Lisbon on 15 June 2026: which stops does stop_timezone move, and by how much?",
+    widget: "showGtfsTripBoard",
+    area: "rail",
+    args: { preset: "border" },
+  },
+  {
+    text: "A PTP sensor stamped 1704067237 seconds with currentUtcOffset 37. What UTC time is that?",
+    widget: "showPtpClockConverter",
+    area: "iot",
+    args: { seconds: "1704067237", nanoseconds: "0", offset: "37" },
+  },
+  {
+    text: "Our Kolkata office schedule gives no open hours at all. Is it closed, or is the schedule broken?",
+    widget: "showScheduleChecker",
+    area: "core",
+    args: { preset: "kolkata-annotated-holiday" },
+  },
+  {
+    text: "A Tokyo desk is open 09:00–18:00 on weekdays. A ticket lands Friday 17:30. When is an 8-open-hour reply due?",
+    widget: "showOpeningHoursBoard",
+    area: "core",
+    args: {
+      preset: "tokyo-desk",
+      from: "2024-06-14T17:30:00+09:00",
+      duration: "PT8H",
+    },
   },
 ];
 

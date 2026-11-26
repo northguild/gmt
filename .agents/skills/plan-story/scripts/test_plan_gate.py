@@ -46,6 +46,7 @@ def problems(root: Path, story: str = "FIX-1") -> list[str]:
     [
         ("feature/197-mar-16-gpstoutc-utctogps", "MAR-16"),
         ("feature/289-dox-e1c-chat-tools", "DOX-E1C"),
+        ("feature/490-cnry-1-safari-icu", "CNRY-1"),
         ("fix/12-core-8-range-edges", "CORE-8"),
         ("feature/304-dox-three-intermodal-tools", None),
         ("main", None),
@@ -108,6 +109,17 @@ def test_dox_story_uses_dox_specs_only(tmp_path: Path) -> None:
     write(tmp_path, "context/dox/specs/dox-e1c/index.md", index(links="[t](t.md)"))
     write(tmp_path, "context/dox/specs/dox-e1c/t.md", "tool\n")
     assert problems(tmp_path, "DOX-E1C") == []
+
+
+def test_canary_story_uses_canary_specs(tmp_path: Path) -> None:
+    write(tmp_path, f"{LIB}/index.md", index())
+    write(tmp_path, f"{LIB}/a.md", "slice\n")
+    assert any("context/canary/specs/CNRY-1/index.md" in p for p in problems(tmp_path, "CNRY-1"))
+    write(tmp_path, "context/canary/specs/CNRY-1/index.md", index(dox=""))
+    write(tmp_path, "context/canary/specs/CNRY-1/a.md", "slice\n")
+    assert any("no dox decision" in p for p in problems(tmp_path, "CNRY-1"))
+    write(tmp_path, "context/canary/specs/CNRY-1/index.md", index())
+    assert problems(tmp_path, "CNRY-1") == []
 
 
 def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

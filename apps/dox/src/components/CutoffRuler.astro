@@ -46,6 +46,7 @@ const html = renderCutoffRulerTemplate("cutoff-ruler", {}).value;
   import { mountCutoffRuler } from "../lib/cutoff-ruler-mount";
   import { showUnavailable } from "../lib/widget-mount";
   import { seedFromLocation } from "../lib/widget-permalink";
+  import { offerPageTool } from "../lib/webmcp/offer";
 
   if (typeof window !== "undefined") {
     const seed = seedFromLocation("cutoffruler");
@@ -54,5 +55,9 @@ const html = renderCutoffRulerTemplate("cutoff-ruler", {}).value;
         showUnavailable(el, error),
       );
     });
+    void offerPageTool(
+      "cutoff-ruler",
+      () => import("../lib/webmcp/tools/cutoff-ruler"),
+    );
   }
 </script>

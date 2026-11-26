@@ -1,6 +1,7 @@
+import { plainTimeOf } from "../../internal/inputChecks";
+import { isTimeUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
 import { getUnitSpan, resolveDateTimeUnit } from "../../internal";
-import { isValidTime, isValidTimeUnit } from "../validate";
 
 /**
  * Count how many `unit` boundaries a time interval crosses.
@@ -35,7 +36,11 @@ export function intervalCountTime(
     return null;
   }
 
-  if (!isValidTime(start) || !isValidTime(end)) {
+  const startVal = plainTimeOf(start);
+
+  const endVal = plainTimeOf(end);
+
+  if (startVal === null || endVal === null) {
     return null;
   }
 
@@ -45,14 +50,11 @@ export function intervalCountTime(
 
   const resolvedUnit = resolveDateTimeUnit(unit);
 
-  if (!isValidTimeUnit(resolvedUnit)) {
+  if (!isTimeUnitName(resolvedUnit)) {
     return null;
   }
 
   try {
-    const startVal = Temporal.PlainTime.from(start);
-    const endVal = Temporal.PlainTime.from(end);
-
     const order = Temporal.PlainTime.compare(startVal, endVal);
 
     if (order > 0) {

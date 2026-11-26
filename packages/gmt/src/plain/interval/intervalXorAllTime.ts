@@ -1,6 +1,6 @@
+import { timeIntervalOf } from "../../internal/intervalChecks";
 import { Temporal } from "../../internal/temporal";
 import { halfOpenXor } from "../../internal";
-import { isValidTimeInterval } from "./validate";
 import { isObject } from "../../internal/isObject";
 
 /**
@@ -48,22 +48,25 @@ export function intervalXorAllTime(
       return [];
     }
 
-    if (
-      !intervals.every(
-        (interval) =>
-          isObject(interval) &&
-          isValidTimeInterval(interval.start, interval.end),
-      )
-    ) {
-      return [];
+    const parsed: Array<{
+      start: Temporal.PlainTime;
+      end: Temporal.PlainTime;
+    }> = [];
+    for (let index = 0; index < intervals.length; index++) {
+      if (!(index in intervals)) {
+        continue;
+      }
+      const interval = intervals[index];
+      const bounds = isObject(interval)
+        ? timeIntervalOf(interval.start, interval.end)
+        : null;
+      if (bounds === null) {
+        return [];
+      }
+      parsed[index] = { start: bounds[0], end: bounds[1] };
     }
 
     try {
-      const parsed = intervals.map((interval) => ({
-        start: Temporal.PlainTime.from(interval.start),
-        end: Temporal.PlainTime.from(interval.end),
-      }));
-
       return halfOpenXor(parsed, Temporal.PlainTime.compare).map(
         ({ start, end }) => ({
           start: start.toString(),

@@ -36,8 +36,12 @@
   .row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  /* The browser card holds a table, so it gets 4/9 of the row rather than 2/5. */
+/* The browser card holds a table with two offset columns whose heads read as words, so it gets 4/9
+   of the row rather than 2/5, and only once that is at least 32rem. Narrower, Key points stacks
+   above it and the card takes the full width. */
+@container gmt-clockcheck (min-width: 73rem) {
   .top {
     grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
   }

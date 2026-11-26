@@ -8,6 +8,8 @@ import {
   badSitemapLocs,
   badUrlsInCss,
   badUrlsInHtml,
+  pageLinksWithoutSlash,
+  pageLinksWithoutSlashInMarkdown,
   type BaseFailure,
 } from "./build-utils/dist-base";
 import { distDirOrSkip } from "./dist-dir";
@@ -67,15 +69,52 @@ function built(): { root: string; pages: string } | null {
 }
 
 describe("the built site keeps the /gmt base", () => {
-  it("dist holds exactly gmt/ and _redirects", () => {
+  it("dist holds exactly gmt/, _headers and _redirects", () => {
     const b = built();
     if (b === null) return;
     const { root, pages } = b;
-    expect(readdirSync(root).sort()).toEqual(["_redirects", "gmt"]);
+    expect(readdirSync(root).sort()).toEqual(["_headers", "_redirects", "gmt"]);
     expect(existsSync(resolve(pages, "index.html"))).toBe(true);
     expect(existsSync(resolve(pages, "404.html"))).toBe(true);
     expect(existsSync(resolve(root, "_redirects"))).toBe(true);
     expect(existsSync(resolve(pages, "_redirects"))).toBe(false);
+    expect(existsSync(resolve(root, "_headers"))).toBe(true);
+    expect(existsSync(resolve(pages, "_headers"))).toBe(false);
+  });
+
+  it("every _headers rule sits under /gmt/", () => {
+    const b = built();
+    if (b === null) return;
+    // A rule path starts a line; its headers are indented, and a comment starts with `#`.
+    const paths = readFileSync(resolve(b.root, "_headers"), "utf8")
+      .split("\n")
+      .filter((line) => line !== "" && !/^\s/.test(line) && line[0] !== "#");
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((path) => !path.startsWith("/gmt/"))).toEqual([]);
+  });
+
+  it("every file under _astro/ has a content hash in its name, so its immutable header is true", () => {
+    const b = built();
+    if (b === null) return;
+    const names = readdirSync(resolve(b.pages, "_astro"));
+    expect(names.length).toBeGreaterThan(0);
+    // `name.<hash>.ext`: Vite's hash is at least five characters of the URL-safe alphabet.
+    expect(
+      names.filter((name) => !/^.+\.[A-Za-z0-9_-]{5,}\.[a-z0-9]+$/.test(name)),
+    ).toEqual([]);
+  });
+
+  it("the only .txt files are the llms files, which the noindex rule covers", () => {
+    const b = built();
+    if (b === null) return;
+    const txt = walk(b.pages, (n) => n.endsWith(".txt"))
+      .map((file) => relative(b.pages, file).split(sep).join("/"))
+      .sort();
+    expect(
+      txt.filter((file) => !/(^|\/)llms(-full)?\.txt$/.test(file)),
+    ).toEqual([]);
+    expect(txt).toContain("llms.txt");
+    expect(txt).toContain("llms-full.txt");
   });
 
   it("no HTML page carries a URL without the base", () => {
@@ -85,6 +124,14 @@ describe("the built site keeps the /gmt base", () => {
     const html = walk(pages, (n) => n.endsWith(".html"));
     expect(html.length).toBeGreaterThan(100);
     expect(scan(pages, html, badUrlsInHtml)).toEqual([]);
+  });
+
+  it("every link to a page ends in the slash the host serves it at", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const html = walk(pages, (n) => n.endsWith(".html"));
+    expect(scan(pages, html, pageLinksWithoutSlash)).toEqual([]);
   });
 
   it("no stylesheet carries a URL without the base, and the Michroma font is inline", () => {
@@ -126,6 +173,18 @@ describe("the built site keeps the /gmt base", () => {
     expect(scan(pages, text, badLinksInMarkdown)).toEqual([]);
   });
 
+  it("every page link in a .md twin, llms.txt or llms-full.txt ends in the slash", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const text = [
+      ...walk(pages, (n) => n.endsWith(".md")),
+      ...walk(pages, (n) => /^llms(-full)?\.txt$/.test(n)),
+    ];
+    expect(text.length).toBeGreaterThan(100);
+    expect(scan(pages, text, pageLinksWithoutSlashInMarkdown)).toEqual([]);
+  });
+
   it("every page carries one same-tab NorthGuild link with the inlined mark", () => {
     const b = built();
     if (b === null) return;
@@ -137,22 +196,26 @@ describe("the built site keeps the /gmt base", () => {
       // The 404 page is exempt only when it has no header at all.
       if (basename(file) === "404.html" && !/class="header"/.test(html))
         continue;
+      // The header's home link is the one named `NorthGuild home`; a page may also link to
+      // northguild.dev in its text (the deck's QR caption), which is not the home link.
       const anchors = [
         ...html.matchAll(
           /<a\b[^>]*\shref="https:\/\/northguild\.dev\/"[^>]*>([\s\S]*?)<\/a>/g,
         ),
-      ];
+      ].filter(([tag]) =>
+        /\saria-label="NorthGuild home"/.test(
+          tag.slice(0, tag.indexOf(">") + 1),
+        ),
+      );
       const fail = (why: string) =>
         failures.push({ file, value: "https://northguild.dev/", where: why });
       if (anchors.length !== 1) {
-        fail(`${anchors.length} NorthGuild anchors, expected 1`);
+        fail(`${anchors.length} NorthGuild home links, expected 1`);
         continue;
       }
       const [tag, inner] = [anchors[0][0], anchors[0][1]];
       const open = tag.slice(0, tag.indexOf(">") + 1);
       if (/\starget=/.test(open)) fail("opens in a new tab");
-      if (!/\saria-label="NorthGuild home"/.test(open))
-        fail("no NorthGuild home name");
       const svg = /<svg\b[^>]*aria-hidden="true"[^>]*>([\s\S]*?)<\/svg>/.exec(
         inner,
       );
@@ -226,6 +289,21 @@ describe("the built site keeps the /gmt base", () => {
       ))
         failures.push({ ...hit, file: f });
     expect(report(pages, failures)).toEqual([]);
+  });
+
+  it("every built page is at most 1 MiB uncompressed, the most a Messages preview reads", () => {
+    const b = built();
+    if (b === null) return;
+    const { pages } = b;
+    const sizes = walk(pages, (n) => n.endsWith(".html"))
+      .map((file) => ({ file, bytes: statSync(file).size }))
+      .sort((a, c) => c.bytes - a.bytes);
+    expect(sizes.length).toBeGreaterThan(0);
+    const [largest] = sizes;
+    expect(
+      largest.bytes,
+      `${relative(pages, largest.file)} is the largest page`,
+    ).toBeLessThanOrEqual(1_048_576);
   });
 
   it("no route begins with /gmt, so withBase leaves a /gmt/… path alone", () => {

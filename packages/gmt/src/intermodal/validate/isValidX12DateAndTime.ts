@@ -1,4 +1,4 @@
-import { parseX12DateAndTime } from "../parse/parseX12DateAndTime";
+import { x12DateAndTimeText } from "../../internal/ediDateTimeFields";
 
 /**
  * Return true when the date and the time of an X12 segment, sent as two elements, together
@@ -11,7 +11,7 @@ import { parseX12DateAndTime } from "../parse/parseX12DateAndTime";
  * | [337](https://www.stedi.com/edi/x12-005010/element/337) | Time | "Time expressed in 24-hour clock time as follows: HHMM, or HHMMSS, or HHMMSSD, or HHMMSSDD" |
  *
  * - True exactly when `parseX12DateAndTime` returns a date-time for the same arguments: the
- *   validator calls the parser, so the two cannot disagree.
+ *   validator and the parser share one core, so the two cannot disagree.
  * - **Both elements are required.** A missing or empty date or time is false: check a date alone
  *   with `isValidX12Date(value, "D8")` and a time alone with `isValidX12Time`.
  * - Checks the calendar as well as the shape: 29 February 2023, 31 June, hour 24 and minute or
@@ -32,5 +32,5 @@ import { parseX12DateAndTime } from "../parse/parseX12DateAndTime";
  * @example isValidX12DateAndTime("240615", "1430") // false (the date element has a four-digit year)
  */
 export function isValidX12DateAndTime(date: string, time: string): boolean {
-  return parseX12DateAndTime(date, time) !== "";
+  return x12DateAndTimeText(date, time) !== "";
 }

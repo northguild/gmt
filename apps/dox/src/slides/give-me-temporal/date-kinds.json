@@ -1,0 +1,32 @@
+{
+  "code": "export function nextDay(input) {\n  const d = new Date(input);\n  d.setDate(d.getDate() + 1);\n  return d.toISOString().slice(0, 10);\n}",
+  "want": "2027-03-28",
+  "kinds": [
+    { "id": "date", "kind": "A date", "call": "nextDay(\"2027-03-27\")" },
+    {
+      "id": "local",
+      "kind": "A local time",
+      "call": "nextDay(\"2027-03-27T00:00\")"
+    },
+    {
+      "id": "utc",
+      "kind": "A UTC time",
+      "call": "nextDay(\"2027-03-27T00:00Z\")"
+    },
+    {
+      "id": "offset",
+      "kind": "A time with an offset",
+      "call": "nextDay(\"2027-03-27T00:00+02:00\")"
+    },
+    {
+      "id": "zoned",
+      "kind": "A time with a zone",
+      "call": "nextDay(\"2027-03-27T00:00+02:00[Europe/Helsinki]\")"
+    },
+    {
+      "id": "object",
+      "kind": "A Date object",
+      "call": "nextDay(new Date(2027, 2, 27))"
+    }
+  ]
+}

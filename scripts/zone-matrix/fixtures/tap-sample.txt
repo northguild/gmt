@@ -1,0 +1,13 @@
+TAP version 13
+# add
+ok 1 .date()
+ok 2 .month()
+ok 3 .year()
+ok 4 .hour()
+ok 5 .minute()
+ok 6 .day()
+# diff
+not ok 9 .diff() across the date line
+  ---
+  operator: equal
+  ...
