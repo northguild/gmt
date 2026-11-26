@@ -10,6 +10,7 @@ import {
   SOURCES,
   discImage,
   fitDisc,
+  flattenDisc,
   remapAlbedo,
 } from "./prepare-sky-bodies.mjs";
 
@@ -322,6 +323,55 @@ describe("sky-sun.webp", () => {
       expect(at(127.5 + dx, 127.5 + dy)).toBeLessThan(0.75 * centre);
   });
 
+  it("has no structure wider than a sunspot group past the limb darkening: no tile grid", async () => {
+    /* Each pixel over its ring's median, averaged over 16 px blocks inside 0.85 radii, spots and faculae left out. The mosaic's tiles once spread these from -3% to +4%. */
+    const { data, info } = await decodedSun();
+    const radius = 128 / sunSidecar.disc.crop;
+    const rho = (x: number, y: number) =>
+      Math.hypot(x + 0.5 - 128, y + 0.5 - 128);
+    const rings = Array.from({ length: Math.ceil(radius) }, (): number[] => []);
+    for (let y = 0; y < 256; y++)
+      for (let x = 0; x < 256; x++)
+        if (rho(x, y) < radius - 1)
+          rings[Math.floor(rho(x, y))]!.push(
+            data[(y * 256 + x) * info.channels]!,
+          );
+    const median = rings.map(
+      (ring) => ring.sort((a, b) => a - b)[ring.length >> 1]!,
+    );
+    for (let by = 0; by < 256; by += 16)
+      for (let bx = 0; bx < 256; bx += 16) {
+        let sum = 0;
+        let n = 0;
+        for (let y = by; y < by + 16; y++)
+          for (let x = bx; x < bx + 16; x++) {
+            if (rho(x, y) >= 0.85 * radius) continue;
+            const q =
+              data[(y * 256 + x) * info.channels]! /
+              median[Math.floor(rho(x, y))]!;
+            if (Math.abs(q - 1) < 0.07) {
+              sum += q;
+              n++;
+            }
+          }
+        if (n > 200) expect(Math.abs(sum / n - 1)).toBeLessThan(0.015);
+      }
+  });
+
+  it("has its white at 255: the brightest 0.1% of the disc", async () => {
+    const { data, info } = await decodedSun();
+    const radius = 128 / sunSidecar.disc.crop;
+    const inside: number[] = [];
+    for (let y = 0; y < 256; y++)
+      for (let x = 0; x < 256; x++)
+        if (Math.hypot(x + 0.5 - 128, y + 0.5 - 128) < radius - 1)
+          inside.push(data[(y * 256 + x) * info.channels]!);
+    inside.sort((a, b) => a - b);
+    expect(
+      inside[Math.floor(0.999 * (inside.length - 1))],
+    ).toBeGreaterThanOrEqual(252);
+  });
+
   it("is black outside the disc: the four corners", async () => {
     const { data, info } = await decodedSun();
     for (const [x, y] of [
@@ -373,5 +423,53 @@ describe("fitDisc and discImage", () => {
     expect(grey[0]).toBe(0);
     expect(grey[size * size - 1]).toBe(0);
     expect(grey[(size / 2) * size + size / 2]).toBeGreaterThan(175);
+  });
+
+  it("scales the disc's white to 255", () => {
+    const size = 64;
+    const grey = discImage(new Uint8Array(size * size * 3).fill(120), size);
+    expect(grey[(size / 2) * size + size / 2]).toBe(255);
+  });
+});
+
+describe("flattenDisc", () => {
+  /** A limb-darkened disc filling the crop, 2% brighter on the left half (a tile's step), with one dark spot. */
+  const size = 128;
+  const radius = size / 2.04;
+  const tiled = () => {
+    const luma = new Uint8Array(size * size);
+    for (let p = 0; p < luma.length; p++) {
+      const x = (p % size) + 0.5 - size / 2;
+      const y = Math.floor(p / size) + 0.5 - size / 2;
+      const rho = Math.hypot(x, y) / radius;
+      if (rho > 1) continue;
+      const spot = Math.hypot(x - 10, y + 8) < 3 ? 0.3 : 1;
+      luma[p] = Math.round(
+        200 *
+          (1 - 0.5 * (1 - Math.sqrt(1 - rho * rho))) *
+          (x < 0 ? 1.02 : 1) *
+          spot,
+      );
+    }
+    return luma;
+  };
+  const at = (img: ArrayLike<number>, x: number, y: number) =>
+    img[(size / 2 + y) * size + size / 2 + x]!;
+
+  it("takes out the step between the halves and keeps the limb darkening and the spot", () => {
+    const before = tiled();
+    const after = flattenDisc(before, size);
+    expect(at(before, -20, 20) / at(before, 20, 20)).toBeGreaterThan(1.015);
+    expect(Math.abs(at(after, -20, 20) / at(after, 20, 20) - 1)).toBeLessThan(
+      0.006,
+    );
+    expect(at(after, 0, -55)).toBeLessThan(0.8 * at(after, 0, 0));
+    expect(at(after, 10, -8)).toBeLessThan(0.4 * at(after, 0, 0));
+  });
+
+  it("leaves the pixels past the limb alone", () => {
+    const after = flattenDisc(tiled(), size);
+    expect(after[0]).toBe(0);
+    expect(after[size * size - 1]).toBe(0);
   });
 });

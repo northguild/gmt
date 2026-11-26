@@ -5,8 +5,8 @@
  * reader can use or read.
  *
  * Placements, per page:
- *   - `/` and `/tools/zoned-earth/`: the last button of the globe's control stack (the fifth on `/`,
- *     where the zone finder's magnifier comes before it; the fourth on the tool page);
+ *   - `/` and `/tools/zoned-earth/`: the last button of the globe's control stack (the sixth on `/`,
+ *     where Look at and the zone finder's magnifier come before it; the fourth on the tool page);
  *   - `/why-gmt/`: a glass square in the time-zone map's corner;
  *   - `/check/canada-2026-clock-change/`: a glass square in the Canada map's corner, added by the client
  *     when the map is drawn (the Worker is stubbed), at every width;
@@ -55,7 +55,7 @@ const TARGETS = [
     path: "/",
     slug: "home-globe",
     ...GLOBE,
-    order: [...ZOOM_STACK, "Find a zone", "Data credits"],
+    order: [...ZOOM_STACK, "Look at", "Find a zone", "Data credits"],
     // The landing alone carries the night sky, so alone it credits the star catalogue, and alone
     // it holds the licence note instead of the page footer.
     labels: [
@@ -65,6 +65,7 @@ const TARGETS = [
       "Milky Way",
       "Sun",
       "Moon",
+      "Planets",
       "Licence",
     ],
   },
@@ -293,9 +294,13 @@ function geometry({ id, stack, zoom }) {
     groupLabel: group?.getAttribute("aria-label") ?? null,
     groupRole: group?.getAttribute("role") ?? null,
     order: group
-      ? [...group.querySelectorAll("button")].map((b) =>
-          b.getAttribute("aria-label"),
-        )
+      ? /* The shut Look at bar's buttons sit in a hidden panel: not the stack's own controls. */
+        [...group.querySelectorAll("button")]
+          .filter((b) => b.closest("[hidden]") === null)
+          .map(
+            /* An icon-only kit button names itself with hidden text, not aria-label. */
+            (b) => b.getAttribute("aria-label") ?? b.textContent?.trim() ?? "",
+          )
       : [],
   };
 }

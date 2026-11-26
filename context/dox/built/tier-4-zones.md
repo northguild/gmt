@@ -16,7 +16,7 @@ Part of [built/index.md](index.md). Globe engine and hero: [tier-4-globe.md](tie
 
 ## Zone filters (`src/lib/zone-filter.ts`, `zone-filter-ui.ts`)
 
-- A settings gear named "Settings" opens a popup of nine switches over three axes: local day, DST state, local sky. They narrow the clock list, the globe markers and the region hit test. The selected zone keeps its marker. A separate fieldset holds "Natural Earth" (`setEarthAvailable`); it is not a filter.
+- A settings gear named "Settings" opens a popup of nine switches over three axes: local day, DST state, local sky. They narrow the clock list, the globe markers and the region hit test. The selected zone keeps its marker. A separate fieldset holds "Natural colours" (`setLookAvailable`); it is not a filter.
 - The popup is a floating `<details>` with our own dismissal (press outside or Escape returns focus to the gear). Its width is capped to `100cqi` (`disclosure.module.css`), never the viewport, or a drawer clips its left edge from 320 to 3008 px.
 - A switch is shown when its bucket has zones or when it is off, so a filter can never become unreachable.
 - Switches are built once and afterwards only shown, hidden or relabelled; re-rendering would pull a control from under a keyboard user.

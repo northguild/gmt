@@ -1,0 +1,89 @@
+{
+  "name": "Planets for the Dox night sky",
+  "source": {
+    "title": "VSOP87B, heliocentric spherical coordinates, J2000 ecliptic",
+    "publisher": "IMCCE, Observatoire de Paris",
+    "page": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/",
+    "reference": "Bretagnon and Francou 1988, Astronomy and Astrophysics 202, 309-315",
+    "files": [
+      {
+        "body": "earth",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.ear",
+        "bytes": 343406,
+        "sha256": "30a05a74b8bf65aeffffea7d329934b648dfbe186a06f6cce12b0d9403f896bb"
+      },
+      {
+        "body": "mercury",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.mer",
+        "bytes": 949753,
+        "sha256": "cc3c03bb5ca5257983e5f311c22b5cea43da504a27f0bb8a09281c6da0f7c10f"
+      },
+      {
+        "body": "venus",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.ven",
+        "bytes": 229824,
+        "sha256": "fcff361adbdb3a9947c7e0cbe45e9ac45585987983fc891c92462e15a532e8e4"
+      },
+      {
+        "body": "mars",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.mar",
+        "bytes": 853594,
+        "sha256": "1e39273409b7fac1262d2e4682856b5c8f18ea745540c77c90b0a16dba8d14cf"
+      },
+      {
+        "body": "jupiter",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.jup",
+        "bytes": 484519,
+        "sha256": "408b5938ab39e661940b4253579f4a7a65f206926d98bec20e46aebb06cdd159"
+      },
+      {
+        "body": "saturn",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.sat",
+        "bytes": 848939,
+        "sha256": "c790102e7d698c4a2de125e3eb8e87b19c7d6ee1cc2082440ef9689633da5d6a"
+      },
+      {
+        "body": "uranus",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.ura",
+        "bytes": 702639,
+        "sha256": "a71943b2a514c03ab6e6e4071a6cccc13fd42c9879910f71630df04b8fbe1066"
+      }
+    ]
+  },
+  "credit": "Bretagnon, P. and Francou, G., IMCCE (VSOP87)",
+  "license": "IMCCE publishes the files for use with attribution; no further licence is stated",
+  "changes": "Terms smaller than 0.000008 rad (0.000002 rad for the Earth) at the span's ends dropped, each kept number rounded to the coarsest power of ten that moves its term by at most 0.25 of that limit, for 200 years either side of the run.",
+  "generator": "apps/dox/scripts/prepare-sky-orbits.ts",
+  "span": {
+    "from": -4515710788588,
+    "to": 8107070011412
+  },
+  "faintLimit": 5.5,
+  "bodies": {
+    "mercury": {
+      "peak": -2.49,
+      "worstArcseconds": 6
+    },
+    "venus": {
+      "peak": -4.92,
+      "worstArcseconds": 20
+    },
+    "mars": {
+      "peak": -2.93,
+      "worstArcseconds": 35
+    },
+    "jupiter": {
+      "peak": -2.94,
+      "worstArcseconds": 11.8
+    },
+    "saturn": {
+      "peak": -0.54,
+      "worstArcseconds": 13.6
+    },
+    "uranus": {
+      "peak": 5.38,
+      "worstArcseconds": 9.2
+    }
+  },
+  "omitted": []
+}

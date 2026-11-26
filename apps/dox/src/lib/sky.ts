@@ -27,6 +27,7 @@ import {
   type Disc,
   type BodyPainters,
   type Rgb,
+  type SkyLayer,
 } from "./sky-bodies";
 import type { SkyMap } from "./sky-map";
 import {
@@ -82,8 +83,8 @@ export interface Sky {
     instantMs: number,
     zoom?: number,
   ): void;
-  /** Hands the sky the textured Moon's painter, or null when its map failed to load, and draws again. */
-  maps(painters: BodyPainters): void;
+  /** Hands the sky the textured bodies' painters and the planets' layer (each absent when it failed to load), and draws again. */
+  maps(painters: BodyPainters, layer?: SkyLayer): void;
 }
 
 /** A place in the hero, in CSS pixels; `radius` is the Earth's disc, when the host knows it. */
@@ -134,8 +135,9 @@ export function mountSky(options: SkyOptions): Sky {
   /** The band canvas's pixels, made again after a resize. */
   let glow: ImageData | undefined;
   let pending: number | undefined;
-  /** The textured Moon's painter, once its map has loaded. */
+  /** The textured bodies' painters and the planets' layer, once they have loaded. */
   let paint: BodyPainters = {};
+  let layer: SkyLayer | undefined;
   /** Set by the first `view`: until then nothing draws, whatever resizes or changes. */
   let begun = false;
   let resolveReady: () => void = () => {};
@@ -182,6 +184,15 @@ export function mountSky(options: SkyOptions): Sky {
           dpr,
         ];
         drawStars(starsCtx, list, lens, stars, frame, tint);
+        layer?.(
+          starsCtx,
+          lens,
+          m,
+          frame,
+          latest.rotation,
+          latest.instantMs,
+          tint,
+        );
         [text, moon] = drawBodies(
           starsCtx,
           lens,
@@ -356,9 +367,10 @@ export function mountSky(options: SkyOptions): Sky {
   return {
     ready,
     view,
-    /** The Moon's painter arrives: the flat Moon is replaced. */
-    maps: (next: BodyPainters) => {
+    /** The painters arrive: the flat bodies are replaced, and the planets appear. */
+    maps: (next: BodyPainters, planets?: SkyLayer) => {
       paint = next;
+      layer = planets;
       draw();
     },
   };

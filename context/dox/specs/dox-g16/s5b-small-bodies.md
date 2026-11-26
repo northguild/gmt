@@ -2,14 +2,14 @@
 
 Part of [DOX-G16](./index.md). Paths are under `apps/dox/`. Builds on
 [slice 5a](./s5a-planets.md): the same registry (`SKY_BODIES`), layer, generator, faint limit
-and the Look at list. It is a slice of its own because it brings a second source, a second orbit
+and the Look at bar. It is a slice of its own because it brings a second source, a second orbit
 and magnitude law, and elements that age. [5c](./s5c-apophis.md) builds on it.
 
 ## What the reader sees
 
 (4) Vesta, the one minor planet that reaches the stars' limit, shows as a star-like point on
 the nights it is brighter than magnitude 5.5, at its true place, by the same law and look as the
-planets, and is listed in Look at on those nights. The next are around 2029-07-08 (5.41,
+planets. Its Look at row follows the planets' and can be chosen on those nights only. The next are around 2029-07-08 (5.41,
 Horizons). Outside them nothing changes.
 
 ## Decided
@@ -76,7 +76,8 @@ Pins from Horizons, each query in the comment, instants as epoch-ms literals.
 - `sky-planets.test.ts`: with a fixture row built from Horizons' osculating elements for
   2029-07-01 (query in the comment), Vesta at 2029-07-08 is drawn at 5.41 ± 0.05; with the
   shipped 2026 elements at the same instant it is not (outside validity). `drawn()` lists it
-  exactly when it is drawn, so `sky-picker.test.ts` shows it in the list with that fixture.
+  exactly when it is drawn, so `sky-view.test.ts` shows its row available with that fixture
+  and `aria-disabled` without it.
 - `prepare-sky-orbits.test.ts`: the parser on three fixed-column lines copied from the file;
   the bound keeps 5.5, drops 5.51; a q < 1.3 row and a comet designation are dropped.
 - The freshness check's own test: within 90 days fails, beyond passes, with a fixed clock.
@@ -101,7 +102,7 @@ Pins from Horizons, each query in the comment, instants as epoch-ms literals.
 
 ## Definition of done
 
-- `pnpm --filter @gmt/dox test -- kepler ephemeris magnitude sky-planets sky-registry sky-picker prepare-sky-orbits sky-size`
+- `pnpm --filter @gmt/dox test -- kepler ephemeris magnitude sky-planets sky-registry sky-view prepare-sky-orbits sky-size`
   passes; `lint` and `check` are clean.
 - `pnpm --filter @gmt/dox gates --only hero-space,data-credits-check,sky-orbits-fresh` passes.
   No `it.skip`, `it.todo` or `it.fails` added.

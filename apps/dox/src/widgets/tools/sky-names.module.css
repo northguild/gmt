@@ -1,0 +1,61 @@
+/*
+ * The sky's name label (`sky-names.ts`): a small glass chip above a body, as northguild.dev names
+ * its sky. It sits in the top layer as a manual popover, so the popover's own box (centred, framed,
+ * the system colours) gives way to the chip's; script sets `left` and `top` in the window's pixels,
+ * at the body's top (or, with `data-below`, its bottom), and the chip stands clear of the disc.
+ * An author `display` would beat the UA's `[hidden]`, so the rule says it again.
+ *
+ * It enters with the site's entrance (`.gmt-enter`, rising from below, or from above when it hangs
+ * below) and fades out; reduced motion zeroes both through the motion tokens.
+ */
+
+.tip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  z-index: var(--gmt-z-over);
+  padding: 0.15rem 0.5rem;
+  overflow: visible;
+  color: var(--gmt-ice);
+  font-size: var(--gmt-text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% calc(-100% - 0.75rem);
+  background: var(--gmt-glass-tint-subtle);
+  border: 1px solid var(--gmt-hairline);
+  border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
+  backdrop-filter: var(--gmt-glass-blur-saturate);
+
+  --gmt-enter-transform: translateY(6px);
+
+  /* Shut (`hidden`), it fades and only then stops drawing, so it never covers anything. */
+  transition:
+    opacity var(--gmt-duration-med) ease-in,
+    display var(--gmt-duration-med) allow-discrete;
+
+  &[hidden] {
+    display: none;
+    opacity: 0;
+  }
+
+  &[data-below] {
+    translate: -50% 0.75rem;
+
+    --gmt-enter-transform: translateY(-6px);
+  }
+
+  & span {
+    color: var(--gmt-ice-dim);
+  }
+
+  & span::before {
+    content: " · ";
+  }
+}
+
+@media (forced-colors: active) {
+  .tip {
+    display: none;
+  }
+}

@@ -93,28 +93,40 @@ export const heroOf = (element: Element): HTMLElement | null =>
   element.closest<HTMLElement>('[data-gate="hero-stage"]');
 
 /**
- * The boxes the meteor and the sky view keep clear of, in viewport pixels: the copy column, an
- * open zone drawer, and whatever else the caller names (the meteor adds the Earth's stage, the
- * view the zoom stack).
+ * The boxes the meteor and the sky view keep clear of, in viewport pixels: the copy, an open zone
+ * drawer, and whatever else the caller names (the meteor adds the Earth's stage, the view the
+ * zoom stack). On the stacked landing the copy column is `display: contents` and has no box: its
+ * cells (the intro, the buttons, the pages) are laid out in the hero's grid, so each is a box.
  */
 function heroAvoidRects(
   hero: HTMLElement,
   ...extra: (Element | null)[]
 ): DOMRect[] {
   const copy = hero.querySelector('[data-gate="hero-copy"]');
+  const cells =
+    copy && getComputedStyle(copy).display === "contents"
+      ? [...copy.children]
+      : [copy];
   const drawer = hero.querySelector('[data-drawer][data-open="true"]');
-  return [copy, drawer, ...extra]
+  return [...cells, drawer, ...extra]
     .filter((el): el is Element => el !== null)
     .map((el) => el.getBoundingClientRect());
 }
 
-/** `heroAvoidRects` and the hero's size, in the hero's own pixels, for the sky view's aim. */
+/**
+ * What the sky view aims into, in the pixels of the Earth's area (the hero's `[data-space]`):
+ * its size, the globe surface's place in it, and `heroAvoidRects` in it. Side by side the area is
+ * the hero right of the copy, under the header; stacked it is the row under the buttons, which
+ * ends at the fold, so a body is never put down the page under the pages.
+ */
 export function heroAimFrame(
   hero: HTMLElement,
   surface: HTMLElement,
   ...extra: (Element | null)[]
 ): AimFrame {
-  const box = hero.getBoundingClientRect();
+  const box = (
+    hero.querySelector(":scope > [data-space]") ?? hero
+  ).getBoundingClientRect();
   const at = surface.getBoundingClientRect();
   return {
     width: box.width,

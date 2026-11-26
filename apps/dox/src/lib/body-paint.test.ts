@@ -10,6 +10,7 @@ import type { Vec3 } from "./globe/pinhole";
 import { ICE_TINT, type Disc, type MoonPainter } from "./sky-bodies";
 import type { SkyMap } from "./sky-map";
 import { limbOnScreen, skyLens } from "./sky-math";
+import { LOOK_ATTRIBUTE, paintLook, setLook } from "./look";
 
 const DEG = Math.PI / 180;
 
@@ -203,6 +204,24 @@ describe("paintLitSphere", () => {
     ).toBeLessThanOrEqual(1.5);
   });
 
+  it("keeps the map's own colour in the natural look, and the ice tint's hue in ice", () => {
+    const red = map(0);
+    for (let i = 0; i < red.data.length; i += 4) {
+      red.data[i] = 200;
+      red.data[i + 1] = 60;
+      red.data[i + 2] = 60;
+    }
+    const at = (image: ImageData) => {
+      const o = ((image.height >> 1) * image.width + (image.width >> 1)) * 4;
+      return Array.from(image.data.slice(o, o + 4));
+    };
+    const [r, g, b, a] = at(paint(red, geometry(0, { tint: null })));
+    expect(a).toBe(255);
+    expect(r! - Math.max(g!, b!)).toBeGreaterThanOrEqual(40);
+    const ice = at(paint(red, geometry(0)));
+    expect(ice.slice(0, 3)).toEqual([...ICE_TINT]);
+  });
+
   it("leaves the pixels outside the disc clear", () => {
     const image = paint(map(120), geometry(0));
     expect(image.data[3]).toBe(0);
@@ -238,7 +257,11 @@ describe("createMoonPainter", () => {
 
   it("hands the sphere axes that agree with the screen and the phase", () => {
     const seen: DiscGeometry[] = [];
-    const painter = createMoonPainter(map(120), (_map, g) => void seen.push(g));
+    const painter = createMoonPainter(
+      map(120),
+      (_map, g) => void seen.push(g),
+      () => ICE_TINT,
+    );
     const { show, moon, angle } = sight(T);
     expect(show(painter)).toBe(true);
     const { view, right, up, sun } = seen[0]!;
@@ -255,7 +278,7 @@ describe("createMoonPainter", () => {
 
   it("paints once, draws the cached disc again at the same key, and paints once more on a change", () => {
     const spy = vi.fn();
-    const painter = createMoonPainter(map(120), spy);
+    const painter = createMoonPainter(map(120), spy, () => ICE_TINT);
     const first = sight(T);
     first.show(painter);
     first.show(painter);
@@ -267,9 +290,38 @@ describe("createMoonPainter", () => {
     expect(drawImage).toHaveBeenCalledTimes(3);
   });
 
+  it("paints once more when the look changes, and not before", () => {
+    const spy = vi.fn();
+    const painter = createMoonPainter(map(120), spy, () =>
+      paintLook() === "natural" ? null : ICE_TINT,
+    );
+    const { show } = sight(T);
+    try {
+      show(painter);
+      show(painter);
+      expect(spy).toHaveBeenCalledTimes(1);
+      setLook("natural");
+      show(painter);
+      show(painter);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.calls[1]![1].tint).toBeNull();
+      /* Raised contrast paints ice whatever the page keeps. */
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query === "(prefers-contrast: more)",
+      }));
+      show(painter);
+      expect(spy).toHaveBeenCalledTimes(3);
+      expect(spy.mock.calls[2]![1].tint).toEqual(ICE_TINT);
+    } finally {
+      vi.unstubAllGlobals();
+      setLook("ice");
+      document.documentElement.removeAttribute(LOOK_ATTRIBUTE);
+    }
+  });
+
   it("leaves a disc at the smallest size to the flat Moon", () => {
     const spy = vi.fn();
-    const painter = createMoonPainter(map(120), spy);
+    const painter = createMoonPainter(map(120), spy, () => ICE_TINT);
     const { show, disc } = sight(T);
     expect(show(painter, { ...disc, r: 2.5 })).toBe(false);
     expect(spy).not.toHaveBeenCalled();
@@ -279,7 +331,7 @@ describe("createMoonPainter", () => {
   it("leaves the Moon to the flat one when the canvas gives no context", () => {
     vi.restoreAllMocks();
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-    const painter = createMoonPainter(map(120), vi.fn());
+    const painter = createMoonPainter(map(120), vi.fn(), () => ICE_TINT);
     expect(sight(T).show(painter)).toBe(false);
   });
 });

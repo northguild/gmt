@@ -9,14 +9,13 @@ import {
   focal,
   P,
   projectDirection,
+  RAD,
   rotationMatrix,
   type Lens,
   type Screen,
   type Vec3,
 } from "./globe/pinhole";
 import { DAY_MS, J2000_JD, subsolarPoint, UNIX_EPOCH_JD } from "./globe/sun";
-
-const RAD = Math.PI / 180;
 
 /**
  * A star's dot scales with the Earth's radius on screen, the camera's own scale, and never with
@@ -163,10 +162,10 @@ export function toUnit(ra: number, dec: number): [number, number, number] {
 }
 
 /** The astronomical unit in Earth equatorial radii: 149,597,870.7 km (IAU 2012 Resolution B2). */
-const AU = 149_597_870.7 / EARTH_EQUATORIAL_RADIUS_KM;
+export const AU = 149_597_870.7 / EARTH_EQUATORIAL_RADIUS_KM;
 
 /** The dot product of two directions; a view matrix's first row is its forward axis. */
-const dot = (a: ArrayLike<number>, b: Unit): number =>
+export const dot = (a: ArrayLike<number>, b: Unit): number =>
   a[0]! * b[0] + a[1]! * b[1] + a[2]! * b[2];
 /** `a + k b`. */
 const plus = (a: Unit, k: number, b: Unit): Vec3 => [
@@ -174,6 +173,13 @@ const plus = (a: Unit, k: number, b: Unit): Vec3 => [
   a[1] + k * b[1],
   a[2] + k * b[2],
 ];
+
+/** The globe's camera in Earth radii, equatorial axes of date: `P` over the point `rotation` looks at, `(-lambda, -phi)`. */
+export const cameraAt = (
+  rotation: readonly [number, number],
+  instantMs: number,
+): Vec3 =>
+  toUnit(-turnOf(rotation, instantMs), -rotation[1]).map((c) => c * P) as Vec3;
 
 /** The Moon seen from the globe's camera: its place, angular radius, phase angle and bright limb, degrees, and its lit fraction. */
 export interface CameraMoon {
@@ -190,8 +196,7 @@ export interface CameraMoon {
 }
 
 /**
- * The Moon seen from the globe's camera, `P` Earth radii over the point it looks at (`rotation`
- * `[lambda, phi]` looks at `(-lambda, -phi)`), at an instant. Every vector is equatorial of date,
+ * The Moon seen from the globe's camera (`cameraAt`) at an instant. Every vector is equatorial of date,
  * in Earth radii: the camera turned into right ascension by the sidereal time; the Moon at
  * `1 / sin(parallax)` along `moonRaDec` (Astronomical Almanac, Section D); the Sun at one
  * astronomical unit (IAU 2012 B2) along `sunRaDec`. The place and the radius `asin(k / distance)`
@@ -204,13 +209,13 @@ export function moonFromCamera(
   instantMs: number,
   rotation: readonly [number, number],
 ): CameraMoon {
-  const camera = toUnit(-turnOf(rotation, instantMs), -rotation[1]);
+  const camera = cameraAt(rotation, instantMs);
   const [moon, parallax] = moonGeocentric(instantMs);
   const sun = sunRaDec(instantMs);
   /* The camera's view of the Moon, over its geocentric distance 1 / sin(parallax), and of the Sun, over 1 AU. */
   const near = Math.sin(parallax * RAD);
-  const v = plus(moon, -P * near, camera);
-  const w = plus(toUnit(sun.ra, sun.dec), -P / AU, camera);
+  const v = plus(moon, -near, camera);
+  const w = plus(toUnit(sun.ra, sun.dec), -1 / AU, camera);
   const far = Math.hypot(...v);
   const ra = Math.atan2(v[1], v[0]) / RAD;
   const dec = Math.asin(v[2] / far) / RAD;

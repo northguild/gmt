@@ -22,7 +22,7 @@ One PR. Each phase is a slice that `dox-builder` lands and `dox-tester` verifies
 | 2 | [Sun disc](./s2-sun.md) | A photographed solar disc, limb-darkened, solar north on its true pole; the glare unchanged |
 | 3 | [Look at the Sun and Moon](./s3-views.md) | A Look at button in the zoom stack whose list turns the camera to the Sun or the Moon and holds it in view |
 | 4 | [Natural colours](./s4-look.md) | One switch sets all three bodies: ice-tinted by default, the imagery's own colours when on |
-| 5a | [Planets, the registry, View planet](./s5a-planets.md) | Mercury to Saturn, and Uranus when it reaches 5.5, as star-like points at true place and magnitude; the Look at list adds the bodies drawn now, brightest first, and aims at the one picked |
+| 5a | [Planets, the registry, Look at for every body](./s5a-planets.md) | Mercury to Saturn, and Uranus when it reaches 5.5, as star-like points at true place and magnitude; the Look at bar gains every planet's row in order from the Sun, available while drawn, and aims at the one picked |
 | 5b | [Small bodies](./s5b-small-bodies.md) | Vesta as a point on the nights it reaches 5.5; split from 5a for its second source, second laws and ageing elements |
 | 5c | [Apophis's 2029 pass](./s5c-apophis.md) | Apophis on 13 April 2029, inside the camera's orbit: placed from the camera, in front of or behind the Earth, listed in Look at |
 | 6 | [Hashed names for the large site files](./s6-cache.md) | The Earth imagery and boundary files cached for good after the first visit, like the rest of the build |
@@ -76,7 +76,7 @@ New shared pieces, each with its home and one-line interface:
 | `Look`, `currentLook`, `setLook` | `src/lib/look.ts` (was `earth-look.ts`) | `"ice" \| "natural"`; `data-look` on `<html>`, `dox:look` in storage |
 | `watchTheme`, `THEME_ATTRIBUTES` | `src/lib/globe/globe-theme.ts` | `(callback, signal) → void`; the one observer for theme and look, used by globe, sky and deck |
 | `lookSwitchOffered` | `src/lib/globe.ts` (was `earthSwitchOffered`) | `({imagery, renderer, skyTextured, contrast, forced}) → boolean` |
-| `mountSkyView`, `renderSkyView`; `wireBodyList` | `src/lib/sky-view.ts`; `sky-picker.ts` | `({engine, host, avoid, now, reducedMotion, signal}) → {release(), destroy()}`; the zoom stack's Look at, from kit `disclosure` and `listbox` |
+| `mountSkyView`, `renderSkyView` | `src/lib/sky-view.ts` | `({engine, host, avoid, now, reducedMotion, signal}) → {release(), destroy()}`; the zoom stack's Look at: a kit `disclosure` whose panel is a labelled bar, one button per `SKY_BODIES` row |
 
 Layers: all shared. Content (sources, crops, credits, orbits, rotation and magnitude terms) is
 data in the prepare scripts, `src/assets/sky-*.json` and `SKY_BODIES`; `slides/places.ts` imports.
@@ -90,7 +90,7 @@ approach that reaches 5.5 needs one registry row; the generator adds its data. A
 ## Kit pieces
 
 **Look at:** kit `disclosure` (APG Disclosure; icon only, its label for assistive technology) in the
-zoom stack's `role="group"`, holding kit `listbox` (APG Listbox). **Natural colours:** the kit
+zoom stack's `role="group"`, its panel a labelled bar of buttons drawn like the stack. **Natural colours:** the kit
 switch (APG Switch). No kit change.
 
 ## Budgets and rules every slice keeps
@@ -135,8 +135,9 @@ pass (his window size, his clicks). Once, after the last slice (5c) and before t
 7. Choosing the held body again releases the view and leaves the camera where it is.
 8. Every solar-system body reaching the stars' limit (5.5) is a point at true place and magnitude,
    stars' look; one registry, `SKY_BODIES`, keeps IAU rotations for future gmt planetary times.
-9. Look at lists the Sun, the Moon, then the bodies drawn now (5.5 or brighter), brightest first; picking one aims and holds as 3–7.
+9. Look at shows every body in a fixed order: the Sun, the Moon, the planets outward from the Sun, then the small bodies; a body not drawn now (fainter than 5.5) is unavailable; no magnitude numbers; picking one aims and holds as 3–7.
 10. Apophis's 2029 pass is planned in, placed from the camera; JPL's solution as a national peer.
+11. A pointer near the Sun, the Moon or a drawn planet names it in a glass chip, as northguild.dev does ([slice 3](./s3-views.md#names-in-the-sky)).
 
 ## Close-out
 

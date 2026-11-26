@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import {
   followGlobe,
+  heroAimFrame,
   offerGlobe,
   skyWithoutGlobe,
   startHeroEntrance,
@@ -17,6 +18,7 @@ const views: {
 vi.mock("./sky", () => ({
   mountSky: ({ host }: { host: HTMLElement }) => ({
     ready: Promise.resolve(),
+    maps: () => {},
     view: (
       rotation: readonly [number, number],
       centre: unknown,
@@ -47,6 +49,9 @@ const globe = (frames: (() => void)[]): GlobeHost =>
     onFrame: (callback: () => void) => frames.push(callback),
   }) as unknown as GlobeHost;
 
+/** The hero's copy column, as `beforeEach` builds it. */
+let heroCopy: HTMLElement;
+
 beforeEach(() => {
   views.length = 0;
   meteors.length = 0;
@@ -62,9 +67,9 @@ beforeEach(() => {
     canvas.dataset["skyCanvas"] = which;
     skyRoot.append(canvas);
   }
-  const copy = document.createElement("div");
-  copy.dataset["gate"] = "hero-copy";
-  hero.append(skyRoot, copy);
+  heroCopy = document.createElement("div");
+  heroCopy.dataset["gate"] = "hero-copy";
+  hero.append(skyRoot, heroCopy);
   document.body.append(hero);
   vi.stubGlobal(
     "fetch",
@@ -198,5 +203,80 @@ describe("the hero's entrance", () => {
     await skyWithoutGlobe(hero);
     offerGlobe(hero, null);
     await vi.waitFor(() => expect(html.dataset["entrance"]).toBe("run"));
+  });
+});
+
+/** Gives `el` a fixed layout box, as jsdom lays nothing out. */
+function boxAt(
+  el: Element,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): void {
+  vi.spyOn(el, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(left, top, width, height),
+  );
+}
+
+describe("the sky view's aim frame", () => {
+  let space: HTMLElement;
+  let surface: HTMLElement;
+  let copy: HTMLElement;
+
+  beforeEach(() => {
+    space = document.createElement("div");
+    space.dataset["space"] = "";
+    surface = document.createElement("div");
+    space.append(surface);
+    hero.append(space);
+    copy = heroCopy;
+  });
+
+  it("is the Earth's area, beside the copy column", () => {
+    boxAt(hero, 0, 0, 2560, 1360);
+    boxAt(space, 784, 55, 1776, 1305);
+    boxAt(surface, 800, 100, 1700, 1200);
+    boxAt(copy, 0, 55, 784, 1305);
+    const stack = document.createElement("div");
+    space.append(stack);
+    boxAt(stack, 2510, 1145, 34, 199);
+    expect(heroAimFrame(hero, surface, stack)).toEqual({
+      width: 1776,
+      height: 1305,
+      shift: { x: 16, y: 45 },
+      rects: [
+        { left: -784, top: 0, right: 0, bottom: 1305 },
+        { left: 1726, top: 1090, right: 1760, bottom: 1289 },
+      ],
+    });
+  });
+
+  it("stacked, ends at the fold and keeps clear of each cell of the copy", () => {
+    /* The copy column has no box of its own; the intro and the buttons sit above the Earth's row,
+       the pages below it, down a page much taller than the screen. */
+    // oxlint-disable-next-line dox-test/no-implementation-assert -- the input, not an assert: stacked, the page lays the copy out as `display: contents`, and jsdom lays nothing out
+    copy.style.display = "contents";
+    const intro = document.createElement("div");
+    const buttons = document.createElement("div");
+    const page = document.createElement("div");
+    copy.append(intro, buttons, page);
+    boxAt(hero, 0, 0, 390, 3957);
+    boxAt(space, 0, 312, 390, 532);
+    boxAt(surface, 0, 312, 390, 532);
+    boxAt(intro, 16, 71, 358, 160);
+    boxAt(buttons, 16, 247, 358, 49);
+    boxAt(page, 20, 868, 334, 438);
+    const frame = heroAimFrame(hero, surface);
+    expect(frame).toMatchObject({
+      width: 390,
+      height: 532,
+      shift: { x: 0, y: 0 },
+    });
+    expect(frame.rects).toEqual([
+      { left: 16, top: -241, right: 374, bottom: -81 },
+      { left: 16, top: -65, right: 374, bottom: -16 },
+      { left: 20, top: 556, right: 354, bottom: 994 },
+    ]);
   });
 });

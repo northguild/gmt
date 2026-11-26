@@ -22,6 +22,7 @@ const EXPECTED: Record<string, { id: string; labels: string[] }[]> = {
         "Milky Way",
         "Sun",
         "Moon",
+        "Planets",
         "Licence",
       ],
     },

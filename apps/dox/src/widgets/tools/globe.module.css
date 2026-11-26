@@ -134,7 +134,10 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
-  background: var(--gmt-border);
+
+  /* The 1px gaps are the dividers. The border tint is see-through, so it is laid over the
+     button surface: the Sun or the Moon behind the stack does not shine through them. */
+  background: linear-gradient(var(--gmt-border) 0 0), var(--gmt-surface-2);
   border: 1px solid var(--gmt-border);
   border-radius: var(--gmt-radius-sm);
   corner-shape: bevel;
@@ -178,6 +181,17 @@
       outline-color: transparent;
     }
   }
+}
+
+/* Look at's bar opens beside the stack, outside the box that clips the buttons to the bevel. */
+.zoom:has([data-gate="sky-look"] [aria-expanded="true"]) {
+  overflow: visible;
+}
+
+/* The globe's tooltip is a popover, in the top layer over everything, so it would cover the open
+   bar: it steps aside until the bar closes. */
+:where(.root:has([data-gate="sky-look"] [aria-expanded="true"])) .tooltip {
+  visibility: hidden;
 }
 
 /* `data-ready` is set once the globe's entrance has finished, or on a timer, so the controls

@@ -1,16 +1,15 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { subsolarPoint } from "~/lib/globe/sun";
 import {
   aimBody,
-  AIM_BODIES,
   AIM_ZOOMS,
   boxRadius,
   subBodyPoint,
   type AimLens,
   type Box,
-  type SkyBodyId,
 } from "./sky-aim";
+import { bodyRow, type SkyBodyId } from "./sky-registry";
 import {
   moonRaDec,
   siderealDeg,
@@ -77,7 +76,8 @@ function landing(
   rotation: readonly [number, number],
   zoom: number,
 ) {
-  const at = AIM_BODIES[body].raDec(instantMs, rotation);
+  const row = bodyRow(body);
+  const at = row.place(instantMs, rotation)!;
   return bodyOnScreen(
     skyLens(lens.width, lens.height, {
       x: lens.centre.x,
@@ -89,7 +89,7 @@ function landing(
     at.radius,
     lens.width,
     lens.height,
-    AIM_BODIES[body].reach,
+    row.reach,
   );
 }
 
@@ -162,16 +162,17 @@ describe("aimBody", () => {
 
   it("aims the Moon by its parallax, nearly a degree or more from a geocentric aim (least near apogee)", () => {
     const { lens, avoid } = LENSES[0]!;
-    const row = AIM_BODIES.moon;
-    const parallax = row.raDec;
+    const row = bodyRow("moon");
     for (const instant of INSTANTS) {
       const seen = aimBody("moon", instant, lens, avoid)!;
-      row.raDec = (at) => moonRaDec(at);
+      const spy = vi
+        .spyOn(row, "place")
+        .mockImplementation((at) => moonRaDec(at));
       let geo;
       try {
         geo = aimBody("moon", instant, lens, avoid)!;
       } finally {
-        row.raDec = parallax;
+        spy.mockRestore();
       }
       const apart = Math.hypot(
         ((seen.rotation[0] - geo.rotation[0] + 540) % 360) - 180,

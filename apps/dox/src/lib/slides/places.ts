@@ -17,7 +17,10 @@
 import { COORDINATES_BY_ID } from "~/lib/globe-zones";
 import { toUnit } from "~/lib/sky-math";
 import { subBodyPoint } from "~/lib/sky-aim";
-export { EARTH_HALF_ANGLE_DEG } from "~/lib/globe/pinhole";
+import { RIM } from "~/lib/globe/pinhole";
+
+/** Half the angle the Earth fills from the camera, degrees: `asin(RIM)`. */
+export const EARTH_HALF_ANGLE_DEG = (Math.asin(RIM) * 180) / Math.PI;
 
 export type PlacePoint = readonly [lng: number, lat: number];
 

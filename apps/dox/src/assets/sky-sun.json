@@ -11,7 +11,7 @@
   "credit": "ESA & NASA/Solar Orbiter/PHI Team",
   "license": "CC-BY-SA-3.0-IGO",
   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/igo/",
-  "changes": "Reduced from its orange colour table to one grey band (the JPEG's luma), cropped to a square of 1.02 solar radii, scaled to 256 x 256, and the pixels outside the disc set to black. Not turned: solar north is up. The disc was fitted at (4806.2, 4803.4) with a radius of 3973.4 source pixels.",
+  "changes": "Reduced from its orange colour table to one grey band (the JPEG's luma), cropped to a square of 1.02 solar radii, scaled to 256 x 256, the mosaic's tile vignetting divided out (the median, over 0.06 solar radii, of each pixel over its ring's median; the limb darkening kept), scaled so the brightest 0.1% of the disc is white, and the pixels outside the disc set to black. Not turned: solar north is up. The disc was fitted at (4806.2, 4803.4) with a radius of 3973.4 source pixels.",
   "generator": "apps/dox/scripts/prepare-sky-bodies.mjs",
   "observed": "2023-03-22",
   "disc": {
@@ -22,11 +22,12 @@
     "threshold": 0.1
   },
   "map": {
-    "quality": 80,
+    "nearLossless": true,
+    "quality": 60,
     "file": "sky-sun.webp",
     "width": 256,
     "height": 256,
-    "bytes": 1970,
-    "sha256": "d9c3d792e6d2ac5013d4d9570acfc733a82641e8ace5933531fd1c09e02c8ef7"
+    "bytes": 15830,
+    "sha256": "53253d2a1d43295acde37e9a02e437791678bec93756f73d41055c0f36c9fd22"
   }
 }

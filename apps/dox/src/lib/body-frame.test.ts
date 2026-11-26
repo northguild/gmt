@@ -1,4 +1,5 @@
-import { moonFrame, sunPole, surfaceAt } from "./body-frame";
+import { bodyFrame, surfaceAt } from "./body-frame";
+import { MOON_ROTATION, SUN_ROTATION } from "./body-rotation";
 import { precessToDate, toUnit, type Unit } from "./sky-math";
 
 const DEG = 180 / Math.PI;
@@ -41,7 +42,7 @@ function northAngle(pole: Unit, ra: number, dec: number): number {
  * Moon's apparent right ascension and declination (the line of sight) and the frame.
  */
 function seen(instantMs: number, ra: number, dec: number) {
-  const { pole, prime } = moonFrame(instantMs);
+  const { pole, prime } = bodyFrame(MOON_ROTATION, instantMs);
   const observer = toUnit(ra, dec).map((x) => -x) as unknown as Unit;
   const [lon, lat] = surfaceAt({ pole, prime }, observer);
   return {
@@ -118,7 +119,7 @@ const CAMERA = [
   },
 ];
 
-describe("moonFrame", () => {
+describe("bodyFrame, the Moon", () => {
   it.each(GEOCENTRIC)(
     "matches Horizons from the geocentre on $name: sub-observer point and pole angle within 0.2 degree",
     (row) => {
@@ -147,7 +148,7 @@ describe("moonFrame", () => {
       1_795_564_800_000, // 2026-11-25
       4_083_955_200_000, // 2099-06-01
     ]) {
-      const { pole, prime } = moonFrame(t);
+      const { pole, prime } = bodyFrame(MOON_ROTATION, t);
       expect(Math.hypot(...pole)).toBeCloseTo(1, 12);
       expect(Math.hypot(...prime)).toBeCloseTo(1, 12);
       expect(dot(pole, prime)).toBeCloseTo(0, 12);
@@ -156,8 +157,8 @@ describe("moonFrame", () => {
 
   it("turns the prime meridian once in 27.32 days", () => {
     const start = 1_793_491_200_000;
-    const a = moonFrame(start).prime;
-    const b = moonFrame(start + 27.321_661 * 86_400_000).prime;
+    const a = bodyFrame(MOON_ROTATION, start).prime;
+    const b = bodyFrame(MOON_ROTATION, start + 27.321_661 * 86_400_000).prime;
     expect(Math.acos(Math.min(1, dot(a, b))) * DEG).toBeLessThan(0.5);
   });
 });
@@ -193,18 +194,23 @@ const SUN = [
   },
 ];
 
-describe("sunPole", () => {
+describe("bodyFrame, the Sun's pole", () => {
   it.each(SUN)(
     "matches the Horizons pole position angle on $name within 0.2 degree",
     (row) => {
       expect(
-        apart(northAngle(sunPole(row.t), row.ra, row.dec), row.angle),
+        apart(
+          northAngle(bodyFrame(SUN_ROTATION, row.t).pole, row.ra, row.dec),
+          row.angle,
+        ),
       ).toBeLessThan(0.2);
     },
   );
 
   it("is a unit vector", () => {
-    expect(Math.hypot(...sunPole(1_795_564_800_000))).toBeCloseTo(1, 12);
+    expect(
+      Math.hypot(...bodyFrame(SUN_ROTATION, 1_795_564_800_000).pole),
+    ).toBeCloseTo(1, 12);
   });
 });
 

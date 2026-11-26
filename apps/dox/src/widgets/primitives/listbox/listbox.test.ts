@@ -97,6 +97,30 @@ describe("the listbox element", () => {
     await expectNoAxeViolations(fx.host);
   });
 
+  it("shows a disabled option as disabled and never chooses it, by click or key", async () => {
+    const fx = renderHtml(
+      listbox({
+        id: "pick",
+        label: "Pick one",
+        items: [...items, { value: "n", label: "Note", disabled: true }],
+      }),
+    );
+    const seen: string[] = [];
+    fx.host.addEventListener("change", (e) =>
+      seen.push((e as CustomEvent<{ value: string }>).detail.value),
+    );
+    const note = screen.getByRole("option", { name: "Note" });
+    expect(note).toHaveAttribute("aria-disabled", "true");
+    const user = userEvent.setup();
+    await user.click(note);
+    await user.keyboard("{End}{Enter}");
+    expect(seen).toEqual([]);
+    expect(fx.element<GmtListbox>("listbox").value).toBe("");
+    await user.keyboard("{ArrowUp}{Enter}");
+    expect(seen).toEqual(["c"]);
+    await expectNoAxeViolations(fx.host);
+  });
+
   it("marks the value it starts with, and takes one from code", () => {
     const fx = draw("b");
     expect(screen.getByRole("option", { name: "Beta" })).toHaveAttribute(

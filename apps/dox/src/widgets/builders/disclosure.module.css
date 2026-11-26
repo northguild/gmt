@@ -58,6 +58,7 @@
   padding: var(--gmt-space-3);
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
   background: var(--gmt-surface-widget);
   color: var(--gmt-ice);
 

@@ -1,7 +1,12 @@
 {
   "singleQuote": false,
   "printWidth": 80,
-  "ignorePatterns": ["**/*.yaml", "**/*.md", "**/*.mdx"],
+  "ignorePatterns": [
+    "**/*.yaml",
+    "**/*.md",
+    "**/*.mdx",
+    "apps/dox/src/assets/sky-orbits.json"
+  ],
   "overrides": [
     {
       "files": ["packages/**/*.{ts,tsx,js,jsx,json,jsonc}"],

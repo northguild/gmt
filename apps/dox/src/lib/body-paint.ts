@@ -4,17 +4,18 @@
  * canvas and repaints it only when it looks different. The Sun's painter (`sun-paint.ts`) shares the
  * disc cache, the screen axes and the edge coverage from here.
  */
-import { moonFrame, surfaceAt, type BodyFrame } from "./body-frame";
-import type { Screen, Vec3 } from "./globe/pinhole";
-import { ICE_TINT, type Disc, type MoonPainter, type Rgb } from "./sky-bodies";
+import { bodyFrame, cross, surfaceAt, type BodyFrame } from "./body-frame";
+import { MOON_ROTATION } from "./body-rotation";
+import { RAD, type Screen, type Vec3 } from "./globe/pinhole";
+import type { Disc, MoonPainter, Rgb } from "./sky-bodies";
 import { sampleMap, type SkyMap } from "./sky-map";
 import {
+  dot,
   MIN_BODY,
   skyToScreen,
   toUnit,
   type RaDec,
   type SkyLens,
-  type Unit,
 } from "./sky-math";
 
 /** Everything `paintLitSphere` needs, in the one set of axes (the equatorial axes of date). */
@@ -30,7 +31,8 @@ export interface DiscGeometry {
   frame: BodyFrame;
   /** The night side's strength: its albedo times this. */
   shine: number;
-  tint: Rgb;
+  /** The `ice` look tints the map's brightness to this; `null` is the `natural` look, the map's own colour. */
+  tint: Rgb | null;
 }
 
 /** The image's side, in pixels, for a disc of this radius: the disc and a pixel of edge each side. */
@@ -40,8 +42,10 @@ export const discSize = (radius: number): number => Math.ceil(2 * radius) + 2;
 const decode = (c: number): number =>
   c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 
-/** sRGB bytes to linear light. */
-const LINEAR = Array.from({ length: 256 }, (_, i) => decode(i / 255));
+/** sRGB bytes to linear light. `@__PURE__` lets the Sun's chunk, which never reads it, drop it. */
+const LINEAR = /* @__PURE__ */ Array.from({ length: 256 }, (_, i) =>
+  decode(i / 255),
+);
 
 /** The brightest tone of each map, found once: the map's luminance is taken relative to it. */
 const whites = new WeakMap<SkyMap, number>();
@@ -85,9 +89,6 @@ function whiteOf(map: SkyMap): number {
 export const coverage = (radius: number, x: number, y: number): number =>
   Math.min(1, Math.max(0, radius * (1 - Math.hypot(x, y)) + 0.5));
 
-export const dot = (a: Unit, b: Unit): number =>
-  a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-
 /**
  * Paints a sphere into `out`, lit from `sun` and seen from `view`. Each pixel's surface normal is
  * the orthographic disc's (the Moon spans under 0.3 degree); its place on the map comes from the
@@ -97,7 +98,9 @@ export const dot = (a: Unit, b: Unit): number =>
  * white night pixel's alpha comes back as `shine`. Albedo is the map's luminance over the map's white (its 99.9th percentile), so the
  * brightest ground of a full Moon is at most 1 and the half Moon is darker, as the real one is.
  * The level is linear light; its sRGB encoding is the pixel's alpha, over the tint, since a canvas
- * composites encoded values. The edge takes coverage alpha.
+ * composites encoded values. The edge takes coverage alpha. In the `natural` look each map channel
+ * (as linear light, over the same white) is lit the same way and the pixel is opaque colour, its
+ * alpha the coverage alone.
  */
 export function paintLitSphere(
   map: SkyMap,
@@ -116,10 +119,6 @@ export function paintLitSphere(
       const y = (j + 0.5 - centre) / radius;
       const rho = Math.hypot(x, y);
       const cover = coverage(radius, x, y);
-      out.data[o] = tint[0];
-      out.data[o + 1] = tint[1];
-      out.data[o + 2] = tint[2];
-      out.data[o + 3] = 0;
       if (cover === 0) continue;
       const k = rho > 1 ? 1 / rho : 1;
       const z = Math.sqrt(Math.max(0, 1 - (x * k) ** 2 - (y * k) ** 2));
@@ -128,23 +127,26 @@ export function paintLitSphere(
       const [lon, lat] = surfaceAt(frame, n);
       const u = 0.5 + lon / (2 * Math.PI);
       const v = 0.5 - lat / Math.PI;
-      const albedo =
-        luminance(
-          sampleMap(map, u, v, 0),
-          sampleMap(map, u, v, 1),
-          sampleMap(map, u, v, 2),
-        ) / white;
       const lit = dot(n, sun);
       /* Earthshine lights the whole Earth-facing disc, so the lit side has it too and no seam shows at the terminator. */
-      const level =
-        ((lit > 0 ? (2 * lit) / (lit + z) : 0) + earthshine) * albedo;
-      out.data[o + 3] = Math.round(255 * cover * encode(Math.min(1, level)));
+      const shade =
+        ((lit > 0 ? (2 * lit) / (lit + z) : 0) + earthshine) / white;
+      const [r, g, b] = ([0, 1, 2] as const).map((a) =>
+        sampleMap(map, u, v, a),
+      ) as Vec3;
+      for (const [a, c] of [r, g, b].entries())
+        out.data[o + a] = tint
+          ? tint[a]!
+          : 255 * encode(shade * LINEAR[Math.round(c)]!);
+      out.data[o + 3] = Math.round(
+        255 *
+          cover *
+          (tint ? encode(Math.min(1, shade * luminance(r, g, b))) : 1),
+      );
     }
   }
 }
 
-const RAD = Math.PI / 180;
-const DEG = 180 / Math.PI;
 const step: Screen = { x: 0, y: 0 };
 
 /**
@@ -202,25 +204,14 @@ export function screenAxes(
   const view = toUnit(body.ra + 180, -body.dec);
   const toN = Math.hypot(...north);
   const toE = Math.hypot(...east);
-  const ra = body.ra * RAD;
-  const dec = body.dec * RAD;
-  const eN: Vec3 = [
-    -Math.sin(dec) * Math.cos(ra),
-    -Math.sin(dec) * Math.sin(ra),
-    Math.cos(dec),
-  ];
-  const eE: Vec3 = [-Math.sin(ra), Math.cos(ra), 0];
+  const eN = toUnit(body.ra, body.dec + 90);
+  const eE = toUnit(body.ra + 90, 0);
   /* (north, east) on screen are orthonormal axes there: the right axis is their transpose applied to the screen's x. */
   const lean = [0, 1, 2].map(
     (a) => (north[0] / toN) * eN[a]! + (east[0] / toE) * eE[a]!,
   );
   const right = lean.map((c) => c / Math.hypot(...lean)) as Vec3;
-  const up = [
-    view[1] * right[2] - view[2] * right[1],
-    view[2] * right[0] - view[0] * right[2],
-    view[0] * right[1] - view[1] * right[0],
-  ] as Vec3;
-  return { view, right, up };
+  return { view, right, up: cross(view, right) };
 }
 
 /**
@@ -232,6 +223,8 @@ export function screenAxes(
 export function createMoonPainter(
   map: SkyMap,
   paint: typeof paintLitSphere = paintLitSphere,
+  /** The tint to paint now: `null` is the natural look. Read on every call, so a look change repaints. */
+  tintOf: () => Rgb | null,
 ): MoonPainter {
   const draw = cachedDisc();
   return (ctx, lens, m, instantMs, dpr, disc, moon, angle, shine) => {
@@ -246,27 +239,37 @@ export function createMoonPainter(
         Math.sin(psi) *
           (Math.cos(angle) * right[a]! - Math.sin(angle) * upward[a]!),
     ) as Vec3;
-    const frame = moonFrame(instantMs);
+    const frame = bodyFrame(MOON_ROTATION, instantMs);
     const [lon, lat] = surfaceAt(frame, view);
     const poleAngle = Math.atan2(
       dot(frame.pole, upward),
       dot(frame.pole, right),
     );
     const radius = disc.r * dpr;
+    const tint = tintOf();
     const next = [
       radius * 2,
       moon.phase * 2,
-      angle * DEG * 2,
-      lon * DEG * 4,
-      lat * DEG * 4,
-      poleAngle * DEG * 2,
+      (angle / RAD) * 2,
+      (lon / RAD) * 4,
+      (lat / RAD) * 4,
+      (poleAngle / RAD) * 2,
     ]
       .map(Math.round)
-      .join();
+      .join(String(tint));
     return draw(ctx, disc, dpr, next, (image) =>
       paint(
         map,
-        { radius, view, right, up: upward, sun, frame, shine, tint: ICE_TINT },
+        {
+          radius,
+          view,
+          right,
+          up: upward,
+          sun,
+          frame,
+          shine,
+          tint,
+        },
         image,
       ),
     );

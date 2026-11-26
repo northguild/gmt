@@ -15,6 +15,7 @@ import {
   type RaDec,
   type SkyLens,
 } from "./sky-math";
+import type { DiscId } from "./sky-registry";
 
 export type Rgb = [number, number, number];
 
@@ -28,6 +29,26 @@ export function parseHex(value: string): Rgb | null {
 
 export const rgba = ([r, g, b]: Rgb, a: number): string =>
   `rgba(${r}, ${g}, ${b}, ${a})`;
+
+/**
+ * The soft halo round a bright point (a star, a planet, the Sun's glare): `tint` at `alpha` from
+ * `inner` px out, fading to nothing at `reach`.
+ */
+export function drawHalo(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  reach: number,
+  tint: Rgb,
+  alpha = 0.25,
+  inner = 0,
+): void {
+  const glow = ctx.createRadialGradient(x, y, inner, x, y, reach);
+  glow.addColorStop(0, rgba(tint, alpha));
+  glow.addColorStop(1, rgba(tint, 0));
+  ctx.fillStyle = glow;
+  ctx.fillRect(x - reach, y - reach, reach * 2, reach * 2);
+}
 
 /**
  * The Sun's glare reaches this many of its own radii past its disc, so it grows with the zoom as the
@@ -80,11 +101,25 @@ export type SunPainter = (
   sun: RaDec,
 ) => boolean;
 
-/** The textured bodies' painters, each once its map has loaded; a body without one is drawn flat. */
-export interface BodyPainters {
-  sun?: SunPainter | null;
-  moon?: MoonPainter | null;
-}
+/** The textured bodies' painters, each once its map has loaded; a body without one is drawn flat. Keyed by the registry's disc ids. */
+export type BodyPainters = {
+  [Id in DiscId]?: { sun: SunPainter; moon: MoonPainter }[Id] | null;
+};
+
+/**
+ * A layer drawn on the stars canvas between the stars and the bodies, inside the Earth's clip (the
+ * planets): into `ctx` for the camera `lens`, `m` and `rotation` at `instantMs`, `tint` the sky's.
+ * It writes what the gate reads on the canvas itself.
+ */
+export type SkyLayer = (
+  ctx: CanvasRenderingContext2D,
+  lens: SkyLens,
+  m: Float64Array,
+  frame: [number, number, number, number],
+  rotation: readonly [number, number],
+  instantMs: number,
+  tint: Rgb,
+) => void;
 
 /**
  * Clears the Moon's disc on the stars canvas: the Moon is solid, so no star or Sun behind it
@@ -138,13 +173,7 @@ export function drawBodies(
     Math.hypot(sunAt.x - lens.centreX, sunAt.y - lens.centreY) < earth - reach;
   if (sunAt && !hidden) {
     const { x, y, r } = sunAt;
-    if (!plain) {
-      const glow = ctx.createRadialGradient(x, y, r, x, y, reach);
-      glow.addColorStop(0, rgba(SUN_GLARE, 0.35));
-      glow.addColorStop(1, rgba(SUN_GLARE, 0));
-      ctx.fillStyle = glow;
-      ctx.fillRect(x - reach, y - reach, 2 * reach, 2 * reach);
-    }
+    if (!plain) drawHalo(ctx, x, y, reach, SUN_GLARE, 0.35, r);
     if (!paint.sun?.(ctx, lens, m, instantMs, dpr, sunAt, sun)) {
       ctx.fillStyle = SUN_CORE;
       ctx.beginPath();

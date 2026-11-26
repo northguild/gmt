@@ -49,9 +49,12 @@ Modify:
 - Processing: find the disc (threshold at 10 % of the median on-disc level, then the centroid
   and the radius from the area); turn the image so solar north is up, using the angle from the
   caption; crop a square of 1.02 radii around the disc; resize to 256×256 with Lanczos; keep
-  the single 617 nm grey band untouched in tone (slice 4's natural look shows it as it is).
-  Pixels outside the disc are 0. WebP at quality 80, budget 16,000 bytes, checked by the script
-  and its test. The sidecar's `changes` lists each step, and the disc's fitted centre and radius
+  the single 617 nm grey band (slice 4's natural look shows it as it is). Divide out the 25
+  tiles' vignetting, about 2 %, which shows as a grid: each pixel over its ring's median (the
+  limb darkening, kept), median over 0.06 radii with spots and faculae left out (`flattenDisc`).
+  Scale the disc's white (its 99.9th percentile) to 255. Pixels outside the disc are 0. WebP
+  near-lossless at 60 (lossy WebP's blocks show as a grid on a smooth disc), budget 16,000
+  bytes, checked by the script and its test. The sidecar's `changes` lists each step, and the disc's fitted centre and radius
   in source pixels.
 - The disc is not limb-corrected: its limb darkening is the real one and is what the reader sees.
 
@@ -62,9 +65,9 @@ Modify:
 - Each pixel inside the disc maps to the disc image by its offset from the centre, rotated by
   the pole's screen angle. The angle comes from projecting `sunPole` through the same view the
   sky draws with, so it is the camera's, not a separate model.
-- Tone, default look (the owner's decision 3): the image's centre level maps to full strength
-  of `ICE_TINT` (slice 1), the same ice white the Moon takes; the rest scales with the image and
-  keeps that hue. Slice 4 adds the natural look. Edge pixels take coverage alpha. The flat
+- Tone, default look (the owner's decision 3): a map byte over 255 is the share of `ICE_TINT`
+  (slice 1), the same ice white the Moon takes, so the map's white is full strength and nothing
+  clips. Reads stay two map pixels inside the limb, so the black past it never darkens the edge. Slice 4 adds the natural look. Edge pixels take coverage alpha. The flat
   fallback core stays `SUN_CORE`.
 - The glare is drawn as today, from the same centre and radius, after the disc.
 - Below `MIN_BODY`, or with no map, the flat core draws, unchanged.
@@ -73,7 +76,9 @@ Modify:
 
 - `prepare-sky-bodies.test.ts`, the Sun row: the shipped disc is 256×256 and within budget; its
   sidecar hash, licence and date fields match; the four pixels at 0.98 radii on the axes are
-  darker than the centre by at least 25 % (the limb darkening survived); the corners are 0.
+  darker than the centre by at least 25 % (the limb darkening survived); the corners are 0;
+  each 16 px block inside 0.85 radii, over its rings' medians, is within 1.5 % of 1 (no tile
+  grid); the disc's white is 255. `flattenDisc` takes out a 2 % step and keeps a spot.
 - `body-frame.test.ts`, `sunPole`: pinned to JPL Horizons, target 10, observer 500@399,
   `QUANTITIES='17'`, three instants a season apart, the query in the test's comment: the north
   pole position angle within 0.2°.
@@ -81,7 +86,8 @@ Modify:
   - a uniform disc fills the expected pixel count within 2 %;
   - a dot at the image's top centre lands on the side the pole angle gives, within 10°, at
     pole angles 0°, 90° and 200°;
-  - the centre pixel equals `ICE_TINT` within 1/255 for a map whose centre is its brightest.
+  - a map byte of 255 paints `ICE_TINT` within 1/255, and 128 paints half of it, unclipped;
+  - a uniform disc that is black past the limb paints no covered pixel darker than its centre.
 - `sky-bodies.test.ts`: with both maps set, a draw that moves only the Moon repaints the Moon and
   not the Sun (spy on both painters).
 - `space-sky.test.ts`: both maps load in one idle wait; one failing leaves the other textured and

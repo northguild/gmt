@@ -3,16 +3,23 @@
  * deck's stage (`slides/stage.ts`).
  *
  * The sky has no loop of its own. `loadSky` fetches the star list and the Milky Way map and builds
- * the sky, then, once the browser is idle, loads the Moon's map and hands the sky its painter; `followGlobe` draws it once from the globe's camera (which marks the host
+ * the sky, then, once the browser is idle, loads the bodies' maps and the planets' layer and hands the sky their painters; `followGlobe` draws it once from the globe's camera (which marks the host
  * `data-sky="ready"` and so fades the layers in) and then re-draws it on each of the globe's
  * frames; `drawWithoutGlobe` draws it once when no globe will ever mount. Each takes the caller's
  * own elements and signal, so the hero passes a signal it never aborts and the deck aborts its on
  * `destroy()`.
  */
+import { watchTheme } from "./globe/globe-theme";
 import { startRotation } from "./globe-zones";
 import { mountSky, type Sky } from "./sky";
 import type { BodyPainters } from "./sky-bodies";
 import type { SkyMap } from "./sky-map";
+import {
+  EMPTY_POINTS,
+  providePoints,
+  SKY_BODIES,
+  type SkyBody,
+} from "./sky-registry";
 import { whenIdle } from "./yield-to-main";
 
 type Clock = {
@@ -111,33 +118,14 @@ export function skyInputsOf(
   };
 }
 
-/**
- * The bodies that take a map: the `SkyInputs` field that names it and the painter its lazy chunk
- * makes from it. Sun first, as it is drawn first. Each chunk loads with its map, off the first paint.
- */
-const SKY_BODIES = [
-  {
-    id: "sun",
-    map: "sunMap",
-    make: async (map: SkyMap) =>
-      (await import("./sun-paint")).createSunPainter(map),
-  },
-  {
-    id: "moon",
-    map: "moonMap",
-    make: async (map: SkyMap) =>
-      (await import("./body-paint")).createMoonPainter(map),
-  },
-] as const satisfies readonly {
-  id: keyof BodyPainters;
-  map: "sunMap" | "moonMap";
-  make: (map: SkyMap) => Promise<BodyPainters[keyof BodyPainters]>;
-}[];
+/** The registry's discs that take a map, whose map the page declares. */
+type MappedDisc = Extract<SkyBody, { kind: "disc" }>;
 
 /**
- * Once the first paint is done and the browser idle, loads each body's map and painter chunk and
- * hands the painters to the sky; a body whose map or chunk fails stays flat and the others are
- * textured. Nothing is fetched under forced colours (the sky is hidden) or after the caller has gone.
+ * Once the first paint is done and the browser idle, loads each disc's map and painter chunk and
+ * the planets' layer, and hands them to the sky; a body whose map or chunk fails stays flat (the
+ * planets are then left out) and the others are textured. Nothing is fetched under forced colours
+ * (the sky is hidden) or after the caller has gone.
  */
 async function loadBodyMaps(
   sky: Sky,
@@ -145,29 +133,38 @@ async function loadBodyMaps(
   inputs: Pick<SkyInputs, "sunMap" | "moonMap" | "signal">,
 ): Promise<void> {
   const { signal } = inputs;
-  const wanted = SKY_BODIES.filter((body) => inputs[body.map]);
-  if (
-    !wanted.length ||
-    globalThis.matchMedia?.("(forced-colors: active)")?.matches
-  ) {
-    return;
-  }
+  if (globalThis.matchMedia?.("(forced-colors: active)")?.matches) return;
+  const wanted = SKY_BODIES.filter(
+    (row): row is MappedDisc => row.kind === "disc" && !!inputs[row.map],
+  );
   await sky.ready;
   await whenIdle();
   if (signal.aborted) return;
-  const made = await Promise.all(
-    wanted.map(async ({ map, make }) => {
-      const loaded = await loadSkyMap(inputs[map]!, signal);
-      return loaded ? make(loaded).catch(() => null) : null;
-    }),
-  );
+  const [made, planets] = await Promise.all([
+    Promise.all(
+      wanted.map(async ({ map, make }) => {
+        const loaded = await loadSkyMap(inputs[map]!, signal);
+        return loaded ? make(loaded).catch(() => null) : null;
+      }),
+    ),
+    import("./sky-planets")
+      .then((chunk) => chunk.createPlanetLayer())
+      .catch(() => null),
+  ]);
   if (signal.aborted) return;
   const painters: BodyPainters = {};
   wanted.forEach(({ id }, i) => {
     if (made[i]) Object.assign(painters, { [id]: made[i] });
   });
-  stars.dataset["skyMaps"] = made.some(Boolean) ? "ready" : "failed";
-  sky.maps(painters);
+  if (wanted.length)
+    stars.dataset["skyMaps"] = made.some(Boolean) ? "ready" : "failed";
+  /* The sky's own signal ends the source with it; a failed chunk leaves an empty one, so the list stops waiting. */
+  providePoints(planets ?? EMPTY_POINTS);
+  signal.addEventListener("abort", () => providePoints(null), { once: true });
+  const layer = planets ?? undefined;
+  sky.maps(painters, layer);
+  /* A look change repaints the discs: their cache keys carry the look, so one redraw is enough. */
+  watchTheme(() => sky.maps(painters, layer), signal);
 }
 
 /**

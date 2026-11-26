@@ -42,6 +42,7 @@ import {
   skyWithoutGlobe,
 } from "./hero-space";
 import { loadClock } from "./space-sky";
+import { mountSkyNames, type SkyNames } from "./sky-names";
 import { mountSkyView, renderSkyView, type SkyView } from "./sky-view";
 import {
   EARTH_IMAGERY,
@@ -121,7 +122,6 @@ export function renderGlobeTemplate({
       })}
       <div class="${styles.filters}" id="${id("filters")}"></div>
     </div>
-    ${space ? renderSkyView(id("sky-view")) : ""}
     ${listbox({
       id: id("clocks"),
       label: "Pinned zones — select one to focus the globe",
@@ -134,6 +134,7 @@ export function renderGlobeTemplate({
     <button type="button" data-globe-zoom="in" data-cue aria-label="Zoom in">+</button>
     <button type="button" data-globe-zoom="out" data-cue aria-label="Zoom out">−</button>
     <button type="button" data-globe-zoom="reset" data-cue aria-label="Reset zoom">⊙</button>
+    ${space ? renderSkyView(id("sky-view")) : ""}
     ${
       space
         ? html`<button type="button" data-globe-search aria-label="Find a zone" aria-controls="${id("drawer")}" aria-expanded="false"
@@ -258,6 +259,9 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
       tooltip,
       lock,
       zoom,
+      /* The Look switch is offered once a body's map is drawn on this page's sky (`space-sky.ts`). */
+      skyTextured: () =>
+        document.querySelector('[data-sky-maps="ready"]') !== null,
       engine: pause,
       ...(space
         ? {
@@ -442,7 +446,7 @@ function wireSpace(
   const drawerHandle = wireDrawer(panel, {
     signal,
     toggle: magnifier,
-    /* The zoom stack, magnifier included, is hidden while the list is open. */
+    /* The zoom stack, magnifier and Look at included, is hidden while the list is open. */
     inertWhenOpen:
       magnifier.closest<HTMLElement>('[data-gate="globe-zoom"]') ?? undefined,
     onToggle: (open) => {
@@ -463,12 +467,22 @@ function wireSpace(
     },
     { signal },
   );
-  /* The Sky view row: a stacked phone closes its sheet first, so the body shows in the sky bay. */
+  /* Look at: the zoom stack's button and the bar it opens, shown only with the sheet closed, so a body shows in the sky bay. */
   const hero = heroOf(root);
   let view: SkyView | undefined;
+  /* The names of the Sun, the Moon and the planets under the pointer, as northguild.dev names its sky. */
+  let names: SkyNames | undefined;
   if (hero)
     void loadClock().then(({ getUnixNow }) => {
       if (signal.aborted) return;
+      names = mountSkyNames({
+        engine: host,
+        hero,
+        surface,
+        frame: () => heroAimFrame(hero, surface),
+        now: getUnixNow,
+        signal,
+      });
       view = mountSkyView({
         engine: host,
         host: hero,
@@ -477,20 +491,21 @@ function wireSpace(
             hero,
             surface,
             magnifier.closest('[data-gate="globe-zoom"]'),
+            /* The open Look at bar, beside the stack, is one more box to keep clear of (the
+               disclosure hides its panel, not the bar). */
+            hero.querySelector(':not([hidden]) > [data-gate="sky-look-bar"]'),
           ),
         now: getUnixNow,
         reducedMotion: () =>
           globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ??
           false,
-        onPress: () => {
-          if (globalThis.matchMedia?.(HOME_LOCKED_QUERY).matches === false)
-            drawerHandle.close();
-        },
         signal,
       });
     });
   host.onInteract((kind) => {
     view?.release();
+    /* A tap names what it lands on; working the globe takes the name away. */
+    if (kind !== "tap") names?.hide();
     /* Stacked, only the magnifier opens the sheet; a tap still picks its zone and shows the card. */
     if (globalThis.matchMedia?.(HOME_LOCKED_QUERY).matches === false) return;
     /* The tap has already picked its zone, or cleared the choice, by the time this runs. */

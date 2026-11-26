@@ -1,67 +1,73 @@
 /**
- * The Sky view group: one toggle button per body of `SKY_VIEWS`, in the zone drawer. Pressing one
- * flies the globe's camera until that body sits beside the Earth's limb (`aimBody`), holds it there
- * as the body drifts, and keeps the idle spin off while the view is on. Pressing the pressed
- * button, or any work of the reader's on the globe, releases the view and leaves the camera where
- * it is. A body is a row of `SKY_VIEWS` and one of `AIM_BODIES`; nothing here names the Sun or the Moon
- * apart from that row.
+ * Look at: a kit `disclosure` (icon only) in the globe's zoom stack whose panel is a second bar,
+ * drawn as the stack is but wide enough for words: one button per row of `SKY_BODIES`, its icon
+ * and its name, in the registry's order (the Sun, the Moon, then the planets outward from the
+ * Sun). Pressing one closes the bar and flies the globe's camera until that body sits beside the
+ * Earth's limb (`aimBody`), holds it there as the body drifts, and keeps the idle spin off while
+ * the view is on; the held body's button is pressed (`aria-pressed`) and the stack's button shows
+ * that a view is on. Pressing the held body again, or any work of the reader's on the globe,
+ * releases the view and leaves the camera where it is. A planet's button is unavailable
+ * (`aria-disabled`, its reason in its `title`) while the planet layer loads, or while the planet
+ * is too faint to be drawn.
  *
  * Time is the sky's own `now`; the view keeps no timer. It checks the body on the globe's frames
  * (the engine renders one a second at rest), at most once a second of `now`.
  */
 import {
-  button,
-  buttonRow,
+  disclosure,
   html,
   raw,
+  wireDisclosure,
   type SafeHtml,
 } from "~/widgets/builders";
-import styles from "~/widgets/tools/sky-view.module.css";
+import styles from "~/widgets/tools/sky-look.module.css";
 import { hopDuration } from "./globe/controller";
 import {
   aimBody,
+  aimLens,
   behindEarth,
   bodyAt,
   boxRadius,
   isClear,
   type AimFrame,
   type AimLens,
-  type SkyBodyId,
 } from "./sky-aim";
+import { pointSource, SKY_BODIES, type SkyBodyId } from "./sky-registry";
 import { arcDegrees } from "./slides/places";
 import { SKY_ICON_PATHS } from "./zone-sky";
 
-interface SkyViewEntry {
-  id: SkyBodyId;
-  label: string;
-  /** Inner SVG markup of a 24-unit icon. */
-  icon: string;
-}
+/* A text-presentation selector keeps a symbol from drawing as a coloured emoji. */
+const symbol = (char: string): SafeHtml =>
+  html`<span class="${styles.face}" aria-hidden="true">${char}\uFE0E</span>`;
+const icon = (path: string): SafeHtml =>
+  html`<svg class="${styles.face}" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">${raw(path)}</svg>`;
 
-/** The buttons, in order. */
-export const SKY_VIEWS: readonly SkyViewEntry[] = [
-  { id: "sun", label: "View Sun", icon: SKY_ICON_PATHS.day },
-  { id: "moon", label: "View Moon", icon: SKY_ICON_PATHS.night },
-];
+/** Each body's face on its button: the sky's own icons for the discs, the astronomical symbols for the planets. */
+const FACES: Readonly<Record<SkyBodyId, SafeHtml>> = {
+  sun: icon(SKY_ICON_PATHS.day),
+  moon: icon(SKY_ICON_PATHS.night),
+  mercury: symbol("\u263F"),
+  venus: symbol("\u2640"),
+  mars: symbol("\u2642"),
+  jupiter: symbol("\u2643"),
+  saturn: symbol("\u2644"),
+  uranus: symbol("\u2645"),
+};
 
-/** The `data-gate` of a body's button. */
-const gateOf = (id: SkyBodyId): string => `sky-view-${id}`;
-
-/** The group's markup; `idPrefix` namespaces the button ids. */
-export function renderSkyView(
-  idPrefix: string,
-  views: readonly SkyViewEntry[] = SKY_VIEWS,
-): SafeHtml {
-  const buttons = views.map((view) =>
-    button({
-      id: `${idPrefix}-${view.id}`,
-      label: view.label,
-      pressed: false,
-      gate: gateOf(view.id),
-      icon: html`<svg viewBox="0 0 24 24" width="16" height="16" focusable="false">${raw(view.icon)}</svg>`,
-    }),
-  );
-  return html`<div class="${styles.group}" role="group" aria-label="Sky view" data-gate="sky-view">${buttonRow(html`${buttons}`)}</div>`;
+/** The stack's button and the bar it opens; `idPrefix` namespaces its ids. */
+export function renderSkyView(idPrefix: string): SafeHtml {
+  return disclosure({
+    id: `${idPrefix}-look`,
+    label: "Look at",
+    icon: html`<svg viewBox="0 0 24 24" width="16" height="16" focusable="false">${raw(SKY_ICON_PATHS.night)}</svg>`,
+    gate: "sky-look",
+    className: styles.look,
+    buttonClassName: styles.toggle,
+    children: html`<div class="${styles.bar}" role="group" aria-label="Look at" data-gate="sky-look-bar">${SKY_BODIES.map(
+      (row) =>
+        html`<button type="button" class="${styles.body}" data-sky-body="${row.id}" aria-pressed="false">${FACES[row.id]}<span>${row.name}</span></button>`,
+    )}</div>`,
+  });
 }
 
 /** What the view asks of the globe: a `GlobeHost` or a `GlobeEngine` both serve. */
@@ -84,17 +90,14 @@ export interface SkyViewEngine {
 
 interface SkyViewOptions {
   engine: SkyViewEngine;
-  /** The hero: it holds the buttons and gets `data-sky-view` while a view is on. */
+  /** The hero: it holds the control and gets `data-sky-view` while a view is on. */
   host: HTMLElement;
   /** The hero's size and the boxes to keep clear of, read afresh each time. */
   avoid: () => AimFrame;
   /** The instant the sky shows, epoch milliseconds. */
   now: () => number;
   reducedMotion: () => boolean;
-  /** A view was pressed on; a stacked phone closes its sheet here. */
-  onPress?: () => void;
   signal: AbortSignal;
-  views?: readonly SkyViewEntry[];
 }
 
 export interface SkyView {
@@ -110,37 +113,73 @@ const CHECK_MS = 1000;
 
 export function mountSkyView(options: SkyViewOptions): SkyView {
   const { engine, host, avoid, now, signal } = options;
-  const views = options.views ?? SKY_VIEWS;
-  const buttons = new Map<SkyBodyId, HTMLElement>();
-  for (const { id } of views) {
-    const el = host.querySelector<HTMLElement>(`[data-gate="${gateOf(id)}"]`);
-    if (el) buttons.set(id, el);
+  const control = host.querySelector<HTMLElement>('[data-gate="sky-look"]');
+  if (!control) throw new Error("the sky view is missing its Look at control");
+  const toggle = control.querySelector<HTMLElement>("button");
+  const buttons = [
+    ...control.querySelectorAll<HTMLButtonElement>("button[data-sky-body]"),
+  ];
+  /* Opening reads the planet layer afresh, so the bar never shows a stale state. */
+  const panel = wireDisclosure(control, {
+    signal,
+    light: true,
+    onToggle: (open) => {
+      if (open) syncPoints();
+    },
+  });
+  control.addEventListener(
+    "click",
+    (event) => {
+      const button = (event.target as Element | null)?.closest<HTMLElement>(
+        "button[data-sky-body]",
+      );
+      if (button && button.getAttribute("aria-disabled") !== "true")
+        choose(button.dataset["skyBody"] ?? "");
+    },
+    { signal },
+  );
+
+  /** Marks the planets that cannot be looked at now, with the reason as their tip. */
+  function syncPoints(): void {
+    const source = pointSource();
+    const drawn = new Set(
+      source?.drawn(now(), engine.getView().rotation).map(({ id }) => id),
+    );
+    for (const button of buttons) {
+      const row = SKY_BODIES.find((r) => r.id === button.dataset["skyBody"]);
+      if (row?.kind !== "point") continue;
+      const why =
+        source === null
+          ? `${row.name}: the planets are still loading`
+          : drawn.has(row.id)
+            ? null
+            : `${row.name}: too faint to see now`;
+      if (why) {
+        button.title = why;
+        button.setAttribute("aria-disabled", "true");
+      } else {
+        button.removeAttribute("title");
+        button.removeAttribute("aria-disabled");
+      }
+    }
   }
+  syncPoints();
 
   let active: SkyBodyId | null = null;
   let destroyed = false;
-  /** Where the body sits on screen when the camera is on it, in the hero's pixels. */
+  /** Where the body sits on screen when the camera is on it, in the frame's pixels. */
   let anchor: { x: number; y: number } | null = null;
   let checkedAt = -Infinity;
 
-  /** The camera and the hero as `aimBody` wants them. */
-  function lensOf(frame: AimFrame): AimLens {
-    const view = engine.getView();
-    return {
-      width: frame.width,
-      height: frame.height,
-      centre: {
-        x: view.centre.x + frame.shift.x,
-        y: view.centre.y + frame.shift.y,
-      },
-      focalAtRest: view.focalPx / view.zoom,
-      rotation: view.rotation,
-    };
-  }
+  const lensOf = (frame: AimFrame): AimLens => aimLens(engine.getView(), frame);
 
   function mark(): void {
-    for (const [id, el] of buttons)
-      el.setAttribute("aria-pressed", id === active ? "true" : "false");
+    toggle?.toggleAttribute("data-held", active !== null);
+    for (const button of buttons)
+      button.setAttribute(
+        "aria-pressed",
+        String(button.dataset["skyBody"] === active),
+      );
     if (active) host.dataset["skyView"] = active;
     else delete host.dataset["skyView"];
   }
@@ -152,7 +191,10 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
     const lens = lensOf(frame);
     const found = aimBody(id, at, lens, frame.rects);
     /* No clear spot: look past the Earth's centre at the body, at rest zoom. */
-    const goal = found ?? { rotation: behindEarth(id, at), zoom: 1 };
+    const behind = behindEarth(id, at);
+    const goal = found ?? (behind && { rotation: behind, zoom: 1 });
+    /* A body with no place (a point whose source is gone) cannot be looked at. */
+    if (!goal) return release();
     anchor = found
       ? bodyAt(id, at, { ...lens, rotation: goal.rotation }, goal.zoom)
       : null;
@@ -176,18 +218,27 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
     engine.holdAmbient(false);
   }
 
-  function press(id: SkyBodyId): void {
-    if (active === id) return release();
-    active = id;
+  /** A body was chosen: the bar closes, and the view aims, switches or (the held one) releases. */
+  function choose(id: string): void {
+    panel.set(false, true);
+    if (!SKY_BODIES.some((row) => row.id === id)) return;
+    const body = id as SkyBodyId;
+    if (active === body) return release();
+    active = body;
     mark();
-    options.onPress?.();
     engine.holdAmbient(true);
-    aim(id, true);
+    aim(body, true);
   }
 
+  let syncedAt = -Infinity;
   engine.onFrame(() => {
-    if (destroyed || active === null || engine.getView().moving) return;
+    if (destroyed) return;
     const at = now();
+    if (at - syncedAt >= CHECK_MS) {
+      syncedAt = at;
+      syncPoints();
+    }
+    if (active === null || engine.getView().moving) return;
     if (at - checkedAt < CHECK_MS) return;
     checkedAt = at;
     const frame = avoid();
@@ -203,8 +254,6 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
       aim(active, false);
   });
 
-  for (const [id, el] of buttons)
-    el.addEventListener("click", () => press(id), { signal });
   const destroy = (): void => {
     if (destroyed) return;
     release();

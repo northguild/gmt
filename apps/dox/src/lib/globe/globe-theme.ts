@@ -5,6 +5,7 @@
  */
 
 import { LABEL_ALPHA, MINOR_MARKER_ALPHA } from "../globe-inks";
+import { LOOK_ATTRIBUTE } from "../look";
 import type { GlobeTheme, RendererChoice, Rgba } from "./types";
 
 /**
@@ -182,4 +183,21 @@ function parseRgbFunction(value: string): Rgba | null {
   if (parts.length < 3 || parts.some((part) => !Number.isFinite(part)))
     return null;
   return [parts[0] / 255, parts[1] / 255, parts[2] / 255, parts[3] ?? 1];
+}
+
+/** The attributes on `<html>` that change a token the theme reads: the colour scheme and the look. */
+export const THEME_ATTRIBUTES = ["data-theme", LOOK_ATTRIBUTE] as const;
+
+/**
+ * Calls `callback` once for each change of the page's colour scheme or look, until `signal`
+ * aborts. The one observer for the globe, the sky and the deck's stage.
+ */
+export function watchTheme(callback: () => void, signal: AbortSignal): void {
+  if (signal.aborted || typeof MutationObserver === "undefined") return;
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: [...THEME_ATTRIBUTES],
+  });
+  signal.addEventListener("abort", () => observer.disconnect(), { once: true });
 }

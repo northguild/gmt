@@ -14,7 +14,7 @@ Earth's centre, inside the camera's 42,164 km orbit; JPL close-approach data, so
 the geocentre it brightens from 5.75 at 12:00 UTC to 3.19 at 21:00 (Horizons); from the camera it
 can be far brighter, as the camera can sit within one Earth radius of it. It hides behind the
 Earth, and passes in front of the Earth, the Moon and the Sun when it is nearer than they are.
-While it is at 5.5 or brighter, Look at lists it, and choosing it aims and holds the camera
+While it is at 5.5 or brighter, its Look at row can be chosen, and choosing it aims and holds the camera
 as for any body. Outside the pass nothing changes.
 
 ## Decided
@@ -48,8 +48,8 @@ as for any body. Outside the pass nothing changes.
   radius from the camera it is about four magnitudes brighter than from the geocentre, and the
   stars' halo law applies unchanged.
 - **(e) Behind the camera.** `projectDirection` returns false for a direction behind the image
-  plane (`pinhole.ts`); the layer lists the body `behind` and does not draw it. Look at still
-  lists it by V, and the aim turns the camera to it.
+  plane (`pinhole.ts`); the layer lists the body `behind` and does not draw it. Its Look at row
+  stays available, and the aim turns the camera to it.
 - **(f) The Earth, the Moon and the Sun: occlusion by geometry.** `earthCover(camera, body)`
   answers `behind` when the camera's ray meets the Earth's sphere before the body (not drawn,
   listed `earth`), `front` when the body is inside the disc but nearer than the near surface, else
@@ -64,8 +64,8 @@ as for any body. Outside the pass nothing changes.
   SBDB's current solution id for a tabulated body (`https://ssd-api.jpl.nasa.gov/sbdb.api?sstr=<id>`)
   differs from the recorded one, and when a shipped window has ended. Its message names the
   runbook (re-run the generator). The pull-request tier reads neither the date nor the network.
-- **(i) In Look at** Apophis is one more point row, `{id: "apophis", name: "Apophis"}`, sorted
-  by V with the planets, so near closest approach it can head the list. Its `place(instantMs,
+- **(i) In Look at** Apophis is one more point row, `{id: "apophis", name: "Apophis"}`, after
+  Vesta's in the registry's order (rows never move, so the bar never jumps). Its `place(instantMs,
   rotation)` is camera-centred, so slice 3's Newton solve handles the parallax as it does for the
   Moon; its box is `POINT_BOX`; the 9 px drift check re-aims as it moves.
 - **(j) Credit:** `SKY_CREDITS` gains "Close-approach positions: NASA JPL Small-Body Database and
@@ -114,7 +114,7 @@ Apophis, and with the Earth between.
   three sites, within 0.05 mag.
 - `sky-planets.test.ts`: from the near site at 20:00Z it draws on `near`, not the stars canvas;
   behind the image plane it is listed `behind`; at the far-side Earth pin `earth`; at 06:00Z it is
-  absent from `drawn()`; at 20:00Z present. `sky-picker.test.ts`: Apophis sorted by V among them.
+  absent from `drawn()`; at 20:00Z present. `sky-view.test.ts`: Apophis's row last, available exactly then.
 - `prepare-sky-orbits.test.ts`: on the recorded answers, rule (a) keeps Apophis 2029 and drops a
   recorded 0.0019 au approach of an H 25 body; the window's bounds; every sidecar field.
 - The freshness check's test, recorded answers and a fixed clock: same id passes; a changed id
@@ -128,8 +128,8 @@ Apophis, and with the Earth between.
   within 2 px of the pin's screen point, V within 0.1.
 - `apophis-front`: the near rotation: the near canvas has alpha above 0 within 2 px of the pin,
   over the Earth's disc. `apophis-behind`: listed `earth`, both canvases alpha 0 within 3 px.
-- `apophis-pick`: Look at lists Apophis; choosing it lands it within 2 px of the aim's target,
-  held after `page.clock.runFor(60_000)`. At 06:00Z it is not listed.
+- `apophis-pick`: Apophis's Look at row is available; choosing it lands it within 2 px of the aim's target,
+  held after `page.clock.runFor(60_000)`. At 06:00Z its row is `aria-disabled`.
 
 ## Duplication pass (dox-tester)
 
@@ -143,7 +143,7 @@ Apophis, and with the Earth between.
 
 ## Definition of done
 
-- `pnpm --filter @gmt/dox test -- pass-table ephemeris magnitude sky-planets sky-picker sky-registry prepare-sky-orbits data-credits sky-size`
+- `pnpm --filter @gmt/dox test -- pass-table ephemeris magnitude sky-planets sky-view sky-registry prepare-sky-orbits data-credits sky-size`
   passes; `lint` and `check` clean.
 - `pnpm --filter @gmt/dox gates --only hero-space,data-credits-check,sky-orbits-fresh` passes. No
   `it.skip`, `it.todo` or `it.fails`.

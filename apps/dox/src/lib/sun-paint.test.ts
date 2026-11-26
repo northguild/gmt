@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { moonSight, stubImageCanvas } from "../test/body-sight";
 import { createMoonPainter, discSize } from "./body-paint";
-import { ICE_TINT, type Disc } from "./sky-bodies";
+import { ICE_TINT, type Disc, type Rgb } from "./sky-bodies";
+import { paintLook, setLook } from "./look";
 import type { SkyMap } from "./sky-map";
 import {
   bodyOnScreen,
@@ -30,14 +31,19 @@ function map(
   return { width: size, height: size, data };
 }
 
-function paint(m: SkyMap, radius: number, angle: number): ImageData {
+function paint(
+  m: SkyMap,
+  radius: number,
+  angle: number,
+  tint: Rgb = ICE_TINT,
+): ImageData {
   const size = discSize(radius);
   const out = {
     width: size,
     height: size,
     data: new Uint8ClampedArray(size * size * 4),
   } as ImageData;
-  paintEmissiveDisc(m, { radius, angle, tint: ICE_TINT }, out);
+  paintEmissiveDisc(m, { radius, angle, tint }, out);
   return out;
 }
 
@@ -84,9 +90,9 @@ describe("paintEmissiveDisc", () => {
     },
   );
 
-  it("paints the centre as the tint at full strength when the map is brightest there", () => {
+  it("paints a map byte of 255 as the tint at full strength", () => {
     const m = map(50, (x, y) =>
-      Math.abs(x - 32) < 5 && Math.abs(y - 32) < 5 ? 200 : undefined,
+      Math.abs(x - 32) < 5 && Math.abs(y - 32) < 5 ? 255 : undefined,
     );
     const image = paint(m, 100, Math.PI / 2);
     const o = (100 * image.width + 100) * 4;
@@ -96,10 +102,51 @@ describe("paintEmissiveDisc", () => {
     expect(image.data[o + 3]).toBe(255);
   });
 
+  it("scales the tint by the map byte over 255, unclipped", () => {
+    const image = paint(map(128), 50, Math.PI / 2);
+    const o = (51 * image.width + 51) * 4;
+    ICE_TINT.forEach((channel, a) =>
+      expect(
+        Math.abs(image.data[o + a]! - (channel * 128) / 255),
+      ).toBeLessThanOrEqual(1),
+    );
+  });
+
+  it("draws no dark ring at the limb when the map is black past it", () => {
+    /* A uniform disc filling the crop, black outside: every covered pixel keeps the centre's colour. */
+    const radius = 100;
+    const edge = 32 / 1.02;
+    const m = map(0, (x, y) =>
+      Math.hypot(x + 0.5 - 32, y + 0.5 - 32) < edge ? 200 : undefined,
+    );
+    const image = paint(m, radius, Math.PI / 2);
+    const c = image.width / 2;
+    const centre =
+      image.data[(Math.floor(c) * image.width + Math.floor(c)) * 4]!;
+    let darkest = 255;
+    for (let j = 0; j < image.height; j++)
+      for (let i = 0; i < image.width; i++) {
+        const o = (j * image.width + i) * 4;
+        if (image.data[o + 3]! > 0) darkest = Math.min(darkest, image.data[o]!);
+      }
+    expect(centre - darkest).toBeLessThanOrEqual(1);
+  });
+
   it("leaves the pixels outside the disc clear", () => {
     const image = paint(map(200), 50, 0);
     expect(image.data[3]).toBe(0);
     expect(image.data[image.data.length - 1]).toBe(0);
+  });
+});
+
+describe("the natural look", () => {
+  it("paints the Sun's grey level as neutral white, r = g = b", () => {
+    const image = paint(map(200), 50, 0, [255, 255, 255]);
+    const o = ((image.height >> 1) * image.width + (image.width >> 1)) * 4;
+    const [r, g, b] = image.data.slice(o, o + 3);
+    expect(Math.abs(r! - g!)).toBeLessThanOrEqual(1);
+    expect(Math.abs(g! - b!)).toBeLessThanOrEqual(1);
+    expect(r).toBe(Math.round((255 * 200) / 255));
   });
 });
 
@@ -139,7 +186,7 @@ describe("createSunPainter", () => {
 
   it("paints once, draws the cached disc again at the same key, and paints once more when the radius changes", () => {
     const spy = vi.fn();
-    const painter = createSunPainter(map(200), spy);
+    const painter = createSunPainter(map(200), spy, () => ICE_TINT);
     const { m, disc, sun } = sight(T);
     expect(painter(ctx, lens, m, T, 1, disc, sun)).toBe(true);
     painter(ctx, lens, m, T, 1, disc, sun);
@@ -149,11 +196,30 @@ describe("createSunPainter", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("paints once more when the look changes", () => {
+    const spy = vi.fn();
+    const painter = createSunPainter(map(200), spy, () =>
+      paintLook() === "natural" ? [255, 255, 255] : ICE_TINT,
+    );
+    const { m, disc, sun } = sight(T);
+    try {
+      painter(ctx, lens, m, T, 1, disc, sun);
+      setLook("natural");
+      painter(ctx, lens, m, T, 1, disc, sun);
+      painter(ctx, lens, m, T, 1, disc, sun);
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy.mock.calls[1]![1].tint).toEqual([255, 255, 255]);
+    } finally {
+      setLook("ice");
+    }
+  });
+
   it("hands the painting a finite screen angle for the Sun's pole", () => {
     const seen: number[] = [];
     const painter = createSunPainter(
       map(200),
       (_map, g) => void seen.push(g.angle),
+      () => ICE_TINT,
     );
     const { m, disc, sun } = sight(T);
     painter(ctx, lens, m, T, 1, disc, sun);
@@ -163,7 +229,7 @@ describe("createSunPainter", () => {
 
   it("leaves a disc at the smallest size to the flat Sun", () => {
     const spy = vi.fn();
-    const painter = createSunPainter(map(200), spy);
+    const painter = createSunPainter(map(200), spy, () => ICE_TINT);
     const { m, disc, sun } = sight(T);
     expect(painter(ctx, lens, m, T, 1, { ...disc, r: 2.5 }, sun)).toBe(false);
     expect(spy).not.toHaveBeenCalled();
@@ -173,7 +239,7 @@ describe("createSunPainter", () => {
   it("leaves the Sun to the flat one when the canvas gives no context", () => {
     vi.restoreAllMocks();
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
-    const painter = createSunPainter(map(200), vi.fn());
+    const painter = createSunPainter(map(200), vi.fn(), () => ICE_TINT);
     const { m, disc, sun } = sight(T);
     expect(painter(ctx, lens, m, T, 1, disc, sun)).toBe(false);
   });
@@ -181,8 +247,8 @@ describe("createSunPainter", () => {
   it("repaints only the Moon when only the Moon moves", () => {
     const sunSpy = vi.fn();
     const moonSpy = vi.fn();
-    const sunPainter = createSunPainter(map(200), sunSpy);
-    const moonPainter = createMoonPainter(map(120), moonSpy);
+    const sunPainter = createSunPainter(map(200), sunSpy, () => ICE_TINT);
+    const moonPainter = createMoonPainter(map(120), moonSpy, () => ICE_TINT);
     const moonAt = (instantMs: number) => {
       const { m, moon, disc } = moonSight(lens, instantMs);
       return () =>

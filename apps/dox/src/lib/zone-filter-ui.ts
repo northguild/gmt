@@ -1,6 +1,6 @@
 /**
  * The globe's settings panel: nine filter switches over three axes (day, DST, sky) and the
- * Earth's look, behind a settings gear that is shut until asked for. The markup is
+ * page's look, behind a settings gear that is shut until asked for. The markup is
  * `zoneFilters` in the zones family; this file is the mount.
  *
  * Shut by default on purpose: the filters answer a question most readers never ask. It is
@@ -15,7 +15,7 @@
 import { setHtml, setSwitchDetail, wireDisclosure } from "~/widgets/builders";
 import { zoneFilters } from "~/widgets/families/zones/zone-filters";
 import type { GmtReadout } from "~/widgets/primitives/readout/readout";
-import { currentEarth, setEarth } from "./earth-look";
+import { currentLook, setLook } from "./look";
 import type { SkyState } from "./zone-sky";
 import {
   DAY_SHIFTS,
@@ -37,11 +37,11 @@ export interface ZoneFilterUi {
    */
   update(counts: BucketCounts, shown: number, total: number): void;
   /**
-   * Show or hide the "Natural Earth" switch and set it to the page's current look. The switch
+   * Show or hide the "Natural colours" switch and set it to the page's current look. The switch
    * is offered only where this globe draws the photograph, since anywhere else it would do
    * nothing. The mount calls this whenever its theme or renderer may have changed.
    */
-  setEarthAvailable(available: boolean): void;
+  setLookAvailable(available: boolean): void;
   /** Whether the panel is open; `globe.ts` uses it to decide whether the bucket scan is worth running. */
   isOpen(): boolean;
   destroy(): void;
@@ -74,8 +74,8 @@ export function mountZoneFilters(
     return found;
   };
   const status = root.querySelector<GmtReadout>("gmt-readout");
-  const earth = input("earth", "natural");
-  const earthGroup = earth.closest("fieldset");
+  const natural = input("look", "natural");
+  const lookGroup = natural.closest("fieldset");
 
   root.addEventListener(
     "change",
@@ -83,8 +83,8 @@ export function mountZoneFilters(
       const box = event.target;
       if (!(box instanceof HTMLInputElement)) return;
       const { name: axis, value: key } = box;
-      if (axis === "earth") {
-        setEarth(box.checked ? "natural" : "blue");
+      if (axis === "look") {
+        setLook(box.checked ? "natural" : "ice");
         return;
       }
       if (axis === "day") filter.days[key as DayShift] = box.checked;
@@ -120,14 +120,14 @@ export function mountZoneFilters(
   return {
     get,
     isOpen: () => disclosure.open,
-    setEarthAvailable(available) {
-      earth.checked = currentEarth() === "natural";
-      if (!earthGroup || earthGroup.hidden === !available) return;
+    setLookAvailable(available) {
+      natural.checked = currentLook() === "natural";
+      if (!lookGroup || lookGroup.hidden === !available) return;
       /* The same rule as a filter switch: hiding the control under the reader's focus
          would drop it to <body>. */
-      if (!available && earthGroup.contains(document.activeElement))
+      if (!available && lookGroup.contains(document.activeElement))
         gear?.focus();
-      earthGroup.hidden = !available;
+      lookGroup.hidden = !available;
     },
     update(counts, shown, total) {
       for (const day of DAY_SHIFTS)

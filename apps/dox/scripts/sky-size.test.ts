@@ -6,8 +6,9 @@ import { pathToFileURL } from "node:url";
 /**
  * The night sky is decoration, so its code is held small, minified and gzipped as bundled alone:
  * the meteor (`space-fx.ts`) to 4,096 bytes, and the sky (`sky.ts` with `sky-math.ts`, the Sun and
- * the Moon, the band and the stars, kept off the solid Earth) to 5,216 bytes. The Moon's and the
- * Sun's painters are lazy chunks of their own, held to 3,200 and 2,048 bytes.
+ * the Moon, the band and the stars, kept off the solid Earth) to 5,248 bytes (the layer hook and the stars' shared law). The Moon's
+ * and the Sun's painters and the planets' layer (`sky-planets.ts` with its series, laws and
+ * ephemeris) are lazy chunks of their own, held to 3,200, 2,048 and 7,168 bytes.
  */
 
 type BuildResult = {
@@ -44,15 +45,18 @@ async function size(entry: string): Promise<number> {
     .filter((file) => file.type === "chunk")
     .map((file) => file.code ?? "")
     .join("");
-  return gzipSync(code).length;
+  const bytes = gzipSync(code).length;
+  if (process.env["SKY_SIZE_LOG"]) console.log(entry, bytes);
+  return bytes;
 }
 
 describe("night sky code size", () => {
   it.each([
     ["the meteor", "src/lib/space-fx.ts", 4096],
-    ["the sky", "src/lib/sky.ts", 5216],
+    ["the sky", "src/lib/sky.ts", 5248],
     ["the body painter", "src/lib/body-paint.ts", 3200],
     ["the Sun painter", "src/lib/sun-paint.ts", 2048],
+    ["the planets", "src/lib/sky-planets.ts", 7168],
   ])(
     "keeps %s within its limit, minified and gzipped",
     async (_name, entry, limit) => {

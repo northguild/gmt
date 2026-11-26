@@ -1,9 +1,9 @@
-# Slice 5a · Planets, the one body registry, and View planet
+# Slice 5a · Planets, the one body registry, and Look at for every body
 
 Part of [DOX-G16](./index.md). Paths are under `apps/dox/`. Builds on slices 1–3 (`body-frame.ts`,
 the lazy loader in `space-sky.ts`, `sky-aim.ts`, `sky-view.ts`) and the shipped stars
 (`built/tier-4-globe.md`, Night sky). [5b](./s5b-small-bodies.md) and [5c](./s5c-apophis.md) add
-rows to the same registry, layer, generator and picker.
+rows to the same registry, layer, generator and Look at bar.
 
 ## What the reader sees
 
@@ -11,15 +11,16 @@ The planets join the stars on the hero and the deck's stage: Mercury, Venus, Mar
 Saturn, and Uranus on the nights it reaches magnitude 5.5 (first on 2033-12-05). Each is a point
 at its true place for the instant and the camera, at its true magnitude, drawn by the stars' own
 law: Venus is the brightest point in the sky, its halo wider than Sirius's. A planet behind the
-Earth's disc or the Moon does not show; the Sun's disc covers one behind it. The Sky view row
-gains a third control, **View planet**: it opens a short list of the bodies drawn now, and
-picking one aims the camera exactly as View Sun and View Moon do. First paint is unchanged.
+Earth's disc or the Moon does not show; the Sun's disc covers one behind it. The zoom stack's
+**Look at** bar (slice 3) lists every registry body, in the registry's order (the Sun, the Moon,
+then the planets outward from the Sun); a planet not drawn now is unavailable, and picking one
+that is drawn aims the camera exactly as the Sun and the Moon do (decision 9). First paint is unchanged.
 
 ## Decided
 
 - **(a) Which bodies: the stars' faint limit.** `prepare-hero-sky.mjs` cuts the catalogue at 5.5
   (`START_LIMIT`). A body enters when its brightest magnitude over the generator's span is 5.5 or
-  brighter, and is drawn (and listed) at an instant when its magnitude from the camera then is.
+  brighter, and is drawn (and can be chosen) at an instant when its magnitude from the camera then is.
   Measured with Horizons: Uranus peaks at 5.38 (2054-03-29), in; Neptune at 7.67, out. The
   generator applies the rule; a test keeps the registry's point rows equal to its output.
 - **(b) Positions: truncated VSOP87B** (IMCCE, Bretagnon and Francou 1988,
@@ -55,40 +56,27 @@ picking one aims the camera exactly as View Sun and View Moon do. First paint is
 - **(i) Credit:** one `SKY_CREDITS` data row, "Planet positions: VSOP87, Bretagnon and Francou,
   IMCCE." If IMCCE's page forbids shipping derived coefficients, stop and report.
 
-## View planet (kit pieces only)
+## Look at grows (kit pieces only)
 
-- **Markup.** In `renderSkyView`, after the `view` rows' kit `button`s and inside the same kit
-  `buttonRow`: kit `disclosure` (APG Disclosure) `{id: "<prefix>-planet", label: "View planet",
-  icon: PLANET_ICON, gate: "sky-view-planet"}`. Its panel holds kit `listbox`
-  (APG Listbox) `{id: "<prefix>-planets", label: "Bodies in view", items: [], gate:
-  "sky-view-planets"}` and one `<p data-gate="sky-view-planet-note" hidden>`. Kit change:
-  `disclosure` takes `button`'s `labelHidden`, so an icon shows beside its label unless hidden
-  (APG unchanged); its two icon-only callers pass `labelHidden: true`.
-- **List.** On open, `points.drawn(now(), rotation)` gives `{id, V}` for every point row with V
-  ≤ 5.5 from the camera now, on screen or not; options are `listboxOption`s, brightest first,
-  text `Venus` plus a magnitude cell (`−4.2`, U+2212, tabular figures, reserved width, no wrap).
-  `value` is the held point body's id, or `""`.
-- **Keyboard.** Kit behaviour, unchanged: the button toggles; Tab enters the listbox (one tab
-  stop); ArrowUp/Down, Home/End, PageUp/Down move; Enter, Space or a click chooses; Escape closes
-  through `esc-layers` and returns focus to the button; an outside pointer or focus closes
-  (`wireDisclosure({light: true})`).
-- **Choosing** calls the view's own `press(id)`: same aim, hold, drift check and release rules,
-  no new aim code. The panel closes and focus returns to the button. Choosing the held body
-  releases, as pressing a pressed button does. The Sun and Moon buttons read `aria-pressed="false"`
-  while a point body holds; the disclosure button carries `aria-expanded` only (APG), and the held
-  body is the listbox's selected option.
-- **Empty and loading.** Before the layer loads, the note reads "The planets are still loading."
-  With it loaded and none at 5.5 or brighter: "No planet is bright enough to see right now." The
-  listbox is `hidden` while the note shows. Forced colours hide the whole group, as slice 3.
-- **Still while it works.** Opening, choosing and holding never move or resize the row's three
-  controls; the panel floats over the drawer (no `flow`), full border, bevelled corners.
+- **Markup.** None new: slice 3's disclosure and bar, one button per `SKY_BODIES` row. No kit
+  change.
+- **Rows.** Fixed, in the registry's order: a planet's button is its astronomical symbol and its
+  name, and no number (a magnitude means nothing to most readers). On open, a point row not in
+  `points.drawn(now(), rotation)` (V ≤ 5.5 from the camera now, on screen or not) is
+  `aria-disabled` with "Venus: too faint to see now" in its `title`; a disabled button does
+  nothing. A held point that drops below 5.5 is released.
+- **Keyboard.** Kit disclosure behaviour, unchanged (slice 3); Tab walks the bar.
+- **Choosing** a point calls the view's own `choose(id)`: same aim, hold, drift check and release
+  rules, no new aim code. Choosing the held body releases.
+- **Loading.** Before the layer loads, every planet's button is `aria-disabled` with "Venus: the
+  planets are still loading" in its `title`.
+- **Still while it works.** Opening, choosing and holding never move or resize the zoom stack's
+  controls; the rows never come and go, so the bar never jumps.
 
 ## Files
 
 Create: `src/lib/sky-registry.ts` (+ test; `SKY_BODIES`, `SkyBodyId`, `providePoints`,
 `pointSource`); `src/lib/body-rotation.ts` (WGCCRE rows, one export per body);
-`src/lib/sky-picker.ts` (+ test; `renderPlanetPicker(prefix)`, `wirePlanetPicker({root, points,
-now, rotation, held, press, signal}) → {sync(held), destroy()}`, `PLANET_ICON`);
 `src/lib/ephemeris.ts` (+ test; `vsopPosition`, `bodyFromCamera(id, instantMs, camera) → {unit,
 delta, r, phase} | null`); `src/lib/magnitude.ts` (+ test); `src/lib/sky-planets.ts` (+ test,
 lazy chunk; `createPlanetLayer(): SkyLayer & PointSource`, writes `data-sky-planets`);
@@ -104,8 +92,8 @@ Modify:
   and `providePoints(null)` on abort.
 - `sky-aim.ts`: `AIM_BODIES` and `SUN_GLARE_RADII` go; `place` and `boxRadius` read the row;
   a point row's box is `POINT_BOX` px, covering Venus's halo at its brightest.
-- `sky-view.ts`: `SKY_VIEWS` goes (rows with `view`); renders and wires the picker; `press` takes
-  any `SkyBodyId`. It stays under 400 lines (207 today).
+- `sky-view.ts`: `SKY_VIEWS` goes; the bar is the registry's rows; on open it marks the point
+  rows not drawn now `aria-disabled`; `choose` takes any `SkyBodyId`. Under 400 lines.
 - `sky.ts`: `maps(painters, layer?)`; `layer?.(starsCtx, lens, m, frame, rotation, instantMs,
   tint)` runs between `drawStars` and `drawBodies`, inside the Earth clip, before the Moon's erase.
 - `sky-bodies.ts`: the `SkyLayer` type; exports `GLARE_RADII`; `BodyPainters` keyed by registry ids.
@@ -113,9 +101,7 @@ Modify:
 - `sky-math.ts`: `cameraAt(rotation, instantMs) → Vec3` and `AU`; `moonFromCamera` calls it (393 lines).
 - `body-frame.ts`: `bodyFrame(rotation, instantMs)` replaces `moonFrame` and `sunPole`; `daysFromJ2000`.
 - `body-paint.ts`, `sun-paint.ts`: `bodyFrame(MOON_ROTATION, …)`, `bodyFrame(SUN_ROTATION, …)`.
-- `widgets/builders/disclosure.ts` (+ test): `labelHidden`; `zone-filters.ts` and
-  `pulse-template.ts` pass it. `widgets/tools/sky-view.module.css`: the
-  picker's panel and magnitude cell.
+- `widgets/tools/sky-look.module.css`: the disabled row's look.
 - `scripts/prepare-sky-bodies.mjs`: its comment names `sky-registry.ts`.
 - `data-credits.ts`: the VSOP87 row. `scripts/hero-space-check.mjs`: the pins and checks below.
 - `scripts/sky-size.test.ts`: `sky.ts` to its measure after the hook rounded up to 32 B, at most
@@ -139,10 +125,10 @@ Pins from JPL Horizons, each query in the test comment, instants as epoch-ms lit
 - `sky-planets.test.ts`: V 5.6 not drawn, 5.4 drawn; inside the disc listed `earth`; the dataset
   format; `drawn()` returns exactly the bodies at 5.5 or brighter; the pins' screen points equal
   `skyToScreen` of their Horizons RA/Dec at 1440×900 within 0.1 px.
-- `sky-picker.test.ts` (jsdom, fake source, fake timers): the list is the drawn bodies, brightest
-  first; arrows, Home/End and Enter choose; choosing calls `press` and closes with focus on the
-  button; choosing the held one releases; Escape and an outside click close; both notes; abort
-  removes every listener.
+- `sky-view.test.ts` (jsdom, fake source, fake timers): the bar is every registry row in its
+  order; before the layer every planet is `aria-disabled` with the loading reason, after it only
+  those not drawn, with the faint reason; a disabled button does nothing; a held point that drops
+  below 5.5 is released; abort removes every listener.
 - `sky-aim.test.ts` and `sky-view.test.ts`: slice 3's cases pass through the registry; a point
   row aims within 2 px, its box clear of the avoid rectangles.
 - `sky-stars`, `sky`, `space-sky`, `prepare-sky-orbits`: same pixels per byte magnitude; the
@@ -156,10 +142,11 @@ Pins from JPL Horizons, each query in the test comment, instants as epoch-ms lit
   the disc, listed `earth`, alpha 0 within 3 px. `planets-bright`: Venus's halo outshines Sirius's.
   `planets-late`: no `data-sky-planets` on the first frame, set after the idle load, never under
   forced colours.
-- `sky-view-planet`: at the `planets-place` instant open View planet: Venus first; choose Jupiter
-  by keyboard; it lands within 2 px of the aim's target and holds after `page.clock.runFor(5_000)`;
-  Escape returns focus. `sky-view-still`: the three controls' boxes match within 0.5 px closed,
-  open and holding.
+- `sky-view-planet`: at the `planets-place` instant open Look at: the Sun, the Moon, Mercury,
+  Venus, Mars, Jupiter, Saturn, Uranus; Venus and Jupiter are available; choose Jupiter by
+  keyboard; it lands within 2 px of the aim's target and holds after
+  `page.clock.runFor(5_000)`; Escape returns focus. `sky-view-still`: the zoom stack's controls
+  and the open bar's box match within 0.5 px before and after the layer loads, and holding.
 
 ## Duplication pass (dox-tester)
 
@@ -168,18 +155,18 @@ Pins from JPL Horizons, each query in the test comment, instants as epoch-ms lit
   a second table of bodies is a defect.
 - `rg -n "0\.45 \+ 0\.42|0\.3 \+ 0\.14" apps/dox/src` → one hit each, `sky-stars.ts`.
 - `rg -n "mercury|venus|jupiter|saturn" -i apps/dox/src/lib --glob '!sky-registry*' --glob '!body-rotation*' --glob '!magnitude*' --glob '!*.test.ts'` → no hit.
-- `rg -n "role=\"(listbox|option)\"|aria-expanded" apps/dox/src/lib` → no hit: kit markup only.
+- `rg -n "role=\"(listbox|option)\"|aria-expanded" apps/dox/src/lib/sky-view.ts` → no hit: the kit renders the disclosure.
 - `wc -l` of every touched file under 400.
 
 ## Definition of done
 
-- `pnpm --filter @gmt/dox test -- sky-registry ephemeris magnitude body-frame body-paint sun-paint sky-planets sky-picker sky-aim sky-view disclosure sky-stars sky space-sky prepare-sky-orbits sky-size`
+- `pnpm --filter @gmt/dox test -- sky-registry ephemeris magnitude body-frame body-paint sun-paint sky-planets sky-aim sky-view sky-stars sky space-sky prepare-sky-orbits sky-size`
   passes; `lint` and `check` clean; `sky-size` records each measure in its comment.
 - `pnpm --filter @gmt/dox gates --only hero-space,data-credits-check,esc-cascade,readout-still`
   passes. No `it.skip`, `it.todo` or `it.fails`. Any chunk over its cap: stop.
 - **Owner viewing pass**, his window size, his clicks: on `/`, find Venus and Jupiter and compare
-  with a planetarium; Venus outshines Sirius; a planet vanishes behind the limb; open the drawer,
-  View planet, choose Saturn by mouse and Mars by keyboard; Escape; the deck's stage shows them.
+  with a planetarium; Venus outshines Sirius; a planet vanishes behind the limb; open Look at,
+  choose Saturn by mouse and Mars by keyboard; Escape; the deck's stage shows them.
 - Close-out: `built/tier-4-globe.md` "Night sky" and "Controls and drawer": the planets, the rule,
   VSOP87 and its span, `SKY_BODIES` as the one registry and its lazy columns, `bodyFrame`, the
-  layer hook, View planet, the caps and checks, one-line reason each; the generator's runbook.
+  layer hook, Look at with the planets, the caps and checks, one-line reason each; the generator's runbook.

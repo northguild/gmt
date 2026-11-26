@@ -54,9 +54,13 @@ import {
   isFilterEngaged,
   matchesFilter,
 } from "./zone-filter";
-import { EARTH_ATTRIBUTE } from "./earth-look";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
-import { labelFont, readTheme, rendererOverride } from "./globe/globe-theme";
+import {
+  labelFont,
+  readTheme,
+  rendererOverride,
+  watchTheme,
+} from "./globe/globe-theme";
 import { setHtml } from "~/widgets/builders";
 import type { GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import { renderZoneTooltip } from "./zone-readout";
@@ -158,6 +162,8 @@ const IMAGERY_URL = imageryUrl;
 export interface GlobeParts {
   /** The hover card; hidden until a zone is selected. */
   tooltip: HTMLElement;
+  /** Whether a body's map is drawn on this page's sky (`data-sky-maps="ready"`); read on every frame. */
+  skyTextured?: () => boolean;
   /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
   zoom: HTMLElement | null;
   /** Where the lock's rings ripple from a chosen pin (`globe-lock.ts`); absent when the host has none. */
@@ -186,19 +192,19 @@ export interface GlobeParts {
 }
 
 /**
- * The attributes on `<html>` that change a token the theme reads: the colour scheme and the
- * Earth's look. A change to either re-reads the theme on every globe.
+ * Whether the "Natural colours" switch is offered: where the Earth photograph is drawn (the WebGPU
+ * renderer with imagery above 0) or where a body's map is drawn on this page's sky. Raised contrast
+ * and forced colours never offer it: the default look is painted whatever is saved.
  */
-export const THEME_ATTRIBUTES = ["data-theme", EARTH_ATTRIBUTE] as const;
-
-/**
- * Whether the "Natural Earth" switch is offered: only where the photograph is drawn, which is
- * the WebGPU renderer with imagery above 0. The canvas-2D fallback never draws it, and the
- * light theme (outside the hero), raised contrast and forced colours set imagery to 0, so on
- * those globes the switch would do nothing.
- */
-export function earthSwitchOffered(imagery: number, renderer: string): boolean {
-  return renderer === "webgpu" && imagery > 0;
+export function lookSwitchOffered(o: {
+  imagery: number;
+  renderer: string;
+  skyTextured: boolean;
+  contrast: boolean;
+  forced: boolean;
+}): boolean {
+  if (o.contrast || o.forced) return false;
+  return (o.renderer === "webgpu" && o.imagery > 0) || o.skyTextured;
 }
 
 export async function initGlobe(
@@ -809,24 +815,29 @@ export async function initGlobe(
     engine.setTheme(theme);
     engine.setMarkers(buildMarkers());
     engine.setRegions(buildRegions());
-    syncEarthSwitch();
+    syncLookSwitch();
   }
 
-  /* "Natural Earth" only does something where the photograph is drawn: the WebGPU renderer, with
-     imagery above 0. A renderer swap (device loss) changes that without a theme change, so the
-     frame loop checks too; the call is a no-op when nothing moved. */
-  function syncEarthSwitch(): void {
-    filterUi?.setEarthAvailable(
-      earthSwitchOffered(theme.imagery, engine.renderer),
+  /* "Natural colours" only does something where the photograph or a body's map is drawn. A renderer
+     swap (device loss) or a map arriving changes that without a theme change, so the frame loop
+     checks too; the call is a no-op when nothing moved. */
+  const media = (query: string): boolean =>
+    globalThis.matchMedia?.(query)?.matches === true;
+  function syncLookSwitch(): void {
+    filterUi?.setLookAvailable(
+      lookSwitchOffered({
+        imagery: theme.imagery,
+        renderer: engine.renderer,
+        skyTextured: parts.skyTextured?.() === true,
+        contrast: media("(prefers-contrast: more)"),
+        forced: media("(forced-colors: active)"),
+      }),
     );
   }
-  frameListeners.push(syncEarthSwitch);
+  frameListeners.push(syncLookSwitch);
 
-  const themeObserver = new MutationObserver(refreshTheme);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: [...THEME_ATTRIBUTES],
-  });
+  const themeAbort = new AbortController();
+  watchTheme(refreshTheme, themeAbort.signal);
 
   /* `gmt-a11y.css` zeroes the atmosphere, haze and imagery tokens under these
      preferences, and the renderer only sees a token when the theme is re-read. */
@@ -840,7 +851,7 @@ export async function initGlobe(
   }
 
   // --- start ---------------------------------------------------------------
-  syncEarthSwitch();
+  syncLookSwitch();
   engine.setMarkers(buildMarkers());
   /* A dawn is the canvas's only entrance: `enter()` would layer a second animation on it. The
      dawn arms the zoom stack when it ends. */
@@ -889,7 +900,7 @@ export async function initGlobe(
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("scroll", followScroll, { capture: true });
       window.removeEventListener("resize", followScroll);
-      themeObserver.disconnect();
+      themeAbort.abort();
       for (const query of preferenceQueries) {
         query.removeEventListener("change", refreshTheme);
       }

@@ -5,7 +5,7 @@
  * One row of `SOURCES` per body: its pinned source, its credit and licence, and the map it
  * becomes. The script is run by hand, not on every build, and its output is committed:
  *
- * - `src/assets/sky-<id>.webp`  the map, RGB, WebP at quality 80 or the first lower step that fits its budget, equirectangular, longitude -180 degrees at the left
+ * - `src/assets/sky-<id>.webp`  the map, RGB, WebP at the first of its row's `webp` settings (default: quality 80, then lower steps) that fits its budget, equirectangular, longitude -180 degrees at the left
  *                               edge and 0 at the centre, north at the top. The Moon's brightness is
  *                               remapped to albedo (`REMAP`) with the hue held.
  * - `src/assets/sky-<id>.json`  the credit sidecar, in the fields of `hero-milkyway.json`.
@@ -30,7 +30,7 @@
  * therefore needs no turn, and the disc's pole angle on screen comes from `sunPole`.
  *
  * A body is added as one more row in `SOURCES`, its asset and sidecar, a `SKY_CREDITS` row and a
- * `SKY_BODIES` row.
+ * row of the registry (`sky-registry.ts`).
  *
  * Run it from `apps/dox`:
  *
@@ -48,10 +48,11 @@ import {
   DISC_THRESHOLD,
   discImage,
   fitDisc,
+  flattenDisc,
   lumaOf,
 } from "./sun-disc.mjs";
 
-export { discImage, fitDisc };
+export { discImage, fitDisc, flattenDisc };
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -79,8 +80,8 @@ export const REMAP = {
   scale: 0.25,
 };
 
-/** WebP quality, 0 to 100: the first of these that fits a map's budget is used. */
-const QUALITIES = [80, 76, 72, 68, 64, 60];
+/** WebP settings, tried in order: the first that fits a map's budget is used. A row's own `webp` list replaces them. */
+const QUALITIES = [80, 76, 72, 68, 64, 60].map((quality) => ({ quality }));
 
 export const SOURCES = [
   {
@@ -122,12 +123,14 @@ export const SOURCES = [
     width: 256,
     height: 256,
     budget: 16_000,
+    /* Lossy WebP's 4x4 blocks show as a grid on a smooth disc (quality 80 erred by up to 25 levels); near-lossless errs by 2 at most. */
+    webp: [{ nearLossless: true, quality: 60 }],
     observed: "2023-03-22",
     credit: "ESA & NASA/Solar Orbiter/PHI Team",
     license: "CC-BY-SA-3.0-IGO",
     licenseUrl: "https://creativecommons.org/licenses/by-sa/3.0/igo/",
     changes:
-      "Reduced from its orange colour table to one grey band (the JPEG's luma), cropped to a square of 1.02 solar radii, scaled to 256 x 256, and the pixels outside the disc set to black. Not turned: solar north is up.",
+      "Reduced from its orange colour table to one grey band (the JPEG's luma), cropped to a square of 1.02 solar radii, scaled to 256 x 256, the mosaic's tile vignetting divided out (the median, over 0.06 solar radii, of each pixel over its ring's median; the limb darkening kept), scaled so the brightest 0.1% of the disc is white, and the pixels outside the disc set to black. Not turned: solar north is up.",
   },
 ];
 
@@ -301,12 +304,12 @@ async function prepare(source, sharp) {
     sharp,
   );
   let webp;
-  let quality;
-  for (quality of QUALITIES) {
+  let setting;
+  for (setting of source.webp ?? QUALITIES) {
     webp = await sharp(Buffer.from(bytes), {
       raw: { width: source.width, height: source.height, channels: 3 },
     })
-      .webp({ quality, effort: 6 })
+      .webp({ ...setting, effort: 6 })
       .toBuffer();
     if (webp.length <= source.budget) break;
   }
@@ -335,7 +338,7 @@ async function prepare(source, sharp) {
     generator: "apps/dox/scripts/prepare-sky-bodies.mjs",
     ...extra,
     map: {
-      quality,
+      ...setting,
       file: mapFile,
       width: source.width,
       height: source.height,
@@ -348,7 +351,7 @@ async function prepare(source, sharp) {
     `${JSON.stringify(sidecar, null, 2)}\n`,
   );
   console.log(
-    `${source.id}: ${source.width} x ${source.height}, quality ${quality}, ${webp.length} bytes`,
+    `${source.id}: ${source.width} x ${source.height}, ${JSON.stringify(setting)}, ${webp.length} bytes`,
   );
 }
 

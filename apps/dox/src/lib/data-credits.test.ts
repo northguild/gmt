@@ -5,6 +5,7 @@ import { renderHtml } from "~/widgets/test-fixture";
 import milkyWay from "../assets/hero-milkyway.json";
 import sky from "../assets/hero-sky.json";
 import moon from "../assets/sky-moon.json";
+import orbits from "../assets/sky-orbits.source.json";
 import sun from "../assets/sky-sun.json";
 import {
   COASTLINES,
@@ -15,6 +16,7 @@ import {
   MOON_IMAGERY,
   NE_TAG,
   NIGHT_SKY,
+  PLANET_ORBITS,
   renderDataCreditsHtml,
   SKY_CREDITS,
   STATE_BOUNDARIES,
@@ -179,13 +181,25 @@ describe("the Moon credit", () => {
     ).toHaveAttribute("href", moon.licenseUrl);
   });
 
-  it("is listed with the stars, the Milky Way and the Sun, in that order", () => {
+  it("is listed with the stars, the Milky Way, the Sun and the planets, in that order", () => {
     expect(SKY_CREDITS.map((credit) => credit.label)).toEqual([
       "Stars",
       "Milky Way",
       "Sun",
       "Moon",
+      "Planets",
     ]);
+  });
+});
+
+describe("the planets credit", () => {
+  it("is labelled Planets, credits VSOP87 and IMCCE as the files ask, and says terms were dropped", () => {
+    show([PLANET_ORBITS], { id: "c", placement: "stack" });
+    expect(text("Planets")).toHaveTextContent("Bretagnon and Francou, IMCCE");
+    expect(text("Planets")).toHaveTextContent("smallest terms dropped");
+    expect(
+      screen.getByRole("link", { name: "VSOP87", hidden: true }),
+    ).toHaveAttribute("href", orbits.source.page);
   });
 });
 

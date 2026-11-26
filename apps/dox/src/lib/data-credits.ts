@@ -167,12 +167,30 @@ export const MOON_IMAGERY: DataCredit = {
   ],
 };
 
+/**
+ * The planets' places in the night sky: VSOP87 of Bretagnon and Francou, IMCCE (Observatoire de
+ * Paris, an observatory of the French national research body, published for use with attribution).
+ * The change is `sky-orbits.json`'s: terms dropped and rounded.
+ */
+export const PLANET_ORBITS: DataCredit = {
+  label: "Planets",
+  parts: [
+    "Planet positions: ",
+    {
+      text: "VSOP87",
+      href: "https://ftp.imcce.fr/pub/ephem/planets/vsop87/",
+    },
+    ", Bretagnon and Francou, IMCCE, with the smallest terms dropped.",
+  ],
+};
+
 /** The night sky's rows in reading order: the globe's popover, the deck's and the slides' read this list. */
 export const SKY_CREDITS: readonly DataCredit[] = [
   NIGHT_SKY,
   MILKY_WAY,
   SUN_IMAGERY,
   MOON_IMAGERY,
+  PLANET_ORBITS,
 ];
 
 /** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */

@@ -15,6 +15,7 @@ import {
   rotationForZone,
 } from "./globe-zones";
 import { TZ_COORDINATES } from "./tz-coordinates";
+import { lookSwitchOffered } from "./globe";
 
 // ---------------------------------------------------------------------------
 
@@ -83,5 +84,42 @@ describe("rotationForZone", () => {
     expect(rotationForZone({ id: "x", lat: 35, lng: 139 })).toEqual([
       -139, -35,
     ]);
+  });
+});
+
+describe("lookSwitchOffered", () => {
+  const cases = [true, false].flatMap((photo) =>
+    [true, false].flatMap((sky) =>
+      [true, false].flatMap((contrast) =>
+        [true, false].map((forced) => ({ photo, sky, contrast, forced })),
+      ),
+    ),
+  );
+  it.each(cases)(
+    "photo $photo, sky $sky, contrast $contrast, forced $forced",
+    ({ photo, sky, contrast, forced }) => {
+      expect(
+        lookSwitchOffered({
+          imagery: photo ? 1 : 0,
+          renderer: photo ? "webgpu" : "canvas2d",
+          skyTextured: sky,
+          contrast,
+          forced,
+        }),
+      ).toBe((photo || sky) && !contrast && !forced);
+    },
+  );
+
+  it("needs both WebGPU and imagery for the photograph", () => {
+    const base = { skyTextured: false, contrast: false, forced: false };
+    expect(
+      lookSwitchOffered({ ...base, imagery: 0.4, renderer: "webgpu" }),
+    ).toBe(true);
+    expect(lookSwitchOffered({ ...base, imagery: 0, renderer: "webgpu" })).toBe(
+      false,
+    );
+    expect(
+      lookSwitchOffered({ ...base, imagery: 1, renderer: "canvas2d" }),
+    ).toBe(false);
   });
 });

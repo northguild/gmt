@@ -6,6 +6,7 @@ import {
   skyInputsOf,
 } from "./space-sky";
 import type { Sky } from "./sky";
+import { EMPTY_POINTS, pointSource, providePoints } from "./sky-registry";
 import { skyHost } from "~/test/sky-host";
 
 /* The sky itself is tested in sky.test.ts; here it is a recorder that marks its host ready on its first view, as the real one does. */
@@ -18,6 +19,13 @@ const views: {
 const maps: unknown[] = [];
 /** What the painters hook was handed each time: the painters that loaded, none for a body that failed. */
 const painters: unknown[] = [];
+/** The layers each `maps` call was handed, and the planets' chunk: a stub layer, or one that fails to build. */
+const layers: unknown[] = [];
+const planets = {
+  layer: () =>
+    Object.assign(() => {}, { place: () => null, drawn: () => [] }) as unknown,
+};
+vi.mock("./sky-planets", () => ({ createPlanetLayer: () => planets.layer() }));
 vi.mock("./body-paint", () => ({
   createMoonPainter: (map: unknown) => ({ moonFor: map }),
 }));
@@ -29,7 +37,10 @@ vi.mock("./sky", () => ({
     maps.push(milkyWay);
     return {
       ready: Promise.resolve(),
-      maps: (painter: unknown) => painters.push(painter),
+      maps: (painter: unknown, layer: unknown) => {
+        painters.push(painter);
+        layers.push(layer);
+      },
       view: (
         rotation: readonly [number, number],
         centre: unknown,
@@ -60,6 +71,9 @@ beforeEach(() => {
   views.length = 0;
   maps.length = 0;
   painters.length = 0;
+  layers.length = 0;
+  planets.layer = () =>
+    Object.assign(() => {}, { place: () => null, drawn: () => [] });
   controller = new AbortController();
   ({ host, stars, band } = skyHost());
   vi.stubGlobal(
@@ -281,8 +295,34 @@ describe("the bodies' maps", () => {
 
   afterEach(() => {
     controller.abort();
+    providePoints(null);
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
+  });
+
+  it("hand the planets' layer to the sky and the registry its source, and take the source back when the sky goes", async () => {
+    decoder();
+    expect(pointSource()).toBeNull();
+    await loadSky(withBodies());
+    await vi.advanceTimersByTimeAsync(100);
+    expect(typeof layers[0]).toBe("function");
+    expect(pointSource()).toBe(layers[0]);
+    controller.abort();
+    expect(pointSource()).toBeNull();
+  });
+
+  it("leave the planets out, and the list no longer waiting for them, when their chunk fails to build", async () => {
+    decoder();
+    planets.layer = () => {
+      throw new Error("no chunk");
+    };
+    await loadSky(withBodies());
+    await vi.advanceTimersByTimeAsync(100);
+    expect(layers).toEqual([undefined]);
+    expect(pointSource()).toBe(EMPTY_POINTS);
+    expect(painters).toEqual([
+      { sun: { sunFor: pixels }, moon: { moonFor: pixels } },
+    ]);
   });
 
   it("are fetched only after the sky is built and the browser idle, both in one wait, then handed over as painters", async () => {
@@ -355,7 +395,9 @@ describe("the bodies' maps", () => {
     await loadSky(inputs());
     await vi.advanceTimersByTimeAsync(100);
     expect(mapFetches()).toHaveLength(0);
-    expect(painters).toEqual([]);
+    /* No map is fetched, but the planets still load and the sky is handed their layer, with no painters. */
+    expect(painters).toEqual([{}]);
+    expect(typeof layers[0]).toBe("function");
   });
 });
 

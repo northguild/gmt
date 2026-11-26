@@ -13,6 +13,7 @@ import {
   parseColour,
   readTheme,
   rendererOverride,
+  watchTheme,
 } from "~/lib/globe/globe-theme";
 import {
   drawWithoutGlobe,
@@ -132,6 +133,11 @@ export async function bootStage(d: BootDeps): Promise<void> {
   }
   const globe = created;
   s.engine = globe;
+  /* The stage read the theme once at boot; a flip of the colour scheme or the look now reaches the Earth (the sky repaints itself, `space-sky.ts`). */
+  watchTheme(() => {
+    s.theme = readTheme(host);
+    globe.setTheme(s.theme);
+  }, signal);
   hardenCanvases(host);
   globe.onInteract(() => {
     s.commanded = false;

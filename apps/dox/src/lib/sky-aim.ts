@@ -1,55 +1,26 @@
 /**
  * Where to point the globe's camera so a body of the sky sits beside the Earth's limb, clear of the
- * page's copy, drawer and zoom stack. Pure: it uses only `sky-math`, and the rectangles arrive as
+ * page's copy, drawer and zoom stack. Pure: it uses only `sky-math` and the registry, and the rectangles arrive as
  * arguments.
  *
- * A body is one row of `AIM_BODIES`: where it is (`raDec`, given the camera when its place depends
- * on it, as the Moon's does through parallax) and how far its box reaches past its disc. A planet
- * is another row, and no code below changes.
+ * A body is one row of `SKY_BODIES` (`sky-registry.ts`): where it is (`place`, given the camera when
+ * its place depends on it, as the Moon's does through parallax) and how far its box reaches past its
+ * disc. A point (a planet) has no disc, so its box is `POINT_BOX` pixels; a body is any row, and
+ * no code below names one.
  *
  * `aimBody` tries the largest lens zoom first (2, then 1.75 down to 1). For each zoom it tries
  * sixteen spots around the limb, nearest to where the body is now first, and moves the camera onto
  * a spot by Newton's method on the rotation `[lambda, phi]`.
  */
-import { EARTH_HALF_ANGLE_DEG } from "./globe/pinhole";
-import { GLARE_RADII } from "./sky-bodies";
+import { G, RAD } from "./globe/pinhole";
 import {
   bodyOnScreen,
-  moonFromCamera,
-  moonRaDec,
   siderealDeg,
   skyLens,
-  sunRaDec,
-  SUN_RADIUS,
   toUnit,
   viewMatrix,
-  type RaDec,
 } from "./sky-math";
-
-/** A body the camera can be aimed at. Widen the union with a row in `AIM_BODIES`. */
-export type SkyBodyId = "sun" | "moon";
-
-interface AimBody {
-  /** The body's place and angular radius, degrees, seen from the camera when it is given. */
-  raDec(
-    instantMs: number,
-    rotation?: readonly [number, number],
-  ): RaDec & { radius: number };
-  /** The box reaches this many disc radii past the disc (the Sun's glare). */
-  reach: number;
-}
-
-export const AIM_BODIES: Readonly<Record<SkyBodyId, AimBody>> = {
-  sun: {
-    raDec: (instantMs) => ({ ...sunRaDec(instantMs), radius: SUN_RADIUS }),
-    reach: GLARE_RADII,
-  },
-  moon: {
-    raDec: (instantMs, rotation) =>
-      rotation ? moonFromCamera(instantMs, rotation) : moonRaDec(instantMs),
-    reach: 0,
-  },
-};
+import { bodyRow, type DiscId, type SkyBodyId } from "./sky-registry";
 
 /** An axis-aligned rectangle in the hero's CSS pixels. */
 export interface Box {
@@ -71,13 +42,13 @@ export interface AimLens {
   rotation: readonly [number, number];
 }
 
-/** The hero as the view sees it: its size, where the globe's pixels start in it, and what to keep clear of. */
+/** The Earth's area as the view sees it (`heroAimFrame`): its size, where the globe's pixels start in it, and what to keep clear of. */
 export interface AimFrame {
   width: number;
   height: number;
-  /** The globe surface's top-left in the hero's pixels. */
+  /** The globe surface's top-left in the frame's pixels. */
   shift: { x: number; y: number };
-  /** In the hero's pixels. */
+  /** In the frame's pixels. */
   rects: readonly Box[];
 }
 
@@ -86,11 +57,30 @@ export interface Aim {
   zoom: number;
 }
 
-const RAD = Math.PI / 180;
+/** The globe's camera as its engine reports it (`GlobeEngine.getView`), in the surface's pixels. */
+export interface CameraView {
+  centre: { x: number; y: number };
+  focalPx: number;
+  zoom: number;
+  rotation: readonly [number, number];
+}
+
+/** The camera and the hero as `aimBody` and `bodyAt` want them: the Earth's centre moved into the frame's pixels. */
+export const aimLens = (view: CameraView, frame: AimFrame): AimLens => ({
+  width: frame.width,
+  height: frame.height,
+  centre: {
+    x: view.centre.x + frame.shift.x,
+    y: view.centre.y + frame.shift.y,
+  },
+  focalAtRest: view.focalPx / view.zoom,
+  rotation: view.rotation,
+});
+
 /** The lens zooms to try, largest first. */
 export const AIM_ZOOMS = [2, 1.75, 1.5, 1.25, 1] as const;
 const SPOTS = 16;
-/** The body's box keeps this far inside the hero, px. */
+/** The body's box keeps this far inside the frame, px. */
 const INSET = 16;
 /** The body's disc sits this far past the limb, px. */
 const GAP = 24;
@@ -100,18 +90,20 @@ const MAX_LAT = 89;
 const NUDGE_DEG = 10;
 /** Finite-difference step of the Jacobian, degrees. */
 const DELTA = 0.01;
+/** The box of a point body, px: it covers the halo of the brightest planet. */
+const POINT_BOX = 16;
 /** A body off the hero still has a place: the lens is moved by this much so none counts as off screen. */
 const PAD = 1e5;
 
 const wrap180 = (degrees: number): number =>
   ((((degrees + 180) % 360) + 360) % 360) - 180;
 
-/** The point on the Earth under a body: its longitude is its right ascension less the sidereal time. */
+/** The point on the Earth under a disc body: its longitude is its right ascension less the sidereal time. */
 export function subBodyPoint(
-  body: SkyBodyId,
+  body: DiscId,
   instantMs: number,
 ): [lng: number, lat: number] {
-  const { ra, dec } = AIM_BODIES[body].raDec(instantMs);
+  const { ra, dec } = bodyRow(body).place(instantMs);
   return [wrap180(ra - siderealDeg(instantMs)), dec];
 }
 
@@ -128,7 +120,8 @@ function place(
   lens: AimLens,
   radius: number,
 ): { x: number; y: number; r: number } | null {
-  const at = AIM_BODIES[body].raDec(instantMs, rotation);
+  const at = bodyRow(body).place(instantMs, rotation);
+  if (!at) return null;
   const shown = bodyOnScreen(
     skyLens(lens.width, lens.height, {
       x: lens.centre.x + PAD,
@@ -147,9 +140,9 @@ function place(
 
 type Rotation = [number, number];
 
-/** The Earth's radius on screen at a lens zoom, px. */
+/** The Earth's radius on screen at a lens zoom, px: the pinhole's `focal` run backwards. */
 const earthRadius = (focalAtRest: number, zoom: number): number =>
-  zoom * focalAtRest * Math.tan(EARTH_HALF_ANGLE_DEG * RAD);
+  (zoom * focalAtRest) / G;
 
 /** The body's disc on screen for the lens's own camera (or `rotation`) at a lens zoom, or null while it is behind it. */
 export const bodyAt = (
@@ -230,7 +223,7 @@ const meets = (spot: Spot, r: number, box: Box): boolean =>
     spot.y - Math.max(box.top, Math.min(spot.y, box.bottom)),
   ) < r;
 
-/** Whether the body's box at `spot` is inside the hero and clear of every rectangle. */
+/** Whether the body's box at `spot` is inside the frame and clear of every rectangle. */
 export function isClear(
   spot: Spot,
   r: number,
@@ -247,19 +240,24 @@ export function isClear(
   return !avoid.some((box) => meets(spot, r, box));
 }
 
-/** The camera that antipodes the body: it sits straight behind the Earth's centre. */
-export function behindEarth(body: SkyBodyId, instantMs: number): Rotation {
-  const [lng, lat] = subBodyPoint(body, instantMs);
-  return [wrap180(-lng - 180), lat];
+/** The camera that antipodes the body: it sits straight behind the Earth's centre. Null while the body has no place. */
+export function behindEarth(
+  body: SkyBodyId,
+  instantMs: number,
+): Rotation | null {
+  const at = bodyRow(body).place(instantMs);
+  return at && [wrap180(-(at.ra - siderealDeg(instantMs)) - 180), at.dec];
 }
 
-/** The box radius of a body's disc `r`: the disc and whatever reaches past it. */
-export const boxRadius = (body: SkyBodyId, r: number): number =>
-  r * (1 + AIM_BODIES[body].reach);
+/** The box radius of a body's disc `r`: the disc and whatever reaches past it, or `POINT_BOX` for a point. */
+export function boxRadius(body: SkyBodyId, r: number): number {
+  const row = bodyRow(body);
+  return row.kind === "point" ? POINT_BOX : r * (1 + row.reach);
+}
 
 /**
  * The camera rotation and lens zoom that put the body beside the Earth's limb, or null when no
- * spot at any zoom is inside the hero and clear of `avoid`.
+ * spot at any zoom is inside the frame and clear of `avoid`.
  */
 export function aimBody(
   body: SkyBodyId,
@@ -268,6 +266,7 @@ export function aimBody(
   avoid: readonly Box[],
 ): Aim | null {
   const behind = behindEarth(body, instantMs);
+  if (!behind) return null;
   const now = bodyAt(body, instantMs, lens, 1);
   const heading = now
     ? Math.atan2(now.y - lens.centre.y, now.x - lens.centre.x)

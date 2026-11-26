@@ -98,8 +98,8 @@ Modify:
 
 ## Gate checks (`hero-space`)
 
-- `look-flip`: `/` at 1440×900, dark, the clock at `SKY_PINS.half`, maps ready, View Moon
-  pressed. Flip "Natural colours" by click: within two frames the Moon's mean lit-pixel
+- `look-flip`: `/` at 1440×900, dark, the clock at `SKY_PINS.half`, maps ready, Look at › Moon
+  held. Flip "Natural colours" by click: within two frames the Moon's mean lit-pixel
   (b − r) drops by at least 6/255, the Sun (at `SKY_PINS.clear`, Look at › Sun) reads r = g = b within
   2/255 at its centre, and the globe canvas changes; `performance.timeOrigin` is unchanged (no
   reload). Flip back: all three return within 2/255 of the first reading.
@@ -131,7 +131,7 @@ Modify:
 - The saved choice applies before first paint with no flash (`look-first-paint`).
 - The label reads "Natural colours" in a group named "Look" (`zone-filter-ui.test.tsx`).
 - The switch is offered exactly per decision (b) (`look-offered`, the offer's truth table).
-- **Owner viewing pass**, at his recorded window size, his own clicks: on `/`, View Moon, flip
+- **Owner viewing pass**, at his recorded window size, his own clicks: on `/`, Look at › Moon, flip
   Natural colours on and off, then Look at › Sun and the same; reload with it on and watch for a
   flash. Then open the deck's "A day off" slide, build 2: the Moon shows the saved look. (A flip
   in another tab does not repaint an open page; no storage listener is added.)

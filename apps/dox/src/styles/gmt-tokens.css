@@ -634,14 +634,15 @@
      keep the bright token; only `color:` moved. */
 }
 
-/* The Earth's natural look: the photograph in its own colours, with no vector land on top.
-   `data-earth` is set on <html> by the "Natural Earth" switch (src/lib/earth-look.ts) and by
+/* Natural colours: the Earth photograph in its own colours, with no vector land on top (the Moon
+   and the Sun read the same attribute in their painters).
+   `data-look` is set on <html> by the "Natural colours" switch (src/lib/look.ts) and by
    ThemeProvider.astro before first paint. The island is named too, because it re-declares both
    tokens on itself above, and an inherited override would never reach the hero's globe. Where
    no photograph is drawn (the light theme, raised contrast, forced colours, canvas 2D) these
    two change nothing, and the switch is not offered. */
-:root[data-earth="natural"],
-:root[data-earth="natural"] .gmt-theme-dark {
+:root[data-look="natural"],
+:root[data-look="natural"] .gmt-theme-dark {
   --gmt-globe-imagery-duotone: 0;
   --gmt-globe-vector-overlay: 0;
 }
