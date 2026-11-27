@@ -18,7 +18,11 @@
   overflow: visible;
   color: var(--gmt-ice);
   font-size: var(--gmt-text-xs);
-  white-space: nowrap;
+  text-align: center;
+
+  /* A name is one line; a faint body's reason wraps inside the window. */
+  inline-size: max-content;
+  max-inline-size: min(22rem, calc(100vw - 2rem));
   pointer-events: none;
   translate: -50% calc(-100% - 0.75rem);
   background: var(--gmt-glass-tint-subtle);
