@@ -142,6 +142,17 @@ describe("upstream filings", () => {
     }
   });
 
+  it("has no filing that only the live file knows", () => {
+    // `refresh` flags a filing discovery found that the committed file lacks with `new: true`. Until
+    // the owner adds it by hand (`pnpm upstream:sync` lists it), it has no gmtGuard or gmtNote, so
+    // the coverage check below would fail with a bare key. This names the cause and the fix.
+    const unrecorded = filings.filter((f) => f.new === true).map(filingKey);
+    expect(
+      unrecorded,
+      `new upstream filing(s) missing from apps/dox/src/data/upstream-filings.json: ${unrecorded.join(", ")}. Add each with a gmtGuard or a gmtNote (run \`pnpm upstream:sync\` to list them).`,
+    ).toEqual([]);
+  });
+
   it("covers every filing in GMT: exactly one of gmtGuard or gmtNote", () => {
     // A filing with neither would be a defect GMT neither works around nor avoids.
     for (const f of filings) {
@@ -383,6 +394,14 @@ describe("overlayLive", () => {
       "tc39/proposal-temporal#3336",
       "tc39/proposal-temporal#3340",
     ]);
+  });
+
+  it("drops a stale `new` flag once the committed file has the filing", () => {
+    const result = overlayLive(
+      { checked: committedAt, filings: [filing(3340)] },
+      { checked: liveAt, filings: [filing(3340, { new: true })] },
+    );
+    expect(result.filings[0]).not.toHaveProperty("new");
   });
 
   it("ignores a live file checked before the committed one", () => {
