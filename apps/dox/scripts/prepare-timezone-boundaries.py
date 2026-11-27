@@ -4,7 +4,7 @@ One-shot data-prep for the timezone-map boundary polygons.
 
 This script is NOT part of the dox build pipeline. Run it manually when the
 upstream `timezone-boundary-builder` dataset is updated and you want to
-refresh `apps/dox/public/timezone-boundaries.json`.
+refresh `apps/dox/src/assets/timezone-boundaries.json`.
 
 Steps:
   1. Download `timezones.geojson.zip` from the pinned TBB_TAG release of
@@ -15,10 +15,10 @@ Steps:
   4. Douglas-Peucker-simplify each polygon with shapely at 0.02 deg
      (~2.2 km at the equator) and round coordinates to 3 decimals, to keep the asset small.
   5. Write the filtered FeatureCollection to
-     `apps/dox/public/timezone-boundaries.json`.
+     `apps/dox/src/assets/timezone-boundaries.json`.
 
 The repo's formatter checks the output, so finish with
-`pnpm exec oxfmt --write apps/dox/public/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
+`pnpm exec oxfmt --write apps/dox/src/assets/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
 (the files roughly double when pretty-printed; re-check the Canada file is still under budget).
 
 Requires: `uv run --with shapely python scripts/prepare-timezone-boundaries.py`
@@ -37,7 +37,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = (
-    REPO_ROOT / "apps/dox/public/timezone-boundaries.json"
+    REPO_ROOT / "apps/dox/src/assets/timezone-boundaries.json"
 )
 
 # Pinned release, shared with prepare-region-boundaries.py. Every boundary file names the

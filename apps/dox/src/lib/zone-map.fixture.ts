@@ -39,7 +39,7 @@ export function loadBoundaries(
 ): BoundaryCollection & Record<string, unknown> {
   return JSON.parse(
     readFileSync(
-      resolve(__dirname, `../../public/timezone-boundaries-${file}.json`),
+      resolve(__dirname, `../assets/timezone-boundaries-${file}.json`),
       "utf8",
     ),
   ) as BoundaryCollection & Record<string, unknown>;

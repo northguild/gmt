@@ -33,10 +33,7 @@ import {
 
 afterEach(destroyDrawnZoneMaps);
 
-const FILE = resolve(
-  __dirname,
-  "../../public/timezone-boundaries-morocco.json",
-);
+const FILE = resolve(__dirname, "../assets/timezone-boundaries-morocco.json");
 const boundaries = loadBoundaries("morocco");
 const IDS = regionZones.zones;
 
@@ -178,7 +175,7 @@ describe("the config", () => {
     expect(releaseOf("Europe/Madrid")).toBeNull();
   });
 
-  it("serves the file from the site base, never a bare root path", () => {
+  it("reads the file through its hashed asset URL", () => {
     expect(MOROCCO_MAP.boundariesUrl).toMatch(
       /timezone-boundaries-morocco\.json$/,
     );

@@ -43,6 +43,8 @@ export const listboxRootClass: string = styles.root;
 interface ListboxItem {
   value: string;
   label: string;
+  /** A note the list shows but does not let the reader choose. */
+  disabled?: boolean;
 }
 
 interface ListboxOptions extends GateOption {
@@ -63,6 +65,8 @@ interface ListboxOptionOptions {
   index: number;
   value: string;
   selected?: boolean;
+  /** A note the list shows but cannot choose: it reads as disabled, and a key or click on it does nothing. */
+  disabled?: boolean;
   /** The option's content; plain text or a builder's output. */
   children: SafeHtml | string;
   className?: string;
@@ -81,6 +85,7 @@ export function listboxOption(o: ListboxOptionOptions): SafeHtml {
     data-index="${o.index}"
     data-value="${o.value}"
     aria-selected="${String(o.selected === true)}"
+    ${o.disabled ? html`aria-disabled="true"` : ""}
   >
     ${o.children}
   </div>`;
@@ -100,6 +105,7 @@ export function listbox(o: ListboxOptions): SafeHtml {
         index,
         value: item.value,
         selected: item.value === o.value,
+        disabled: item.disabled === true,
         children: item.label,
       }),
     )}</gmt-listbox
@@ -229,7 +235,11 @@ export class GmtListbox extends KitElement {
 
   #choose(index: number): void {
     const value = this.valueAt(index);
-    if (value === undefined) return;
+    if (
+      value === undefined ||
+      this.#optionAt(index)?.getAttribute("aria-disabled") === "true"
+    )
+      return;
     this.#active = index;
     this.#value = value;
     this.sync();

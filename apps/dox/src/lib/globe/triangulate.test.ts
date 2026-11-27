@@ -8,8 +8,6 @@
  * directly rather than assumed from the implementation.
  */
 
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { fillRing, preparePolygon, type PreparedPolygon } from "./geometry";
 import { landPolygons } from "./land";
 import {
@@ -19,19 +17,7 @@ import {
   type Mesh,
 } from "./triangulate";
 import type { LngLat, PolygonRings } from "./types";
-
-const DOX = path.resolve(import.meta.dirname, "..", "..", "..");
-
-interface TzFeature {
-  properties: { tzid: string };
-  geometry:
-    | { type: "Polygon"; coordinates: number[][][] }
-    | { type: "MultiPolygon"; coordinates: number[][][][] };
-}
-
-const TZ: { features: TzFeature[] } = JSON.parse(
-  readFileSync(path.join(DOX, "public/timezone-boundaries-globe.json"), "utf8"),
-);
+import { TZ_GLOBE as TZ, type TzFeature } from "~/test/tz-globe";
 
 function polygonsOf(feature: TzFeature): PolygonRings[] {
   const raw =

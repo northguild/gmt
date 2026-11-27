@@ -79,6 +79,16 @@
       block-size: 2.75rem;
     }
 
+    /* Seven 44px buttons need 23rem of window. Narrower, Reset goes: a pinch out or Zoom out
+       reaches the same rest zoom (the globe's least). */
+    @media (width < 23rem) {
+      [data-space]
+        .stack:where(:has([data-globe-locate]:not([hidden])))
+        [data-globe-zoom="reset"] {
+        display: none;
+      }
+    }
+
     [data-space] .sheet :is(button, input, [role="option"]) {
       min-block-size: 2.75rem;
     }

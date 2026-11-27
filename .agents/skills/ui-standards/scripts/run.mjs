@@ -41,14 +41,14 @@ const ACCEPTED = /ui-standards-ok:\s*\S.{8,}/;
 
 /* ---- What the branch adds: committed, staged, unstaged and untracked ---- */
 
-/** path → Set of added line numbers (1-based, in the working tree). */
+/** path → Set of added line numbers (1-based, in the working tree). A file moved unchanged adds none. */
 const added = new Map();
 let hunk = null;
 for (const line of git(
   "diff",
   "--unified=0",
   "--no-color",
-  "--no-renames",
+  "--find-renames=100%",
   BASE,
   "--",
   DOX,

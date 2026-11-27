@@ -1,6 +1,6 @@
 /**
  * Geometry preparation, exercised against the data the site actually ships —
- * `world-atlas/land-110m` and `public/timezone-boundaries-globe.json` — not
+ * `world-atlas/land-110m` and `src/assets/timezone-boundaries-globe.json` — not
  * against invented shapes. Every awkward case here is a real feature: Antarctica
  * winds the south pole without reaching it, Eurasia crosses the antimeridian
  * twice, and `Antarctica/McMurdo` has a 310° edge along the −86° parallel that
@@ -8,8 +8,6 @@
  */
 
 import { geoContains } from "d3-geo";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import {
   closeAtPole,
   densifyRing,
@@ -24,19 +22,7 @@ import {
   unwrapRing,
 } from "./geometry";
 import type { LngLat, PolygonRings } from "./types";
-
-const DOX = path.resolve(import.meta.dirname, "..", "..", "..");
-
-interface TzFeature {
-  properties: { tzid: string };
-  geometry:
-    | { type: "Polygon"; coordinates: number[][][] }
-    | { type: "MultiPolygon"; coordinates: number[][][][] };
-}
-
-const TZ: { features: TzFeature[] } = JSON.parse(
-  readFileSync(path.join(DOX, "public/timezone-boundaries-globe.json"), "utf8"),
-);
+import { TZ_GLOBE as TZ, type TzFeature } from "~/test/tz-globe";
 
 function zone(tzid: string): TzFeature {
   const found = TZ.features.find((f) => f.properties.tzid === tzid);

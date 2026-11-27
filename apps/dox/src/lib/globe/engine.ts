@@ -823,6 +823,10 @@ export async function createGlobeEngine(
       controller.setSpin(on);
       schedule();
     },
+    holdAmbient(hold) {
+      controller.holdAmbient(hold, performanceNow());
+      schedule();
+    },
     isSpinning: () => controller.isSpinning(),
     refit: () => measure(),
     getView: () => ({

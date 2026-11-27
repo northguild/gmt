@@ -52,6 +52,7 @@ describe("the gate registry", () => {
       "canada-stored-still",
       "table-fit",
       "plate-fit",
+      "sky-orbits-fresh",
     ]);
     expect(at("local")).toHaveLength(GATES.length);
   });

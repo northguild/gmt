@@ -23,8 +23,8 @@ export const P = 1 + GEOSTATIONARY_ALTITUDE_KM / EARTH_EQUATORIAL_RADIUS_KM;
 export const G = Math.sqrt(P * P - 1);
 /** Camera-frame x of the silhouette; a surface point is on the visible cap when its x exceeds it. */
 export const RIM = 1 / P;
-
-const DEG = Math.PI / 180;
+/** Radians in a degree: the one copy every sky and globe module multiplies by. */
+export const RAD = Math.PI / 180;
 
 /** A vector in the camera frame: `[towards the camera, screen right, screen up]`. */
 export type Vec3 = [number, number, number];
@@ -64,8 +64,8 @@ export function toView(
   lat: number,
   out: Vec3,
 ): Vec3 {
-  const lambda = lng * DEG;
-  const phi = lat * DEG;
+  const lambda = lng * RAD;
+  const phi = lat * RAD;
   const cosLat = Math.cos(phi);
 
   /* Longitude rotation folded into the angle sum, so the point's own sin/cos are combined with the
@@ -94,10 +94,10 @@ export function toView(
  */
 export function rotationMatrix(lambda: number, phi: number): Float64Array {
   const [ca, sa, cp, sp] = [
-    Math.cos(lambda * DEG),
-    Math.sin(lambda * DEG),
-    Math.cos(phi * DEG),
-    Math.sin(phi * DEG),
+    Math.cos(lambda * RAD),
+    Math.sin(lambda * RAD),
+    Math.cos(phi * RAD),
+    Math.sin(phi * RAD),
   ];
   return new Float64Array([
     ca * cp,

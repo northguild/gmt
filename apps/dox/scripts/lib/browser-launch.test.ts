@@ -1,4 +1,4 @@
-import { firefoxEndpoint, launchBrowser } from "./browser-launch.mjs";
+import { firefoxEndpoint, launchBrowser, tabKey } from "./browser-launch.mjs";
 
 const LOOPBACK = "<loopback>";
 
@@ -124,5 +124,13 @@ describe("launchBrowser", () => {
     await expect(
       launchBrowser("edge" as never, {}, { engines: fakeEngines(), env: {} }),
     ).rejects.toThrow(/chromium.*firefox.*webkit/);
+  });
+});
+
+describe("tabKey", () => {
+  it("walks every control: Option+Tab in WebKit, Tab elsewhere", () => {
+    expect(tabKey("webkit")).toBe("Alt+Tab");
+    expect(tabKey("chromium")).toBe("Tab");
+    expect(tabKey("firefox")).toBe("Tab");
   });
 });

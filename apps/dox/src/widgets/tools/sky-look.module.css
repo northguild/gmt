@@ -1,0 +1,166 @@
+/* Look at: a button of the zoom stack (`globe.module.css` styles every `button` under `.zoom`,
+   so only what the disclosure adds is undone here) and the bar it opens. The bar is drawn as the
+   stack is (hairline gaps on the border colour, one bevelled box) but its buttons are wide enough
+   for an icon and a name. It opens beside the stack, towards the globe, its foot level with the
+   button's and growing upward, so it never runs past the hero's bottom edge. The sky is hidden
+   in forced colours, so the control that aims at it is too. */
+
+.look[data-disclosure] {
+  display: block;
+  min-inline-size: 0;
+
+  /* Secondary: it sits apart from the globe's own controls, a wider divider above it (the stack's
+     background shows through the gap, as its 1px dividers do). */
+  margin-block-start: 3px;
+
+  /* Beside the stack, towards the globe (the stack lets an open panel overflow). The panel is
+     bare: the bar inside it is the box. */
+  & > [id$="-panel"] {
+    inset-block: auto 0;
+    inset-inline: auto 100%;
+    margin-block-start: 0;
+    margin-inline-end: var(--gmt-space-2);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    max-inline-size: none;
+  }
+}
+
+/* Two classes, to win over the stack's `.zoom button` colour (0,1,1) and lose to its hover and
+   focus fill (0,2,1): at rest the icon is dim, as a secondary control's is. */
+.look .toggle {
+  border-radius: 0;
+  min-inline-size: 0;
+  min-block-size: 0;
+  color: var(--gmt-ice-dim);
+
+  /* A view is on: the stack's button says so while the bar is shut. */
+  &[data-held] {
+    color: var(--gmt-cyan);
+  }
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+
+  /* Opaque dividers, as the stack's (globe.module.css). */
+  background: linear-gradient(var(--gmt-border) 0 0), var(--gmt-surface-2);
+  border: 1px solid var(--gmt-border);
+  border-radius: var(--gmt-radius-sm);
+  corner-shape: bevel;
+  overflow: hidden;
+}
+
+/* Three classes, to win over the stack's square `button` rules (`.zoom button`, and the phone
+   row's `[data-space] .stack button`). */
+.look .bar .body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--gmt-space-2);
+  inline-size: auto;
+  min-inline-size: 8.5rem;
+  padding-inline: var(--gmt-space-2) var(--gmt-space-3);
+  font-size: var(--gmt-text-sm);
+  white-space: nowrap;
+}
+
+/* The states weigh (0,3,0) too, so they also beat the stack's hover and focus fill (0,2,1): the
+   chosen row stays cyan and a row that cannot be chosen stays dim under the pointer. That fill
+   was the stack's only focus cue, so these rows draw a ring instead. */
+.bar .body[aria-pressed="true"] {
+  color: var(--gmt-void);
+  background: var(--gmt-cyan);
+}
+
+.bar .body[aria-disabled="true"] {
+  color: var(--gmt-ice-dim);
+  background: var(--gmt-surface-2);
+  cursor: default;
+}
+
+.bar .body:focus-visible {
+  outline: 2px solid var(--gmt-ice);
+  outline-offset: -2px;
+}
+
+/* A point's name and, under it, its dim second line (the reason or the date): visible text, so
+   touch and screen readers get it. A row with no line is a single line, as the discs' are. */
+.text {
+  display: grid;
+  text-align: start;
+}
+
+/* The quiet text: a point's second line (the reason or the date) and, beside the name, what a
+   body is when it is not a planet ("Asteroid"). The owner's one exception to the 7:1 rule for
+   `--gmt-ice-dim` text: it is subtext, a step quieter than the dim names of the disabled rows, so
+   it mixes toward the bar's ground. Measured 5.28:1 on `--gmt-surface-2` (the hero is dark only);
+   `a11y-axe` holds it to 4.5:1. */
+.line,
+.tag {
+  font-size: var(--gmt-text-xs);
+  color: color-mix(in oklab, var(--gmt-ice-dim) 80%, var(--gmt-surface-2));
+}
+
+.line {
+  line-height: 1.3;
+
+  /* The bar opens leftward from the stack, so a long line (a faint body with a pass date) would
+     push it past the viewport's left edge on a phone: it wraps instead, at a measure that fits. */
+  max-inline-size: 24ch;
+  white-space: normal;
+
+  /* Each part of the line (`writeLine` in sky-view.ts) stays whole; the line breaks between them. */
+  & > span {
+    white-space: nowrap;
+  }
+
+  &:empty {
+    display: none;
+  }
+}
+
+/* On a cyan ground (the chosen row, and the stack's hover and focus fill) the quiet text takes
+   the row's own colour. */
+.body[aria-pressed="true"] :is(.line, .tag),
+.body:where(:not([aria-disabled="true"])):is(:hover, :focus-visible)
+  :is(.line, .tag) {
+  color: inherit;
+}
+
+/* The icon or symbol, in a 1rem cell so every name starts at the same edge. */
+.face {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 1rem;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+/* Stacked in a row (a coarse pointer in the phone layout, globe-phone.module.css; keep the two
+   queries equal), the bar opens upwards, over the sky bay, its end edge level with the button's. */
+@media (pointer: coarse) and (not ((width >= 64rem) and (orientation: landscape))) {
+  /* The row's divider is on the inline side; `[data-space]` weighs it over `.look[data-disclosure]`. */
+  [data-space] .look[data-disclosure] {
+    margin-block-start: 0;
+    margin-inline-start: 3px;
+  }
+
+  .look[data-disclosure] > [id$="-panel"] {
+    inset-block: auto 100%;
+    inset-inline: auto 0;
+    margin-inline-end: 0;
+    margin-block-end: var(--gmt-space-2);
+  }
+}
+
+@media (forced-colors: active) {
+  .look[data-disclosure] {
+    display: none;
+  }
+}

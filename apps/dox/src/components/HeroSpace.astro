@@ -6,10 +6,13 @@
  * The page reads nothing here (`aria-hidden`), so the sky adds no stop to the tab order or the
  * reading order. `lib/hero-space.ts` fetches the packed star list and the Milky Way map and
  * draws; the preloads below start those fetches with the page, and they sit on `/` alone because
- * only the landing renders this component.
+ * only the landing renders this component. The Moon's map is not preloaded: it loads after the
+ * first paint, once the browser is idle.
  */
 import skyList from "../assets/hero-sky.bin?url";
 import milkyWay from "../assets/hero-milkyway.webp?url";
+import moonMap from "../assets/sky-moon.webp?url";
+import sunMap from "../assets/sky-sun.webp?url&no-inline"; // a file under 4 kB would inline as a data: URI, which no request can block
 ---
 
 <link rel="preload" as="fetch" href={skyList} crossorigin="anonymous" />
@@ -18,8 +21,10 @@ import milkyWay from "../assets/hero-milkyway.webp?url";
 	class="gmt-sky"
 	aria-hidden="true"
 	data-hero-sky
-	data-src={skyList}
+	data-sky-src={skyList}
 	data-milky-way={milkyWay}
+	data-sun-map={sunMap}
+	data-moon-map={moonMap}
 >
 	<div class="gmt-sky-band" data-sky-layer="band"><canvas data-sky-canvas="band"></canvas></div>
 	<canvas data-sky-layer="stars" data-sky-canvas="stars"></canvas>

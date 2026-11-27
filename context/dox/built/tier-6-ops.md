@@ -37,6 +37,7 @@ Part of [built/index.md](index.md). Dev server, gates, baseline, Firefox: [tier-
 
 ## After a deploy
 
+- Large site data lives in `src/assets/` and loads by `?url`, so it gets a hashed, immutable URL; `public/` is for files that need a fixed URL.
 - `/dox/` loads, and a grounded answer's citation opens the right page.
 - `/api/brains` counts move and survive a reload, and the badge reads `● live`.
 - `curl -s <url>/dox/ | grep -c GEMINI` prints `0`.

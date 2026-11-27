@@ -36,10 +36,11 @@
  *     node scripts/prepare-hero-milkyway.mjs [--jpeg path/to/eso0932a.jpg]
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { fail as failIn, readPinnedSource } from "./prepare-source.mjs";
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -82,37 +83,8 @@ const NCP_LONGITUDE = 122.93192;
 
 const RAD = Math.PI / 180;
 
-const flag = (name) => {
-  const at = process.argv.indexOf(`--${name}`);
-  return at === -1 ? undefined : process.argv[at + 1];
-};
-
-function fail(message) {
-  console.error(`prepare-hero-milkyway: ${message}`);
-  process.exit(1);
-}
-
-// --- the source -----------------------------------------------------------------
-
-async function readSource() {
-  const given = flag("jpeg");
-  let bytes;
-  if (given) {
-    if (!existsSync(given)) fail(`no file at ${given}`);
-    bytes = readFileSync(given);
-  } else {
-    const response = await fetch(SOURCE_URL);
-    if (!response.ok) fail(`download failed: ${response.status} ${SOURCE_URL}`);
-    bytes = Buffer.from(await response.arrayBuffer());
-  }
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  if (sha256 !== SOURCE_SHA256 || bytes.length !== SOURCE_BYTES)
-    fail(
-      `the panorama is not the pinned file (${bytes.length} bytes, sha256 ${sha256}); ` +
-        `expected ${SOURCE_BYTES} bytes, ${SOURCE_SHA256}`,
-    );
-  return bytes;
-}
+const NAME = "prepare-hero-milkyway";
+const fail = (message) => failIn(NAME, message);
 
 // --- the geometry ---------------------------------------------------------------
 
@@ -238,7 +210,15 @@ async function main() {
     createRequire(import.meta.url).resolve("astro/package.json"),
   ).resolve("sharp");
   const sharp = (await import(pathToFileURL(sharpFile).href)).default;
-  const { data, info } = await sharp(await readSource())
+  const { data, info } = await sharp(
+    await readPinnedSource({
+      name: NAME,
+      url: SOURCE_URL,
+      bytes: SOURCE_BYTES,
+      sha256: SOURCE_SHA256,
+      flag: "jpeg",
+    }),
+  )
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });

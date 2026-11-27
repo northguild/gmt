@@ -25,6 +25,7 @@ import {
   FIXTURE_PLANET_ZONES,
   FIXTURE_STAGE as STAGE,
 } from "~/test/deck-stage-fixture";
+import { setLook } from "~/lib/look";
 import { getPlanetZones } from "./places";
 import { mountSpaceStage } from "./stage";
 import { legsOf, readStops } from "./stage-route";
@@ -244,6 +245,21 @@ describe("the globe", () => {
     h.stage.destroy();
     expect(fake.destroy).toHaveBeenCalledTimes(1);
     expect(h.root).not.toHaveAttribute("data-space");
+  });
+
+  it("re-reads the theme once for each look flip, and stops when the stage's signal aborts", async () => {
+    h.mount();
+    const fake = await h.ready();
+    try {
+      setLook("natural");
+      await vi.waitFor(() => expect(fake.setTheme).toHaveBeenCalledTimes(1));
+      h.abort();
+      setLook("ice");
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(fake.setTheme).toHaveBeenCalledTimes(1);
+    } finally {
+      setLook("ice");
+    }
   });
 
   it("destroys an engine that arrives after the stage is gone", async () => {

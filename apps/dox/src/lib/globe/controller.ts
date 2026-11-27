@@ -238,6 +238,8 @@ export interface Controller {
    * same ramp, so the globe never stops short. Reduced motion never spins.
    */
   setSpin(on: boolean): void;
+  /** Held, no idle spin is scheduled and a running one eases down; released, it is due `IDLE_MS` later. */
+  holdAmbient(hold: boolean, now: number): void;
   /** True from the moment the requested spin starts until its ramp down has ended. */
   isSpinning(): boolean;
   /** True while only a requested spin (building, cruising or easing down) moves the globe. */
@@ -286,6 +288,7 @@ export function createController(options: ControllerOptions): Controller {
   /** The running spin was asked for, so it ignores the idle rules and eases down when released. */
   let spinOwned = false;
   let hovered = false;
+  let held = false; // `holdAmbient`: no idle spin is scheduled
 
   /** The fly-to under way, a pure function of the time since `flightStart`. */
   let flight: Flight | null = null;
@@ -351,7 +354,8 @@ export function createController(options: ControllerOptions): Controller {
   function markInteraction(now: number): void {
     ambientActive = false;
     spinOwned = false;
-    ambientDueAt = reducedMotion() || !ambientAllowed ? null : now + IDLE_MS;
+    ambientDueAt =
+      reducedMotion() || !ambientAllowed || held ? null : now + IDLE_MS;
   }
 
   /** Whether nothing else holds the camera, so a requested spin can begin. */
@@ -802,6 +806,16 @@ export function createController(options: ControllerOptions): Controller {
       spinWanted = on;
       // The ramp down starts from the cruise end of the ramp, not from however long it has cruised.
       if (!on && spinOwned) {
+        ambientElapsed = Math.min(ambientElapsed, AMBIENT_RAMP_MS);
+      }
+    },
+
+    holdAmbient(hold, now): void {
+      held = hold;
+      if (!hold) return markInteraction(now);
+      ambientDueAt = null;
+      if (ambientActive && !spinOwned && !spinWanted) {
+        spinOwned = true; // a running idle spin eases down on the requested spin's ramp
         ambientElapsed = Math.min(ambientElapsed, AMBIENT_RAMP_MS);
       }
     },

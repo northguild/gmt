@@ -12,6 +12,9 @@ installJsdomShims();
 const engineOptions: Array<Record<string, unknown>> = [];
 let finishDawn: () => void = () => {};
 let dawnStarts = 0;
+/* Opens the stub engine's `dawnReady`: the imagery is on the GPU. */
+let imageryReady: () => void = () => {};
+const fetched: Array<{ url: string; priority: unknown }> = [];
 /* The silhouette the stub engine reports; the host must hand it on untouched. */
 const ENGINE_CENTRE = { x: 210, y: 140, radius: 123.456 };
 
@@ -28,7 +31,7 @@ vi.mock("./globe/engine", () => ({
     return new Proxy(
       {
         renderer: "webgpu",
-        dawnReady: Promise.resolve(),
+        dawnReady: new Promise<void>((resolve) => (imageryReady = resolve)),
         startDawn: () => {
           dawnStarts += 1;
           return dawn;
@@ -68,7 +71,10 @@ async function mount(entrance?: "dawn") {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubGlobal("fetch", async () => new Response("{}", { status: 404 }));
+  vi.stubGlobal("fetch", async (url: string, init?: { priority?: unknown }) => {
+    fetched.push({ url, priority: init?.priority });
+    return new Response("{}", { status: 404 });
+  });
 });
 
 afterEach(() => {
@@ -76,6 +82,7 @@ afterEach(() => {
   document.body.replaceChildren();
   engineOptions.length = 0;
   dawnStarts = 0;
+  fetched.length = 0;
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -100,7 +107,25 @@ describe("initGlobe entrance", () => {
 
   it("passes the engine's readiness through", async () => {
     const { globe } = await mount("dawn");
+    imageryReady();
     await expect(globe.dawnReady).resolves.toBeUndefined();
+  });
+
+  it("asks for the zone outlines only once the dawn's imagery is ready, as the lower priority", async () => {
+    await mount("dawn");
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(fetched).toEqual([]);
+    imageryReady();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(fetched).toHaveLength(1);
+    expect(fetched[0]!.priority).toBe("low");
+  });
+
+  it("asks for the outlines at once when there is no dawn to wait for", async () => {
+    await mount();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(fetched).toHaveLength(1);
+    expect(fetched[0]!.priority).toBe("low");
   });
 });
 

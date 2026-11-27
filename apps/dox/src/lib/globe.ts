@@ -29,6 +29,7 @@ import {
   type PreparedPolygon,
 } from "./globe/geometry";
 import type {
+  GlobeEngine,
   GlobeInteraction,
   GlobeMarker,
   GlobeOptions,
@@ -53,16 +54,20 @@ import {
   isFilterEngaged,
   matchesFilter,
 } from "./zone-filter";
-import { EARTH_ATTRIBUTE } from "./earth-look";
 import { type ZoneFilterUi, mountZoneFilters } from "./zone-filter-ui";
-import { labelFont, readTheme, rendererOverride } from "./globe/globe-theme";
+import {
+  labelFont,
+  readTheme,
+  rendererOverride,
+  watchTheme,
+} from "./globe/globe-theme";
 import { setHtml } from "~/widgets/builders";
 import type { GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
-import { withBase } from "./site";
+import { EARTH_IMAGERY_URL, ZONE_BOUNDARIES_URL } from "./globe-assets";
 import { chooseZone } from "./zone-action";
 import { createSlicer, yieldToMain } from "./yield-to-main";
 import { placeTooltip } from "./globe-card";
@@ -82,6 +87,8 @@ export interface GlobeHost {
   getZones: () => GlobeZone[];
   /** The currently selected zone id, or null. */
   getSelected: () => string | null;
+  /** The reader's own zone (the system's), or null when the globe cannot place it. */
+  homeZone: string | null;
   /** Called on every selection change (null when cleared). */
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
   /**
@@ -102,6 +109,12 @@ export interface GlobeHost {
   onZoom: (callback: (dir: 1 | -1, closeness: number) => void) => void;
   /** `[λ, φ]` in degrees as the camera has it: it looks at longitude −λ, latitude −φ. */
   getRotation: () => readonly [number, number];
+  /** The camera: its rotation, zoom and focal length (see `GlobeEngine.getView`). */
+  getView: () => ReturnType<GlobeEngine["getView"]>;
+  /** Turn the camera to a rotation, with a timed hop if asked (see `GlobeEngine.flyTo`). */
+  flyTo: GlobeEngine["flyTo"];
+  /** Hold the idle spin off, or release it (see `GlobeEngine.holdAmbient`). */
+  holdAmbient: (hold: boolean) => void;
   /** Where the Earth's centre sits now, in CSS pixels within the globe's host. */
   getCentre: () => { x: number; y: number; radius: number };
   /** Called after every frame the globe draws. Adds to any earlier callback; `destroy` drops them all. */
@@ -136,20 +149,12 @@ const SELECTION_RING_WIDTH = 1.5;
 /** Outline width of the selected zone's boundary, in CSS pixels. */
 const REGION_STROKE_WIDTH = 1.5;
 
-/** The boundary dataset, fetched after the globe is already interactive. */
-const BOUNDARIES_URL = withBase("/timezone-boundaries-globe.json");
-
-/**
- * NASA's Blue Marble, prepared by `scripts/prepare-globe-imagery.py`. Only the
- * WebGPU renderer fetches it, and only while `--gmt-globe-imagery-alpha` is
- * above 0.
- */
-const IMAGERY_URL = withBase("/earth-blue-marble.webp");
-
 /** The two elements the template draws inside the stage, which the engine does not own. */
 export interface GlobeParts {
   /** The hover card; hidden until a zone is selected. */
   tooltip: HTMLElement;
+  /** Whether a body's map is drawn on this page's sky (`data-sky-maps="ready"`); read on every frame. */
+  skyTextured?: () => boolean;
   /** The zoom cluster, armed once the globe has entered; absent when the host has none. */
   zoom: HTMLElement | null;
   /** Where the lock's rings ripple from a chosen pin (`globe-lock.ts`); absent when the host has none. */
@@ -178,19 +183,19 @@ export interface GlobeParts {
 }
 
 /**
- * The attributes on `<html>` that change a token the theme reads: the colour scheme and the
- * Earth's look. A change to either re-reads the theme on every globe.
+ * Whether the "Natural colours" switch is offered: where the Earth photograph is drawn (the WebGPU
+ * renderer with imagery above 0) or where a body's map is drawn on this page's sky. Raised contrast
+ * and forced colours never offer it: the default look is painted whatever is saved.
  */
-export const THEME_ATTRIBUTES = ["data-theme", EARTH_ATTRIBUTE] as const;
-
-/**
- * Whether the "Natural Earth" switch is offered: only where the photograph is drawn, which is
- * the WebGPU renderer with imagery above 0. The canvas-2D fallback never draws it, and the
- * light theme (outside the hero), raised contrast and forced colours set imagery to 0, so on
- * those globes the switch would do nothing.
- */
-export function earthSwitchOffered(imagery: number, renderer: string): boolean {
-  return renderer === "webgpu" && imagery > 0;
+export function lookSwitchOffered(o: {
+  imagery: number;
+  renderer: string;
+  skyTextured: boolean;
+  contrast: boolean;
+  forced: boolean;
+}): boolean {
+  if (o.contrast || o.forced) return false;
+  return (o.renderer === "webgpu" && o.imagery > 0) || o.skyTextured;
 }
 
 export async function initGlobe(
@@ -273,7 +278,7 @@ export async function initGlobe(
       initialRotation: defaultRotation,
       zoomRange: [MIN_ZOOM, MAX_ZOOM],
       reducedMotion,
-      imageryUrl: IMAGERY_URL,
+      imageryUrl: EARTH_IMAGERY_URL,
       ...parts.engine,
     })) as GlobeEngineWithHitTest;
   } catch (error) {
@@ -532,7 +537,10 @@ export async function initGlobe(
 
   async function loadBoundaries(): Promise<void> {
     try {
-      const response = await fetch(BOUNDARIES_URL);
+      /* The outlines come second: a dawn's globe has its imagery first, so the two never share the
+         connection, and the outlines are asked for as the lower priority they are. */
+      if (parts.engine?.entrance === "dawn") await engine.dawnReady;
+      const response = await fetch(ZONE_BOUNDARIES_URL, { priority: "low" });
       if (!response.ok) return;
       const data = (await response.json()) as {
         features: {
@@ -567,6 +575,9 @@ export async function initGlobe(
       boundaries = prepared;
       rawBoundaries = raw;
       engine.setRegions(buildRegions());
+      /* A click on a zone's land selects it from now on; the browser gates wait for this, as the
+         outlines come after the dawn and their time differs from run to run. */
+      host.dataset["regions"] = "ready";
     } catch {
       // The globe is fully usable without the boundary outlines.
     }
@@ -801,24 +812,29 @@ export async function initGlobe(
     engine.setTheme(theme);
     engine.setMarkers(buildMarkers());
     engine.setRegions(buildRegions());
-    syncEarthSwitch();
+    syncLookSwitch();
   }
 
-  /* "Natural Earth" only does something where the photograph is drawn: the WebGPU renderer, with
-     imagery above 0. A renderer swap (device loss) changes that without a theme change, so the
-     frame loop checks too; the call is a no-op when nothing moved. */
-  function syncEarthSwitch(): void {
-    filterUi?.setEarthAvailable(
-      earthSwitchOffered(theme.imagery, engine.renderer),
+  /* "Natural colours" only does something where the photograph or a body's map is drawn. A renderer
+     swap (device loss) or a map arriving changes that without a theme change, so the frame loop
+     checks too; the call is a no-op when nothing moved. */
+  const media = (query: string): boolean =>
+    globalThis.matchMedia?.(query)?.matches === true;
+  function syncLookSwitch(): void {
+    filterUi?.setLookAvailable(
+      lookSwitchOffered({
+        imagery: theme.imagery,
+        renderer: engine.renderer,
+        skyTextured: parts.skyTextured?.() === true,
+        contrast: media("(prefers-contrast: more)"),
+        forced: media("(forced-colors: active)"),
+      }),
     );
   }
-  frameListeners.push(syncEarthSwitch);
+  frameListeners.push(syncLookSwitch);
 
-  const themeObserver = new MutationObserver(refreshTheme);
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: [...THEME_ATTRIBUTES],
-  });
+  const themeAbort = new AbortController();
+  watchTheme(refreshTheme, themeAbort.signal);
 
   /* `gmt-a11y.css` zeroes the atmosphere, haze and imagery tokens under these
      preferences, and the renderer only sees a token when the theme is re-read. */
@@ -832,7 +848,7 @@ export async function initGlobe(
   }
 
   // --- start ---------------------------------------------------------------
-  syncEarthSwitch();
+  syncLookSwitch();
   engine.setMarkers(buildMarkers());
   /* A dawn is the canvas's only entrance: `enter()` would layer a second animation on it. The
      dawn arms the zoom stack when it ends. */
@@ -849,6 +865,7 @@ export async function initGlobe(
     getZoom: () => engine.getZoom(),
     getZones: () => zones.slice(),
     getSelected: () => selectedId,
+    homeZone: defaultZone,
     onSelect(callback) {
       selectCallback = callback;
     },
@@ -860,6 +877,9 @@ export async function initGlobe(
     onZoom: (callback) => engine.onZoom(callback),
     getRotation: () => engine.getRotation(),
     getCentre: () => engine.getCentre(),
+    getView: () => engine.getView(),
+    flyTo: (rotation, options) => engine.flyTo(rotation, options),
+    holdAmbient: (hold) => engine.holdAmbient(hold),
     onFrame: (callback) => {
       frameListeners.push(callback);
     },
@@ -878,7 +898,7 @@ export async function initGlobe(
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("scroll", followScroll, { capture: true });
       window.removeEventListener("resize", followScroll);
-      themeObserver.disconnect();
+      themeAbort.abort();
       for (const query of preferenceQueries) {
         query.removeEventListener("change", refreshTheme);
       }

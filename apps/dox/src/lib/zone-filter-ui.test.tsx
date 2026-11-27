@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { defineElements } from "~/widgets/define";
 import type { BucketCounts } from "./zone-filter";
-import { currentEarth } from "./earth-look";
+import { currentLook } from "./look";
 import { mountZoneFilters } from "./zone-filter-ui";
 
 function counts(over: Partial<BucketCounts> = {}): BucketCounts {
@@ -45,7 +45,7 @@ afterEach(() => {
   for (const ui of mounted.splice(0)) ui.destroy();
   for (const el of hosts.splice(0)) el.remove();
   vi.restoreAllMocks();
-  document.documentElement.removeAttribute("data-earth");
+  document.documentElement.removeAttribute("data-look");
   localStorage.clear();
 });
 
@@ -225,33 +225,34 @@ describe("mountZoneFilters", () => {
   });
 });
 
-describe("the Earth's look", () => {
-  const natural = () => screen.queryByRole("switch", { name: "Natural Earth" });
+describe("the page's look", () => {
+  const natural = () =>
+    screen.queryByRole("switch", { name: "Natural colours" });
 
-  it("is a switch in its own group, off, and only offered once the globe draws the photograph", async () => {
+  it("is a switch in its own group, off, and only offered once a body is drawn in imagery", async () => {
     const { ui } = mount();
     await open(userEvent.setup());
     expect(natural()).toBeNull();
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     expect(natural()).not.toBeChecked();
-    expect(screen.getByRole("group", { name: "Earth" })).toContainElement(
+    expect(screen.getByRole("group", { name: "Look" })).toContainElement(
       natural(),
     );
     expect(screen.getAllByRole("switch")).toHaveLength(10);
-    ui.setEarthAvailable(false);
+    ui.setLookAvailable(false);
     expect(natural()).toBeNull();
   });
 
-  it("sets the page's look, remembers it, and puts blue back", async () => {
+  it("sets the page's look, remembers it, and puts ice back", async () => {
     const { ui, changes } = mount();
     const user = userEvent.setup();
     await open(user);
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     await user.click(natural()!);
-    expect(currentEarth()).toBe("natural");
+    expect(currentLook()).toBe("natural");
     expect(localStorage.getItem("dox:earth")).toBe("natural");
     await user.click(natural()!);
-    expect(currentEarth()).toBe("blue");
+    expect(currentLook()).toBe("ice");
     expect(localStorage.getItem("dox:earth")).toBeNull();
     // It is not a filter: the zone list is told nothing.
     expect(changes).toHaveLength(0);
@@ -260,9 +261,9 @@ describe("the Earth's look", () => {
   it("follows the page when another globe changes the look", async () => {
     const { ui } = mount();
     await open(userEvent.setup());
-    ui.setEarthAvailable(true);
-    document.documentElement.setAttribute("data-earth", "natural");
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
+    document.documentElement.setAttribute("data-look", "natural");
+    ui.setLookAvailable(true);
     expect(natural()).toBeChecked();
   });
 
@@ -270,11 +271,11 @@ describe("the Earth's look", () => {
     const { ui } = mount();
     const user = userEvent.setup();
     await open(user);
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     natural()!.focus();
     await user.keyboard(" ");
     expect(natural()).toBeChecked();
-    expect(currentEarth()).toBe("natural");
+    expect(currentLook()).toBe("natural");
   });
 
   it("keeps working for this page when storage throws", async () => {
@@ -287,26 +288,26 @@ describe("the Earth's look", () => {
     const { ui } = mount();
     const user = userEvent.setup();
     await open(user);
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     await user.click(natural()!);
-    expect(currentEarth()).toBe("natural");
+    expect(currentLook()).toBe("natural");
     await user.click(natural()!);
-    expect(currentEarth()).toBe("blue");
+    expect(currentLook()).toBe("ice");
   });
 
   it("moves focus to the gear when the switch goes away under it", async () => {
     const { ui } = mount();
     await open(userEvent.setup());
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     natural()!.focus();
-    ui.setEarthAvailable(false);
+    ui.setLookAvailable(false);
     expect(gear()).toHaveFocus();
   });
 
   it("passes axe with the switch shown", async () => {
     const { ui, host } = mount();
     await open(userEvent.setup());
-    ui.setEarthAvailable(true);
+    ui.setLookAvailable(true);
     await expectNoAxeViolations(host);
   });
 });

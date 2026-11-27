@@ -1,8 +1,10 @@
-import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import {
+  decodeWebp,
+  expectWebpMatchesSidecar,
+  restoreVipsHomeAfterAll,
+} from "./webp-test-kit";
 import {
   FLOOR_PERCENTILE,
   GAMMA,
@@ -31,34 +33,13 @@ const sidecar = JSON.parse(
   readFileSync(resolve(assets, "hero-milkyway.json"), "utf8"),
 );
 
-/* Loading sharp sets `VIPSHOME`; the file puts it back as it found it. */
-const vipsHome = process.env["VIPSHOME"];
-afterAll(() => {
-  if (vipsHome === undefined) delete process.env["VIPSHOME"];
-  else process.env["VIPSHOME"] = vipsHome;
-});
-
-type Sharp = (input: Buffer) => {
-  raw: () => {
-    toBuffer: (options: { resolveWithObject: true }) => Promise<{
-      data: Buffer;
-      info: { width: number; height: number; channels: number };
-    }>;
-  };
-};
+restoreVipsHomeAfterAll();
 
 let decoding: ReturnType<typeof decodeMap> | undefined;
 /** The map's brightness as the generator wrote it, decoded once by sharp, when a test first asks. */
 const decoded = () => (decoding ??= decodeMap());
 
-async function decodeMap() {
-  /* Sharp is a dependency of Astro, not of the app, so it is found from Astro's own install. */
-  const sharpFile = createRequire(
-    createRequire(import.meta.url).resolve("astro/package.json"),
-  ).resolve("sharp");
-  const sharp = (await import(pathToFileURL(sharpFile).href)).default as Sharp;
-  return sharp(webp).raw().toBuffer({ resolveWithObject: true });
-}
+const decodeMap = () => decodeWebp(webp);
 
 /** The mean brightness of the 7 x 7 cells around a sky position, degrees. */
 async function brightness(ra: number, dec: number): Promise<number> {
@@ -106,12 +87,7 @@ describe("hero-milkyway.json", () => {
 
 describe("hero-milkyway.webp", () => {
   it("is a WebP that matches the sidecar's size and hash", () => {
-    expect(webp.toString("latin1", 0, 4)).toBe("RIFF");
-    expect(webp.toString("latin1", 8, 12)).toBe("WEBP");
-    expect(webp.length).toBe(sidecar.map.bytes);
-    expect(createHash("sha256").update(webp).digest("hex")).toBe(
-      sidecar.map.sha256,
-    );
+    expectWebpMatchesSidecar(webp, sidecar);
   });
 
   it("stays within the size budget", () => {

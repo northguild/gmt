@@ -11,10 +11,10 @@
           ? 'light'
           : 'dark';
     document.documentElement.dataset.theme = theme;
-    /* The Earth's look (src/lib/earth-look.ts): the same key, applied here so the first frame is right. */
+    /* The page's look (src/lib/look.ts): the same key, applied here so the first frame is right. */
     try {
       if (localStorage.getItem('dox:earth') === 'natural') {
-        document.documentElement.dataset.earth = 'natural';
+        document.documentElement.dataset.look = 'natural';
       }
     } catch (_) {}
     /* The sound choice (src/lib/sound/settings.ts): the same rule, applied here so the settings

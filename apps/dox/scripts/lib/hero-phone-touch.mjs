@@ -316,7 +316,7 @@ export async function stillness(ctx, page) {
 
 export async function dots(ctx, page) {
   // Targets: the zoom stack.
-  // In, out, reset and "Find a zone".
+  // In, out, Find a zone, Locate, Look at and About this sky; Reset too where the row has room.
   await small(ctx, page.locator('[data-gate="globe-zoom"] button'), "zoom", 4);
 
   // Dot scale and layout shift.

@@ -126,6 +126,136 @@ export const MILKY_WAY: DataCredit = {
   ],
 };
 
+/**
+ * The Sun disc behind the night sky's Sun: ESA's Solar Orbiter PHI image, a multinational body's
+ * (CC BY-SA 3.0 IGO). The credit is the one ESA asks for; the change is `sky-sun.json`'s.
+ */
+export const SUN_IMAGERY: DataCredit = {
+  label: "Sun",
+  parts: [
+    {
+      text: "PHI's view of the Sun in visible light",
+      href: "https://www.esa.int/ESA_Multimedia/Images/2024/11/PHI_s_view_of_the_Sun_in_visible_light",
+    },
+    " by ESA & NASA/Solar Orbiter/PHI Team, 22 March 2023, cropped, scaled and reduced to grey (",
+    {
+      text: "CC BY-SA 3.0 IGO",
+      href: "https://creativecommons.org/licenses/by-sa/3.0/igo/",
+    },
+    ").",
+  ],
+};
+
+/**
+ * The Moon map behind the night sky's Moon: NASA's visualisation of LRO LROC data, a national peer
+ * (no international body publishes a global lunar mosaic). NASA's media guidelines ask for the
+ * credit and no implied endorsement; the change is `sky-moon.json`'s.
+ */
+export const MOON_IMAGERY: DataCredit = {
+  label: "Moon",
+  parts: [
+    {
+      text: "NASA's Scientific Visualization Studio, CGI Moon Kit",
+      href: "https://svs.gsfc.nasa.gov/4720",
+    },
+    ", from Lunar Reconnaissance Orbiter LROC data, scaled (",
+    {
+      text: "NASA media guidelines",
+      href: "https://www.nasa.gov/multimedia/guidelines/index.html",
+    },
+    ").",
+  ],
+};
+
+/**
+ * The planets' places in the night sky: VSOP87 of Bretagnon and Francou, IMCCE (Observatoire de
+ * Paris, an observatory of the French national research body, published for use with attribution).
+ * The change is `sky-orbits.json`'s: terms dropped and rounded.
+ */
+export const PLANET_ORBITS: DataCredit = {
+  label: "Planets",
+  parts: [
+    "Planet positions: ",
+    {
+      text: "VSOP87",
+      href: "https://ftp.imcce.fr/pub/ephem/planets/vsop87/",
+    },
+    ", Bretagnon and Francou, IMCCE, with the smallest terms dropped.",
+  ],
+};
+
+/**
+ * Vesta's place in the night sky: the osculating elements of the IAU Minor Planet Center, whose
+ * bright minor planets file is published for use with acknowledgement, and its absolute magnitude
+ * and slope from JPL's Small-Body Database. The change is `sky-orbits.json`'s: the one body kept,
+ * with its elements read as a two-body orbit.
+ */
+export const SMALL_BODY_ORBITS: DataCredit = {
+  label: "Vesta",
+  parts: [
+    "Vesta's orbit: ",
+    {
+      text: "IAU Minor Planet Center",
+      href: "https://www.minorplanetcenter.net/",
+    },
+    ", its brightness: ",
+    {
+      text: "JPL Small-Body Database",
+      href: "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+    },
+    ".",
+  ],
+};
+
+/**
+ * Pluto's place and brightness in the night sky: its orbit is the IAU Minor Planet Center's
+ * distant-bodies file (`sky-orbits.json`'s `small.pluto`), read by `prepare-sky-orbits.ts` beside the
+ * bright-bodies file, and its magnitude is the Explanatory Supplement's law (`magnitude.ts`).
+ */
+export const DISTANT_ORBITS: DataCredit = {
+  label: "Pluto",
+  parts: [
+    "Pluto's orbit: ",
+    {
+      text: "IAU Minor Planet Center",
+      href: "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    },
+    ", its brightness: Urban and Seidelmann (eds.), Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), table 10.6.",
+  ],
+};
+
+/**
+ * The close passes' positions in the night sky: JPL's Horizons integration of
+ * a Small-Body Database orbit solution, a national peer (see `context/dox/built/tier-4-globe.md`,
+ * "Night sky"). It is listed exactly while `sky-orbits.json` ships a pass; `data-credits.test.ts`
+ * holds the two together.
+ */
+export const PASS_ORBITS: DataCredit = {
+  label: "Close approaches",
+  parts: [
+    "Close-approach positions: NASA ",
+    {
+      text: "JPL Small-Body Database",
+      href: "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+    },
+    " and ",
+    { text: "Horizons", href: "https://ssd.jpl.nasa.gov/horizons/" },
+    ".",
+  ],
+};
+
+/** The night sky's rows in reading order: the globe's popover, the deck's and the slides' read this list. */
+export const SKY_CREDITS: readonly DataCredit[] = [
+  NIGHT_SKY,
+  MILKY_WAY,
+  SUN_IMAGERY,
+  MOON_IMAGERY,
+  PLANET_ORBITS,
+  SMALL_BODY_ORBITS,
+  DISTANT_ORBITS,
+  PASS_ORBITS,
+];
+
 /** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */
 export const LICENCE_CREDIT: DataCredit = {
   label: "Licence",

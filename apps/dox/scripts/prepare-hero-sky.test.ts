@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { decodeStars } from "../src/lib/sky";
+import { decodeStars } from "../src/lib/sky-stars";
 import { toUnit } from "../src/lib/sky-math";
 import {
   COMMIT,

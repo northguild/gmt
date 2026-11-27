@@ -27,10 +27,11 @@
  *     node scripts/prepare-hero-sky.mjs [--csv path/to/hyg_v44.csv.gz]
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gunzipSync } from "node:zlib";
+import { fail as failIn, readPinnedSource } from "./prepare-source.mjs";
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -52,35 +53,19 @@ export const LIST_BUDGET = 24_000;
 /** Naked eye under a dark sky; lowered by 0.1 until the list fits its budget. */
 const START_LIMIT = 5.5;
 
-const flag = (name) => {
-  const at = process.argv.indexOf(`--${name}`);
-  return at === -1 ? undefined : process.argv[at + 1];
-};
-
-function fail(message) {
-  console.error(`prepare-hero-sky: ${message}`);
-  process.exit(1);
-}
+const NAME = "prepare-hero-sky";
+const fail = (message) => failIn(NAME, message);
 
 // --- the catalogue -------------------------------------------------------------
 
 async function readCatalogue() {
-  const given = flag("csv");
-  let bytes;
-  if (given) {
-    if (!existsSync(given)) fail(`no file at ${given}`);
-    bytes = readFileSync(given);
-  } else {
-    const response = await fetch(SOURCE_URL);
-    if (!response.ok) fail(`download failed: ${response.status} ${SOURCE_URL}`);
-    bytes = Buffer.from(await response.arrayBuffer());
-  }
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  if (sha256 !== SOURCE_SHA256 || bytes.length !== SOURCE_BYTES)
-    fail(
-      `the catalogue is not the pinned file (${bytes.length} bytes, sha256 ${sha256}); ` +
-        `expected ${SOURCE_BYTES} bytes, ${SOURCE_SHA256}`,
-    );
+  const bytes = await readPinnedSource({
+    name: NAME,
+    url: SOURCE_URL,
+    bytes: SOURCE_BYTES,
+    sha256: SOURCE_SHA256,
+    flag: "csv",
+  });
   return gunzipSync(bytes).toString("utf8");
 }
 

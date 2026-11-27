@@ -11,7 +11,7 @@ import {
   PROBE_ZONES,
   STOPPED_ZONES,
 } from "./canada-clock-change";
-import { withBase } from "./site";
+import boundariesUrl from "../assets/timezone-boundaries-canada.json?url";
 import { MAP_WIDTH, zonesOnly } from "./zone-map";
 import type { BoundaryCollection, ZoneMapConfig } from "./zone-map";
 
@@ -76,7 +76,7 @@ export function releaseOf(id: string): string | null {
 export const CANADA_MAP: ZoneMapConfig = {
   idPrefix: "canada",
   height: MAP_HEIGHT,
-  boundariesUrl: withBase("/timezone-boundaries-canada.json"),
+  boundariesUrl: boundariesUrl,
   projection: canadaProjection,
   stopped: STOPPED_ZONES,
   classText: canadaClassText,
