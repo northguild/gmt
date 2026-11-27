@@ -29,7 +29,7 @@
 
 import { readFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
-import { launchBrowser } from "./lib/browser-launch.mjs";
+import { launchBrowser, tabKey } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordLabelled, recordMeasured } from "./gates/findings.mjs";
@@ -328,7 +328,7 @@ for (const name of BROWSERS) {
         // Keyboard only: Tab from the textarea (past the formats disclosure) to Check, then Enter.
         await control(page, STORED, CONTROLS.lines).focus();
         for (let i = 0; i < 2; i += 1) {
-          await page.keyboard.press(name === "webkit" ? "Alt+Tab" : "Tab");
+          await page.keyboard.press(tabKey(name));
         }
         await page.keyboard.press("Enter");
         await rows(page).first().waitFor();

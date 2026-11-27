@@ -681,16 +681,14 @@ async function main() {
           !isBlank(shots[renderer]),
           `deck (${renderer}): the space layer is blank`,
         );
-        // On the wall slide, each pane's centre as drawn matches its capture.
-        for (let i = 0; i < 6; i++) {
-          const wall = await page.evaluate(
-            (sel) => document.querySelector(sel)?.dataset.wall ?? "",
-            DECK_SPACE,
+        /* On the wall slide, each pane's centre as drawn matches its capture. The deck is entered
+           at that slide by its id, read from the page, so the gate holds wherever the slide sits. */
+        await page.evaluate(() => {
+          const wall = document.querySelector(
+            '[data-slide][data-layout="wall"]',
           );
-          if (wall === "whole") break;
-          await page.keyboard.press("ArrowRight");
-          await page.waitForTimeout(400);
-        }
+          if (wall) location.hash = `#${wall.id}`;
+        });
         await page.waitForFunction(
           (sel) => {
             const d = document.querySelector(sel)?.dataset ?? {};

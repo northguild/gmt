@@ -91,7 +91,7 @@
  * Exits non-zero on any failure.
  */
 import { readFileSync } from "node:fs";
-import { launchBrowser } from "./lib/browser-launch.mjs";
+import { launchBrowser, tabKey } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
@@ -725,14 +725,14 @@ for (const name of browsers) {
               "control-keys",
               `${width}: focus went to "${first}", not the theme switch`,
             );
-          await page.keyboard.press("Tab");
+          await page.keyboard.press(tabKey(name));
           const onMute = await page.evaluate(() => document.activeElement?.id);
           if (onMute !== "gmt-sound-mute")
             bad(
               "control-keys",
               `${width}: Tab from the theme switch reached "${onMute}", not the mute button`,
             );
-          await page.keyboard.press("Tab");
+          await page.keyboard.press(tabKey(name));
           const onFader = await page.evaluate(() => document.activeElement?.id);
           if (onFader !== "gmt-sound-fader")
             bad(
@@ -762,7 +762,7 @@ for (const name of browsers) {
               `${width}: the Aura switch ${auraShown ? "shows" : "hides"} and its track ${trackShown ? "shows" : "hides"}, wanted both ${landing ? "shown on the landing" : "hidden off the landing"}`,
             );
           if (landing) {
-            await page.keyboard.press("Tab");
+            await page.keyboard.press(tabKey(name));
             const onAura = await page.evaluate(
               () => document.activeElement?.id,
             );

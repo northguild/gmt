@@ -1,5 +1,5 @@
 /**
- * The one place a gate launches a browser.
+ * The one place a gate launches a browser, and the key it presses to move focus in it.
  *
  * Playwright 1.63's Firefox does not launch on macOS 27 ("Could not find profile folder"). When
  * `GMT_PW_FIREFOX_WS` names a Playwright run-server (see `scripts/firefox-server.mjs`), Firefox
@@ -14,6 +14,17 @@
 import { chromium, firefox, webkit } from "@playwright/test";
 
 const ENGINES = { chromium, firefox, webkit };
+
+/**
+ * The key that moves focus to the next control in `name`. Safari on macOS, and so Playwright's
+ * WebKit, leaves buttons and sliders out of the Tab order unless the reader turns on "Press Tab to
+ * highlight each item" or presses Option+Tab, which walks every control. Plain Tab there reaches
+ * only links and fields, on every site, so WebKit's run presses Option+Tab. Chromium's and
+ * Firefox's Tab walks every control.
+ *
+ * @param {"chromium" | "firefox" | "webkit"} name
+ */
+export const tabKey = (name) => (name === "webkit" ? "Alt+Tab" : "Tab");
 
 /** Playwright's `exposeNetwork` keyword for localhost, `*.localhost`, 127.0.0.1 and [::1]. */
 const LOOPBACK = "<loopback>";
