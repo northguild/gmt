@@ -90,7 +90,20 @@ describe("the built site keeps the /gmt base", () => {
       .split("\n")
       .filter((line) => line !== "" && !/^\s/.test(line) && line[0] !== "#");
     expect(paths.length).toBeGreaterThan(0);
-    expect(paths.filter((path) => !path.startsWith("/gmt/"))).toEqual([]);
+    // One absolute rule is allowed: the old host, which keeps its copy of the pages out of search.
+    const OLD_HOST = "https://gmt-dox.northguild.workers.dev";
+    expect(
+      paths.filter((path) => !path.replace(OLD_HOST, "").startsWith("/gmt/")),
+    ).toEqual([]);
+  });
+
+  it("_headers keeps the old workers.dev host's /gmt/ pages out of search results", () => {
+    const b = built();
+    if (b === null) return;
+    const headers = readFileSync(resolve(b.root, "_headers"), "utf8");
+    expect(headers).toMatch(
+      /^https:\/\/gmt-dox\.northguild\.workers\.dev\/gmt\/\*\n\s+X-Robots-Tag: noindex$/m,
+    );
   });
 
   it("every file under _astro/ has a content hash in its name, so its immutable header is true", () => {

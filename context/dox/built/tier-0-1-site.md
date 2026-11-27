@@ -33,16 +33,29 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
 - **Worker order** under the base: `?key=` dev exchange, 301 from bare `/gmt` to `/gmt/`,
   `/gmt/api/*`, then `ASSETS`. On the legacy `workers.dev` host every path 301s to
   `northguild.dev/gmt…` except `/api/brains` and `/api/chat` (a redirect turns a POST into a GET).
+  That 301 adds the page slash (`withPageSlash`), so an old link lands in one hop; a path with a
+  dot keeps its form.
+- **A page path without its slash answers 308** to the slash URL, query kept. The assets binding's
+  `auto-trailing-slash` handling answers 307 and its code cannot be set; the Worker's
+  `permanentSlash` turns that one hop into a 308, because a permanent redirect is the canonical
+  signal Google honours (RFC 9110 §15.4.9). It changes only a 307 to the same path plus `/` with
+  the same query, so a missing page stays a 404.
+- **The `workers.dev` host serves its `/gmt/` pages with `X-Robots-Tag: noindex`** (an absolute
+  host rule in `_headers`), because assets answer them there too and only `northguild.dev` may be
+  indexed. The host stays on for the 301s above.
 - **`_redirects` and `_headers`** must sit at the assets root. The generator writes
   `src/generated/_redirects`; `src/assets-root/_headers` is tracked; the `astro:build:done` hook in
-  `src/lib/copy-redirects.ts` copies both to `dist/`. Every `_headers` rule sits under `/gmt/`
-  (`scripts/dist-base.test.ts`). Cloudflare serves assets before the Worker, so these rules set
+  `src/lib/copy-redirects.ts` copies both to `dist/`. Every `_headers` rule sits under `/gmt/`,
+  the `workers.dev` host rule included (`scripts/dist-base.test.ts`). Cloudflare serves assets before the Worker, so these rules set
   headers: `/gmt/_astro/*` is `immutable` (the test fails on a file there without a content hash);
   `/gmt/*.md` and `/gmt/*.txt` are `X-Robots-Tag: noindex` (the test fails on any `.txt` other than
   `llms.txt` and `llms-full.txt`).
 - `scripts/deploy-smoke.mjs` checks the redirect matrix and crawl rows after each deploy.
   `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows against `wrangler dev`.
-- `robots.txt` is served by the landing Worker. Zone and dashboard setup is in
+- `robots.txt` is served by the landing Worker. Googlebot and Bingbot have a group of their own that
+  skips the `.md` twins and page URLs with a query; every other agent reads them.
+  `scripts/robots-policy.mjs` holds the policy table, and `deploy-smoke` checks the live file
+  against it. Zone and dashboard setup is in
   [`context/dox/cloudflare-runbook.md`](../cloudflare-runbook.md).
 - Web Analytics: the Cloudflare beacon loads from `src/components/Head.astro` in production only.
   Automatic injection stays off, so it is never loaded twice.
@@ -61,7 +74,9 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
 - **Page links end in `/`.** `rehype-base-links` adds the slash to every page link (an `href`
   whose last segment has no dot); file links keep their form. A component that builds an `href`
   uses `pageHref` from `site.ts`. `pageLinksWithoutSlash` and `pageLinksWithoutSlashInMarkdown`
-  in `dist-base.ts` fail `test:dist`.
+  in `dist-base.ts` fail `test:dist`. They share one predicate, `isPageLinkWithoutSlash`, with
+  `resolveHref` for relative values, in `scripts/lib/page-links.mjs`. The `rendered-links` gate
+  runs the same predicate over the links widgets render at run time.
 - The NorthGuild mark in the header links to `LANDING_URL`; the dist guard allows exactly that URL.
 
 ## Head tags and share cards
