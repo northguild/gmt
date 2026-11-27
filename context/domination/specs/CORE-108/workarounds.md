@@ -31,6 +31,7 @@ CORE-108 findings record the Node 26 verdicts only; the browser verdicts on 1.0.
 | D10 | GUARD (repros pass) | see below |
 | D16 | still needed (ICU-20548) | keep; trigger unchanged (it names ICU, not a polyfill) |
 | D22 | still needed (tc39/proposal-temporal#3336) | keep; retarget trigger |
+| D35 | still needed (fullcalendar/temporal-polyfill#130) | keep; new on 1.0.8, so its trigger already names a `temporal-polyfill` release |
 | D17, D18, D19 | out of scope on Node | judge in Firefox / WebKit; keep or remove by that verdict |
 
 Any group Step 1 shows still needed on some engine stays, its trigger retargeted.

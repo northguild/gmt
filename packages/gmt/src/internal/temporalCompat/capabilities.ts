@@ -81,6 +81,20 @@ export function isNudgeOriginCompatNeeded(): boolean {
   return isDefectPresent("D22", "iso8601");
 }
 
+/**
+ * True when this runtime's `Duration.compare` adds a duration's days and time to a plain
+ * `relativeTo`, so a day or time amount whose date would be past the range throws (defect D35,
+ * fullcalendar/temporal-polyfill#130).
+ *
+ * TC39 `Temporal.Duration.compare` adds only the years, months and weeks to a plain `relativeTo`
+ * (`DateDurationDays`), and checks the days and time only against `maxTimeDuration`
+ * (`Add24HourDaysToTimeDuration`). The defect is in the shared compare path, not in a calendar, so
+ * one ISO probe answers for every calendar.
+ */
+export function isDurationCompareCompatNeeded(): boolean {
+  return isDefectPresent("D35", "iso8601");
+}
+
 const rangeZoneNameCache = new Map<string, boolean>();
 
 /**

@@ -1,5 +1,6 @@
 import {
   isDefectPresent,
+  isDurationCompareCompatNeeded,
   isLunisolarTextCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,
@@ -64,9 +65,9 @@ describe("isDefectPresent", () => {
 });
 
 describe("repro split", () => {
-  // DefectId (D16, D17, D19, D22) is the type the shipped probes can ask about; the canary-only
-  // groups are BoundedWorkDefectId (D9) and CanaryDefectId (D23 to D34).
-  const probeDefects = new Set(["D16", "D17", "D19", "D22"]);
+  // DefectId (D16, D17, D19, D22, D35) is the type the shipped probes can ask about; the
+  // canary-only groups are BoundedWorkDefectId (D9) and CanaryDefectId (D23 to D34).
+  const probeDefects = new Set(["D16", "D17", "D19", "D22", "D35"]);
 
   it("holds every probe-defect repro of the full table in probeRepros", () => {
     const expected = repros.filter((repro) => probeDefects.has(repro.defect));
@@ -310,6 +311,41 @@ describe("D22 repeated-hour origin probe", () => {
 
   it("answers the same on a second call", () => {
     expect(isNudgeOriginCompatNeeded()).toBe(isNudgeOriginCompatNeeded());
+  });
+});
+
+// D35: TC39 Duration.compare adds only the years, months and weeks to a plain relativeTo
+// (DateDurationDays), so the days and time never reach a date past the range
+// (fullcalendar/temporal-polyfill#130). Expected values: Chromium 153 native Temporal.
+describe("D35 plain-relativeTo compare probe", () => {
+  it.each`
+    name                       | expected
+    ${"hoursPastTheLastDate"}  | ${"1"}
+    ${"dayBeforeTheFirstDate"} | ${"-1"}
+  `("expects $name to answer '$expected'", ({ name, expected }) => {
+    expect(findRepro("D35", "iso8601", name)?.expected).toBe(expected);
+  });
+
+  it.each`
+    name
+    ${"hoursPastTheLastDate"}
+    ${"dayBeforeTheFirstDate"}
+  `(
+    "reads the recorded polyfill 1.0.8 output of $name as the defect",
+    ({ name }) => {
+      expect(
+        reproPasses(
+          findRepro("D35", "iso8601", name)!,
+          "ERR RangeError: Out-of-bounds date",
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it("answers the same on a second call", () => {
+    expect(isDurationCompareCompatNeeded()).toBe(
+      isDurationCompareCompatNeeded(),
+    );
   });
 });
 

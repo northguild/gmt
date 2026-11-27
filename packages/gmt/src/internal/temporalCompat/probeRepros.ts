@@ -3,7 +3,7 @@ import { Temporal } from "../temporal";
 /*
  * Upstream repros for each `temporal-polyfill` / engine defect GMT still works around, with the
  * spec-correct answer. This file holds the repros the shipped capability probes read (D16, D17,
- * D19 and D22); `repros.ts` adds the canary-only D9 timing repro. It imports ONLY the polyfill,
+ * D19, D22 and D35); `repros.ts` adds the canary-only D9 timing repro. It imports ONLY the polyfill,
  * through `../temporal` (no other GMT module), so a canary script can load its compiled copy
  * straight from `dist`.
  *
@@ -13,7 +13,7 @@ import { Temporal } from "../temporal";
  */
 
 /** Defect ids from the temporalCompat README's workaround table. */
-export type DefectId = "D16" | "D17" | "D19" | "D22";
+export type DefectId = "D16" | "D17" | "D19" | "D22" | "D35";
 
 export interface ProbeRepro {
   defect: DefectId;
@@ -285,12 +285,52 @@ const d22Repros: readonly ProbeRepro[] = [
   },
 ];
 
+/**
+ * D35 (`internal/zonedDifference/plainCompare.ts`): fullcalendar/temporal-polyfill#130. TC39
+ * `Temporal.Duration.compare` adds only the years, months and weeks to a plain `relativeTo`
+ * (`DateDurationDays`), and checks the days and time only against `maxTimeDuration`
+ * (`Add24HourDaysToTimeDuration`). A runtime that adds the whole duration to the date throws for a
+ * day or time amount whose date is past the range. One repro passes the last date, the other the
+ * first. Expected values: Chromium 153 native Temporal.
+ */
+const d35Repros: readonly ProbeRepro[] = [
+  {
+    defect: "D35",
+    calendar: "iso8601",
+    name: "hoursPastTheLastDate",
+    expected: "1",
+    run: () =>
+      String(
+        Temporal.Duration.compare(
+          { hours: 3_000_000_000 },
+          { years: 1 },
+          { relativeTo: "2000-01-01" },
+        ),
+      ),
+  },
+  {
+    defect: "D35",
+    calendar: "iso8601",
+    name: "dayBeforeTheFirstDate",
+    expected: "-1",
+    run: () =>
+      String(
+        Temporal.Duration.compare(
+          { days: -1 },
+          { weeks: 1 },
+          { relativeTo: "-271821-04-19" },
+        ),
+      ),
+  },
+];
+
 /** The shipped-probe groups, each in the order the full table places it. */
 export const probeReproGroups = {
   d16: d16Repros,
   d17: d17Repros,
   d19: d19Repros,
   d22: d22Repros,
+  d35: d35Repros,
 } as const satisfies Record<string, readonly ProbeRepro[]>;
 
 /** Every repro a shipped capability probe reads. */

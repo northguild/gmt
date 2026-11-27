@@ -86,7 +86,7 @@ export const WORKAROUNDS = [
     trigger:
       'a temporal-polyfill release on which every D22 repro passes, P7D with largestUnit "week" giving P1W among them, and which gives no value in totalsWithNoValue, noDayCorrection and emptyDaySpan, where TC39 Asserts (tc39/proposal-temporal#3336); if #3336 gives these lengths a value instead, the rows, the throws and the repros change together',
     steps: [
-      "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeOrigin.ts with its three calls in zonedWallClockDifference.ts (the originTotalBySpec and originRoundBySpec operands in durationTotal and durationRound, and untilTakesSpecPath with the block in zonedUntil that calls untilAtLimit), then internal/zonedDifference/operations.ts, the exports of possibleEpochNanoseconds, epochNanosecondsFor, utcEpochNanoseconds and isValidEpoch from zonedWallClock.ts that nothing else calls, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry. Then drop the imports and locals tsc reports unused.",
+      "Delete the D22 repros and readOrNone in probeRepros.ts with readOrNone's tests in capabilities.test.ts, isNudgeOriginCompatNeeded in capabilities.ts and its export in index.ts, and internal/zonedDifference/nudgeOrigin.ts with its three calls in zonedWallClockDifference.ts (the originTotalBySpec and originRoundBySpec operands in durationTotal and durationRound, and untilTakesSpecPath with the block in zonedUntil that calls untilAtLimit), then internal/zonedDifference/operations.ts, or, while D35 stands, all of it but what plainCompare.ts imports (dateDurationDays, add24HourDaysToTimeDuration, bigintSign and toInternalDuration) and the helpers those call (fallow does not report its unused exports: every src file is a build entry), the exports of possibleEpochNanoseconds, epochNanosecondsFor, utcEpochNanoseconds and isValidEpoch from zonedWallClock.ts that nothing else calls, WHAT_BREAKS.D22 in apps/dox/src/data/temporal-compat.ts, and this entry. Then drop the imports and locals tsc reports unused.",
       "Keep the throws' rows in test/laterPassOrigin.test.ts, test/noSpecValue.test.ts and the later-pass rows in internal/lengthFromNow.test.ts: the values are the specification's, but the repros are samples, so run these on the release first and keep D22 if a row fails.",
       `Full wording: ${COMPAT_README} § Removal steps 22.`,
     ],
@@ -239,6 +239,18 @@ export const WORKAROUNDS = [
       "Delete isCopticEpochEraCompatNeeded in capabilities.ts, its term in repairCopticEra's activation and atRisk (copticEra.ts), copticEpochTwin, copticFieldTwin and its call in localFieldsOf (rangeFieldValues.ts), and the D34 repro in repros.ts.",
       "Keep every D34 row of copticEra.test.ts: the era is Intl era/monthCode Table 2's and holds either way.",
       `Full wording: ${COMPAT_README} § Removal steps 34.`,
+    ],
+  },
+  {
+    defects: ["D35"],
+    title:
+      "D35 — Duration.compare from a plain relativeTo throws for a day or time amount whose date would be past the range (internal/zonedDifference/plainCompare.ts)",
+    trigger:
+      "a temporal-polyfill release on which both D35 repros pass: PT3000000000H against P1Y from 2000-01-01 gives 1, and -P1D against P1W from -271821-04-19 gives -1 (fullcalendar/temporal-polyfill#130)",
+    steps: [
+      "Delete internal/zonedDifference/plainCompare.ts, and its call in durationCompare (the try around Temporal.Duration.compare) and the D35 bullet in the header of zonedWallClockDifference.ts; the D35 repros in probeRepros.ts and D35 in DefectId, isDurationCompareCompatNeeded in capabilities.ts with its export in index.ts and its tests in capabilities.test.ts, WHAT_BREAKS.D35 in apps/dox/src/data/temporal-compat.ts, the D35 row in apps/dox/src/data/temporal-compat.json, and this entry. In internal/zonedDifference/operations.ts, delete dateDurationDays and add24HourDaysToTimeDuration and the export on bigintSign and toInternalDuration, or the file once D22 is gone too.",
+      "Keep every compareDurations row: the values are TC39's and hold either way.",
+      `Full wording: ${COMPAT_README} § Removal steps 35.`,
     ],
   },
   {

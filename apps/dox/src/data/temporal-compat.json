@@ -134,6 +134,14 @@
       "engines": ["webkit"]
     },
     {
+      "defects": ["D35"],
+      "title": "D35 — Duration.compare from a plain relativeTo throws for a day or time amount whose date would be past the range (internal/zonedDifference/plainCompare.ts)",
+      "trigger": "a temporal-polyfill release on which both D35 repros pass: PT3000000000H against P1Y from 2000-01-01 gives 1, and -P1D against P1W from -271821-04-19 gives -1 (fullcalendar/temporal-polyfill#130)",
+      "probes": 2,
+      "failing": 2,
+      "state": "still-needed"
+    },
+    {
       "defects": ["D9"],
       "title": "D9 — an out-of-range non-ISO month amount throws only after work linear in the amount (temporalCompat/monthRange.ts throws first)",
       "trigger": "a temporal-polyfill release throws for an out-of-range month amount in bounded time: hebrew 2024-01-15 + 40,000,000 months throws in at most 5,000 ms (an absolute ceiling that fails the repro at once), and + 400,000,000 months throws in under 3 × the time of + 40,000,000 months + 10 ms",

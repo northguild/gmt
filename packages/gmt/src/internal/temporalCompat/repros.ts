@@ -499,6 +499,7 @@ export const repros: readonly Repro[] = [
   ...probeReproGroups.d17,
   ...probeReproGroups.d19,
   ...probeReproGroups.d22,
+  ...probeReproGroups.d35,
 ];
 
 /** The repro with this defect, calendar and name, if any. */

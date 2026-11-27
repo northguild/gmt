@@ -9,6 +9,7 @@ export {
   longestDayOfMonthCode,
 } from "./calendarDateFromMonthCode";
 export {
+  isDurationCompareCompatNeeded,
   isNudgeOriginCompatNeeded,
   isRangeDayPeriodCompatNeeded,
   isRangeZoneNameCompatNeeded,

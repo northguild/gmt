@@ -72,9 +72,10 @@ function hasRelativeToShape(value: string): boolean {
  *   bag, a number, `null`) throws `TypeError`: `relativeTo` is a string, and Temporal would clamp an
  *   invalid property bag (`{ year: 2024, month: 2, day: 30 }` is 29 February).
  *
- * A PlainDate string resolves to a `Temporal.PlainDateTime` (midnight, same calendar) only because
- * the polyfill's TypeScript declaration lists `PlainDateTime`, not `PlainDate`. Temporal's `GetTemporalRelativeToOption` converts a `PlainDateTime` with
- * `CreateTemporalDate` and drops the time, so the result is identical.
+ * A calendar-annotated plain string resolves to a `Temporal.PlainDate`, as Temporal's
+ * `GetTemporalRelativeToOption` makes it with `CreateTemporalDate`. That checks only
+ * `ISODateWithinLimits`, so `"-271821-04-19[u-ca=gregory]"` is a valid `relativeTo` although
+ * midnight on that date is not a valid `PlainDateTime`.
  *
  * Throws on invalid input. Callers already wrap the Temporal call consuming this in
  * `try { ... } catch { return sentinel }` per GMT's contract.
@@ -106,5 +107,5 @@ export function resolveDurationRelativeTo(
   if (timeZoneAnnotation.test(relativeTo)) {
     return parseCalendarZonedValue(relativeTo);
   }
-  return parseCalendarDateValue(relativeTo).toPlainDateTime();
+  return parseCalendarDateValue(relativeTo);
 }

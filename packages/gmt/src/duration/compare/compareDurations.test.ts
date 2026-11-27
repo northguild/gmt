@@ -245,6 +245,60 @@ describe("compareDurations with a non-ISO calendar relativeTo (CORE-6)", () => {
   );
 });
 
+// TC39 Duration.compare with a plain relativeTo adds only the years, months and weeks to the date
+// (DateDurationDays). The days and the time are exact, and only their sum is checked against the
+// largest time duration, 2^53 seconds less 1 nanosecond (Add24HourDaysToTimeDuration). So a day or
+// time amount whose date would be past the range still compares. Values: Chromium 153 native
+// `Duration.compare`.
+describe("compareDurations with a plain relativeTo and a day or time amount past the range", () => {
+  it.each`
+    one                      | two                    | relativeTo                             | expected | reason
+    ${"PT3000000000H"}       | ${"P1Y"}               | ${"2000-01-01"}                        | ${1}     | ${"the hours are never added to the date"}
+    ${"PT3000000000H"}       | ${"P1Y"}               | ${"2000-01-01T12:00"}                  | ${1}     | ${"a date-time relativeTo drops its time"}
+    ${"P1YT3000000000H"}     | ${"P385DT3000000000H"} | ${"2024-02-10[u-ca=hebrew]"}           | ${0}     | ${"P1Y from 1 Adar I 5784 is 385 days"}
+    ${"P1YT3000000000H"}     | ${"P385DT3000000000H"} | ${"2024-02-10"}                        | ${-1}    | ${"P1Y from 2024-02-10 is 366 days"}
+    ${"P104249991374D"}      | ${"P1Y"}               | ${"2000-01-01"}                        | ${1}     | ${"the most whole days a duration holds"}
+    ${"PT9007199254740991S"} | ${"P1Y"}               | ${"2000-01-01"}                        | ${1}     | ${"the most whole seconds a duration holds"}
+    ${"P1Y104249991008D"}    | ${"P1D"}               | ${"2000-01-01"}                        | ${1}     | ${"366 days of P1Y bring the days to the most a duration holds"}
+    ${"-P1D"}                | ${"P1W"}               | ${"-271821-04-19"}                     | ${-1}    | ${"the day before the first date is never reached"}
+    ${"-P1D"}                | ${"P1W"}               | ${"-271821-04-19[u-ca=gregory]"}       | ${-1}    | ${"a calendar-annotated first date"}
+    ${"-P1D"}                | ${"P1W"}               | ${"-271821-04-19T00:00[u-ca=gregory]"} | ${-1}    | ${"a calendar-annotated first date-time drops its time"}
+    ${"-P1D"}                | ${"P1W"}               | ${"-271821-04-19[u-ca=iso8601]"}       | ${-1}    | ${"an iso8601-annotated first date"}
+    ${"P1D"}                 | ${"P2D"}               | ${"-271821-04-19[u-ca=gregory]"}       | ${-1}    | ${"no calendar unit, from a calendar-annotated first date"}
+    ${"P1M"}                 | ${"P400D"}             | ${"+275760-08-13"}                     | ${-1}    | ${"P1M ends on the last date"}
+    ${"-P1W"}                | ${"P1D"}               | ${"+275760-09-13"}                     | ${-1}    | ${"the day after the last date is never reached"}
+    ${"-P1W"}                | ${"PT9000000000000S"}  | ${"2000-01-01"}                        | ${-1}    | ${"the seconds are never added to the date"}
+    ${"P1Y104249991009D"}    | ${"P1D"}               | ${"2000-01-01"}                        | ${null}  | ${"one day more is past the largest time duration"}
+    ${"P1M"}                 | ${"P1D"}               | ${"+275760-09-13"}                     | ${null}  | ${"P1M from the last date is past the range"}
+    ${"-P1D"}                | ${"-P1W"}              | ${"-271821-04-19"}                     | ${null}  | ${"-P1W from the first date is past the range"}
+  `(
+    "compares $one with $two relative to $relativeTo as $expected ($reason)",
+    ({ one, two, relativeTo, expected }) => {
+      expect(compareDurations(one, two, { relativeTo })).toBe(expected);
+    },
+  );
+});
+
+// TC39 Duration.compare with a zoned relativeTo and a calendar unit adds the whole duration to it
+// (AddZonedDateTime), so the hours do reach the date, and past the range it throws. Values:
+// Node 26.12.1 native `Duration.compare`.
+describe("compareDurations with a zoned relativeTo and an amount past the range", () => {
+  it.each`
+    one                | two      | expected | reason
+    ${"PT3000000000H"} | ${"P1Y"} | ${null}  | ${"the hours are added to the date and pass the last date"}
+    ${"P1W"}           | ${"P1D"} | ${1}     | ${"both dates are in range"}
+  `(
+    "compares $one with $two relative to 2000-01-01T00:00:00+00:00[UTC] as $expected ($reason)",
+    ({ one, two, expected }) => {
+      expect(
+        compareDurations(one, two, {
+          relativeTo: "2000-01-01T00:00:00+00:00[UTC]",
+        }),
+      ).toBe(expected);
+    },
+  );
+});
+
 describe("compareDurations with a relativeTo that is not a string", () => {
   it.each`
     relativeTo                           | label

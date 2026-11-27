@@ -17,22 +17,17 @@ import {
   calendarDateAdd as compatCalendarDateAdd,
   calendarDateUntil as compatCalendarDateUntil,
 } from "../temporalCompat";
-import {
-  epochNanosecondsFor,
-  isValidEpoch,
-  utcEpochNanoseconds,
-} from "../zonedWallClock";
+import { epochNanosecondsFor, isValidEpoch } from "../zonedWallClock";
 
 /*
  * ---------------------------------------------------------------------------------------------
  * The TC39 abstract operations the zoned-difference workarounds share
  * ---------------------------------------------------------------------------------------------
  * Mirrors of `DifferenceZonedDateTime`, `NudgeToCalendarUnit`, `NudgeToZonedTime`,
- * `ComputeNudgeWindow`, `RoundRelativeDuration`, `BubbleRelativeDuration`,
- * `DifferencePlainDateTimeWith{Rounding,Total}`, `DateDurationDays` and
- * `CombineDateAndTimeDuration`, each under its TC39 name, so a workaround in this folder can
- * compute the spec's answer where `temporal-polyfill` does not (D22, `./nudgeOrigin.ts`). It goes
- * with that group.
+ * `ComputeNudgeWindow`, `RoundRelativeDuration`, `BubbleRelativeDuration`, `DateDurationDays`,
+ * `Add24HourDaysToTimeDuration` and `CombineDateAndTimeDuration`, each under its TC39 name, so a
+ * workaround in this folder can compute the spec's answer where `temporal-polyfill` does not (D22,
+ * `./nudgeOrigin.ts`; D35, `./plainCompare.ts`). It goes with the last of those groups.
  *
  * The throws in `differenceZonedDateTime`, `combineDateAndTimeDuration`, `nudgeToCalendarUnit`
  * and `nudgeToZonedTime` are this port's own Asserts. Their decision is in the header of
@@ -116,19 +111,14 @@ interface NudgeWindow {
 }
 
 /**
- * The time zone, calendar and origin wall clock (`isoDateTime`) the rounding steps share. An unset
- * `timeZone` is the spec's plain context: exact times are `GetUTCEpochNanoseconds`, never checked
- * against the instant range.
+ * The time zone, calendar and origin wall clock (`isoDateTime`) the rounding steps share. Every
+ * caller is zoned, so the spec's plain-context branches (`GetUTCEpochNanoseconds`,
+ * `NudgeToDayOrTime`) are not mirrored.
  */
 interface RoundingContext {
-  timeZone: string | undefined;
+  timeZone: string;
   calendar: string;
   wall: Temporal.PlainDateTime;
-}
-
-/** A rounding context with a time zone. */
-interface ZonedContext extends RoundingContext {
-  timeZone: string;
 }
 
 export interface RoundingSettings {
@@ -458,7 +448,7 @@ export function temporalDurationFromInternal(
 function differenceZonedDateTime(
   ns1: bigint,
   ns2: bigint,
-  context: Omit<ZonedContext, "wall">,
+  context: Omit<RoundingContext, "wall">,
   largestUnit: Unit,
 ): InternalDuration {
   if (ns1 === ns2) return { date: ZERO_DATE_DURATION, time: 0n };
@@ -596,20 +586,7 @@ function windowBoundEpoch(
     context.wall.toPlainDate(),
     duration,
   );
-  return contextEpoch(context, atTimeOf(date, context.wall));
-}
-
-/**
- * The exact time of `wall` in `context`: TC39 `GetEpochNanosecondsFor(timeZone, wall, ~compatible~)`,
- * or `GetUTCEpochNanoseconds(wall)` when the time zone is unset (a plain context).
- */
-function contextEpoch(
-  context: RoundingContext,
-  wall: Temporal.PlainDateTime,
-): bigint {
-  return context.timeZone === undefined
-    ? utcEpochNanoseconds(wall)
-    : epochFor(context.timeZone, wall);
+  return epochFor(context.timeZone, atTimeOf(date, context.wall));
 }
 
 /** TC39 `ComputeNudgeWindow`. */
@@ -740,7 +717,7 @@ function nudgeToCalendarUnit(
 function nudgeToZonedTime(
   sign: Sign,
   duration: InternalDuration,
-  context: ZonedContext,
+  context: RoundingContext,
   increment: number,
   unit: TimeUnit,
   roundingMode: RoundingMode,
@@ -877,7 +854,7 @@ export function roundRelativeDuration(
 function differenceZonedDateTimeWithRounding(
   ns1: bigint,
   ns2: bigint,
-  context: Omit<ZonedContext, "wall">,
+  context: Omit<RoundingContext, "wall">,
   settings: RoundingSettings,
 ): InternalDuration {
   const { largestUnit, smallestUnit, increment, roundingMode } = settings;
@@ -907,15 +884,11 @@ function differenceZonedDateTimeWithRounding(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Plain context: no time zone, exact times are
-// GetUTCEpochNanoseconds and are never checked against the instant range
+// RoundRelativeDuration's nudge, and the date and time duration sums
 // ---------------------------------------------------------------------------------------------
 
-/** An ISO date far from the limits, used only to validate options. */
-export const PLAIN_DATE_PROBE = new Temporal.PlainDate(2000, 1, 1);
-
 /** TC39 `IsCalendarUnit`. */
-export function isCalendarUnit(unit: Unit): unit is "year" | "month" | "week" {
+function isCalendarUnit(unit: Unit): unit is "year" | "month" | "week" {
   return unit === "year" || unit === "month" || unit === "week";
 }
 
@@ -928,14 +901,10 @@ function nudgeRelativeDuration(
   context: RoundingContext,
   settings: RoundingSettings,
 ): NudgeResult {
-  const { largestUnit, smallestUnit, increment, roundingMode } = settings;
-  const { timeZone } = context;
+  const { smallestUnit, increment, roundingMode } = settings;
 
-  // irregularLengthUnit: a calendar unit, or a day with a time zone.
-  if (
-    isCalendarUnit(smallestUnit) ||
-    (timeZone !== undefined && smallestUnit === "day")
-  ) {
+  // irregularLengthUnit: a calendar unit, or a day with a time zone (every context has one).
+  if (isCalendarUnit(smallestUnit) || smallestUnit === "day") {
     return nudgeToCalendarUnit(
       sign,
       duration,
@@ -947,208 +916,14 @@ function nudgeRelativeDuration(
       roundingMode,
     ).nudgeResult;
   }
-  if (timeZone !== undefined) {
-    return nudgeToZonedTime(
-      sign,
-      duration,
-      { ...context, timeZone },
-      increment,
-      smallestUnit as TimeUnit,
-      roundingMode,
-    );
-  }
-  return nudgeToDayOrTime(
+  return nudgeToZonedTime(
+    sign,
     duration,
-    destEpochNs,
-    largestUnit,
+    context,
     increment,
-    smallestUnit as "day" | TimeUnit,
+    smallestUnit as TimeUnit,
     roundingMode,
   );
-}
-
-/** TC39 `NudgeToDayOrTime`. */
-function nudgeToDayOrTime(
-  duration: InternalDuration,
-  destEpochNs: bigint,
-  largestUnit: Unit,
-  increment: number,
-  smallestUnit: "day" | TimeUnit,
-  roundingMode: RoundingMode,
-): NudgeResult {
-  const timeDuration =
-    duration.time + BigInt(duration.date.days) * NANOSECONDS_PER_DAY;
-  const unitLength =
-    smallestUnit === "day"
-      ? NANOSECONDS_PER_DAY
-      : NANOSECONDS_PER_TIME_UNIT[smallestUnit];
-  const roundedTime = roundTimeDurationToIncrement(
-    timeDuration,
-    unitLength * BigInt(increment),
-    roundingMode,
-  );
-  // TotalTimeDuration(…, day) truncated: bigint division truncates toward zero.
-  const wholeDays = timeDuration / NANOSECONDS_PER_DAY;
-  const roundedWholeDays = roundedTime / NANOSECONDS_PER_DAY;
-  const keepsDays = isDateUnit(largestUnit);
-
-  return {
-    duration: {
-      date: adjustDateDuration(
-        duration.date,
-        keepsDays ? Number(roundedWholeDays) : 0,
-      ),
-      time: keepsDays
-        ? roundedTime - roundedWholeDays * NANOSECONDS_PER_DAY
-        : roundedTime,
-    },
-    nudgedEpochNs: destEpochNs + (roundedTime - timeDuration),
-    didExpandCalendarUnit:
-      bigintSign(roundedWholeDays - wholeDays) === bigintSign(timeDuration),
-  };
-}
-
-/** Nanoseconds since midnight on `wall`'s own date. */
-function timeOfDayNanoseconds(wall: Temporal.PlainDateTime): bigint {
-  return (
-    BigInt(wall.hour) * NANOSECONDS_PER_TIME_UNIT.hour +
-    BigInt(wall.minute) * NANOSECONDS_PER_TIME_UNIT.minute +
-    BigInt(wall.second) * NANOSECONDS_PER_TIME_UNIT.second +
-    BigInt(wall.millisecond) * NANOSECONDS_PER_TIME_UNIT.millisecond +
-    BigInt(wall.microsecond) * NANOSECONDS_PER_TIME_UNIT.microsecond +
-    BigInt(wall.nanosecond)
-  );
-}
-
-/** TC39 `DifferenceISODateTime`, for two ISO-calendar wall clocks. */
-function differenceISODateTime(
-  one: Temporal.PlainDateTime,
-  two: Temporal.PlainDateTime,
-  calendar: string,
-  largestUnit: Unit,
-): InternalDuration {
-  let time = timeOfDayNanoseconds(two) - timeOfDayNanoseconds(one);
-  const timeSign = bigintSign(time);
-  const dateSign = Temporal.PlainDate.compare(
-    one.toPlainDate(),
-    two.toPlainDate(),
-  );
-  let adjustedDate = two.toPlainDate();
-  if (timeSign === dateSign) {
-    adjustedDate = adjustedDate.add({ days: timeSign });
-    time -= BigInt(timeSign) * NANOSECONDS_PER_DAY;
-  }
-
-  const dateLargestUnit = largerUnit("day", largestUnit) as DateUnit;
-  const date = calendarDateUntil(
-    calendar,
-    one.toPlainDate(),
-    adjustedDate,
-    dateLargestUnit,
-  );
-  if (largestUnit === dateLargestUnit) {
-    return { date, time };
-  }
-  return {
-    date: adjustDateDuration(date, 0),
-    time: time + BigInt(date.days) * NANOSECONDS_PER_DAY,
-  };
-}
-
-export function plainContext(
-  calendar: string,
-  wall: Temporal.PlainDateTime,
-): RoundingContext {
-  return { timeZone: undefined, calendar, wall };
-}
-
-/** TC39 `DifferencePlainDateTimeWithRounding`. */
-export function differencePlainDateTimeWithRounding(
-  one: Temporal.PlainDateTime,
-  two: Temporal.PlainDateTime,
-  calendar: string,
-  settings: RoundingSettings,
-): InternalDuration {
-  if (Temporal.PlainDateTime.compare(one, two) === 0) {
-    return { date: ZERO_DATE_DURATION, time: 0n };
-  }
-  const difference = differenceISODateTime(
-    one,
-    two,
-    calendar,
-    settings.largestUnit,
-  );
-  if (settings.smallestUnit === "nanosecond" && settings.increment === 1) {
-    return difference;
-  }
-  return roundRelativeDuration(
-    difference,
-    utcEpochNanoseconds(one),
-    utcEpochNanoseconds(two),
-    plainContext(calendar, one),
-    settings,
-  );
-}
-
-/** TC39 `DifferencePlainDateTimeWithTotal`. */
-function differencePlainDateTimeWithTotal(
-  one: Temporal.PlainDateTime,
-  two: Temporal.PlainDateTime,
-  calendar: string,
-  unit: Unit,
-): number {
-  if (Temporal.PlainDateTime.compare(one, two) === 0) return 0;
-
-  const difference = differenceISODateTime(one, two, calendar, unit);
-  if (isCalendarUnit(unit)) {
-    // TC39 TotalRelativeDuration for a calendar unit.
-    return nudgeToCalendarUnit(
-      internalDurationSign(difference) < 0 ? -1 : 1,
-      difference,
-      utcEpochNanoseconds(one),
-      utcEpochNanoseconds(two),
-      plainContext(calendar, one),
-      1,
-      unit,
-      "trunc",
-    ).total;
-  }
-  return divideToNumber(
-    difference.time + BigInt(difference.date.days) * NANOSECONDS_PER_DAY,
-    unit === "day" ? NANOSECONDS_PER_DAY : NANOSECONDS_PER_TIME_UNIT[unit],
-  );
-}
-
-/**
- * The origin and target wall clocks TC39 `Duration#round` / `Duration#total` build from a plain
- * `relativeTo`: `ToInternalDurationRecordWith24HourDays`, `AddTime` from midnight, and
- * `CalendarDateAdd` of the date part plus the whole days that carried out of the time.
- */
-function plainRelativeTarget(
-  duration: Temporal.Duration,
-  plain: Temporal.PlainDate,
-): { origin: Temporal.PlainDateTime; target: Temporal.PlainDateTime } {
-  const internal = toInternalDuration(duration);
-  const time = internal.time + BigInt(internal.date.days) * NANOSECONDS_PER_DAY;
-  let carriedDays = time / NANOSECONDS_PER_DAY;
-  let timeOfDay = time % NANOSECONDS_PER_DAY;
-  if (timeOfDay < 0n) {
-    carriedDays -= 1n;
-    timeOfDay += NANOSECONDS_PER_DAY;
-  }
-
-  const origin = plain.withCalendar("iso8601").toPlainDateTime();
-  const targetDate = calendarDateAdd(
-    plain.calendarId,
-    origin.toPlainDate(),
-    adjustDateDuration(internal.date, Number(carriedDays)),
-  );
-  return {
-    origin,
-    target: targetDate
-      .toPlainDateTime()
-      .add({ nanoseconds: Number(timeOfDay) }),
-  };
 }
 
 /** TC39 `DateDurationDays`. */
@@ -1162,6 +937,18 @@ export function dateDurationDays(
   const isoDate = plain.withCalendar("iso8601");
   const later = calendarDateAdd(plain.calendarId, isoDate, yearsMonthsWeeks);
   return date.days + isoDate.until(later, { largestUnit: "day" }).days;
+}
+
+/** TC39 `Add24HourDaysToTimeDuration`. */
+export function add24HourDaysToTimeDuration(
+  time: bigint,
+  days: number,
+): bigint {
+  const result = time + BigInt(days) * NANOSECONDS_PER_DAY;
+  if (bigintAbs(result) > MAX_TIME_DURATION) {
+    throw new RangeError("The time duration is out of range");
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1179,7 +966,9 @@ export function optionsAreValid(validate: () => unknown): boolean {
   }
 }
 
-function contextOf(zoned: Temporal.ZonedDateTime): Omit<ZonedContext, "wall"> {
+function contextOf(
+  zoned: Temporal.ZonedDateTime,
+): Omit<RoundingContext, "wall"> {
   return { timeZone: zoned.timeZoneId, calendar: zoned.calendarId };
 }
 
@@ -1272,24 +1061,6 @@ export function roundAtLimit(
   );
 }
 
-/** `Temporal.Duration.compare` with a zoned `relativeTo`, when either operand has date units. */
-export function compareAtLimit(
-  one: Temporal.Duration,
-  two: Temporal.Duration,
-  zoned: Temporal.ZonedDateTime,
-): number | null {
-  if (
-    !isDateUnit(defaultLargestUnit(one)) &&
-    !isDateUnit(defaultLargestUnit(two))
-  ) {
-    return null;
-  }
-
-  const after1 = addZonedDateTime(zoned, toInternalDuration(one));
-  const after2 = addZonedDateTime(zoned, toInternalDuration(two));
-  return bigintSign(after1 - after2);
-}
-
 /** Resolves the units of `until`/`round` options; null when a unit name is not one Temporal knows. */
 export function roundingSettings(
   largestUnitOption: unknown,
@@ -1334,56 +1105,5 @@ function canRoundBySpec(
     ) &&
     largerUnit(largestUnit, smallestUnit) === largestUnit &&
     !(increment > 1 && largestUnit !== smallestUnit && isDateUnit(smallestUnit))
-  );
-}
-
-/** `Duration#total` with a plain `relativeTo`: TC39 `DifferencePlainDateTimeWithTotal`. */
-export function totalWithPlainRelativeTo(
-  duration: Temporal.Duration,
-  plain: Temporal.PlainDate,
-  unitOption: string,
-  unit: Unit,
-): number | null {
-  if (
-    !optionsAreValid(() =>
-      ZERO_DURATION.total({
-        unit: unitOption as never,
-        relativeTo: PLAIN_DATE_PROBE,
-      }),
-    )
-  ) {
-    return null;
-  }
-  const { origin, target } = plainRelativeTarget(duration, plain);
-  return differencePlainDateTimeWithTotal(
-    origin,
-    target,
-    plain.calendarId,
-    unit,
-  );
-}
-
-/** `Duration#round` with a plain `relativeTo`: TC39 `DifferencePlainDateTimeWithRounding`. */
-export function roundWithPlainRelativeTo(
-  duration: Temporal.Duration,
-  plain: Temporal.PlainDate,
-  roundTo: DurationRoundOptions,
-  settings: RoundingSettings,
-): Temporal.Duration | null {
-  if (!canRoundBySpec(roundTo, settings, PLAIN_DATE_PROBE)) {
-    return null;
-  }
-  const { origin, target } = plainRelativeTarget(duration, plain);
-  const rounded = differencePlainDateTimeWithRounding(
-    origin,
-    target,
-    plain.calendarId,
-    settings,
-  );
-  return temporalDurationFromInternal(
-    rounded,
-    isDateUnit(settings.largestUnit)
-      ? "hour"
-      : (settings.largestUnit as TimeUnit),
   );
 }

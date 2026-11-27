@@ -18,6 +18,7 @@ import {
   originRoundBySpec,
   originTotalBySpec,
 } from "./zonedDifference/nudgeOrigin";
+import { compareFromPlainDate } from "./zonedDifference/plainCompare";
 import type {
   DurationRoundOptions,
   RoundingSettings,
@@ -29,15 +30,17 @@ import type {
  * Zoned differences, totals, rounding and comparison
  * ---------------------------------------------------------------------------------------------
  * `ZonedDateTime#until`, `Duration#total`, `Duration#round` and `Duration.compare` (with a zoned
- * `relativeTo`) are `temporal-polyfill` 1.0.8's own, with three additions:
+ * `relativeTo`) are `temporal-polyfill` 1.0.8's own, with four additions:
  *
  * - the month-range guard (`assertMonthsInRange`, D9): with a `relativeTo`, a month amount past
  *   the date range throws before any arithmetic;
  * - `TimeZoneEquals` by primary identifier (`timeZoneEquals`, D19);
  * - an origin in a repeated hour is measured by the specification (D22), in
- *   `./zonedDifference/nudgeOrigin.ts`; called at the lines marked `// D22`.
+ *   `./zonedDifference/nudgeOrigin.ts`; called at the lines marked `// D22`;
+ * - `Duration.compare` from a plain `relativeTo` that throws past the range adds only the years,
+ *   months and weeks to the date (D35), in `./zonedDifference/plainCompare.ts`.
  *
- * The TC39 operations D22 shares are in `./zonedDifference/operations.ts`.
+ * The TC39 operations D22 and D35 share are in `./zonedDifference/operations.ts`.
  * ---------------------------------------------------------------------------------------------
  */
 
@@ -253,5 +256,12 @@ export function durationCompare(
   // D9: past the date range, the months added to relativeTo throw in the specification.
   assertMonthsInRange(first.months);
   assertMonthsInRange(second.months);
-  return Temporal.Duration.compare(first, second, { relativeTo });
+  try {
+    return Temporal.Duration.compare(first, second, { relativeTo });
+  } catch (error) {
+    // D35: from a plain relativeTo, only the years, months and weeks are added to the date.
+    const bySpec = compareFromPlainDate(error, first, second, relativeTo);
+    if (bySpec === null) throw error;
+    return bySpec;
+  }
 }

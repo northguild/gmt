@@ -36,13 +36,21 @@ describe("resolveDurationRelativeTo", () => {
     );
   });
 
-  it("converts an RFC 9557 calendar-annotated PlainDate string into the PlainDateTime it names", () => {
+  it("converts an RFC 9557 calendar-annotated PlainDate string into the PlainDate it names", () => {
     const resolved = resolveDurationRelativeTo("2024-02-24[u-ca=hebrew]");
-    expect(resolved).toBeInstanceOf(Temporal.PlainDateTime);
-    const pdt = resolved as Temporal.PlainDateTime;
-    expect(pdt.calendarId).toBe("hebrew");
-    expect(pdt.toPlainDate().withCalendar("iso8601").toString()).toBe(
-      "2024-02-24",
+    expect(resolved).toBeInstanceOf(Temporal.PlainDate);
+    const date = resolved as Temporal.PlainDate;
+    expect(date.calendarId).toBe("hebrew");
+    expect(date.withCalendar("iso8601").toString()).toBe("2024-02-24");
+  });
+
+  // TC39 CreateTemporalDate checks only ISODateWithinLimits, so the first date is a valid
+  // relativeTo even though midnight on it is not a valid PlainDateTime.
+  it("resolves a calendar-annotated first date to its PlainDate", () => {
+    const resolved = resolveDurationRelativeTo("-271821-04-19[u-ca=gregory]");
+    expect(resolved).toBeInstanceOf(Temporal.PlainDate);
+    expect((resolved as Temporal.PlainDate).toString()).toBe(
+      "-271821-04-19[u-ca=gregory]",
     );
   });
 
@@ -61,18 +69,18 @@ describe("resolveDurationRelativeTo", () => {
   // RFC 9557 / CanonicalizeCalendar.
   it.each`
     value                                                           | type                      | calendarId
-    ${"2024-02-24[!u-ca=hebrew]"}                                   | ${Temporal.PlainDateTime} | ${"hebrew"}
-    ${"2024-02-24[u-ca=HEBREW]"}                                    | ${Temporal.PlainDateTime} | ${"hebrew"}
-    ${"2024-02-24[u-ca=coptic]"}                                    | ${Temporal.PlainDateTime} | ${"coptic"}
+    ${"2024-02-24[!u-ca=hebrew]"}                                   | ${Temporal.PlainDate}     | ${"hebrew"}
+    ${"2024-02-24[u-ca=HEBREW]"}                                    | ${Temporal.PlainDate}     | ${"hebrew"}
+    ${"2024-02-24[u-ca=coptic]"}                                    | ${Temporal.PlainDate}     | ${"coptic"}
     ${"2024-02-24T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${Temporal.ZonedDateTime} | ${"hebrew"}
     ${"2024-02-24T00:00:00-05:00[America/New_York][u-ca=ethiopic]"} | ${Temporal.ZonedDateTime} | ${"ethiopic"}
-    ${"2024-02-24T00:00:00[u-ca=hebrew]"}                           | ${Temporal.PlainDateTime} | ${"hebrew"}
+    ${"2024-02-24T00:00:00[u-ca=hebrew]"}                           | ${Temporal.PlainDate}     | ${"hebrew"}
   `(
     "resolves $value to a $type.name computing in $calendarId",
     ({ value, type, calendarId }) => {
       const resolved = resolveDurationRelativeTo(value);
       expect(resolved).toBeInstanceOf(type);
-      expect((resolved as Temporal.PlainDateTime).calendarId).toBe(calendarId);
+      expect((resolved as Temporal.PlainDate).calendarId).toBe(calendarId);
     },
   );
 
