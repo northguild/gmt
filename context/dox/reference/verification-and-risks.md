@@ -37,7 +37,7 @@
   [design-system.md](design-system.md)).
 - **Where they run:** a Dox PR runs the `pr` tier on its changed pages in Chromium (the
   `dox-gates` job), and `dox-gates-weekly.yml` sweeps every page in three browsers. See
-  [CI jobs for Dox](../built/tier-2-gates.md#ci-jobs-for-dox) and
+  [CI jobs for Dox](../built/tier-2-runner-and-ci.md#ci-jobs-for-dox) and
   [The weekly gate sweep](../built/tier-6-ops.md#the-weekly-gate-sweep).
 - **Gate findings:** a finding's key is `gate:rule:page:target`, where the target is the element's
   identity key. A widget root without `data-widget` makes every finding under it fall back to the

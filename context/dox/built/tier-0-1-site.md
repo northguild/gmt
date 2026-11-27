@@ -51,7 +51,9 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
   `/gmt/*.md` and `/gmt/*.txt` are `X-Robots-Tag: noindex` (the test fails on any `.txt` other than
   `llms.txt` and `llms-full.txt`).
 - `scripts/deploy-smoke.mjs` checks the redirect matrix and crawl rows after each deploy.
-  `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows against `wrangler dev`.
+  `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl rows (`_headers`, the 404 page and the
+  slash rows 6a and 6b, whose 308 the Worker makes from the assets binding's 307) against
+  `wrangler dev`; the old-host and `workers.dev` rows need the live hosts.
 - `robots.txt` is served by the landing Worker. Googlebot and Bingbot have a group of their own that
   skips the `.md` twins and page URLs with a query; every other agent reads them.
   `scripts/robots-policy.mjs` holds the policy table, and `deploy-smoke` checks the live file

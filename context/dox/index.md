@@ -10,6 +10,8 @@ Load only what the task needs:
 - [tracker.md](tracker.md) — stories, GitHub issues, status.
 - [cloudflare-runbook.md](cloudflare-runbook.md) — zone settings, API tokens, deploy checks and
   search-engine setup for `northguild.dev`. Load for a deploy, a zone audit or a 403 from a crawler.
+- [search-console-runbook.md](search-console-runbook.md) — Search Console and Bing Webmaster
+  Tools for `northguild.dev`: the steps after a deploy and the pages to inspect again.
 - [specs/index.md](specs/index.md) — the execution spec of a story in progress; deleted when the story is Done, with any rule the code cannot show moved into `built/`.
 - [reference/design-system.md](reference/design-system.md) — theme implementation rules: stylesheet
   stack, tokens, maintenance rules, the visual gate. Load when styling. Scoped companions, loaded

@@ -49,7 +49,7 @@ builds it.
 | 33    | DOX-G15                                     | —          | #556         | Done   |
 | 34    | DOX-G15                                     | —          | #569         | Done   |
 | 35    | DOX-G16                                     | —          | #578         | Done   |
-| 36    | DOX-G17                                     | —          | #559         | Todo   |
+| 36    | DOX-G17                                     | —          | #559         | Done   |
 
 Owed verification, not work:
 

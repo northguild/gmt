@@ -18,11 +18,12 @@
  * The whole set is retried up to 6 times, 10 s apart, for route propagation. The exit code
  * is 1 with a table of failures when the last attempt still fails. It does not roll back.
  *
- * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers` and the 404
- * page) against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
- * live hosts and are skipped, the slash rows (6a, 6b) among them, which check the 308 the Worker
- * makes from the assets binding's 307. The workers.dev
- * `noindex` rows (6c) match a host name, which `localhost` is not.
+ * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers`, the 404
+ * page and the slash rows 6a and 6b) against a local `wrangler dev` that serves the built `dist`.
+ * `wrangler dev` answers a slashless page with the assets binding's 307 as production does, so the
+ * 308 the Worker makes from it is checked there too. The old-host redirect rows need the live
+ * hosts and are skipped. The workers.dev `noindex` rows (6c) match a host name, which `localhost`
+ * is not.
  */
 import { readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
@@ -148,18 +149,25 @@ const slashHop = (rows, label, url) => {
 };
 
 /**
- * The first page URL in the live sitemap that matches `re`: the first `<loc>` of the index, then the
- * first match in that child sitemap. `undefined` when there is none, so a row can fail by name.
+ * The first page URL in the sitemap that matches `re`: the first `<loc>` of the index, then the
+ * first match in that child sitemap. Each `<loc>` names `northguild.dev`, so its path is read under
+ * `ND`, which is the local server under `DOX_SMOKE_LOCAL`. `undefined` when there is none, so a
+ * row can fail by name.
  */
 async function firstSitemapUrl(re) {
+  const here = (loc) => `${ND}${new URL(loc).pathname}`;
   const index = await send("GET", `${ND}/gmt/sitemap-index.xml`);
   const child = /<loc>([^<]+)<\/loc>/.exec(index.body)?.[1];
   if (child === undefined) return undefined;
-  const sitemap = await send("GET", child);
+  const sitemap = await send("GET", here(child));
   return [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)]
-    .map((m) => m[1])
+    .map((m) => here(m[1]))
     .find((loc) => re.test(loc));
 }
+
+/** A function page from the sitemap, never a name typed here: pages get renamed. */
+const functionPage = () =>
+  firstSitemapUrl(/\/gmt\/reference\/[^/]+\/[^/]+\/[^/]+\/$/);
 
 /** The meta tag that asks a crawler not to index a page. */
 const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
@@ -170,6 +178,17 @@ const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
  */
 async function crawlRows() {
   const rows = [];
+  slashHop(rows, "6a", `${ND}/gmt/reference`);
+  const fnPage = await functionPage();
+  if (fnPage === undefined) {
+    rows.push({
+      label: "6b",
+      url: `${ND}/gmt/sitemap-index.xml`,
+      steps: [{ status: 200, check: () => "no function page in the sitemap" }],
+    });
+  } else {
+    slashHop(rows, "6b", `${fnPage.slice(0, -1)}?a=1`);
+  }
   const noindex = ({ headers }) =>
     headers["x-robots-tag"] === "noindex"
       ? undefined
@@ -337,20 +356,10 @@ async function buildRows() {
   hop(rows, "3", `${WD}/reference/`, `${ND}/gmt/reference/`);
   // The old host adds the page slash in its one 301, so an old link never chains.
   hop(rows, "6", `${WD}/reference`, `${ND}/gmt/reference/`);
-  slashHop(rows, "6a", `${ND}/gmt/reference`);
-  // A function page from the live sitemap, never a name typed here: pages get renamed.
-  const fnPage = await firstSitemapUrl(
-    /\/gmt\/reference\/[^/]+\/[^/]+\/[^/]+\/$/,
-  );
-  if (fnPage === undefined) {
-    add({
-      label: "6b",
-      url: `${ND}/gmt/sitemap-index.xml`,
-      steps: [{ status: 200, check: () => "no function page in the sitemap" }],
-    });
-  } else {
+  // 6a and 6b, the slash rows, are in `crawlRows`; a missing function page fails there as 6b.
+  const fnPage = await functionPage();
+  if (fnPage !== undefined) {
     const slashless = fnPage.slice(0, -1);
-    slashHop(rows, "6b", `${slashless}?a=1`);
     hop(
       rows,
       "6d",
