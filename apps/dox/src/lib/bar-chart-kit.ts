@@ -7,7 +7,11 @@
  * Kept free of the stats and the report: a chart module in the client graph imports this file.
  */
 import type { ChartDefinition, ChartPoint } from "@tanstack/charts";
-import { defineChart } from "@tanstack/charts";
+import {
+  createChartRuntime,
+  defineChart,
+  renderChartSvg,
+} from "@tanstack/charts";
 import type {
   ChartTooltipContent,
   ChartTooltipExtension,
@@ -111,4 +115,27 @@ export interface BarChart {
   patterns: readonly BarPattern[];
   /** Widened to the runtime's untyped definition so every chart shares a caller. */
   definition: (tooltip?: ChartTooltipExtension) => ChartDefinition;
+}
+
+/**
+ * The chart drawn once to SVG with no tooltip: the build's no-JS fallback, and what the tests read.
+ * A narrower `width` keeps the chart's proportions, as the page's container does.
+ */
+export function renderBarChartSvg(
+  chart: BarChart,
+  width = chart.width,
+): string {
+  const runtime = createChartRuntime();
+  try {
+    const scene = runtime.render(chart.definition(), {
+      width,
+      height: Math.round((width * chart.height) / chart.width),
+    });
+    return renderChartSvg(scene, {
+      ariaLabel: chart.ariaLabel,
+      idPrefix: chart.idPrefix,
+    });
+  } finally {
+    runtime.destroy();
+  }
 }

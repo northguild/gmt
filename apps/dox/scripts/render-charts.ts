@@ -8,6 +8,7 @@ import {
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { gmtStats } from "../src/data/gmt-stats";
 import { localeMatrixRows } from "../src/lib/locale-families";
+import { renderBarChartSvg } from "../src/lib/bar-chart-kit";
 import { BAR_CHARTS, type BarChartId } from "../src/lib/bar-charts";
 import {
   BUNDLE_SIZE_CHARTS,
@@ -20,22 +21,11 @@ import { industryLegend, industrySummary } from "../src/lib/why-gmt-charts";
 // The static SVG is the no-JS fallback; ChartContainer.astro mounts the same
 // definition live on top of it to add the hover tooltip.
 function renderBarChart(id: BarChartId): string {
-  const chart = BAR_CHARTS[id];
-  const runtime = createChartRuntime();
-  const scene = runtime.render(chart.definition(), {
-    width: chart.width,
-    height: chart.height,
-  });
-  const svg = renderChartSvg(scene, {
-    ariaLabel: chart.ariaLabel,
-    idPrefix: chart.idPrefix,
-  });
-  runtime.destroy();
-  return svg;
+  return renderBarChartSvg(BAR_CHARTS[id]);
 }
 
 /** Every /bundle-size chart as build-time SVG, keyed by chart id. */
-export function renderBundleSizeCharts(): Record<BundleSizeChartId, string> {
+function renderBundleSizeCharts(): Record<BundleSizeChartId, string> {
   const ids = Object.keys(BUNDLE_SIZE_CHARTS) as BundleSizeChartId[];
   return Object.fromEntries(
     ids.map((id) => [id, renderBarChart(id)]),

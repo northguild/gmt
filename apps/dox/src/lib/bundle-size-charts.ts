@@ -54,7 +54,7 @@ export type BundleSizeChartId =
   | "polyfill-split-gzipped"
   | "polyfill-split-minified";
 
-export type PolyfillChartKind = "floor" | "split";
+type PolyfillChartKind = "floor" | "split";
 
 const label = (set: PolyfillSet) => `${set.package} ${set.version}`;
 
@@ -63,7 +63,7 @@ const label = (set: PolyfillSet) => `${set.package} ${set.version}`;
 // ---------------------------------------------------------------------------
 
 /** One bar of the floor chart: a polyfill alone. */
-export interface FloorDatum {
+interface FloorDatum {
   set: Side;
   package: string;
   version: string;
@@ -71,7 +71,7 @@ export interface FloorDatum {
 }
 
 /** One bar of the split chart: a function on one polyfill. */
-export interface SplitDatum {
+interface SplitDatum {
   name: string;
   set: Side;
   package: string;

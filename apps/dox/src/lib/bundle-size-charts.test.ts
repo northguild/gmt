@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
 import { screen, within } from "@testing-library/dom";
 import { renderHtml } from "~/widgets/test-fixture";
 import { raw } from "~/widgets/builders/html";
-import { barHatchId } from "./bar-chart-kit";
+import { barHatchId, renderBarChartSvg } from "./bar-chart-kit";
 import {
   bundleSizeCharts,
   polyfillLegendHtml,
@@ -23,21 +22,8 @@ const IDS: readonly BundleSizeChartId[] = [
 
 /** Render one chart of the fixture to a document, tearing the runtime down as it goes. */
 function render(id: BundleSizeChartId, report = fixtureReport()): Document {
-  const chart = bundleSizeCharts(report)[id];
-  const runtime = createChartRuntime();
-  try {
-    const scene = runtime.render(chart.definition(), {
-      width: chart.width,
-      height: chart.height,
-    });
-    const svg = renderChartSvg(scene, {
-      ariaLabel: chart.ariaLabel,
-      idPrefix: chart.idPrefix,
-    });
-    return new DOMParser().parseFromString(svg, "image/svg+xml");
-  } finally {
-    runtime.destroy();
-  }
+  const svg = renderBarChartSvg(bundleSizeCharts(report)[id]);
+  return new DOMParser().parseFromString(svg, "image/svg+xml");
 }
 
 interface Rect {

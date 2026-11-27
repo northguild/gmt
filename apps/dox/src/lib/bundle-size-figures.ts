@@ -11,7 +11,7 @@
 import data from "../generated/bundle-size.json";
 
 export type Measure = "minified" | "gzipped";
-export const MEASURES: readonly Measure[] = ["minified", "gzipped"];
+const MEASURES: readonly Measure[] = ["minified", "gzipped"];
 
 export interface Sized {
   minified: number;
@@ -51,7 +51,7 @@ export interface Part {
 
 export type Split = Record<Measure, Part>;
 
-export interface ComparisonRow {
+interface ComparisonRow {
   name: string;
   shipped: Split;
   previous: Split | null;
@@ -159,7 +159,7 @@ function largestFunction(source: BundleReport): string {
 }
 
 /** The text the lead and the section state, each a finished string. */
-export interface LeadFigures {
+interface LeadFigures {
   shippedVersion: string;
   previousVersion: string;
   previousGmt: string;

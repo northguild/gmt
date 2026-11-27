@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { within } from "@testing-library/dom";
-import { createChartRuntime, renderChartSvg } from "@tanstack/charts";
 import {
   coreNamespaces,
   formatCount,
@@ -9,7 +8,7 @@ import {
 } from "../data/gmt-stats";
 import { raw } from "~/widgets/builders/html";
 import { renderHtml } from "~/widgets/test-fixture";
-import { barGradientId, barHatchId } from "./bar-chart-kit";
+import { barGradientId, barHatchId, renderBarChartSvg } from "./bar-chart-kit";
 import { libraryComparisons } from "../data/library-comparison";
 import {
   WHY_GMT_CHARTS,
@@ -29,18 +28,7 @@ import {
 } from "../lib/why-gmt-charts";
 
 function renderStatic(id: WhyGmtChartId): string {
-  const chart = WHY_GMT_CHARTS[id];
-  const runtime = createChartRuntime();
-  const scene = runtime.render(chart.definition(), {
-    width: chart.width,
-    height: chart.height,
-  });
-  const svg = renderChartSvg(scene, {
-    ariaLabel: chart.ariaLabel,
-    idPrefix: chart.idPrefix,
-  });
-  runtime.destroy();
-  return svg;
+  return renderBarChartSvg(WHY_GMT_CHARTS[id]);
 }
 
 function barRects(svg: string) {
@@ -554,18 +542,7 @@ describe("namespace chart labels", () => {
   ] as const)(
     "keeps every %s label at the page's real chart width",
     (id, expected) => {
-      const chart = WHY_GMT_CHARTS[id];
-      const width = 524;
-      const runtime = createChartRuntime();
-      const scene = runtime.render(chart.definition(), {
-        width,
-        height: Math.round((width * chart.height) / chart.width),
-      });
-      const svg = renderChartSvg(scene, {
-        ariaLabel: chart.ariaLabel,
-        idPrefix: chart.idPrefix,
-      });
-      runtime.destroy();
+      const svg = renderBarChartSvg(WHY_GMT_CHARTS[id], 524);
 
       const labels = [...svg.matchAll(/<text[^>]*>([^<]*)<\/text>/g)].map(
         ([, text]) => text,
