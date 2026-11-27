@@ -250,10 +250,10 @@ describe("the page's look", () => {
     ui.setLookAvailable(true);
     await user.click(natural()!);
     expect(currentLook()).toBe("natural");
-    expect(localStorage.getItem("dox:look")).toBe("natural");
+    expect(localStorage.getItem("dox:earth")).toBe("natural");
     await user.click(natural()!);
     expect(currentLook()).toBe("ice");
-    expect(localStorage.getItem("dox:look")).toBeNull();
+    expect(localStorage.getItem("dox:earth")).toBeNull();
     // It is not a filter: the zone list is told nothing.
     expect(changes).toHaveLength(0);
   });

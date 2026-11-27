@@ -17,8 +17,12 @@ export type Look = "ice" | "natural";
 /** The attribute on `<html>`. Absent means ice. */
 export const LOOK_ATTRIBUTE = "data-look";
 
-/** The `localStorage` key. `ThemeProvider.astro` reads the same key inline. */
-export const LOOK_STORAGE_KEY = "dox:look";
+/**
+ * The `localStorage` key. `ThemeProvider.astro` reads the same key inline. It keeps the name it had
+ * when the switch recoloured only the Earth, with the same `natural` value, so a reader who chose
+ * natural colours then still has them.
+ */
+export const LOOK_STORAGE_KEY = "dox:earth";
 
 /** The look the page shows now. */
 export function currentLook(

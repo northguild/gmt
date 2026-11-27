@@ -29,6 +29,11 @@ afterEach(() => {
 });
 
 describe("the page's look", () => {
+  it("is remembered under the key readers already have", () => {
+    // Before the switch covered the Moon and the Sun, `natural` was stored under this key.
+    expect(LOOK_STORAGE_KEY).toBe("dox:earth");
+  });
+
   it("is ice until set, natural after, and ice again after, with the key removed", () => {
     expect(currentLook()).toBe("ice");
     setLook("natural");

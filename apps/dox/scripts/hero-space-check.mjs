@@ -6837,7 +6837,7 @@ async function checkLookFirstPaint(browser) {
     reduce: true,
     init: () => {
       try {
-        localStorage.setItem("dox:look", "natural");
+        localStorage.setItem("dox:earth", "natural");
       } catch {
         /* the page must cope with no storage; this gate needs it */
       }

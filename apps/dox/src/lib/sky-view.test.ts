@@ -376,8 +376,17 @@ describe("mountSkyView", () => {
     const nine = secondsFor(fake, "moon", 9);
     clock = START + nine;
     fake.frames.forEach((frame) => frame());
+    expect(fake.flights).toHaveLength(2);
+    /* The Moon cannot drift 8 px in under a second of sky time, so the camera is turned 2° off
+       the new aim instead: the Moon is then far from its anchor at every check below. */
+    const [lon, lat] = fake.view.rotation;
+    fake.view.rotation = [lon + 2, lat];
+    clock = START + nine + 999;
     fake.frames.forEach((frame) => frame());
     expect(fake.flights).toHaveLength(2);
+    clock = START + nine + 1000;
+    fake.frames.forEach((frame) => frame());
+    expect(fake.flights).toHaveLength(3);
   });
 
   it("does not check during a flight", async () => {
