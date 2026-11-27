@@ -166,6 +166,7 @@ describe("renderSkyView", () => {
       "Jupiter",
       "Saturn",
       "Uranus",
+      "Neptune",
       "Pluto Dwarf planet",
       "Vesta Asteroid",
       "Apophis Asteroid",

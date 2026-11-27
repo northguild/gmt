@@ -14,7 +14,8 @@
   margin-block-start: 3px;
 
   /* Beside the stack, towards the globe (the stack lets an open panel overflow). The panel is
-     bare: the bar inside it is the box. */
+     bare: the bar inside it is the box. It keeps the bar's bevel, so the sheen that crosses it
+     as it opens (the disclosure's `data-sheen`) has the bar's outline. */
   & > [id$="-panel"] {
     inset-block: auto 0;
     inset-inline: auto 100%;
@@ -22,7 +23,8 @@
     margin-inline-end: var(--gmt-space-2);
     padding: 0;
     border: 0;
-    border-radius: 0;
+    border-radius: var(--gmt-radius-sm);
+    corner-shape: bevel;
     background: none;
     max-inline-size: none;
   }
@@ -64,6 +66,9 @@
   gap: var(--gmt-space-2);
   inline-size: auto;
   min-inline-size: 8.5rem;
+
+  /* The stack's button height is the floor, never a cap: a row grows to hold its name and line. */
+  min-block-size: max-content;
   padding-inline: var(--gmt-space-2) var(--gmt-space-3);
   font-size: var(--gmt-text-sm);
   white-space: nowrap;
@@ -109,8 +114,8 @@
 .line {
   line-height: 1.3;
 
-  /* The bar opens leftward from the stack, so a long line (a faint body with a pass date) would
-     push it past the viewport's left edge on a phone: it wraps instead, at a measure that fits. */
+  /* The bar opens leftward from the stack, so a long line would push it past the viewport's left
+     edge on a phone: it wraps instead, at a measure that fits. */
   max-inline-size: 24ch;
   white-space: normal;
 
@@ -142,9 +147,9 @@
   line-height: 1;
 }
 
-/* Stacked in a row (a coarse pointer in the phone layout, globe-phone.module.css; keep the two
-   queries equal), the bar opens upwards, over the sky bay, its end edge level with the button's. */
-@media (pointer: coarse) and (not ((width >= 64rem) and (orientation: landscape))) {
+/* Stacked in a row (the phone layout, globe-phone.module.css; keep the two queries equal), the bar
+   opens upwards, over the sky bay, its end edge level with the button's. */
+@media not ((width >= 64rem) and (orientation: landscape)) {
   /* The row's divider is on the inline side; `[data-space]` weighs it over `.look[data-disclosure]`. */
   [data-space] .look[data-disclosure] {
     margin-block-start: 0;

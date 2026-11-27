@@ -11,6 +11,10 @@
  * `corner`: a glass square in the drawing's bottom-end corner; the popup opens above it.
  * `corner-start`: the same square in the top-start corner, for a drawing whose land fills the
  * bottom-end one; the popup opens below it.
+ *
+ * A long list runs in up to three columns (`data-columns`, one per four sources), so the popup
+ * grows wide rather than tall and does not scroll on a desktop screen; a narrow screen still has
+ * room for one.
  */
 import { html, raw, type SafeHtml } from "./html";
 import styles from "./data-credits.module.css";
@@ -42,16 +46,23 @@ function part(p: DataCredit["parts"][number]): SafeHtml | string {
   return link({ href: p.href, body: p.text });
 }
 
-/** The sources as a list, label then credit: the popup's body, and the slide deck's info menu's. */
+/**
+ * The sources as a list, label then credit: the popup's body, and the slide deck's info menu's.
+ * Each pair is a `div` (HTML lets a `dl` group its pairs so), the unit a column never splits.
+ */
 export function creditList(credits: readonly DataCredit[]): SafeHtml {
   return html`<dl>${credits.map(
-    (c) => html`<dt>${c.label}</dt><dd>${c.parts.map(part)}</dd>`,
+    (c) => html`<div><dt>${c.label}</dt><dd>${c.parts.map(part)}</dd></div>`,
   )}</dl>`;
 }
+
+/** One column per four sources, at most three. */
+const MAX_COLUMNS = 3;
+const SOURCES_PER_COLUMN = 4;
 
 /** Nothing for an empty list, so a drawing with nothing to credit gets no button. */
 export function dataCredits(o: DataCreditsOptions): SafeHtml {
   if (o.credits.length === 0) return html``;
   return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" data-cue aria-label="${o.label ?? "Data credits"}" aria-expanded="false">${raw(ICON)}</button
-    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover>${o.lead}${creditList(o.credits)}</div>`;
+    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-columns="${Math.min(MAX_COLUMNS, Math.ceil(o.credits.length / SOURCES_PER_COLUMN))}" data-credits-panel popover>${o.lead}${creditList(o.credits)}</div>`;
 }

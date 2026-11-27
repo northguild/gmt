@@ -3,7 +3,7 @@
  * Hero phone gate: the stacked landing on a phone, and the locked one beside it.
  *
  * Per phone profile (`?globe=canvas2d`, after `data-entrance` settles and the sky has drawn):
- *   - first screen (portrait): the title, the "Get started" and "Ask Dox" buttons under it, and
+ *   - first screen (portrait): the title, the "Start" and "Dox" buttons under it, and
  *     the globe disc lie inside `0..innerHeight`; the buttons sit above the Earth's stage; the
  *     atmosphere fills the band between the gutters and above the zoom row, rim whole;
  *   - no carousel: no `data-home-carousel`, and no page hidden, inert or scrolling inside itself;
@@ -23,7 +23,7 @@
  *   - star dots: the sky's camera radius, which sets the dot scale, is below the 1440 x 900 one.
  * The header holds on `/` and `/guides/` at every profile: the title wrapper is not clipped, the
  * wordmark and name keep the 12 px text floor, below 50rem the bar shows no Dox, GitHub or Discord
- * link, and on `/` the hero shows "Get started" and "Ask Dox" only, with no eyebrow.
+ * link, and on `/` the hero shows "Start" and "Dox" only, with no eyebrow.
  * Beside the phones: at 1440 x 900 the carousel is wired and its pager shown, and a
  * stacked-to-locked resize shows the pane the reader was at, and no other, with no entrance motion
  * in the frames after it.

@@ -8,8 +8,7 @@
  *
  * VSOP87B (Bretagnon and Francou 1988, Astronomy and Astrophysics 202, 309) is IMCCE's
  * heliocentric spherical theory of the J2000 dynamical ecliptic. The script reads the files of
- * the Earth (the observer) and of each planet that can reach the stars' faint limit
- * (`FAINT_LIMIT`, 5.5: Neptune never does), pinned by size and sha256, and:
+ * the Earth (the observer) and of every other planet, pinned by size and sha256, and:
  *
  * 1. keeps a term when its amplitude, at the largest `t` of the span, still reaches `EPSILON`
  *    (the amplitude times `REACH`, 0.2, to the power of the term's power of `t`; a radius term's limit
@@ -18,8 +17,9 @@
  *    at that same `t`, by at most `ROUNDING` of the limit (the amplitude by itself; the phase and
  *    frequency times the amplitude, the frequency times `t` once more): a large term keeps more
  *    digits than a small one;
- * 3. keeps the planets whose brightest magnitude over the span reaches the faint limit;
- * 4. measures, for each kept planet, the worst angle between the truncated theory and the full
+ * 3. records each planet's brightest magnitude over the span (Neptune's never reaches the stars'
+ *    faint limit, `FAINT_LIMIT`: like Pluto it is placed, never drawn);
+ * 4. measures, for each planet, the worst angle between the truncated theory and the full
  *    one over the span, in arcseconds, and writes it down.
  *
  * The span is the run instant (gmt's `getUnixNow`) plus and minus 200 years: the series stays
@@ -58,7 +58,7 @@ import { apparentMagnitude, type PlanetId } from "../src/lib/magnitude";
 
 const RAD = Math.PI / 180;
 
-/** The stars' faint limit: the dimmest magnitude a planet is kept for. */
+/** The stars' faint limit: the dimmest magnitude the sky draws, and a small body is kept for. */
 const FAINT_LIMIT = 5.5;
 /** The span either side of the run instant, years. */
 const SPAN_YEARS = 200;
@@ -115,6 +115,12 @@ const SOURCES = {
     702_639,
     "a71943b2a514c03ab6e6e4071a6cccc13fd42c9879910f71630df04b8fbe1066",
     19.218_446,
+  ],
+  neptune: [
+    "nep",
+    270_921,
+    "9eedbfb9d0972e9593909b2990a241bb7c684fced7ce6e4659f990528443c892",
+    30.110_387,
   ],
 } as const satisfies Record<string, readonly [string, number, string, number]>;
 
@@ -180,14 +186,6 @@ export function truncate(series: Series, epsilon: number, a: number): Series {
   };
 }
 
-/** The planets that reach `limit`: the ids whose brightest magnitude is at or under it. */
-function selectBodies<T extends string>(
-  peaks: Record<T, number>,
-  limit: number,
-): T[] {
-  return (Object.keys(peaks) as T[]).filter((id) => peaks[id] <= limit);
-}
-
 const hasAny = (s: Series) => s.L.length + s.B.length + s.R.length > 0;
 
 /** The angle between two unit vectors, arcseconds. */
@@ -200,7 +198,8 @@ const angle = (a: readonly number[], b: readonly number[]) =>
 async function build(
   now: number,
 ): Promise<{ orbits: Orbits; full: Orbits; files: object[] }> {
-  const files: object[] = [];
+  const files: { body: string; url: string; bytes: number; sha256: string }[] =
+    [];
   const read = async (id: keyof typeof SOURCES) => {
     const [ext, bytes, sha256, a] = SOURCES[id];
     const url = urlOf(ext);
@@ -237,6 +236,10 @@ async function build(
     small: {},
     passes: {},
   });
+  /* The downloads finish in any order; the credit lists them in `SOURCES`' order, so a re-run
+     rewrites nothing that did not change. */
+  const order = Object.keys(SOURCES);
+  files.sort((x, y) => order.indexOf(x.body) - order.indexOf(y.body));
   return { orbits: orbits("kept"), full: orbits("full"), files };
 }
 
@@ -328,7 +331,7 @@ async function main() {
   }
   const { orbits, full, files } = await build(now);
   const { peaks, worst } = measure(orbits, full);
-  const kept = selectBodies(peaks, FAINT_LIMIT);
+  const kept = Object.keys(peaks) as PlanetId[];
   const bodies: Orbits["bodies"] = {};
   for (const id of kept)
     bodies[id] = {
@@ -376,9 +379,6 @@ async function main() {
           id,
           { peak: bodies[id]!.peak, worstArcseconds: bodies[id]!.worst },
         ]),
-      ),
-      omitted: Object.keys(peaks).filter(
-        (id) => !kept.includes(id as PlanetId),
       ),
       smallSource,
       distantSource: distant.source,

@@ -364,7 +364,7 @@ describe("mountGlobe in space mode", () => {
     await mount({}, { space: true });
     const user = userEvent.setup();
     const stack = () =>
-      screen.getByRole("group", { name: "Globe controls", hidden: true });
+      screen.getByRole("toolbar", { name: "Globe controls", hidden: true });
     expect(stack()).not.toHaveAttribute("inert");
 
     await user.click(magnifier());
@@ -460,7 +460,7 @@ describe("mountGlobe in space mode", () => {
 
   it("orders the hero's stack: zoom, the two ways to a place, then Look at and the credits", async () => {
     await mount({}, { space: true });
-    const stack = screen.getByRole("group", { name: "Globe controls" });
+    const stack = screen.getByRole("toolbar", { name: "Globe controls" });
     const named = [
       "Zoom in",
       "Zoom out",

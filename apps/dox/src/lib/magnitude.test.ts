@@ -52,15 +52,12 @@ describe("hgMagnitude", () => {
   it.each(PINS)(
     "is Horizons' APmag within 0.05 with the shipped H and G at JD $jd",
     ({ V, ...view }) => {
-      expect(
-        Math.abs(hgMagnitude(H, G, { ...view, unit: [1, 0, 0] }) - V),
-      ).toBeLessThan(0.05);
+      expect(Math.abs(hgMagnitude(H, G, view) - V)).toBeLessThan(0.05);
     },
   );
 
   it("is H + 5 log10(r delta) at a phase angle of 0", () => {
     const view = {
-      unit: [1, 0, 0] as [number, number, number],
       r: 2.2,
       delta: 1.3,
       phase: 0,

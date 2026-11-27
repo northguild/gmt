@@ -10,6 +10,10 @@
  * turn among the page's layers, `lib/esc-layers.ts`) and sends focus back to the button, and (with `light`) closes when a pointer lands outside or
  * focus moves to a real element outside. A `focusout` with no destination (a click on
  * non-focusable space) is ignored, so a pointer press inside the panel never closes it.
+ *
+ * A floating panel carries `data-sheen`: the band of ice light every appearing panel shows
+ * (gmt-primitives.css) crosses it each time it opens. A flow panel is part of the page, not a
+ * panel over it, so it has none.
  */
 import { registerEscLayer } from "~/lib/esc-layers";
 import { gateAttr, type GateOption } from "./gate";
@@ -53,7 +57,7 @@ export function disclosure(o: DisclosureOptions): SafeHtml {
           ? o.label
           : html`<span aria-hidden="true" class="${styles.icon}">${o.icon}</span>${srOnly(o.label)}`
       }</button
-    ><div class="${styles.panel}" id="${o.id}-panel" ${open ? "" : html`hidden`}>${o.children}</div></div
+    ><div class="${styles.panel}" id="${o.id}-panel" ${o.flow === true ? "" : html`data-sheen`} ${open ? "" : html`hidden`}>${o.children}</div></div
   >`;
 }
 
