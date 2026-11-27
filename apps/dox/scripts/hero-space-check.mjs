@@ -63,6 +63,7 @@ import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { isLocked, LOCKED_QUERY } from "./lib/home-locked.mjs";
 import { activeProblem, listProblems } from "./lib/zone-list-rows.mjs";
+import { stackPress } from "./lib/globe-stack.mjs";
 import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "hero-space";
@@ -511,7 +512,7 @@ async function checkDrawer(browser, size) {
     size,
   );
   if (!locked) {
-    await magnifier.click();
+    await stackPress(page, magnifier);
     await page.waitForTimeout(400);
   }
   const opened = await onPage(page, await hitBox(page));
@@ -568,7 +569,7 @@ async function checkDrawer(browser, size) {
     size,
   );
 
-  await magnifier.click();
+  await stackPress(page, magnifier);
   await page.waitForTimeout(400);
   check(
     await regionOpen(page),
@@ -648,7 +649,7 @@ async function checkEscape(page, size, t) {
     magnifier.evaluate((el) => el === document.activeElement);
   const reopen = async () => {
     if (!(await regionOpen(page))) {
-      await magnifier.click();
+      await stackPress(page, magnifier);
       await page.waitForTimeout(400);
     }
   };
@@ -1046,7 +1047,7 @@ async function checkZoomFills(browser) {
       reduce: true,
       init: drawGlobeOnMainThread,
     });
-    for (let i = 0; i < 8; i++) await page.locator(ZOOM_IN).click();
+    for (let i = 0; i < 8; i++) await stackPress(page, page.locator(ZOOM_IN));
     await page.waitForTimeout(1500);
     /* Stacked, the landing's pages read on below the Earth inside the hero, so the Earth's area
        is the stage: the zoomed Earth fills that, not the whole hero. */
@@ -1297,7 +1298,7 @@ async function checkInteraction(browser) {
       await page.locator(CLOSE).click();
       await page.waitForTimeout(400);
     }
-    await page.locator(selector).click();
+    await stackPress(page, page.locator(selector));
   };
   await differs(() => press(ZOOM_OUT), "no-zoom-out", "the zoom-out button");
   await differs(() => press(ZOOM_IN), "no-zoom-in", "the zoom-in button");
@@ -1358,7 +1359,7 @@ async function checkInteraction(browser) {
     await page.getByRole("button", { name: "Close zone list" }).click();
     await page.waitForTimeout(400);
   }
-  await page.locator(ZOOM_RESET).click();
+  await stackPress(page, page.locator(ZOOM_RESET));
   await page.waitForTimeout(2500);
   const copy = await copyRect(page);
   // The pointer leaves the reset button first, so its hover fill is not in the picture.
@@ -2372,7 +2373,7 @@ async function checkSkyCamera(browser) {
   for (const problem of problems) fail("page-error", "page", problem, WIDE);
   for (const zoom of ["1x", "one step in"]) {
     if (zoom !== "1x") {
-      await page.locator(ZOOM_IN).click();
+      await stackPress(page, page.locator(ZOOM_IN));
       await page.waitForTimeout(SETTLE);
     }
     const { sky, fit, box, residual, allButOne } = await readCameras(page);
@@ -3952,7 +3953,7 @@ const bodyButton = (page, body) =>
 
 /** Opens the Look at bar with its button, as a reader does. */
 async function openLook(page) {
-  await lookButton(page).click();
+  await stackPress(page, lookButton(page));
   await page
     .locator(LOOK_BAR)
     .waitFor({ state: "visible", timeout: LOAD_TIMEOUT });
@@ -4194,7 +4195,7 @@ async function checkSkyViewHold(browser) {
   const zoomed = await skyCamera(page);
   /* The zoom stack is hidden while the drawer is open (a drag opens it), so the reader closes it first. */
   if (await regionOpen(page)) await page.locator(CLOSE).click();
-  await page.locator(ZOOM_RESET).click();
+  await stackPress(page, page.locator(ZOOM_RESET));
   await page.waitForTimeout(1500);
   const rested = await skyCamera(page);
   /* The aim picks the largest lens zoom that fits, and a small hero fits only rest zoom. The view's zoom was read before the drag; zoomed in, the idle spin stays off, and at rest zoom it has come back by now. */
@@ -4375,12 +4376,12 @@ async function checkSkyViewKeys(browser) {
     },
     [gate("globe-zoom"), `${LOOK} > button`],
   );
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("ArrowDown");
   check(
     await focusOn(`${LOOK} > button`),
     "sky-view-keys",
     t,
-    `Tab from the stack's button before Look at (${before}) did not reach the Look at button`,
+    `ArrowDown from the stack's button before Look at (${before}) did not reach the Look at button`,
     WIDE,
   );
   await openBarByKeys(page);
@@ -5264,7 +5265,7 @@ const PLACED_LINE = /^Too faint · -?\d+\.\d$/;
 /** A placed body whose next spell is a pass says so after its magnitude: Apophis is two years from its pass. */
 const APOPHIS_LINE = /^Too faint · -?\d+\.\d · Close pass 13 Apr 2029$/;
 /** Where the data says Uranus is bright enough again, in this zone and locale. */
-const URANUS_AHEAD = "12 Dec 2033";
+const URANUS_AHEAD = "3 Dec 2033";
 
 /** Each named row's state and second line, once the lines are written (neither empty nor still loading) and Apophis's has its date from the data. */
 async function lookLines(page, ids) {
@@ -5696,7 +5697,7 @@ async function checkStack(browser) {
 
     const copy = (await restingBoxes(page)).slice(0, -2);
     const magnifier = page.getByRole("button", { name: "Find a zone" });
-    await magnifier.click();
+    await stackPress(page, magnifier);
     await page.waitForTimeout(400);
     const open_ = await stackState(page);
     check(
@@ -6668,7 +6669,7 @@ const lookSwitch = (page) => page.getByRole("switch", LOOK_SWITCH);
 /** Opens the zone drawer with the magnifier and the Settings panel with the gear. */
 async function openSettings(page) {
   if (!(await regionOpen(page))) {
-    await page.locator("[data-globe-search]").click();
+    await stackPress(page, page.locator("[data-globe-search]"));
     await page.waitForFunction(
       (sel) => !document.querySelector(sel)?.hasAttribute("inert"),
       REGION,

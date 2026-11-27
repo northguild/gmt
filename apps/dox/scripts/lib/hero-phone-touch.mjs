@@ -11,6 +11,7 @@ import {
   settle,
   tapCentre,
 } from "./hero-phone-steps.mjs";
+import { openStack } from "./globe-stack.mjs";
 
 /**
  * Every control `locator` finds is at least 44 x 44, and it finds at least `min` with a box: a
@@ -317,6 +318,8 @@ export async function stillness(ctx, page) {
 export async function dots(ctx, page) {
   // Targets: the zoom stack.
   // In, out, Find a zone, Locate, Look at and About this sky; Reset too where the row has room.
+  // The row folds to its info button at rest, so a tap opens it first.
+  await openStack(page);
   await small(ctx, page.locator('[data-gate="globe-zoom"] button'), "zoom", 4);
 
   // Dot scale and layout shift.

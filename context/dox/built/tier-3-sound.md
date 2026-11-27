@@ -46,7 +46,7 @@ Part of [built/index.md](index.md). Web Audio only, in `src/lib/sound/`; every v
 
 ## Native panel motion
 
-Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) comes and goes like the drawer (`gmt-primitives.css`, "Native panels: in and out"): a fade and a slide from `--gmt-panel-from` over 240 ms, with `@starting-style` and `display`/`overlay` held by `allow-discrete` so the close fades too. A `::after` sheen crosses on open and again on close; its name flips between `gmt-panel-sheen` and `gmt-panel-sheen-out` so each change restarts it. Reduced motion keeps the fade only; forced colours and more contrast drop the sheen.
+Every non-manual `[popover]` (Settings, Data credits, the hive's info panel) comes and goes like the drawer (`gmt-primitives.css`, "Native panels: in and out"): a fade and a slide from `--gmt-panel-from` over 240 ms, with `@starting-style` and `display`/`overlay` held by `allow-discrete` so the close fades too. A `::after` sheen crosses on open and again on close; its name flips between `gmt-panel-sheen` and `gmt-panel-sheen-out` so each change restarts it. The same sheen layer ("The sheen of a panel that appears") crosses every `data-sheen` box: each floating disclosure panel as it shows (so the hero's Look at bar), and the hero's folded control stack each time it grows open. Reduced motion keeps the fade only; forced colours and more contrast drop the sheen.
 
 ## Behaviour code cannot show
 

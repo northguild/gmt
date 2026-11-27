@@ -220,14 +220,8 @@ export function lookLine(
   V: number | null,
   nowMs: number,
 ): string | null {
-  if (V !== null) {
-    if (V <= FAINT) return null;
-    const faint = `Too faint · ${V.toFixed(1)}`;
-    const next = kit && spellOf(kit.data, id, nowMs);
-    return next && next.unit === "minute" && next.startMs > nowMs
-      ? `${faint} · Close pass ${fmt(kit, next.startMs, SHORT)}`
-      : faint;
-  }
+  /* A placed body's line is its magnitude alone: a pass date beside it would wrap the row to a third line. About this sky lists the pass. */
+  if (V !== null) return V <= FAINT ? null : `Too faint · ${V.toFixed(1)}`;
   if (!kit) return "Too faint";
   const next = spellOf(kit.data, id, nowMs);
   if (!next) return `Too faint through ${endMonth(kit)}`;

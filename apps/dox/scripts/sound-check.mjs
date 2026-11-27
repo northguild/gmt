@@ -96,6 +96,7 @@ import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { sinkless } from "./lib/sound-scope.mjs";
+import { stackPress } from "./lib/globe-stack.mjs";
 
 const GATE = "sound-check";
 const PAGES = ["/", "/tools/zoned-earth/"];
@@ -1997,7 +1998,7 @@ for (const name of browsers) {
             "list ticks: no pressable button to unlock with",
           );
         await page.evaluate(() => window.scrollTo(0, 0));
-        await page.locator("[data-globe-search]").click();
+        await stackPress(page, page.locator("[data-globe-search]"));
         await page.waitForTimeout(600);
         const list = page.locator('[data-drawer] [role="listbox"]').last();
         if (!(await list.isVisible()))

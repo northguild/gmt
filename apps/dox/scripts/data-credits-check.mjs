@@ -22,11 +22,12 @@
  *   - the button's rect intersects no other focusable element's rect (the globe's canvas, which the
  *     button is drawn on, aside) and no text node's client rect;
  * and per page and width:
- *   - Tab reaches the button (a stack's from its first sibling, one press per button before it, inside the group
- *     named "Globe controls"), Enter opens the popover, the accessibility tree shows it expanded
+ *   - Tab reaches the button (a stack's by ArrowUp from Zoom in, wrapping round the toolbar named
+ *     "Globe controls", which one Tab leaves), Enter opens the popover, the accessibility tree shows it expanded
  *     (read from the AX tree over CDP, or `ariaSnapshot()`; a native popover button has no
  *     `aria-expanded` attribute), Escape closes it and focus is back on the button;
- *   - the open panel sits inside the viewport and covers none of the control buttons.
+ *   - the open panel sits inside the viewport and covers none of the control buttons: beside a
+ *     column stack, above a row one.
  *
  * On `/` it also reads the info popover's "Coming up in the sky" list at two pinned instants
  * (`events-ahead`, `events-now`).
@@ -296,6 +297,7 @@ function geometry({ id, stack, zoom }) {
     h: innerHeight,
     groupLabel: group?.getAttribute("aria-label") ?? null,
     groupRole: group?.getAttribute("role") ?? null,
+    row: group?.getAttribute("aria-orientation") === "horizontal",
     order: group
       ? /* The shut Look at bar's buttons sit in a hidden panel: not the stack's own controls. */
         [...group.querySelectorAll("button")]
@@ -478,17 +480,25 @@ for (const name of browsers) {
       // Keyboard path.
       await button.scrollIntoViewIfNeeded();
       if (target.stack) {
-        // Inside the control stack: Tab from the first sibling reaches the button after one press per button before it.
-        await page.locator('[data-globe-zoom="in"]').first().focus();
-        for (let i = 0; i < target.order.length - 1; i += 1)
-          await page.keyboard.press(tabKey(name));
+        // The control stack is one toolbar: one Tab from Zoom in leaves it, and ArrowUp from
+        // Zoom in wraps round to the button, the stack's last.
+        const zoomIn = page.locator('[data-globe-zoom="in"]').first();
+        await zoomIn.focus();
+        await page.keyboard.press(tabKey(name));
+        const left = await page.evaluate(
+          (zoom) => !document.activeElement?.closest(zoom),
+          gate("globe-zoom"),
+        );
+        if (!left) fail(`${label}: one Tab from Zoom in stays in the stack`);
+        await zoomIn.focus();
+        await page.keyboard.press("ArrowUp");
         const reached = await page.evaluate(
           (id) => document.activeElement?.getAttribute("popovertarget") === id,
           target.id,
         );
         if (!reached)
           fail(
-            `${label}: Tab from Zoom in does not reach the button in ${target.order.length - 1} presses`,
+            `${label}: ArrowUp from Zoom in does not wrap round to the button`,
           );
       } else {
         // Tab reachability: tab forward until the button is focused (bounded).
@@ -542,15 +552,20 @@ for (const name of browsers) {
         zoom: gate("globe-zoom"),
       });
       if (target.stack) {
-        if (g.groupLabel !== "Globe controls" || g.groupRole !== "group")
+        if (g.groupLabel !== "Globe controls" || g.groupRole !== "toolbar")
           fail(
-            `${label}: the control stack is not a group named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
+            `${label}: the control stack is not a toolbar named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
           );
         if (g.order.join("|") !== target.order.join("|"))
           fail(`${label}: the stack's order is ${g.order.join(", ")}`);
-        if (g.panel.right > g.button.left + 0.5)
+        // Beside a column stack; above a row, which leaves no room beside its last button.
+        if (
+          g.row
+            ? g.panel.bottom > g.button.top + 0.5
+            : g.panel.right > g.button.left + 0.5
+        )
           fail(
-            `${label}: the open panel is not beside the stack ${JSON.stringify(g.panel)}`,
+            `${label}: the open panel is not ${g.row ? "above" : "beside"} the stack ${JSON.stringify(g.panel)}`,
           );
       } else if (
         g.panel.bottom > g.button.top + 1 &&

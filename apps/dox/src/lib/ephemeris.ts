@@ -137,6 +137,8 @@ export interface PlanetView {
   delta: number;
   r: number;
   phase: number;
+  /** The direction from the body to the Sun, a unit vector in the same axes (a law's Sun latitude, `magnitude.ts`). */
+  toSun: Vec3;
 }
 
 /** A direction's right ascension (0 to 360) and declination, degrees. */
@@ -225,6 +227,7 @@ export function bodyFromCamera(
     delta,
     r,
     phase: Math.acos(Math.min(1, Math.max(-1, cos))) / RAD,
+    toSun: place.map((c) => -c / r) as Vec3,
   };
 }
 

@@ -38,6 +38,7 @@ import { isLocked } from "./lib/home-locked.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { stackPress } from "./lib/globe-stack.mjs";
 
 const GATE = "esc-cascade";
 
@@ -323,7 +324,7 @@ const drawerOpen = (page) =>
 async function openDrawer(page) {
   if (await drawerOpen(page)) return;
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.locator("[data-globe-search]").click();
+  await stackPress(page, page.locator("[data-globe-search]"));
   await page.waitForTimeout(500);
 }
 

@@ -16,14 +16,14 @@ function draw(options?: Parameters<typeof renderGlobeTemplate>[0]) {
 
 function stack(idPrefix?: string): HTMLElement {
   draw({ idPrefix });
-  return screen.getByRole("group", { name: "Globe controls" });
+  return screen.getByRole("toolbar", { name: "Globe controls" });
 }
 
 describe("the globe's control stack", () => {
-  it("is one group named Globe controls", async () => {
+  it("is one toolbar named Globe controls", async () => {
     const r = draw();
     expect(
-      screen.getByRole("group", { name: "Globe controls" }),
+      screen.getByRole("toolbar", { name: "Globe controls" }),
     ).toBeInTheDocument();
     await expectNoAxeViolations(r.host);
   });

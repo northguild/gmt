@@ -587,7 +587,7 @@ html[data-deck] .gmt-deck-menu:popover-open {
     margin: 0;
   }
 
-  & dd + dt {
+  & dl > div + div {
     margin-block-start: var(--gmt-space-2);
   }
 

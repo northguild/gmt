@@ -85,17 +85,37 @@
     --gmt-panel-from: 0 -0.5rem;
   }
 
-  /* One column: each credit's label on its own line, its text under it, a gap before the next. */
+  /* Each credit's label on its own line, its text under it, a gap before the next. A long list
+     (`data-columns`, data-credits.ts) runs in columns of at least 15rem, as many as fit, and the
+     popup widens to hold them; a credit (its `div`) never splits across two. */
   & dl {
     margin: 0;
+    columns: var(--credit-columns, auto);
+    column-gap: var(--gmt-space-6);
+  }
+
+  &[data-columns="2"] {
+    --credit-columns: 2 15rem;
+
+    max-inline-size: 40rem;
+  }
+
+  &[data-columns="3"] {
+    --credit-columns: 3 15rem;
+
+    max-inline-size: 60rem;
+  }
+
+  & dl > div {
+    break-inside: avoid;
+  }
+
+  & dl > div + div {
+    margin-block-start: var(--gmt-space-3);
   }
 
   & dt {
     color: var(--gmt-ice);
-  }
-
-  & dd + dt {
-    margin-block-start: var(--gmt-space-3);
   }
 
   & dd {
@@ -110,18 +130,6 @@
     justify-self: end;
     position-try-fallbacks: flip-block;
 
-    &[data-placement="stack"] {
-      inset-inline-end: anchor(left);
-      margin-inline-end: var(--gmt-space-2);
-
-      /* With a long list on a phone the popup is taller than the room above the button. The
-         near inset caps it there: it ends at the button, and the list scrolls inside it. */
-      inset-block: 12px anchor(bottom);
-      align-self: end;
-      max-block-size: 100%;
-      overflow-y: auto;
-    }
-
     &[data-placement="corner"] {
       inset-inline-end: anchor(right);
       inset-block-end: anchor(top);
@@ -134,6 +142,22 @@
       inset-block-start: anchor(bottom);
       margin-block-start: var(--gmt-space-2);
     }
+  }
+}
+
+/* Beside a column stack: left of its button, from the screen's top down to the button's bottom.
+   A stack laid in a row (globe-phone.module.css) has no room beside its last button, so it sets
+   the three `--credits-*` and the popup opens above the row instead, across the screen. The area
+   is the popup's containing block, so the percentage below is the room there is: a long list on
+   a phone ends there and scrolls inside. */
+@supports (position-area: span-block-start inline-start) {
+  .panel[popover][data-placement="stack"] {
+    position-area: var(--credits-area, span-block-start inline-start);
+    inset-inline-end: var(--credits-gap-inline, var(--gmt-space-2));
+    inset-block: 12px var(--credits-gap-block, 0);
+    align-self: end;
+    max-block-size: calc(100% - 12px - var(--credits-gap-block, 0%));
+    overflow-y: auto;
   }
 }
 

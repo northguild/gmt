@@ -156,7 +156,7 @@ export async function header(ctx, page, onLanding) {
   }
   if (narrow && onLanding) {
     const hero = page.locator('[data-gate="hero-copy"]');
-    for (const name of ["Get started", "Ask Dox"])
+    for (const name of ["Start", "Dox"])
       check(
         ctx,
         await hero.getByRole("link", { name }).isVisible(),

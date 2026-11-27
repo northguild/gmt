@@ -481,6 +481,60 @@
     visibility 0s linear var(--gmt-duration-med);
 }
 
+/* In the hero the stack folds to its info button, a faint icon as northguild.dev's info button
+   is, so the controls do not sit on the sky at rest. It grows open, upward here and along the
+   row on a phone (globe-phone.module.css sets the axis), while a pointer is over it, a key has
+   focused one of its controls, a panel of it is open, or a tap on the folded info button opened
+   it (`data-open`, globe-stack.ts, which also closes it on a tap outside or Escape). As it opens
+   one band of ice light crosses it, the sheen every appearing panel has (gmt-primitives.css). A
+   folded control keeps its place in the tab order: focusing it opens the stack. */
+:where(.root[data-space]) .zoom {
+  & > :not([popovertarget], [popover]) {
+    max-block-size: 3rem;
+    max-inline-size: 3rem;
+    transition:
+      max-block-size var(--gmt-duration-med) var(--gmt-ease-sweep),
+      max-inline-size var(--gmt-duration-med) var(--gmt-ease-sweep),
+      opacity var(--gmt-duration-med) var(--gmt-ease-sweep);
+  }
+
+  & > [popovertarget] {
+    transition:
+      color var(--gmt-duration-quick) ease,
+      background var(--gmt-duration-quick) ease,
+      opacity var(--gmt-duration-quick) ease;
+  }
+}
+
+:where(.root[data-space])
+  .zoom[data-ready]:where(
+    :not(
+      :hover,
+      [data-open],
+      :has(:focus-visible, :popover-open, [aria-expanded="true"])
+    )
+  ) {
+  gap: 0;
+  background: transparent;
+  border-color: transparent;
+
+  & > :not([popovertarget], [popover]) {
+    max-block-size: var(--stack-fold-block, 0);
+    max-inline-size: var(--stack-fold-inline, 3rem);
+    opacity: 0;
+  }
+
+  & > [popovertarget] {
+    color: var(--gmt-cyan);
+    background: transparent;
+    opacity: 0.35;
+  }
+
+  &::after {
+    animation-name: none;
+  }
+}
+
 .drawer {
   position: absolute;
   z-index: var(--gmt-z-menu);
