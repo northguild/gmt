@@ -498,23 +498,6 @@
     translate var(--gmt-duration-med) var(--gmt-ease-sweep),
     display var(--gmt-duration-med) allow-discrete,
     overlay var(--gmt-duration-med) allow-discrete;
-
-  /* The sheen's layer, over the content and never in the way of a press. Closed, the animation
-     has another name, so each open and each close starts the band again. The band starts and
-     ends past the edges, so it rests out of sight. */
-  &::after {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    corner-shape: inherit;
-    content: "";
-    pointer-events: none;
-    background-image: var(--gmt-sheen);
-    background-repeat: no-repeat;
-    background-size: 250% 100%;
-    background-position: 110% 0;
-    animation: gmt-panel-sheen-out var(--gmt-duration-med) ease-in-out;
-  }
 }
 
 :where([popover]:not([popover="manual"]):popover-open) {
@@ -525,10 +508,37 @@
     opacity: 0;
     translate: var(--gmt-panel-from, 0 -0.5rem);
   }
+}
 
-  &::after {
-    animation-name: gmt-panel-sheen;
-  }
+/* ---- The sheen of a panel that appears ----
+ * One band of ice light crosses every panel as it appears, whatever opens it: a native panel, a
+ * `data-sheen` box (a disclosure's floating panel, builders/disclosure.ts) or a box that grows
+ * open (the globe's control stack). The layer lies over the content and never in the way of a
+ * press. A box that leaves `display: none` plays it on each showing; a native panel's closed
+ * state plays it under another name, so each open and each close starts the band again; a box
+ * that is always shown names the animation only while it is open. The band starts and ends past
+ * the edges, so it rests out of sight. The positioned box is the layer's container.
+ */
+:where([popover]:not([popover="manual"]), [data-sheen])::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  corner-shape: inherit;
+  content: "";
+  pointer-events: none;
+  background-image: var(--gmt-sheen);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 110% 0;
+  animation: gmt-panel-sheen var(--gmt-duration-med) ease-in-out;
+}
+
+:where([popover]:not([popover="manual"]))::after {
+  animation-name: gmt-panel-sheen-out;
+}
+
+:where([popover]:not([popover="manual"]):popover-open)::after {
+  animation-name: gmt-panel-sheen;
 }
 
 @keyframes gmt-panel-sheen {
@@ -546,15 +556,15 @@
 @media (prefers-reduced-motion: reduce) {
   :where([popover]:not([popover="manual"])) {
     --gmt-panel-from: 0 0;
+  }
 
-    &::after {
-      animation: none;
-    }
+  :where([popover]:not([popover="manual"]), [data-sheen])::after {
+    animation: none;
   }
 }
 
 @media (forced-colors: active), (prefers-contrast: more) {
-  :where([popover]:not([popover="manual"]))::after {
+  :where([popover]:not([popover="manual"]), [data-sheen])::after {
     display: none;
   }
 }

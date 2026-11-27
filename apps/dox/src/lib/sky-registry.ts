@@ -114,6 +114,7 @@ export const SKY_BODIES = [
   point("jupiter", "Jupiter", "\u2643", "Planet"),
   point("saturn", "Saturn", "\u2644", "Planet"),
   point("uranus", "Uranus", "\u2645", "Planet"),
+  point("neptune", "Neptune", "\u2646", "Planet"),
   point("pluto", "Pluto", "\u2647", "Dwarf planet"),
   point("vesta", "Vesta", "\u26B6", "Asteroid"),
   /* No astronomical symbol exists for it: its initial. */

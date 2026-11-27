@@ -156,7 +156,7 @@ export async function header(ctx, page, onLanding) {
   }
   if (narrow && onLanding) {
     const hero = page.locator('[data-gate="hero-copy"]');
-    for (const name of ["Get started", "Ask Dox"])
+    for (const name of ["Start", "Dox"])
       check(
         ctx,
         await hero.getByRole("link", { name }).isVisible(),
@@ -253,10 +253,11 @@ export async function firstScreen(ctx, page, width, height) {
       `the disc spans ${m.disc.top.toFixed(0)}..${m.disc.bottom.toFixed(0)} of ${height}`,
       "globe disc",
     );
-    /* The atmosphere fills the band between the gutters and above the zoom row, 8px clear of
-       it: its rim is drawn whole, so the disc is that band over the atmosphere's reach. */
+    /* The atmosphere fills the band between the gutters, 16px under the stage's top and 8px
+       above the zoom row: its rim is drawn whole, so the disc is that band over the
+       atmosphere's reach. */
     const want =
-      Math.min(width - 32, m.zoom.top - m.stage.top - 8) / ATMOSPHERE;
+      Math.min(width - 32, m.zoom.top - m.stage.top - 8 - 16) / ATMOSPHERE;
     check(
       ctx,
       m.disc.width >= want - 1,

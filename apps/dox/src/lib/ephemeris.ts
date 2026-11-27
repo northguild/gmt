@@ -103,7 +103,7 @@ export interface Orbits {
 export const KM_PER_AU = 149_597_870.7;
 export const LIGHT_KM_S = 299_792.458;
 /** Light's travel time for one au, in days. */
-const LIGHT_DAYS_PER_AU = KM_PER_AU / LIGHT_KM_S / 86_400;
+export const LIGHT_DAYS_PER_AU = KM_PER_AU / LIGHT_KM_S / 86_400;
 /** The J2000 mean obliquity, degrees (IAU 1976: 84381.448"). */
 const OBLIQUITY = 84_381.448 / 3600;
 const MILLENNIUM_DAYS = 365_250;
@@ -131,12 +131,20 @@ function toEquator([x, y, z]: Vec3): Vec3 {
   return [x, y * c - z * s, y * s + z * c];
 }
 
+/** `toEquator` undone: axes of the J2000 equator turned to the J2000 ecliptic. */
+export function toEcliptic([x, y, z]: Unit): Vec3 {
+  const [c, s] = [Math.cos(OBLIQUITY * RAD), Math.sin(OBLIQUITY * RAD)];
+  return [x, y * c + z * s, z * c - y * s];
+}
+
 /** A body from the camera: the direction (unit, equatorial axes of date), its distance from the camera and from the Sun, au, and the phase angle, degrees. */
 export interface PlanetView {
   unit: Vec3;
   delta: number;
   r: number;
   phase: number;
+  /** The direction from the body to the Sun, a unit vector in the same axes (a law's Sun latitude, `magnitude.ts`). */
+  toSun: Vec3;
 }
 
 /** A direction's right ascension (0 to 360) and declination, degrees. */
@@ -225,6 +233,7 @@ export function bodyFromCamera(
     delta,
     r,
     phase: Math.acos(Math.min(1, Math.max(-1, cos))) / RAD,
+    toSun: place.map((c) => -c / r) as Vec3,
   };
 }
 

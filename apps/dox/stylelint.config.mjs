@@ -76,6 +76,7 @@ const baseRules = {
         resize: ["/^.+$/"],
         "position-anchor": ["/^.+$/"],
         "position-try-fallbacks": ["/^.+$/"],
+        "position-try-order": ["/^.+$/"],
         "view-transition-name": ["/^.+$/"],
         "scrollbar-color": ["/^.+$/"],
         "accent-color": ["/^.+$/"],

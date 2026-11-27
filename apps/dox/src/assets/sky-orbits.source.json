@@ -47,6 +47,12 @@
         "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.ura",
         "bytes": 702639,
         "sha256": "a71943b2a514c03ab6e6e4071a6cccc13fd42c9879910f71630df04b8fbe1066"
+      },
+      {
+        "body": "neptune",
+        "url": "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B.nep",
+        "bytes": 270921,
+        "sha256": "9eedbfb9d0972e9593909b2990a241bb7c684fced7ce6e4659f990528443c892"
       }
     ]
   },
@@ -69,7 +75,7 @@
       "worstArcseconds": 20
     },
     "mars": {
-      "peak": -2.93,
+      "peak": -2.96,
       "worstArcseconds": 35
     },
     "jupiter": {
@@ -83,9 +89,12 @@
     "uranus": {
       "peak": 5.38,
       "worstArcseconds": 9.2
+    },
+    "neptune": {
+      "peak": 7.67,
+      "worstArcseconds": 6.6
     }
   },
-  "omitted": [],
   "smallSource": {
     "title": "MPC bright minor planets, osculating elements",
     "publisher": "IAU Minor Planet Center",
@@ -105,6 +114,19 @@
         "G": 0.32
       }
     }
+  },
+  "distantSource": {
+    "title": "MPC distant minor planets, osculating elements",
+    "publisher": "IAU Minor Planet Center",
+    "page": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    "file": {
+      "url": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/Soft00Distant.txt",
+      "fetched": "2026-11-26T13:27:47.528Z",
+      "bytes": 764329,
+      "sha256": "89aefa5e3b3c059220d1c53f7c9f774464593380df15e87684a98e85452d71d6"
+    },
+    "elementDays": 720,
+    "bodies": ["pluto"]
   },
   "passSource": {
     "title": "Close-approach positions: JPL Horizons state vectors of JPL SBDB solutions",
@@ -179,18 +201,5 @@
         }
       }
     }
-  },
-  "distantSource": {
-    "title": "MPC distant minor planets, osculating elements",
-    "publisher": "IAU Minor Planet Center",
-    "page": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
-    "file": {
-      "url": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/Soft00Distant.txt",
-      "fetched": "2026-11-26T13:27:47.528Z",
-      "bytes": 764329,
-      "sha256": "89aefa5e3b3c059220d1c53f7c9f774464593380df15e87684a98e85452d71d6"
-    },
-    "elementDays": 720,
-    "bodies": ["pluto"]
   }
 }

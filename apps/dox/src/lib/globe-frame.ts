@@ -5,7 +5,9 @@
  * stage's foot and the stage is already the viewport less its 16px gutters
  * (globe-phone.module.css): there the atmosphere spans the stage's width, or the band above
  * that row where that is shorter, so the rim is drawn whole and only its glow reaches into the
- * gutters. It is not shrunk to clear the row from the stage's middle.
+ * gutters. The band starts `SPACE_CLEARANCE` below the stage's top, where the hero's copy ends,
+ * so a band shorter than the stage is wide never lays the glow on the copy's buttons. It is not
+ * shrunk to clear the row from the stage's middle.
  */
 
 /** The share of the stage's half-size the Earth fills at rest. */
@@ -47,9 +49,9 @@ export function frameBand(
       mid: box.height / 2,
       fit: Math.min(half * SPACE_FILL, (half - SPACE_CLEARANCE) / ATMOSPHERE),
     };
-  const above = stack.offsetTop - STACK_CLEARANCE;
+  const band = stack.offsetTop - STACK_CLEARANCE - SPACE_CLEARANCE;
   return {
-    mid: above / 2,
-    fit: Math.min(box.width, above) / 2 / ATMOSPHERE,
+    mid: SPACE_CLEARANCE + band / 2,
+    fit: Math.min(box.width, band) / 2 / ATMOSPHERE,
   };
 }

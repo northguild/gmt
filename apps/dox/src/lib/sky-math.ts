@@ -197,6 +197,14 @@ export function precessToDate(unit: Unit, instantMs: number): Vec3 {
   return [0, 3, 6].map((r) => dot(p.subarray(r, r + 3), unit)) as Vec3;
 }
 
+/** `precessToDate` undone: a direction in the equatorial axes of date, in J2000's. */
+export function precessFromDate(unit: Unit, instantMs: number): Vec3 {
+  const p = starViewMatrix([siderealDeg(instantMs), 0], instantMs);
+  return [0, 1, 2].map(
+    (c) => p[c]! * unit[0] + p[c + 3]! * unit[1] + p[c + 6]! * unit[2],
+  ) as Vec3;
+}
+
 /**
  * The sky's lens: the globe's own `Lens` (pinhole.ts), the Earth's centre in the hero and its disc
  * radius in CSS pixels, zoom included, so the focal length is `focal(radius)`; and the scale of a

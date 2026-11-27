@@ -284,10 +284,10 @@ describe("the spells of sky-events.json", () => {
     expect(convertUnixToUtc(apophis.closestMs!)).toBe("2029-04-13T21:46:00Z");
   });
 
-  it("keeps Uranus's first spell for 2033, when the law first reaches 5.5 (5.60 today)", () => {
+  it("keeps Uranus's first spell for 3 Dec 2033, the day Horizons' APmag first reaches 5.5 (5.60 today)", () => {
     const first = made.events.find((e) => e.id === "uranus")!;
     expect(first.rare).toBe(false);
-    expect(convertUnixToUtc(first.startMs).slice(0, 7)).toBe("2033-12");
+    expect(convertUnixToUtc(first.startMs).slice(0, 10)).toBe("2033-12-03");
   });
 });
 

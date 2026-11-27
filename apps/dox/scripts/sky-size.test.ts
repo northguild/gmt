@@ -78,8 +78,8 @@ describe("night sky code size", () => {
     ["the sky", "src/lib/sky.ts", 5248],
     ["the body painter", "src/lib/body-paint.ts", 3200],
     ["the Sun painter", "src/lib/sun-paint.ts", 2048],
-    /* 8,411 B measured: what the entry loads statically, with the pass hooks (the window check and loader, the Earth cover test, the near canvas) and `sky-orbits.json`, which carries Pluto and the pass's element sets; the pass chunk below is reached only by a dynamic import. */
-    ["the planets", "src/lib/sky-planets.ts", 8448, true],
+    /* 10,101 B measured: what the entry loads statically, with the pass hooks (the window check and loader, the Earth cover test, the near canvas), `sky-orbits.json`, which carries Neptune, Pluto and the pass's element sets, and Mars's markings (its WGCCRE rotation row, the body frame and Mallama's two tables, 1,119 B); the pass chunk below is reached only by a dynamic import. The next 128-byte step. */
+    ["the planets", "src/lib/sky-planets.ts", 10112, true],
     /* 6,530 B measured, bundled alone with the geometry it shares: the pass table's Hermite read, the placement, the nutation, the Moon's theory and `sky-passes.json` (the table is 20 minute rows over three days); the next 128-byte step. */
     ["the close-approach pass", "src/lib/sky-pass.ts", 6656],
   ])(

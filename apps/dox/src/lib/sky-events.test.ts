@@ -126,14 +126,8 @@ describe("a Look at row's second line", () => {
     expect(lookLine(null, "vesta", 7.24, now)).toBe("Too faint · 7.2");
   });
 
-  it("adds the close pass to a placed body whose next spell is one", () => {
-    expect(lookLine(kit, "apophis", 20.7, now)).toBe(
-      "Too faint · 20.7 · Close pass 13 Apr 2029",
-    );
-    expect(lookLine(kit, "vesta", 7.24, now)).toBe("Too faint · 7.2");
-    expect(lookLine(kit, "apophis", 20.7, at("2029-04-13T20:00:00Z"))).toBe(
-      "Too faint · 20.7",
-    );
+  it("gives a placed faint body no pass date, so its row stays two lines", () => {
+    expect(lookLine(kit, "apophis", 20.7, now)).toBe("Too faint · 20.7");
     expect(lookLine(null, "apophis", 20.7, now)).toBe("Too faint · 20.7");
   });
 

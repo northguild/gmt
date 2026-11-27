@@ -114,7 +114,7 @@ export interface SkyView {
 
 /**
  * Writes a second line as its ` · ` parts, each kept whole, so a line too long for the bar breaks
- * only between parts ("Too faint · 20.7 ·" over "Close pass 13 Apr 2029"), never inside one.
+ * only between parts ("Too faint ·" over "20.7"), never inside one.
  */
 function writeLine(slot: Element, line: string | null): void {
   const parts = (line ?? "").split(" · ").filter(Boolean);

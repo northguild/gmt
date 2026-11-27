@@ -27,9 +27,19 @@ describe("frameBand", () => {
   it("on a phone centres the disc above the zoom row, its atmosphere inside the band", () => {
     const { mid, fit } = frameBand({ width: 361, height: 380 }, row, false);
     const above = 334 - STACK_CLEARANCE;
-    expect(mid).toBe(above / 2);
-    expect(fit * ATMOSPHERE).toBeCloseTo(above / 2, 6);
+    expect(mid).toBe((SPACE_CLEARANCE + above) / 2);
+    expect(fit * ATMOSPHERE).toBeCloseTo((above - SPACE_CLEARANCE) / 2, 6);
     expect(mid + fit * ATMOSPHERE).toBeLessThanOrEqual(above + 1e-9);
+  });
+
+  it("keeps the atmosphere 16px under the stage's top, where the hero's copy ends", () => {
+    /* 768 x 844: the band above the row is shorter than the stage is wide. */
+    const { mid, fit } = frameBand(
+      { width: 716, height: 557 },
+      { offsetTop: 523, offsetWidth: 235, offsetHeight: 34 },
+      false,
+    );
+    expect(mid - fit * ATMOSPHERE).toBeCloseTo(SPACE_CLEARANCE, 6);
   });
 
   it("is bound by the width where the band above the row is tall: the atmosphere spans the stage", () => {

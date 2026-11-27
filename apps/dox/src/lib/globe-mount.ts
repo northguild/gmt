@@ -34,6 +34,8 @@ import { HOME_LOCKED_QUERY } from "./home-carousel";
 import { watchCover } from "./globe-cover";
 import { frameSpace } from "./hero-frame";
 import { cardBand, followViewport } from "./globe-sheet";
+import { wireGlobeStack } from "./globe-stack";
+import { wireGlobeToolbar } from "./globe-toolbar";
 import type { GlobeHost } from "./globe";
 import {
   followGlobe,
@@ -131,7 +133,7 @@ export function renderGlobeTemplate({
     })}
   </div>`;
 
-  const zoom = html`<div class="${styles.zoom} ${phone.stack}" id="${id("zoom")}" data-gate="globe-zoom" role="group" aria-label="Globe controls">
+  const zoom = html`<div class="${styles.zoom} ${phone.stack}" id="${id("zoom")}" data-gate="globe-zoom" ${space ? html`data-sheen` : ""} role="toolbar" aria-label="Globe controls">
     <button type="button" data-globe-zoom="in" data-cue aria-label="Zoom in">+</button>
     <button type="button" data-globe-zoom="out" data-cue aria-label="Zoom out">−</button>
     <button type="button" data-globe-zoom="reset" data-cue aria-label="Reset zoom">⊙</button>
@@ -416,6 +418,10 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
 
   if (space)
     releaseView = wireSpace(globe.el, host, surface, clockPanel, wiring.signal);
+  /* One Tab stop; the arrow keys move along the stack (globe-toolbar.ts). */
+  wireGlobeToolbar(zoom, space, wiring.signal);
+  /* The hero's stack folds to its info button; a tap opens it (globe-stack.ts). */
+  if (space) wireGlobeStack(zoom, wiring.signal);
   /* The landing's night sky shows what is behind the Earth for the globe's camera (a hero without one is skipped). */
   const hero = space ? heroOf(globe.el) : null;
   if (space) mountSkyEvents(globe.el, wiring.signal);
