@@ -52,3 +52,29 @@ export async function whenIdle(): Promise<void> {
     }
   });
 }
+
+/**
+ * Resolves once the page's first contentful paint has happened, so work started here cannot delay
+ * the first paint of the copy. A tab that has never been shown paints nothing and so never resolves.
+ * Where the browser reports no paint timing, it resolves at once.
+ */
+export function whenPainted(): Promise<void> {
+  const painted = (): boolean =>
+    performance.getEntriesByName("first-contentful-paint").length > 0;
+  return new Promise((resolve) => {
+    if (
+      painted() ||
+      typeof PerformanceObserver === "undefined" ||
+      !PerformanceObserver.supportedEntryTypes?.includes("paint")
+    ) {
+      resolve();
+      return;
+    }
+    const observer = new PerformanceObserver(() => {
+      if (!painted()) return;
+      observer.disconnect();
+      resolve();
+    });
+    observer.observe({ type: "paint", buffered: true });
+  });
+}

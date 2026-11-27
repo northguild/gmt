@@ -27,7 +27,7 @@
  * right, unmirrored: measured, because no text says so. The sunspots' heliographic latitudes in
  * the image agree with those in the Solar Orbiter archive's `solo_L2_phi-fdt-icnt_20230322T060008`
  * (header CROTA 123.64 degrees, `CRLT_OBS` -6.83) at a turn of 0 degrees, within 0.5. The image
- * therefore needs no turn, and the disc's pole angle on screen comes from `sunPole`.
+ * therefore needs no turn, and the disc's pole angle on screen comes from `bodyPole` with `SUN_ROTATION`.
  *
  * A body is added as one more row in `SOURCES`, its asset and sidecar, a `SKY_CREDITS` row and a
  * row of the registry (`sky-registry.ts`).

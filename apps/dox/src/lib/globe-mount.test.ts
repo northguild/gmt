@@ -5,7 +5,7 @@
  * which jsdom has neither of. What is tested is the wiring a reader feels: choosing a zone in
  * the search box focuses it, the zoom buttons zoom, and a selection on the globe fills the box.
  */
-import { screen } from "@testing-library/dom";
+import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { renderHtml } from "~/widgets/test-fixture";
 import { installJsdomShims } from "../test/jsdom-shims";
@@ -23,6 +23,8 @@ let selected: string | null = "Europe/London";
 /* Whether the stand-in's `focusZone` reports a selection, as the real one does. Off by default, so
    the wiring tests see only the selections they make. */
 let focusSelects = false;
+/* The reader's own zone as the stand-in places it, or null when it cannot. */
+let homeZone: string | null = "Europe/London";
 let engineOptions:
   | {
       framing: (
@@ -60,6 +62,7 @@ vi.mock("./globe", () => ({
     return {
       getZones: () => [{ id: "Asia/Tokyo" }, { id: "Europe/London" }],
       getSelected: () => selected,
+      homeZone,
       focusZone: (id: string) => {
         calls.push(`focus ${id}`);
         if (focusSelects) selectListener?.({ id });
@@ -107,6 +110,7 @@ beforeEach(() => {
   zoomListener = undefined;
   selected = "Europe/London";
   focusSelects = false;
+  homeZone = "Europe/London";
   engineOptions = undefined;
   lifetime = new AbortController();
 });
@@ -141,6 +145,22 @@ describe("mountGlobe", () => {
     await user.click(screen.getByRole("button", { name: "Zoom out" }));
     await user.click(screen.getByRole("button", { name: "Reset zoom" }));
     expect(calls).toEqual(["zoomBy 1.40", "zoomBy 0.71", "setZoom 1"]);
+  });
+
+  it("goes back to the reader's own zone from Locate, after they have looked elsewhere", async () => {
+    await mount({ zone: "Asia/Tokyo" });
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Go to my time zone" }));
+    expect(calls).toEqual(["focus Asia/Tokyo", "focus Europe/London"]);
+  });
+
+  it("leaves Locate out when the globe cannot place the reader's zone", async () => {
+    homeZone = null;
+    await mount();
+    expect(
+      screen.queryByRole("button", { name: "Go to my time zone" }),
+    ).not.toBeInTheDocument();
   });
 
   it("plays the Lens servo for every zoom step, rising in and falling out, at the camera's closeness", async () => {
@@ -436,6 +456,22 @@ describe("mountGlobe in space mode", () => {
     ];
     handle.destroy();
     expect(life.aborted).toBe(true);
+  });
+
+  it("orders the hero's stack: zoom, the two ways to a place, then Look at and the credits", async () => {
+    await mount({}, { space: true });
+    const stack = screen.getByRole("group", { name: "Globe controls" });
+    const named = [
+      "Zoom in",
+      "Zoom out",
+      "Reset zoom",
+      "Find a zone",
+      "Go to my time zone",
+      "Look at",
+      "About this sky",
+    ].map((name) => within(stack).getByRole("button", { name }));
+    /* The Look at bar is shut, so its rows are not among the stack's buttons. */
+    expect(within(stack).getAllByRole("button")).toEqual(named);
   });
 
   it("leaves the page globe without a drawer or a magnifier", async () => {

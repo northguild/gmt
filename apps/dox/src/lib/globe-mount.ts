@@ -27,6 +27,7 @@ import { listbox, type GmtListbox } from "~/widgets/primitives/listbox/listbox";
 import styles from "~/widgets/tools/globe.module.css";
 import phone from "~/widgets/tools/globe-phone.module.css";
 import { registerEscLayer } from "./esc-layers";
+import { mountSkyEvents, skyEventsInfo } from "./sky-events-kit";
 import { cueOnAppear } from "./sound/appear";
 import { cue } from "./sound/cue";
 import { HOME_LOCKED_QUERY } from "./home-carousel";
@@ -134,7 +135,6 @@ export function renderGlobeTemplate({
     <button type="button" data-globe-zoom="in" data-cue aria-label="Zoom in">+</button>
     <button type="button" data-globe-zoom="out" data-cue aria-label="Zoom out">−</button>
     <button type="button" data-globe-zoom="reset" data-cue aria-label="Reset zoom">⊙</button>
-    ${space ? renderSkyView(id("sky-view")) : ""}
     ${
       space
         ? html`<button type="button" data-globe-search aria-label="Find a zone" aria-controls="${id("drawer")}" aria-expanded="false"
@@ -145,12 +145,21 @@ export function renderGlobeTemplate({
           ></button>`
         : ""
     }
+    <button type="button" data-globe-locate aria-label="Go to my time zone" hidden
+      ><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"
+        ><circle cx="8" cy="8" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"
+        /><circle cx="8" cy="8" r="1.5" fill="currentColor"
+        /><path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+      /></svg
+    ></button>
+    ${space ? renderSkyView(id("sky-view")) : ""}
     ${dataCredits({
       credits: space
         ? [TZ_BOUNDARIES, EARTH_IMAGERY, ...SKY_CREDITS, LICENCE_CREDIT]
         : [TZ_BOUNDARIES, EARTH_IMAGERY],
       id: id("data-credits"),
       placement: "stack",
+      ...(space && skyEventsInfo()),
     })}
   </div>`;
 
@@ -387,10 +396,29 @@ const mountGlobeInner: MountFn<GlobeArgs> = async (root, args, signal) => {
     );
   }
 
+  /* Locate: back to the reader's own zone, the one the globe opened on. The selection plays the
+     lock-on and its cue, as any chosen place does. Without a zone the globe can place (an
+     engine with no system zone, or one the boundaries lack) there is nothing to go to, so the
+     button stays hidden. */
+  const locate = zoom.querySelector<HTMLButtonElement>("[data-globe-locate]");
+  const home = host.homeZone;
+  if (locate && home) {
+    locate.hidden = false;
+    locate.addEventListener(
+      "click",
+      () => {
+        releaseView();
+        host.focusZone(home);
+      },
+      { signal: wiring.signal },
+    );
+  }
+
   if (space)
     releaseView = wireSpace(globe.el, host, surface, clockPanel, wiring.signal);
   /* The landing's night sky shows what is behind the Earth for the globe's camera (a hero without one is skipped). */
   const hero = space ? heroOf(globe.el) : null;
+  if (space) mountSkyEvents(globe.el, wiring.signal);
   if (hero) offerGlobe(hero, host);
   if (hero) void followGlobe(hero, host, stage, surface, wiring.signal);
 

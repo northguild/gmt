@@ -67,8 +67,7 @@ import { renderZoneTooltip } from "./zone-readout";
 import { skyAt } from "./zone-sky";
 import { mountZoneClockList } from "./zone-clock-list";
 import { enter, holdEntrance } from "./enter";
-import imageryUrl from "../assets/earth-blue-marble.webp?url";
-import boundariesUrl from "../assets/timezone-boundaries-globe.json?url";
+import { EARTH_IMAGERY_URL, ZONE_BOUNDARIES_URL } from "./globe-assets";
 import { chooseZone } from "./zone-action";
 import { createSlicer, yieldToMain } from "./yield-to-main";
 import { placeTooltip } from "./globe-card";
@@ -88,6 +87,8 @@ export interface GlobeHost {
   getZones: () => GlobeZone[];
   /** The currently selected zone id, or null. */
   getSelected: () => string | null;
+  /** The reader's own zone (the system's), or null when the globe cannot place it. */
+  homeZone: string | null;
   /** Called on every selection change (null when cleared). */
   onSelect: (callback: (reading: ZoneReading | null) => void) => void;
   /**
@@ -147,16 +148,6 @@ const SELECTION_RING_WIDTH = 1.5;
 
 /** Outline width of the selected zone's boundary, in CSS pixels. */
 const REGION_STROKE_WIDTH = 1.5;
-
-/** The boundary dataset, fetched after the globe is already interactive. */
-const BOUNDARIES_URL = boundariesUrl;
-
-/**
- * NASA's Blue Marble, prepared by `scripts/prepare-globe-imagery.py`. Only the
- * WebGPU renderer fetches it, and only while `--gmt-globe-imagery-alpha` is
- * above 0.
- */
-const IMAGERY_URL = imageryUrl;
 
 /** The two elements the template draws inside the stage, which the engine does not own. */
 export interface GlobeParts {
@@ -287,7 +278,7 @@ export async function initGlobe(
       initialRotation: defaultRotation,
       zoomRange: [MIN_ZOOM, MAX_ZOOM],
       reducedMotion,
-      imageryUrl: IMAGERY_URL,
+      imageryUrl: EARTH_IMAGERY_URL,
       ...parts.engine,
     })) as GlobeEngineWithHitTest;
   } catch (error) {
@@ -546,7 +537,10 @@ export async function initGlobe(
 
   async function loadBoundaries(): Promise<void> {
     try {
-      const response = await fetch(BOUNDARIES_URL);
+      /* The outlines come second: a dawn's globe has its imagery first, so the two never share the
+         connection, and the outlines are asked for as the lower priority they are. */
+      if (parts.engine?.entrance === "dawn") await engine.dawnReady;
+      const response = await fetch(ZONE_BOUNDARIES_URL, { priority: "low" });
       if (!response.ok) return;
       const data = (await response.json()) as {
         features: {
@@ -581,6 +575,9 @@ export async function initGlobe(
       boundaries = prepared;
       rawBoundaries = raw;
       engine.setRegions(buildRegions());
+      /* A click on a zone's land selects it from now on; the browser gates wait for this, as the
+         outlines come after the dawn and their time differs from run to run. */
+      host.dataset["regions"] = "ready";
     } catch {
       // The globe is fully usable without the boundary outlines.
     }
@@ -868,6 +865,7 @@ export async function initGlobe(
     getZoom: () => engine.getZoom(),
     getZones: () => zones.slice(),
     getSelected: () => selectedId,
+    homeZone: defaultZone,
     onSelect(callback) {
       selectCallback = callback;
     },

@@ -147,7 +147,13 @@ export function startHeroSky(root: HTMLElement): void {
   const host = root.parentElement;
   /* The landing's sky lives as long as the page, so its signal is never aborted. */
   const inputs = host && skyInputsOf(root, host, new AbortController().signal);
-  if (inputs) skies.set(root, loadSky(inputs));
+  if (!inputs) return;
+  /* The bodies' maps wait for the Earth to have its imagery: a globe that never mounts offers null. */
+  const hero = heroOf(root);
+  const after = hero
+    ? globeSlot(hero).promise.then((globe) => globe?.dawnReady)
+    : undefined;
+  skies.set(root, loadSky(after ? { ...inputs, after } : inputs));
 }
 
 /** The globe could not mount: draw the sky once at the start rotation, at the anchor. */

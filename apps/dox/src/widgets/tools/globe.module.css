@@ -180,6 +180,11 @@
       background: var(--gmt-cyan-ink);
       outline-color: transparent;
     }
+
+    /* The grid above would beat the UA's `[hidden]` (Locate, with no zone to go to). */
+    &[hidden] {
+      display: none;
+    }
   }
 }
 
