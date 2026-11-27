@@ -13,12 +13,14 @@ const LIST = readFileSync(resolve(process.cwd(), "src/assets/hero-sky.bin"));
 /** A canvas context that writes down every call and assignment; the calls are what a draw is. */
 function recorder(canvas: HTMLCanvasElement): string[] {
   const calls: string[] = [];
+  const round = (v: number): string => String(Math.round(v * 1e4) / 1e4);
+  /* Numbers inside a string are rounded too: a halo's alpha arrives as `rgba(…, 0.0256615645…)`, and its last digits differ between CPUs (arm64 and x64 runners disagree there). */
   const show = (v: unknown): string =>
     typeof v === "number"
-      ? String(Math.round(v * 1e4) / 1e4)
+      ? round(v)
       : typeof v === "object"
         ? "obj"
-        : String(v);
+        : String(v).replace(/-?\d+\.\d+(?:e-?\d+)?/g, (n) => round(Number(n)));
   const ctx = new Proxy({} as Record<string, unknown>, {
     get:
       (_target, name: string) =>
@@ -58,7 +60,7 @@ const SKIES: [
     703_036_800_000,
     (t) => [siderealDeg(t) + 180 - moonRaDec(t).ra, moonRaDec(t).dec],
     62,
-    "3ac96b91ed3dae106cc89c2af3312ee970affd0f106b902464c083bc9d58a51d",
+    "b988b47f56b842ab2b4f0425de576d824beb7fb7d1e070cc3ee4117d26b67899",
   ],
   [
     "an annular eclipse",
@@ -68,14 +70,14 @@ const SKIES: [
       sunRaDec(t).dec - 2.5,
     ],
     67,
-    "fee599e8d8410123d8503c32aecbca629c354bb5dfcb708d6f01a0f5565e32f9",
+    "d74c26aa25a3426922c2c61cbd01f956758f30431524b4306fb011535c186a0c",
   ],
   [
     "a new Moon off to one side",
     947_182_440_000,
     (t) => [siderealDeg(t) + 180 - moonRaDec(t).ra + 3, moonRaDec(t).dec],
     62,
-    "8746c5a6721c9abbb49e64a0607c786b0181ab45448aca188adbe23788fb5896",
+    "639b979d387163319d03562149fd36339c060d92275e90e7cfb0192ed472322b",
   ],
 ];
 
