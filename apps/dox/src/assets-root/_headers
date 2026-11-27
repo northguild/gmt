@@ -12,3 +12,8 @@
 # `llms.txt`, `llms-full.txt` and the per-namespace `llms.txt` files repeat the pages; they are for agents, not for a results page.
 /gmt/*.txt
   X-Robots-Tag: noindex
+
+# The old `workers.dev` host serves the same pages, because assets answer `/gmt/*` on every host.
+# Only `northguild.dev` is for a results page, so this keeps the old host out of search results.
+https://gmt-dox.northguild.workers.dev/gmt/*
+  X-Robots-Tag: noindex

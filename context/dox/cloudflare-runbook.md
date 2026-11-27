@@ -35,6 +35,10 @@ the Domains list does not show it.
 | Crawler Hints | Caching → Configuration | On | sends IndexNow pings when cached content changes. Nothing in the repo depends on it; switch it off if Bing Webmaster Tools → IndexNow never lists received URLs |
 | Web Analytics | Analytics & Logs → Web Analytics | site `northguild.dev`, **JS snippet** setup, automatic injection **off** | the tag is already in `Head.astro`; injection would load the beacon twice |
 
+`robots.txt` has two groups: `*` (with Applebot) and a `Googlebot`/`Bingbot` group that also skips
+the `.md` twins and page URLs with a query. The policy is in
+[`apps/dox/scripts/robots-policy.mjs`](../../apps/dox/scripts/robots-policy.mjs).
+
 Checks:
 
 ```sh
@@ -83,6 +87,8 @@ redirect matrix; a red run means a row failed, and its table names it. Then by h
 h $ND/; h $ND/api/x; h $ND/mcp/x   # 200 404 404 (landing)
 h $ND/gmt; h "$ND/gmt?a=1"         # 3xx to /gmt/ and /gmt/?a=1
 h $ND/gmt/; h $ND/gmt/reference/   # 200 200
+h $ND/gmt/reference   # 308 /gmt/reference/
+curl -sI $WD/gmt/ | grep -i x-robots   # noindex
 h $WD/; h "$WD/tools/dst-inspector/?zone=Europe/Paris"   # 301 $ND/gmt/…, query kept
 h -L "$WD/reference/duty/?a=1"     # ends 200 at /gmt/reference/workforce/?a=1
 # as a browser follows a link — curl alone can pass while browsers get a 404
@@ -115,6 +121,73 @@ rollback does not remove the Route, and an older build may lack the `/gmt/` file
    switches stay as §1 sets them. Check: counts for GPTBot, OAI-SearchBot, ChatGPT-User,
    ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Google-Extended and Bingbot, and no
    blocked requests.
+4. **Reindexing steps** after a change to redirects, the `workers.dev` host rule or `robots.txt`
+   reaches production:
+   1. **robots.txt report** (Settings → robots.txt). Check that it shows the fetch with the
+      `Googlebot` group. If the fetch is older, choose "Request a recrawl". Google caches
+      robots.txt for up to 24 hours.
+   2. **Sitemaps.** Resubmit `https://northguild.dev/gmt/sitemap-index.xml`. In Bing Webmaster
+      Tools, resubmit the same sitemap.
+   3. **Validate Fix**, per reason, in the Page indexing report: "Duplicate, Google chose
+      different canonical than user", "Crawled – currently not indexed", "Discovered – currently
+      not indexed" and "Alternate page with proper canonical tag". Do **not** validate "Page with
+      redirect" or "Excluded by 'noindex' tag": those URLs stay excluded as intended, and
+      validation would only report them as failing.
+   4. **URL Inspection → Request indexing** for the pages in the list below, nine requests inside
+      the daily quota. The pages under "Crawled – currently not indexed" are substantial, 200,
+      self-canonical and in the sitemap, so the report needs no change on the site; Google says
+      the state needs no action and can change on a later crawl.
+
+**Pages to inspect again** (URL Inspection → "Google-selected canonical"). Paths are under
+`https://northguild.dev/gmt/`.
+
+*Duplicate, Google chose different canonical* (each page has a self canonical, a sitemap entry and
+a 200):
+
+| Page | Google-selected canonical | Referring pages | Last crawl | Cause |
+| --- | --- | --- | --- | --- |
+| `reference/duration/calculate/totalDuration/` | N/A | `gmt-dox.northguild.workers.dev/reference/duration/calculate/totalDuration/`; `/gmt/tools/interval-visualizer/` | 2026-11-17 | the `workers.dev` copy; its `noindex` rule and one hop fix it |
+| `reference/calendar/hours/operatingIntervals/` | N/A | `/gmt/reference/zoned/calculate/endOfQuarterForZoned` (no slash, 307); `/gmt/tools/interval-visualizer/` | 2026-11-16 | the slashless 307; the 308 fixes it |
+| `reference/types/RoundingOptions/` | `https://gmt-dox.northguild.workers.dev/reference/types/RoundingOptions/` | the old host without the slash; `/gmt/tools/interval-visualizer/` | 2026-11-03 | the old host; one 301 and `noindex` fix it |
+
+The Sitemaps line for `RoundingOptions` reads "Temporary processing error"; step 2 covers it.
+
+*Crawled – currently not indexed*, the six HTML pages:
+
+| Page | Words | Verdict |
+| --- | --- | --- |
+| `guides/recurrence-and-cron/` | 2,903 | substantial, linked from every sidebar |
+| `guides/splitting-and-counting/` | 2,324 | same |
+| `guides/workforce-hours-of-work/` | 7,525 | same |
+| `guides/mistakes/transport/` | 3,031 | same |
+| `guides/durations/` | 2,344 | same |
+| `reference/plain/parse/parseMonthFromDateTime/` | 127 | thin, the same shape as about 1,000 indexed generated reference pages |
+
+What "Google-selected canonical" means for those pages:
+
+| Google-selected canonical | Meaning | Action |
+| --- | --- | --- |
+| the same URL without the slash | the 307 source | Validate Fix after the 308 is live |
+| the `.md` twin | the twin outranked the page | none; the `robots.txt` group skips the twins |
+| a `?w=` or `?tz=` URL | a permalink outranked the page | none; the `robots.txt` group skips them |
+| a `gmt-dox.northguild.workers.dev` URL, or N/A with that host as referring page | the duplicate host | none; inspect again after the host's `noindex` is live |
+| the page itself | resolved | none |
+
+**Timeline and shape:**
+
+| When | Expect |
+| --- | --- |
+| 1 day | the robots.txt report shows the new file |
+| 1–2 weeks | about 242 `.md` twins and 134 query URLs move to "Blocked by robots.txt" (expected, no action); validation of the four reasons reports progress |
+| 2–4 weeks | the slashless 307 URLs consolidate to their slash pages; "Page with redirect" stops growing (it does not empty: the 301s and `http://` URLs stay) |
+| 4–8 weeks | "Discovered – currently not indexed" falls as the freed crawl reaches the 331 pages |
+
+Check the report at 2, 4 and 8 weeks.
+
+**Watch for "Indexed, though blocked by robots.txt".** If a `?w=` or `?tz=` URL or a `.md` twin
+appears there, Google is indexing it from links alone. Report it with the URLs. The answer is a
+decision about the policy in `robots-policy.mjs`, not a `robots.txt` edit, because unblocking
+would undo the block.
 
 ## 5. GitHub
 

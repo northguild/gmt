@@ -7,6 +7,7 @@ import {
   SITE_URL,
   isUnderBase,
   stripBase,
+  withPageSlash,
 } from "../src/lib/site";
 import { brainsPayload } from "./brains-payload";
 import { getUnixNow } from "@northguild/gmt/unix/get";
@@ -248,6 +249,27 @@ function redirect(location: string): Response {
   return new Response(null, { status: 301, headers: { location } });
 }
 
+/**
+ * The assets binding answers a page path without its slash with a 307, and the code cannot be set.
+ * A 307 is temporary, so a search engine may keep the slashless URL as the page's canonical. This
+ * turns that one hop into a 308, which is permanent (RFC 9110 §15.4.9). Any other response, and a
+ * 307 that goes anywhere but the same path plus `/` with the same query, is returned as it is.
+ */
+function permanentSlash(res: Response, url: URL): Response {
+  if (res.status !== 307) return res;
+  const location = res.headers.get("location");
+  if (location === null) return res;
+  const target = new URL(location, url);
+  if (
+    target.origin !== url.origin ||
+    target.pathname !== `${url.pathname}/` ||
+    target.search !== url.search
+  ) {
+    return res;
+  }
+  return new Response(res.body, { status: 308, headers: res.headers });
+}
+
 /*
  * Branches are by path, never by hostname, so `wrangler dev` runs the code
  * production runs.
@@ -256,7 +278,8 @@ function redirect(location: string): Response {
  *     The two API routes are served in place — a 301 turns a `fetch` POST into
  *     a GET, and the hop to another origin has no CORS, so a tab opened before
  *     the move would lose its chat. Everything else is a 301 into the base.
- *     A `key` is dropped from the query, never carried to a page URL.
+ *     A `key` is dropped from the query, never carried to a page URL. The 301 adds the page
+ *     slash, so an old link lands in one hop.
  *  2. The dev key, anywhere under the base (`/gmt` included).
  *  3. Exactly `/gmt`: a 301 to `/gmt/`.
  *  4. Under the base: the API, then the assets binding.
@@ -279,7 +302,7 @@ export default {
         .split("&")
         .filter((pair) => pair !== "" && !/^key(?:=|$)/.test(pair));
       const search = kept.length > 0 ? `?${kept.join("&")}` : "";
-      return redirect(`${SITE_URL}${url.pathname}${search}`);
+      return redirect(withPageSlash(`${SITE_URL}${url.pathname}${search}`));
     }
 
     // Ahead of the `/gmt` branch: `/gmt?key=` would otherwise be a 301 to the
@@ -298,7 +321,7 @@ export default {
     // Only a page path without its slash, or a missing extension-less path,
     // gets here. Assets mirror the full path (`dist/gmt/…`), `html_handling`
     // adds the slash and `404-page` finds `dist/gmt/404.html`. The request
-    // is passed on unmodified.
-    return env.ASSETS.fetch(request);
+    // is passed on unmodified; the slash hop is made permanent here.
+    return permanentSlash(await env.ASSETS.fetch(request), url);
   },
 };

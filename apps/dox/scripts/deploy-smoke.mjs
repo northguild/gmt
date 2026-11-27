@@ -6,8 +6,10 @@
  *
  *     node apps/dox/scripts/deploy-smoke.mjs
  *
- * Node 22+, no dependencies. Rows 26-29 (the landing page, the zone and the landing's
- * robots.txt) belong to the landing repo's deploy and are checked by hand after a deploy.
+ * Node 22+, one devDependency (`robots-parser`, through `robots-policy.mjs`). Rows 26-28 (the
+ * landing page and the zone) belong to the landing repo's deploy and are checked by hand after a
+ * deploy. The landing's robots.txt is checked here ("robots policy") against the table in
+ * `robots-policy.mjs`.
  *
  * Requests go through `node:https`, not `fetch`: undici adds its own `sec-fetch-mode`
  * header, and the (N) rows must send exactly the headers a browser following a link sends.
@@ -18,11 +20,14 @@
  *
  * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers` and the 404
  * page) against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
- * live hosts and are skipped.
+ * live hosts and are skipped, the slash rows (6a, 6b) among them, which check the 308 the Worker
+ * makes from the assets binding's 307. The workers.dev
+ * `noindex` rows (6c) match a host name, which `localhost` is not.
  */
 import { readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { checkRobots } from "./robots-policy.mjs";
 
 const LOCAL = process.env.DOX_SMOKE_LOCAL?.replace(/\/$/, "");
 const ND = LOCAL ?? "https://northguild.dev";
@@ -121,6 +126,40 @@ const hop = (rows, label, from, to, { headers, final = 200 } = {}) =>
     headers,
     steps: [{ status: 301, location: to }, { status: final }],
   });
+
+/**
+ * A row for a page path without its slash: one permanent hop (308) to the slash URL with the query
+ * kept, then the page. The one place the expected status of that hop is written.
+ */
+const slashHop = (rows, label, url) => {
+  const at = url.search(/[?#]/);
+  const path = at === -1 ? url : url.slice(0, at);
+  rows.push({
+    label,
+    url,
+    steps: [
+      {
+        status: 308,
+        location: `${path}/${at === -1 ? "" : url.slice(at)}`,
+      },
+      { status: 200 },
+    ],
+  });
+};
+
+/**
+ * The first page URL in the live sitemap that matches `re`: the first `<loc>` of the index, then the
+ * first match in that child sitemap. `undefined` when there is none, so a row can fail by name.
+ */
+async function firstSitemapUrl(re) {
+  const index = await send("GET", `${ND}/gmt/sitemap-index.xml`);
+  const child = /<loc>([^<]+)<\/loc>/.exec(index.body)?.[1];
+  if (child === undefined) return undefined;
+  const sitemap = await send("GET", child);
+  return [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((m) => m[1])
+    .find((loc) => re.test(loc));
+}
 
 /** The meta tag that asks a crawler not to index a page. */
 const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
@@ -296,15 +335,57 @@ async function buildRows() {
   }
 
   hop(rows, "3", `${WD}/reference/`, `${ND}/gmt/reference/`);
-  add({
-    label: "6",
-    url: `${WD}/reference`,
-    steps: [
-      { status: 301, location: `${ND}/gmt/reference` },
-      { status: 307, location: `${ND}/gmt/reference/` },
-      { status: 200 },
-    ],
-  });
+  // The old host adds the page slash in its one 301, so an old link never chains.
+  hop(rows, "6", `${WD}/reference`, `${ND}/gmt/reference/`);
+  slashHop(rows, "6a", `${ND}/gmt/reference`);
+  // A function page from the live sitemap, never a name typed here: pages get renamed.
+  const fnPage = await firstSitemapUrl(
+    /\/gmt\/reference\/[^/]+\/[^/]+\/[^/]+\/$/,
+  );
+  if (fnPage === undefined) {
+    add({
+      label: "6b",
+      url: `${ND}/gmt/sitemap-index.xml`,
+      steps: [{ status: 200, check: () => "no function page in the sitemap" }],
+    });
+  } else {
+    const slashless = fnPage.slice(0, -1);
+    slashHop(rows, "6b", `${slashless}?a=1`);
+    hop(
+      rows,
+      "6d",
+      `${WD}${slashless.slice(`${ND}/gmt`.length)}?a=1`,
+      `${fnPage}?a=1`,
+    );
+    // The old host serves the same pages under `/gmt/`; only `northguild.dev` may be indexed.
+    // `wrangler dev` serves on `localhost`, where the host rule cannot match, so these are live only.
+    add({
+      label: "6c workers.dev noindex",
+      url: `${WD}${fnPage.slice(ND.length)}`,
+      steps: [
+        {
+          status: 200,
+          check: ({ headers }) =>
+            String(headers["x-robots-tag"] ?? "").includes("noindex")
+              ? undefined
+              : `x-robots-tag is ${headers["x-robots-tag"]}, not noindex`,
+        },
+      ],
+    });
+    add({
+      label: "6c canonical host",
+      url: fnPage,
+      steps: [
+        {
+          status: 200,
+          check: ({ headers }) =>
+            headers["x-robots-tag"] === undefined
+              ? undefined
+              : `x-robots-tag is ${headers["x-robots-tag"]}`,
+        },
+      ],
+    });
+  }
   hop(rows, "7 install.md", `${WD}/install.md`, `${ND}/gmt/install.md`);
   hop(rows, "7 llms.txt", `${WD}/llms.txt`, `${ND}/gmt/llms.txt`);
   hop(
@@ -344,6 +425,22 @@ async function buildRows() {
     steps: [{ status: 301, location: `${ND}/robots.txt` }],
   });
   add({
+    label: "robots policy",
+    url: `${ND}/robots.txt`,
+    steps: [
+      {
+        status: 200,
+        type: "text/plain",
+        check: ({ body }) => {
+          const failures = checkRobots(body);
+          return failures.length === 0
+            ? undefined
+            : failures.map((f) => `${f.value}: ${f.where}`).join("; ");
+        },
+      },
+    ],
+  });
+  add({
     label: "13",
     url: `${WD}/reference/duty.md`,
     steps: [
@@ -352,13 +449,13 @@ async function buildRows() {
       { status: 200 },
     ],
   });
-  // A moved page without its slash: no dot and no slash, so the Worker runs and hands it to the
-  // assets binding, and only `_redirects` stands between it and the 404 page.
+  // A moved page without its slash: the old host's 301 adds the slash, and only `_redirects`
+  // stands between that URL and the 404 page.
   add({
     label: "13 no slash",
     url: `${WD}/reference/duty`,
     steps: [
-      { status: 301, location: `${ND}/gmt/reference/duty` },
+      { status: 301, location: `${ND}/gmt/reference/duty/` },
       { status: 301, location: `${ND}/gmt/reference/workforce/` },
       { status: 200 },
     ],
@@ -411,7 +508,7 @@ async function buildRows() {
       url: `${ND}/gmt/nope`,
       headers,
       steps: [
-        { status: 307, location: `${ND}/gmt/nope/`, optional: true },
+        { status: 308, location: `${ND}/gmt/nope/`, optional: true },
         { status: 404, type: "text/html" },
       ],
     });
@@ -843,7 +940,7 @@ async function buildRows() {
   add({
     label: "25",
     url: `${ND}/gmtx`,
-    steps: [{ status: 301, location: `${ND}/gmt/gmtx` }, { status: 404 }],
+    steps: [{ status: 301, location: `${ND}/gmt/gmtx/` }, { status: 404 }],
   });
   add({
     label: "30",
