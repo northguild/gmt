@@ -21,7 +21,7 @@
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { distPages, parseSweep, sweep } from "./lib/a11y-sweep.mjs";
+import { distPages, parseSweep, settle, sweep } from "./lib/a11y-sweep.mjs";
 import { isPageLinkWithoutSlash, resolveHref } from "./lib/page-links.mjs";
 import { listWidgetPages } from "./lib/widget-pages.mjs";
 
@@ -56,6 +56,7 @@ await sweep({
   run,
   check: async ({ page }) => {
     await page.waitForSelector("[data-widget]", { state: "attached" });
+    await settle(page);
     const pageUrl = page.url();
     return (await readLinks(page))
       .filter(({ href }) => isPageLinkWithoutSlash(resolveHref(href, pageUrl)))

@@ -77,7 +77,8 @@ change.
 | [tier-2-platform.md](tier-2-platform.md) | Component kit, global sheets, widget tests, test isolation, element identity, playground, Escape |
 | [tier-2-tools.md](tier-2-tools.md) | Rules for every tool, registering a tool, industry tags, permalinks, traps |
 | [tier-2-webmcp.md](tier-2-webmcp.md) | Page tools (WebMCP): marker and offer, shared facts, schemas, links, the gate, the origin-trial token |
-| [tier-2-gates.md](tier-2-gates.md) | Gates, the runner, CI jobs |
+| [tier-2-gates.md](tier-2-gates.md) | Gates |
+| [tier-2-runner-and-ci.md](tier-2-runner-and-ci.md) | The gate runner, sharding, CI jobs for Dox |
 | [slides.md](slides.md) | Slide decks: the stage, `.gmt-stage-fit`, presenter previews, text floor, title-safe edges and guide, wake lock, venue runbook |
 | [tier-3-chrome.md](tier-3-chrome.md) | HUD chrome, header, landing entrance, cross-site transition |
 | [tier-3-sound.md](tier-3-sound.md) | Sound engine and cues, the settings control, native panel motion |

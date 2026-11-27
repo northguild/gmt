@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { checkRobots, ROBOTS_POLICY } from "./robots-policy.mjs";
 
 const SIGNAL = "Content-Signal: search=yes, ai-input=yes, ai-train=yes";
