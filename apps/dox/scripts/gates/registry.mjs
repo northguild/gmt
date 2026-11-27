@@ -142,6 +142,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "rendered-links",
+    script: "rendered-links.mjs",
+    tier: "pr",
+    browsers: ["chromium"],
+    fullBrowsers: ["chromium"],
+    themes: false,
+    needs: null,
+  },
+  {
     id: "frame-check",
     script: "frame-check.mjs",
     tier: "pr",
