@@ -149,7 +149,9 @@
    A stack laid in a row (globe-phone.module.css) has no room beside its last button, so it sets
    the three `--credits-*` and the popup opens above the row instead, across the screen. The area
    is the popup's containing block, so the percentage below is the room there is: a long list on
-   a phone ends there and scrolls inside. */
+   a phone ends there and scrolls inside. Since the popup fits its area, it never overflows and
+   `flip-block` would never be tried: `most-height` takes the side with the more room, so a row
+   scrolled near the screen's top opens its popup below. */
 @supports (position-area: span-block-start inline-start) {
   .panel[popover][data-placement="stack"] {
     position-area: var(--credits-area, span-block-start inline-start);
@@ -158,6 +160,7 @@
     align-self: end;
     max-block-size: calc(100% - 12px - var(--credits-gap-block, 0%));
     overflow-y: auto;
+    position-try-order: most-height;
   }
 }
 

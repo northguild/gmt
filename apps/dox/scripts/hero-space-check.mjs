@@ -6,8 +6,9 @@
  * order:
  *
  * - no frame: the stage has no border, fill, shadow or clip, and nothing in the hero is a bracket;
- * - position: the disc is centred in the globe area at 390, 768, 1280, 1440 and 1920 px, and its
- *   atmosphere clears the copy by 16 px;
+ * - position: the disc is centred in the globe area at 390, 768, 1280, 1440 and 1920 px (stacked,
+ *   with the zoom stack a row at its foot, the band 16 px under its top and 8 px above the row),
+ *   and its atmosphere clears the copy by 16 px;
  * - the drawer: shut and out of the accessibility tree on load, opened by a drag (focus staying out
  *   of it) or the magnifier (focus in the search), closed by its close or Escape, and then opened
  *   again only by the magnifier; a sheet below the disc at 390 px; the disc never moves and the
@@ -63,7 +64,7 @@ import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
 import { isLocked, LOCKED_QUERY } from "./lib/home-locked.mjs";
 import { activeProblem, listProblems } from "./lib/zone-list-rows.mjs";
-import { stackPress } from "./lib/globe-stack.mjs";
+import { openStack, stackPress } from "./lib/globe-stack.mjs";
 import { gate, resolveMisses } from "./lib/locate.mjs";
 
 const GATE = "hero-space";
@@ -391,6 +392,16 @@ async function checkPosition(browser) {
     const area = centre(stage);
     const t = "hero › disc";
     const wide = width >= 1280;
+    /* Stacked, a zoom row along the stage's foot takes the disc into the band above it: 16 px
+       under the stage's top and 8 px clear of the row (`frameBand`, src/lib/globe-frame.ts). */
+    const row = await page.locator(gate("globe-zoom")).boundingBox();
+    if (
+      !wide &&
+      row &&
+      row.width > row.height &&
+      row.y + row.height >= stage.y + stage.height - 1
+    )
+      area.y = (stage.y + 16 + row.y - 8) / 2;
     const copy = await copyRect(page);
     const radius = (hit.width / 2) * 1.06;
     check(
@@ -775,7 +786,7 @@ async function checkClose(browser) {
       WIDE,
     );
 
-    await page.getByRole("button", { name: "Find a zone" }).click();
+    await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
     await page.waitForTimeout(1200);
     const close = await page.locator(CLOSE).boundingBox();
     const region = await page.locator(REGION).boundingBox();
@@ -828,7 +839,7 @@ async function checkClose(browser) {
   }
   {
     const { page, context } = await open(browser, NARROW, { reduce: true });
-    await page.getByRole("button", { name: "Find a zone" }).click();
+    await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
     await page.waitForTimeout(1200);
     const close = await page.locator(CLOSE).boundingBox();
     const region = await page.locator(REGION).boundingBox();
@@ -853,7 +864,7 @@ async function checkSearch(browser, wanted) {
   for (const size of wanted && !wanted.includes(ROUTE) ? [] : [WIDE, NARROW]) {
     const t = "hero › zone search";
     const { page, context } = await open(browser, size, { reduce: true });
-    await page.getByRole("button", { name: "Find a zone" }).click();
+    await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
     await page.waitForTimeout(1000);
     const search = page.getByRole("combobox", { name: "Find a zone" });
     check(
@@ -1306,7 +1317,7 @@ async function checkInteraction(browser) {
 
   // A click selects a zone: the search value and the clocks selection follow.
   if (!(await regionOpen(page))) {
-    await page.getByRole("button", { name: "Find a zone" }).click();
+    await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
     await page.waitForTimeout(800);
   }
   const search = page.getByRole("combobox", { name: "Find a zone" });
@@ -1512,7 +1523,7 @@ async function checkZoneList(browser, { label, size, route, drawer }) {
     .waitFor({ state: "attached", timeout: 15_000 });
   await page.waitForTimeout(SETTLE);
   if (drawer) {
-    await page.getByRole("button", { name: "Find a zone" }).click();
+    await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
     await page.waitForTimeout(1200);
   }
   const panel = page.getByRole("listbox", { name: /Pinned zones/ });
@@ -1821,7 +1832,7 @@ async function checkMobileMenu(browser) {
 async function checkNarrowCard(browser) {
   const t = "hero › card beside the sheet";
   const { page, context } = await open(browser, NARROW, { reduce: true });
-  await page.getByRole("button", { name: "Find a zone" }).click();
+  await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
   await page.waitForTimeout(600);
   const result = await page.evaluate(
     ({ tip, region }) => {
@@ -1933,10 +1944,12 @@ async function checkAccessMode(browser, { label, context, media }) {
     `${media} did not take effect, so nothing here was measured`,
     WIDE,
   );
+  /* The stack folds to its info button at rest; a reader opens it before using it. */
+  await openStack(page);
   for (const problem of await controlProblems(page, false)) {
     fail("access-controls", t, problem, WIDE);
   }
-  await page.getByRole("button", { name: "Find a zone" }).click();
+  await stackPress(page, page.getByRole("button", { name: "Find a zone" }));
   await page.waitForTimeout(600);
   for (const problem of await controlProblems(page, true)) {
     fail("access-controls", t, problem, WIDE);
@@ -2437,7 +2450,7 @@ const SKY_PINS = {
     eyebrow: 1_820_607_600_000,
     title: 1_806_266_100_000,
     tagline: 1_805_748_600_000,
-    button: 1_805_229_300_000,
+    button: 1_805_228_580_000,
   },
 };
 
@@ -4542,6 +4555,7 @@ const LOOK_AT_ORDER = [
   "jupiter",
   "saturn",
   "uranus",
+  "neptune",
   "pluto",
   "vesta",
   "apophis",
@@ -5262,12 +5276,10 @@ const REASON_PIN = {
 };
 /** The second line of a placed, too-faint row (`Too faint · 5.6`): the magnitude comes from the sky. */
 const PLACED_LINE = /^Too faint · -?\d+\.\d$/;
-/** A placed body whose next spell is a pass says so after its magnitude: Apophis is two years from its pass. */
-const APOPHIS_LINE = /^Too faint · -?\d+\.\d · Close pass 13 Apr 2029$/;
 /** Where the data says Uranus is bright enough again, in this zone and locale. */
 const URANUS_AHEAD = "3 Dec 2033";
 
-/** Each named row's state and second line, once the lines are written (neither empty nor still loading) and Apophis's has its date from the data. */
+/** Each named row's state and second line, once the lines are written (neither empty nor still loading). */
 async function lookLines(page, ids) {
   await page.waitForFunction(
     ([bar, wanted]) =>
@@ -5314,11 +5326,8 @@ async function checkLookReasons(browser) {
     await openLook(page);
     const rows = await lookLines(page, ["uranus", "pluto", "vesta", "apophis"]);
     for (const row of rows) {
-      const wanted =
-        row.id === "apophis"
-          ? APOPHIS_LINE.test(row.line)
-          : PLACED_LINE.test(row.line);
-      if (!wanted) wrong.push(`${row.id} reads "${row.line}"`);
+      if (!PLACED_LINE.test(row.line))
+        wrong.push(`${row.id} reads "${row.line}"`);
       if (!row.on) wrong.push(`${row.id} is unavailable`);
       if (!row.shown) wrong.push(`${row.id}'s line is not visible`);
       if (!row.named) wrong.push(`${row.id}'s line is not in its name`);

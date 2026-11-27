@@ -66,6 +66,8 @@ export async function sheet(ctx, page) {
     "a tap on the Earth opened the zone sheet",
     "sheet",
   );
+  // The row folds to its info button at rest, so a tap opens it before "Find a zone" is pressed.
+  await openStack(page);
   const find = page.getByRole("button", { name: "Find a zone" });
   const fold = await find.evaluate(
     (b) => b.getBoundingClientRect().bottom - innerHeight,

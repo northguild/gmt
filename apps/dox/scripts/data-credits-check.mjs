@@ -27,7 +27,7 @@
  *     (read from the AX tree over CDP, or `ariaSnapshot()`; a native popover button has no
  *     `aria-expanded` attribute), Escape closes it and focus is back on the button;
  *   - the open panel sits inside the viewport and covers none of the control buttons: beside a
- *     column stack, above a row one.
+ *     column stack; above or below a row one, on whichever side has the more room.
  *
  * On `/` it also reads the info popover's "Coming up in the sky" list at two pinned instants
  * (`events-ahead`, `events-now`).
@@ -558,14 +558,19 @@ for (const name of browsers) {
           );
         if (g.order.join("|") !== target.order.join("|"))
           fail(`${label}: the stack's order is ${g.order.join(", ")}`);
-        // Beside a column stack; above a row, which leaves no room beside its last button.
+        // Beside a column stack. A row leaves no room beside its last button, so the panel goes
+        // above it, or below it when the page is scrolled and there is more room there.
+        const below = g.row && g.h - g.button.bottom > g.button.top;
+        const side = g.row ? (below ? "below" : "above") : "beside";
         if (
           g.row
-            ? g.panel.bottom > g.button.top + 0.5
+            ? below
+              ? g.panel.top < g.button.bottom - 0.5
+              : g.panel.bottom > g.button.top + 0.5
             : g.panel.right > g.button.left + 0.5
         )
           fail(
-            `${label}: the open panel is not ${g.row ? "above" : "beside"} the stack ${JSON.stringify(g.panel)}`,
+            `${label}: the open panel is not ${side} the stack ${JSON.stringify(g.panel)}`,
           );
       } else if (
         g.panel.bottom > g.button.top + 1 &&

@@ -6,22 +6,31 @@
  * (`scripts/prepare-sky-orbits.ts`) read them, so the eager sky never carries them.
  *
  * Each law gives the magnitude at 1 au from the Sun and from the observer, for the phase angle
- * `alpha` and what else it reads (`Seen`); the apparent magnitude adds `5 log10(r delta)`. Against JPL Horizons' APmag (QUANTITIES 9) over 2026 to 2029 and both
- * ends of the span the laws agree within 0.04 mag, except Mars (up to 0.1 at a phase angle of 13
- * to 19 degrees, where the paper's own scatter is 0.1: Mars's albedo markings are not in the law;
- * `planet-horizons.test.ts`). Near the faint limit the curve is flat, so 0.01 mag moves a dated
- * event by days.
+ * `alpha` and what else it reads (`Seen`); the apparent magnitude adds `5 log10(r delta)`. Against
+ * JPL Horizons' APmag (QUANTITIES 9) at every pin, 2026 to 2029 and both ends of the span, the
+ * laws agree within 0.002 mag (`planet-horizons.test.ts`). Near the faint limit the curve is flat,
+ * so 0.01 mag moves a dated event by days.
  *
  * An asteroid has no law of its own: `hgMagnitude` is the IAU H, G system (IAU Commission 20,
  * 1985; Bowell et al. 1989, Asteroids II), from the H and G of its Minor Planet Center row.
  * Pluto has no IAU law, and the H, G system measurably misfits it (0.42 to 0.57 mag too faint
  * against Horizons' APmag), so it takes `DWARF_ABSOLUTE`.
  */
-import { SATURN_ROTATION, URANUS_ROTATION } from "./body-rotation";
-import { bodyPole } from "./body-frame";
-import type { Orbits, PlanetView } from "./ephemeris";
-import { RAD } from "./globe/pinhole";
+import {
+  MARS_ROTATION,
+  SATURN_ROTATION,
+  URANUS_ROTATION,
+} from "./body-rotation";
+import { bodyFrame, bodyPole, surfaceAt } from "./body-frame";
+import {
+  LIGHT_DAYS_PER_AU,
+  toEcliptic,
+  type Orbits,
+  type PlanetView,
+} from "./ephemeris";
+import { RAD, type Vec3 } from "./globe/pinhole";
 import { DAY_MS, J2000_JD, UNIX_EPOCH_JD } from "./globe/sun";
+import { precessFromDate, wrap360, type Unit } from "./sky-math";
 import type { PointId, SkyBodyId } from "./sky-registry";
 
 /** A polynomial in `x`, constant term first. */
@@ -146,16 +155,89 @@ const POLES = { saturn: SATURN_ROTATION, uranus: URANUS_ROTATION };
 const latitude = (pole: readonly number[], out: readonly number[]): number =>
   Math.asin(pole[0]! * out[0]! + pole[1]! * out[1]! + pole[2]! * out[2]!) / RAD;
 
+/*
+ * Mars's albedo markings, magnitudes against the angle at 0, 10, ... 350 degrees: Mallama 2007
+ * (Icarus 192, 404-416), Table 6 by the effective central meridian (west longitude) and Table 8
+ * by the season, the areocentric longitude of the Sun.
+ */
+const MARS_TURN = [
+  0.036, 0.045, 0.038, 0.023, 0.015, 0.011, 0, -0.012, -0.018, -0.036, -0.044,
+  -0.059, -0.06, -0.055, -0.043, -0.041, -0.041, -0.036, -0.036, -0.018, -0.038,
+  -0.011, 0.002, 0.004, 0.018, 0.019, 0.035, 0.05, 0.035, 0.027, 0.037, 0.048,
+  0.025, 0.022, 0.024, 0.034,
+];
+const MARS_SEASON = [
+  -0.029, -0.017, -0.014, -0.006, -0.018, -0.02, -0.014, -0.03, -0.008, -0.04,
+  -0.024, -0.037, -0.036, -0.032, 0.01, 0.01, -0.001, 0.044, 0.025, -0.004,
+  -0.016, -0.008, 0.029, -0.054, -0.033, 0.055, 0.017, 0.052, 0.006, 0.087,
+  0.006, 0.064, 0.03, 0.019, -0.03, -0.017,
+];
+/** The Sun's areocentric longitude less Mars's heliocentric J2000 ecliptic longitude, degrees. */
+const MARS_SEASON_OFFSET = -85;
+
+const differences = (v: readonly number[]): number[] =>
+  v.slice(1).map((x, i) => x - v[i]!);
+
+/**
+ * A table of `MARS_TURN`'s form read at an angle by Stirling's central-difference formula on the
+ * five entries round it (Duncombe, Explanatory Supplement to the Astronomical Almanac), as the
+ * reference code does (`Mars_Stirling`). The table wraps at 360 degrees.
+ */
+function stirling(table: readonly number[], angle: number): number {
+  const zero = Math.floor(angle / 10);
+  const f = [-2, -1, 0, 1, 2].map(
+    (k) => table[(zero + k + table.length) % table.length]!,
+  );
+  const first = differences(f);
+  const second = differences(first);
+  const third = differences(second);
+  const a4 = (third[1]! - third[0]!) / 24;
+  const a3 = (third[0]! + third[1]!) / 12;
+  return poly(
+    [f[2]!, (first[1]! + first[2]!) / 2 - a3, second[1]! / 2 - a4, a3, a4],
+    angle / 10 - zero,
+  );
+}
+
+/**
+ * What Mars's albedo markings add to its magnitude (Mallama and Hilton 2018, eq. 6 and 7, after
+ * the reference code). The longitudes are where the light that reaches the camera left Mars, as
+ * Horizons gives them: the central meridian is the mean of the sub-camera and sub-solar west
+ * longitudes, taken across the shorter arc.
+ */
+function marsMarkings(
+  { unit, delta, toSun }: PlanetView,
+  instantMs: number,
+): number {
+  const frame = bodyFrame(
+    MARS_ROTATION,
+    instantMs - delta * LIGHT_DAYS_PER_AU * DAY_MS,
+  );
+  const west = (out: Unit) => wrap360(-surfaceAt(frame, out)[0] / RAD);
+  const seen = west(unit.map((c) => -c) as Vec3);
+  const lit = west(toSun);
+  const meridian = wrap360(
+    (seen + lit) / 2 + (Math.abs(seen - lit) > 180 ? 180 : 0),
+  );
+  const [x, y] = toEcliptic(
+    precessFromDate(toSun.map((c) => -c) as Vec3, instantMs),
+  );
+  const season = wrap360(Math.atan2(y, x) / RAD + MARS_SEASON_OFFSET);
+  return stirling(MARS_TURN, meridian) + stirling(MARS_SEASON, season);
+}
+
 /**
  * A planet's apparent visual magnitude as the camera sees it at an instant: the law's value at 1
  * au plus `5 log10(r delta)`. Saturn's rings and Uranus's pole read the pole through `bodyPole`,
- * a latitude on the planet being the pole's angle to the line out to the camera or to the Sun.
+ * a latitude on the planet being the pole's angle to the line out to the camera or to the Sun;
+ * Mars adds its markings (`marsMarkings`).
  */
 export function apparentMagnitude(
   id: PlanetId,
-  { unit, delta, r, phase, toSun }: PlanetView,
+  view: PlanetView,
   instantMs: number,
 ): number {
+  const { unit, delta, r, phase, toSun } = view;
   const pole =
     id in POLES && bodyPole(POLES[id as keyof typeof POLES], instantMs);
   const seen: Seen = {
@@ -169,7 +251,11 @@ export function apparentMagnitude(
     year:
       2000 + (instantMs / DAY_MS + UNIX_EPOCH_JD - J2000_JD) / JULIAN_YEAR_DAYS,
   };
-  return 5 * Math.log10(r * delta) + LAWS[id](phase, seen);
+  return (
+    5 * Math.log10(r * delta) +
+    LAWS[id](phase, seen) +
+    (id === "mars" ? marsMarkings(view, instantMs) : 0)
+  );
 }
 
 /** Each planet's B-V colour index (Mallama, Krobusek and Pavlov 2017, Table 3). */

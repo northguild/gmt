@@ -73,9 +73,11 @@
     flex-direction: row;
     inset-block-end: 0;
 
-    /* Folded (globe.module.css), the row's controls close along the row, not upward. */
-    --stack-fold-block: 3rem;
-    --stack-fold-inline: 0;
+    /* Folded (globe.module.css), the row keeps its inline end, where the info button is, not its
+       foot. Physical, as `inset()` is: the site is set left to right. */
+    --stack-fold-clip: inset(
+      -1rem -1rem -1rem calc(100% - var(--stack-fold-keep))
+    );
 
     /* The credits popup (data-credits.module.css) opens above the row, not beside its last
        button, where a phone leaves it a strip. */
@@ -86,6 +88,10 @@
 
   /* Touch: 44px targets, the floor being WCAG 2.5.8's 24px. */
   @media (pointer: coarse) {
+    [data-space] .stack {
+      --stack-fold-keep: calc(2.75rem + 1px);
+    }
+
     [data-space] .stack button {
       inline-size: 2.75rem;
       block-size: 2.75rem;

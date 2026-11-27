@@ -8,10 +8,13 @@ import {
   type PlanetPin,
 } from "../test/planet-pins";
 import { convertUnixToUtc } from "@northguild/gmt/unix/convert";
-import { bodyFromCamera, type Orbits } from "./ephemeris";
-import { RAD } from "./globe/pinhole";
+import { bodyFrame, surfaceAt } from "./body-frame";
+import { MARS_ROTATION } from "./body-rotation";
+import { bodyFromCamera, LIGHT_DAYS_PER_AU, type Orbits } from "./ephemeris";
+import { RAD, type Vec3 } from "./globe/pinhole";
+import { DAY_MS } from "./globe/sun";
 import { apparentMagnitude, type PlanetId } from "./magnitude";
-import { cameraAt, precessToDate, toUnit } from "./sky-math";
+import { cameraAt, precessToDate, toUnit, wrap360 } from "./sky-math";
 
 const orbits = JSON.parse(orbitText) as Orbits;
 
@@ -23,12 +26,12 @@ function off(unit: readonly number[], ra: number, dec: number, t: number) {
 }
 
 /* Measured worst cases over the pins: 12.8 arcseconds (Saturn), a distance 5.1e-5 of itself
-   (Venus), a phase 0.0076 degrees (Mars) and a magnitude 0.001. Mars's magnitude leaves out
-   Mallama's rotation and season corrections, worth up to 0.095. */
+   (Venus), a phase 0.0076 degrees (Mars) and a magnitude 0.0015 (Mars in 2221). Horizons gives
+   the magnitude to 0.001. */
 const ARCSEC = 15;
 const DISTANCE = 6e-5;
 const PHASE = 0.01;
-const MAGNITUDE: Partial<Record<PlanetId, number>> = { mars: 0.1 };
+const MAGNITUDE = 0.002;
 
 const rows = Object.entries(PLANET_PINS).flatMap(([id, pins]) =>
   pins.map((pin): [string, string, PlanetPin] => [
@@ -55,6 +58,25 @@ describe("the planets against Horizons", () => {
     expect(Math.abs(geo.phase - pin.alpha)).toBeLessThan(PHASE);
     expect(
       Math.abs(apparentMagnitude(id, geo, pin.t) - pin.mag),
-    ).toBeLessThanOrEqual(MAGNITUDE[id] ?? 0.002);
+    ).toBeLessThanOrEqual(MAGNITUDE);
   });
+});
+
+/* Mars's markings read the longitude that faces the Earth, so its rotation row is held to
+   Horizons' sub-observer west longitude (ObsSub-LON), at the instant the light left Mars. Measured
+   worst case 0.0036 degrees, in 2221. */
+describe("Mars's central meridian against Horizons", () => {
+  it.each(rows.filter(([id]) => id === "mars"))(
+    "on %s %s",
+    (_id, _day, pin) => {
+      const view = bodyFromCamera(orbits, "mars", pin.t)!;
+      const frame = bodyFrame(
+        MARS_ROTATION,
+        pin.t - view.delta * LIGHT_DAYS_PER_AU * DAY_MS,
+      );
+      const east = surfaceAt(frame, view.unit.map((c) => -c) as Vec3)[0] / RAD;
+      const off = wrap360(-east - pin.lon + 180) - 180;
+      expect(Math.abs(off)).toBeLessThan(0.005);
+    },
+  );
 });

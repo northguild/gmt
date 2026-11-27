@@ -129,7 +129,7 @@ Rules and traps for generated content and the hand-written pages. Index: [index.
   as bevelled panes and the page scrolls: no pager, no inner scrollers. `gmt-home-stacked.css`
   holds the stacked grid and the first screen; the pane look lives in `gmt-home-panes.css`, which
   both layouts share. A jump to a pane clears the header (`scroll-margin-block-start`).
-- Below 50rem the header bar shows only Settings, and its title wrapper never clips; the wordmark and site name keep the 12px floor at 320. The landing's hero row shows "Get started" and "Ask Dox" only, with no Prompt button, no GitHub or Discord link and no `@northguild/gmt` eyebrow; the h1 stays the page's heading.
+- Below 50rem the header bar shows only Settings, and its title wrapper never clips; the wordmark and site name keep the 12px floor at 320. The landing's hero row shows "Start" and "Dox" only, with no Prompt button, no GitHub or Discord link and no `@northguild/gmt` eyebrow; the h1 stays the page's heading.
 - The licence note is the last row of the Earth's data-credits popover on `/`; every other footer
   is a closed `<details class="gmt-licence">`.
 - While a page moves, its backdrop blur is off (`[data-motion]`): blur behind a moving mask drops

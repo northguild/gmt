@@ -188,9 +188,11 @@
   }
 }
 
-/* Look at's bar opens beside the stack, outside the box that clips the buttons to the bevel. */
+/* Look at's bar opens beside the stack, outside the box that clips the buttons to the bevel, and
+   outside the hero's fold clip. */
 .zoom:has([data-gate="sky-look"] [aria-expanded="true"]) {
   overflow: visible;
+  clip-path: none;
 }
 
 /* The globe's tooltip is a popover, in the top layer over everything, so it would cover the open
@@ -460,7 +462,8 @@
   translate: 0 0;
   transition:
     opacity var(--gmt-duration-med) ease,
-    translate var(--gmt-duration-med) var(--gmt-ease-sweep);
+    translate var(--gmt-duration-med) var(--gmt-ease-sweep),
+    clip-path var(--gmt-duration-med) var(--gmt-ease-sweep);
 }
 
 /* In the hero the stack is the hero's own corner control: inset a step from the right and the
@@ -487,15 +490,26 @@
    focused one of its controls, a panel of it is open, or a tap on the folded info button opened
    it (`data-open`, globe-stack.ts, which also closes it on a tap outside or Escape). As it opens
    one band of ice light crosses it, the sheen every appearing panel has (gmt-primitives.css). A
-   folded control keeps its place in the tab order: focusing it opens the stack. */
+   folded control keeps its place in the tab order: focusing it opens the stack.
+   The fold never changes the layout: the stack keeps its size, its other controls fade, and a
+   `clip-path` keeps only the info button's square (`--stack-fold-keep`, its size and the
+   border), which also keeps a pointer off the faded controls. Folding by size moved every
+   control at rest and on each hover, a layout shift (CLS) no input excuses. It is folded from
+   the first paint, so nothing closes as the globe gets ready. */
 :where(.root[data-space]) .zoom {
+  --stack-fold-keep: calc(2rem + 1px);
+  --stack-fold-clip: inset(
+    calc(100% - var(--stack-fold-keep)) -1rem -1rem -1rem
+  );
+
+  clip-path: inset(-1rem);
+  transition:
+    opacity var(--gmt-duration-med) ease,
+    transform var(--gmt-duration-med) cubic-bezier(0.34, 1.56, 0.64, 1),
+    clip-path var(--gmt-duration-med) var(--gmt-ease-sweep);
+
   & > :not([popovertarget], [popover]) {
-    max-block-size: 3rem;
-    max-inline-size: 3rem;
-    transition:
-      max-block-size var(--gmt-duration-med) var(--gmt-ease-sweep),
-      max-inline-size var(--gmt-duration-med) var(--gmt-ease-sweep),
-      opacity var(--gmt-duration-med) var(--gmt-ease-sweep);
+    transition: opacity var(--gmt-duration-med) var(--gmt-ease-sweep);
   }
 
   & > [popovertarget] {
@@ -507,20 +521,18 @@
 }
 
 :where(.root[data-space])
-  .zoom[data-ready]:where(
+  .zoom:where(
     :not(
       :hover,
       [data-open],
       :has(:focus-visible, :popover-open, [aria-expanded="true"])
     )
   ) {
-  gap: 0;
   background: transparent;
   border-color: transparent;
+  clip-path: var(--stack-fold-clip);
 
   & > :not([popovertarget], [popover]) {
-    max-block-size: var(--stack-fold-block, 0);
-    max-inline-size: var(--stack-fold-inline, 3rem);
     opacity: 0;
   }
 
