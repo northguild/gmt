@@ -1874,13 +1874,16 @@ async function checkNarrowCard(browser) {
 
 /** What a reader with a system colour scheme sees of the drawer's controls. */
 /* `open`: the zone list is open, so the zoom stack is hidden and the close button shows; shut, the reverse. */
-async function controlProblems(page, open) {
+async function controlProblems(
+  page,
+  open,
+  names = open
+    ? ["Close zone list"]
+    : ["Zoom in", "Zoom out", "Reset zoom", "Find a zone"],
+) {
   return page.evaluate(
-    ({ region, zoomSel, open }) => {
+    ({ region, zoomSel, open, names }) => {
       const out = [];
-      const names = open
-        ? ["Close zone list"]
-        : ["Zoom in", "Zoom out", "Reset zoom", "Find a zone"];
       const rgbaAlpha = (c) => {
         const m =
           c.match(/\/\s*([\d.]+)\)/) ?? c.match(/rgba\([^)]*,\s*([\d.]+)\)/);
@@ -1926,7 +1929,7 @@ async function controlProblems(page, open) {
       void zoomSel;
       return out;
     },
-    { region: REGION, zoomSel: ZOOM_IN, open },
+    { region: REGION, zoomSel: ZOOM_IN, open, names },
   );
 }
 
@@ -1944,7 +1947,13 @@ async function checkAccessMode(browser, { label, context, media }) {
     `${media} did not take effect, so nothing here was measured`,
     WIDE,
   );
-  /* The stack folds to its info button at rest; a reader opens it before using it. */
+  /* At rest the stack folds to its info button, the one control that shows: it is held to the
+     same rules. A reader then opens the stack before using it. */
+  for (const problem of await controlProblems(page, false, [
+    "About this sky",
+  ])) {
+    fail("access-controls", t, `folded, ${problem}`, WIDE);
+  }
   await openStack(page);
   for (const problem of await controlProblems(page, false)) {
     fail("access-controls", t, problem, WIDE);

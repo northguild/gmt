@@ -801,6 +801,12 @@
     backdrop-filter: none;
   }
 
+  /* Folded, the stack shows only this button: forced colours reset its colours, not its opacity,
+     and WCAG 1.4.11 asks 3:1 of it. */
+  .zoom > [popovertarget] {
+    opacity: 1;
+  }
+
   .zoom {
     background: CanvasText;
     border-color: CanvasText;
@@ -851,6 +857,12 @@
 
   .zoom button {
     color: var(--gmt-ice);
+  }
+
+  /* Folded, the stack shows only this button, so it keeps full strength (WCAG 1.4.11, 3:1). */
+  .zoom > [popovertarget] {
+    color: var(--gmt-ice);
+    opacity: 1;
   }
 
   .tooltip {

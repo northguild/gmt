@@ -5,8 +5,11 @@
  *
  * Its buttons are its own: the zoom buttons, Find a zone, Go to my time zone, Look at and the
  * credits button. A button that does not show (Go to my time zone before a zone is known, Reset on
- * a narrow phone) is skipped. The Look at bar and the credits popup are not part of it: Tab goes
- * into them from their button, as before.
+ * a narrow phone) is skipped and kept out of the tab order, so one that shows later does not bring
+ * back its native Tab stop. If the stop itself stops showing, the first shown button takes it, so
+ * Tab always has one way in. Both are mended whenever a button's `hidden` changes or the window
+ * resizes (the media queries that hide Reset). The Look at bar and the credits popup are not part
+ * of it: Tab goes into them from their button, as before.
  *
  * `aria-orientation` follows the layout: the stack is a column, except the hero's on a screen
  * where the landing is not locked (`HOME_LOCKED_QUERY`), where globe-phone.module.css lays it in
@@ -23,13 +26,29 @@ export function wireGlobeToolbar(
   signal: AbortSignal,
 ): void {
   const win = stack.ownerDocument.defaultView;
-  roving(stack, {
-    items: () =>
-      [...stack.querySelectorAll<HTMLElement>(ITEMS)].filter(
-        (button) => win?.getComputedStyle(button).display !== "none",
-      ),
+  const all = (): HTMLElement[] => [
+    ...stack.querySelectorAll<HTMLElement>(ITEMS),
+  ];
+  const shows = (button: HTMLElement): boolean =>
+    win?.getComputedStyle(button).display !== "none";
+  const stop = roving(stack, {
+    items: () => all().filter(shows),
     signal,
   });
+
+  const mend = (): void => {
+    const buttons = all();
+    for (const button of buttons) if (!shows(button)) button.tabIndex = -1;
+    const first = buttons.find(shows);
+    if (stop.current() === null && first !== undefined) stop.set(first);
+  };
+  mend();
+  if (win?.MutationObserver) {
+    const watch = new win.MutationObserver(mend);
+    watch.observe(stack, { subtree: true, attributeFilter: ["hidden"] });
+    signal.addEventListener("abort", () => watch.disconnect(), { once: true });
+  }
+  win?.addEventListener("resize", mend, { signal });
 
   const locked = space ? win?.matchMedia?.(HOME_LOCKED_QUERY) : undefined;
   const orient = (): void =>

@@ -72,6 +72,31 @@ describe("wireGlobeToolbar", () => {
     expect(at("About this sky")).toHaveFocus();
   });
 
+  it("keeps a button that shows after wiring out of the tab order", async () => {
+    const { at, user } = draw();
+    /* Hidden, it has no role name, so it is found by its label. */
+    screen.getByLabelText("Go to my time zone").hidden = false;
+    await Promise.resolve();
+    at("Before").focus();
+    await user.tab();
+    expect(at("Zoom in")).toHaveFocus();
+    await user.tab();
+    expect(at("After")).toHaveFocus();
+  });
+
+  it("hands the stop to the first shown button when the stop is hidden", async () => {
+    const { at, user } = draw();
+    at("Zoom in").focus();
+    await user.keyboard("{End}");
+    at("About this sky").hidden = true;
+    await Promise.resolve();
+    at("Before").focus();
+    await user.tab();
+    expect(at("Zoom in")).toHaveFocus();
+    await user.tab();
+    expect(at("After")).toHaveFocus();
+  });
+
   it("says it is vertical when the stack is a column", () => {
     const { toolbar } = draw();
     expect(toolbar).toHaveAttribute("aria-orientation", "vertical");
