@@ -1,19 +1,29 @@
 /**
  * Names in the landing sky: a pointer over bare sky near a body of `SKY_BODIES` (the Sun, the
- * Moon, a planet) shows its name in a small glass label above it, and a planet's name says so
- * ("Mars · Planet"). A mouse names what is within 12 px of the pointer; a touch, what is within
+ * Moon, a planet, an asteroid) shows its name in a small glass label above it, and a point's name
+ * says what it is ("Mars · Planet", "Vesta · Asteroid": the row's `group`). A mouse names what is within 12 px of the pointer; a touch, what is within
  * 28 px of the tap, and the name stays until the next tap. The label follows its body as the sky
  * turns, on the globe's own frames, and goes when the body does.
  *
- * Only what the sky draws is named: a planet the layer leaves out (too faint, or not loaded yet),
- * a body wholly behind the Earth, and a planet behind the Moon are not. Bare sky is the hero and
+ * Only what the sky draws is named, with one exception: the body the Look at bar holds, when it is
+ * too faint to draw, wears a ring (`sky-planets.ts`) and is named at the ring, with why it is not
+ * drawn (`faintReason`). A planet the layer leaves out otherwise (too faint, or not loaded yet),
+ * a body wholly behind the Earth, and a planet behind the Moon are not named. Bare sky is the hero and
  * the globe's layers, outside the Earth's disc; the copy, the controls and the drawer are not.
  * The label is decorative (`aria-hidden`): the Look at bar names the same bodies to every reader.
  * With forced colours the sky is not drawn, so nothing is named.
  */
 import styles from "~/widgets/tools/sky-names.module.css";
 import { aimLens, bodyAt, type AimFrame, type CameraView } from "./sky-aim";
-import { pointSource, SKY_BODIES, type SkyBodyId } from "./sky-registry";
+import { faintReason, rowNote } from "./sky-events";
+import { eventsKit } from "./sky-events-kit";
+import {
+  heldBody,
+  pointSource,
+  SKY_BODIES,
+  type SkyBodyId,
+} from "./sky-registry";
+import { FAINT } from "./sky-stars";
 
 /** What the names ask of the globe: a `GlobeHost` serves. */
 export interface SkyNamesEngine {
@@ -54,6 +64,8 @@ interface Seen {
   x: number;
   y: number;
   r: number;
+  /** Why the sky does not draw it, for the held body that wears a ring. */
+  reason?: string;
 }
 
 export function mountSkyNames(options: SkyNamesOptions): SkyNames {
@@ -91,18 +103,30 @@ export function mountSkyNames(options: SkyNamesOptions): SkyNames {
     const [left, top] = [page.left - box.shift.x, page.top - box.shift.y];
     const earth = engine.getCentre();
     const [ex, ey] = [page.left + earth.x, page.top + earth.y];
+    const source = pointSource();
     const drawn = new Set(
-      pointSource()
-        ?.drawn(at, camera.rotation)
-        .map(({ id }) => id),
+      source?.drawn(at, camera.rotation).map(({ id }) => id),
     );
+    const held = heldBody();
+    const faint = source
+      ?.placed(at, camera.rotation)
+      .find(({ id, V }) => id === held && V > FAINT);
     const seen: Seen[] = [];
     let moon: Seen | undefined;
     for (const row of SKY_BODIES) {
-      if (row.kind === "point" && !drawn.has(row.id)) continue;
+      const ringed = faint?.id === row.id;
+      if (row.kind === "point" && !drawn.has(row.id) && !ringed) continue;
       const disc = bodyAt(row.id, at, lens, camera.zoom);
       if (!disc) continue;
-      const body = { id: row.id, x: left + disc.x, y: top + disc.y, r: disc.r };
+      const body: Seen = {
+        id: row.id,
+        x: left + disc.x,
+        y: top + disc.y,
+        r: disc.r,
+        ...(ringed && {
+          reason: faintReason(eventsKit(), row.id, faint.V, at),
+        }),
+      };
       /* Every body is farther than the Earth, and every planet farther than the Moon. */
       if (Math.hypot(body.x - ex, body.y - ey) + body.r <= earth.radius)
         continue;
@@ -125,7 +149,8 @@ export function mountSkyNames(options: SkyNamesOptions): SkyNames {
     return best;
   }
 
-  let naming: SkyBodyId | null = null;
+  /** What the label says now: the body and its reason, so a reason that arrives later is written. */
+  let naming: string | null = null;
 
   function place(body: Seen): void {
     const half = tip.offsetWidth / 2 + SIDE;
@@ -138,12 +163,20 @@ export function mountSkyNames(options: SkyNamesOptions): SkyNames {
 
   function show(body: Seen | null): void {
     if (!body) return hide();
-    if (body.id !== naming) {
-      naming = body.id;
+    const key = `${body.id} ${body.reason ?? ""}`;
+    if (key !== naming) {
+      naming = key;
       const row = SKY_BODIES.find(({ id }) => id === body.id)!;
-      const note = doc.createElement("span");
-      note.textContent = "Planet";
-      tip.replaceChildren(row.name, ...(row.kind === "point" ? [note] : []));
+      const span = (text: string) =>
+        Object.assign(doc.createElement("span"), { textContent: text });
+      tip.replaceChildren(
+        row.name,
+        ...(row.kind === "point"
+          ? [row.group, rowNote(row.id), body.reason].flatMap((text) =>
+              text ? [span(text)] : [],
+            )
+          : []),
+      );
       tip.hidden = false;
       /* A new name plays the site's entrance again. */
       tip.classList.remove("gmt-enter");
@@ -190,7 +223,7 @@ export function mountSkyNames(options: SkyNamesOptions): SkyNames {
 
   engine.onFrame(() => {
     if (naming === null || signal.aborted) return;
-    show(visible().find(({ id }) => id === naming) ?? null);
+    show(visible().find(({ id }) => naming?.startsWith(`${id} `)) ?? null);
   });
 
   return { hide };

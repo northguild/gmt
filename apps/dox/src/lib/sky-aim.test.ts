@@ -11,13 +11,13 @@ import {
 } from "./sky-aim";
 import { bodyRow, type SkyBodyId } from "./sky-registry";
 import {
-  moonRaDec,
   siderealDeg,
   skyLens,
   toUnit,
   viewMatrix,
   bodyOnScreen,
 } from "./sky-math";
+import { moonRaDec } from "./sky-moon";
 
 const INSTANTS = [
   "2027-02-06T00:00:00Z",

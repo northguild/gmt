@@ -9,8 +9,7 @@
  *   prime meridian        W = w[0] + w[1] d + w[2] d^2 + sum(k sin(argument))
  *
  * The columns of `terms` pick an argument by its 1-based index in `args`. `bodyFrame`
- * (`body-frame.ts`) turns a row into a pole and a prime meridian. A row keeps the report's terms
- * unless noted: Mars drops five terms of at most 0.0003 degree, Jupiter its five of at most 0.003.
+ * (`body-frame.ts`) turns a row into a pole and a prime meridian. A row keeps the report's terms.
  * The rows are keyed by the ids of `SKY_BODIES` (`sky-registry.ts`), by name: `SUN_ROTATION`
  * is the Sun's.
  */
@@ -35,34 +34,6 @@ export const SUN_ROTATION: BodyRotation = {
   ra: [286.13, 0],
   dec: [63.87, 0],
   w: [84.176, 14.1844],
-};
-
-/** Mercury (Table 1): the five anomalies M1 to M5 of the prime meridian. */
-export const MERCURY_ROTATION: BodyRotation = {
-  ra: [281.0103, -0.0328],
-  dec: [61.4155, -0.0049],
-  w: [329.5988, 6.1385108],
-  args: [
-    [174.7910857, 4.092335],
-    [349.5821714, 8.18467],
-    [164.3732571, 12.277005],
-    [339.1643429, 16.36934],
-    [153.9554286, 20.461675],
-  ],
-  wTerms: [
-    [1, 0.01067257],
-    [2, -0.00112309],
-    [3, -0.0001104],
-    [4, -0.00002539],
-    [5, -0.00000571],
-  ],
-};
-
-/** Venus (Table 1). */
-export const VENUS_ROTATION: BodyRotation = {
-  ra: [272.76, 0],
-  dec: [67.16, 0],
-  w: [160.2, -1.4813688],
 };
 
 /** The Moon, mean-Earth/polar-axis frame (Table 2): the 13 arguments E1 to E13. */
@@ -119,29 +90,6 @@ export const MOON_ROTATION: BodyRotation = {
     [12, 0.0019],
     [13, -0.0044],
   ],
-};
-
-/** Mars (Table 1): the slow terms of its pole and prime meridian, the same argument for all three. */
-export const MARS_ROTATION: BodyRotation = {
-  ra: [317.269202, -0.109_275_47],
-  dec: [54.432516, -0.058_271_05],
-  w: [176.049863, 350.891_982_443_297],
-  /* The report gives the rate in degrees a Julian century. */
-  args: [
-    [79.398797, 0.5042615 / 36_525],
-    [166.325722, 0.5042615 / 36_525],
-    [95.391654, 0.5042615 / 36_525],
-  ],
-  raTerms: [[1, 0.419057]],
-  decTerms: [[2, 1.591274]],
-  wTerms: [[3, 0.584542]],
-};
-
-/** Jupiter (Table 1), System III. */
-export const JUPITER_ROTATION: BodyRotation = {
-  ra: [268.056595, -0.006499],
-  dec: [64.495303, 0.002413],
-  w: [284.95, 870.536642],
 };
 
 /** Saturn (Table 1), System III. */

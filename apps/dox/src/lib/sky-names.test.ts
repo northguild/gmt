@@ -5,7 +5,18 @@ import userEvent from "@testing-library/user-event";
 import { aimBody, aimLens, behindEarth, bodyAt } from "./sky-aim";
 import { sunRaDec } from "./sky-math";
 import { mountSkyNames, type SkyNamesEngine } from "./sky-names";
-import { bodyRow, providePoints, type SkyBodyId } from "./sky-registry";
+import type { EventsKit } from "./sky-events";
+import { at, kitOf } from "~/test/events-kit";
+import {
+  bodyRow,
+  holdBody,
+  providePoints,
+  type SkyBodyId,
+} from "./sky-registry";
+
+/* The dates are the file's, so the test hands the labels a kit of its own, or none before it has loaded. */
+let kit: EventsKit | null = null;
+vi.mock("./sky-events-kit", () => ({ eventsKit: () => kit }));
 
 /* Where the label sits, and that it hangs below a body near the window's top, are the browser
    gate's (`hero-space-check.mjs`, "sky names"): jsdom lays nothing out. */
@@ -67,12 +78,22 @@ afterEach(() => {
   abort.abort();
   hero.remove();
   providePoints(null);
+  holdBody(null);
+  kit = null;
   vi.unstubAllGlobals();
 });
 
 /** The name the sky shows now, or null. */
 function shown(): string | null {
-  for (const name of ["Sun", "Moon", "Mars", "Venus"]) {
+  for (const name of [
+    "Sun",
+    "Moon",
+    "Mars",
+    "Venus",
+    "Uranus",
+    "Vesta",
+    "Pluto",
+  ]) {
     const label = screen.queryByText(name, { exact: false, ignore: "span" });
     if (label && !label.hidden) return label.textContent;
   }
@@ -98,9 +119,21 @@ function planets(
 ) {
   providePoints({
     place: (_id, _at, rotation) => place(rotation),
+    placed: () => drawn.map((id) => ({ id: id as "venus", V: -4 })),
     drawn: () => drawn.map((id) => ({ id: id as "venus", V: -4 })),
   });
 }
+
+/** A layer that places Uranus at magnitude 5.6, too faint to draw, near the Sun. */
+function faintUranus(): void {
+  const sun = sunRaDec(START);
+  providePoints({
+    place: () => ({ ra: sun.ra, dec: sun.dec + 3 }),
+    placed: () => [{ id: "uranus", V: 5.6 }],
+    drawn: () => [],
+  });
+}
+const FIRST = "Too faint to draw: magnitude 5.6; the sky draws to 5.5.";
 
 describe("the sky's names", () => {
   it("names the Moon under a mouse over bare sky, hidden from assistive tech", async () => {
@@ -166,6 +199,24 @@ describe("the sky's names", () => {
     expect(shown()).toBeNull();
   });
 
+  it("calls an asteroid an asteroid", async () => {
+    lookAt("sun");
+    const sun = sunRaDec(START);
+    planets(["vesta"], () => ({ ra: sun.ra, dec: sun.dec + 3 }));
+    const vesta = spot("vesta");
+    await hover(vesta.x, vesta.y);
+    expect(shown()).toBe("VestaAsteroid");
+  });
+
+  it("calls Pluto a dwarf planet and tells its years as the ninth planet", async () => {
+    lookAt("sun");
+    const sun = sunRaDec(START);
+    planets(["pluto"], () => ({ ra: sun.ra, dec: sun.dec + 3 }));
+    const pluto = spot("pluto");
+    await hover(pluto.x, pluto.y);
+    expect(shown()).toBe("PlutoDwarf planetThe ninth planet from 1930 to 2006");
+  });
+
   it("names no planet behind the Moon, and no body behind the Earth", async () => {
     lookAt("moon");
     let covered = false;
@@ -217,6 +268,58 @@ describe("the sky's names", () => {
       matches: query === "(forced-colors: active)",
     }));
     await hover(moon.x + 1, moon.y);
+    expect(shown()).toBeNull();
+  });
+});
+
+describe("the ring's name", () => {
+  /** Hovers the ring of the held, faint Uranus. */
+  async function overRing(): Promise<void> {
+    lookAt("sun");
+    faintUranus();
+    holdBody("uranus");
+    const uranus = spot("uranus");
+    await hover(uranus.x, uranus.y);
+  }
+
+  it("names a faint body only while it is held, and says why before the dates have loaded", async () => {
+    lookAt("sun");
+    faintUranus();
+    const uranus = spot("uranus");
+    await hover(uranus.x, uranus.y);
+    expect(shown()).toBeNull();
+    holdBody("uranus");
+    await hover(uranus.x + 1, uranus.y);
+    expect(shown()).toBe(`UranusPlanet${FIRST}`);
+  });
+
+  it("says when it will be bright enough, from the data", async () => {
+    kit = kitOf([
+      {
+        id: "uranus",
+        rare: false,
+        startMs: at("2033-12-11T06:00:00Z"),
+        endMs: at("2034-03-01T00:00:00Z"),
+        unit: "day",
+      },
+    ]);
+    await overRing();
+    expect(shown()).toBe(
+      `UranusPlanet${FIRST} Bright enough from 11 Dec 2033.`,
+    );
+  });
+
+  it("says when nothing is ahead", async () => {
+    kit = kitOf([]);
+    await overRing();
+    expect(shown()).toBe(`UranusPlanet${FIRST} Not brighter before Nov 2036.`);
+  });
+
+  it("goes when the view is released", async () => {
+    await overRing();
+    expect(shown()).not.toBeNull();
+    holdBody(null);
+    fake.frame();
     expect(shown()).toBeNull();
   });
 });

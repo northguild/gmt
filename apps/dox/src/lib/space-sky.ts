@@ -16,8 +16,10 @@ import type { BodyPainters } from "./sky-bodies";
 import type { SkyMap } from "./sky-map";
 import {
   EMPTY_POINTS,
+  heldBody,
   providePoints,
   SKY_BODIES,
+  watchHold,
   type SkyBody,
 } from "./sky-registry";
 import { whenIdle } from "./yield-to-main";
@@ -51,6 +53,10 @@ interface SkyInputs {
   /** The Sun's and the Moon's maps; fetched late, after `sky.ready` and an idle wait. */
   sunMap?: string | undefined;
   moonMap?: string | undefined;
+  /** The canvas above the globe that a body nearer than the Moon is drawn on (`sky-planets.ts`), when the page has one. */
+  near?: HTMLCanvasElement | null;
+  /** The bodies' maps and the planets' layer are fetched only once this has settled (the landing: the Earth has its imagery). */
+  after?: Promise<unknown>;
   signal: AbortSignal;
 }
 
@@ -69,10 +75,11 @@ interface SkyGlobe {
 async function loadSkyMap(
   src: string | undefined,
   signal: AbortSignal,
+  priority: "high" | "low" = "high",
 ): Promise<SkyMap | undefined> {
   if (!src) return undefined;
   try {
-    const response = await fetch(src, { signal });
+    const response = await fetch(src, { signal, priority });
     if (!response.ok) return undefined;
     /* The map's bytes are brightness or colour as drawn, so no colour space may change them. */
     const image = await createImageBitmap(await response.blob(), {
@@ -114,6 +121,8 @@ export function skyInputsOf(
     milkyWay: holder.dataset["milkyWay"],
     sunMap: holder.dataset["sunMap"],
     moonMap: holder.dataset["moonMap"],
+    /* Above the globe, so beside it in the host and not in the sky's own box. */
+    near: host.querySelector<HTMLCanvasElement>('[data-sky-canvas="near"]'),
     signal,
   };
 }
@@ -130,7 +139,7 @@ type MappedDisc = Extract<SkyBody, { kind: "disc" }>;
 async function loadBodyMaps(
   sky: Sky,
   stars: HTMLElement,
-  inputs: Pick<SkyInputs, "sunMap" | "moonMap" | "signal">,
+  inputs: Pick<SkyInputs, "sunMap" | "moonMap" | "near" | "after" | "signal">,
 ): Promise<void> {
   const { signal } = inputs;
   if (globalThis.matchMedia?.("(forced-colors: active)")?.matches) return;
@@ -138,17 +147,28 @@ async function loadBodyMaps(
     (row): row is MappedDisc => row.kind === "disc" && !!inputs[row.map],
   );
   await sky.ready;
+  /* What the first view needs is on its way or drawn first; the bodies' maps wait their turn. */
+  await inputs.after?.catch(() => {});
   await whenIdle();
   if (signal.aborted) return;
+  let again = (): void => {};
   const [made, planets] = await Promise.all([
     Promise.all(
       wanted.map(async ({ map, make }) => {
-        const loaded = await loadSkyMap(inputs[map]!, signal);
+        const loaded = await loadSkyMap(inputs[map]!, signal, "low");
         return loaded ? make(loaded).catch(() => null) : null;
       }),
     ),
     import("./sky-planets")
-      .then((chunk) => chunk.createPlanetLayer())
+      .then((chunk) =>
+        chunk.createPlanetLayer({
+          near: inputs.near,
+          signal,
+          /* A pass's states arrive late: the sky draws again once they have. */
+          redraw: () => again(),
+          held: heldBody,
+        }),
+      )
       .catch(() => null),
   ]);
   if (signal.aborted) return;
@@ -163,6 +183,10 @@ async function loadBodyMaps(
   signal.addEventListener("abort", () => providePoints(null), { once: true });
   const layer = planets ?? undefined;
   sky.maps(painters, layer);
+  again = () => sky.maps(painters, layer);
+  /* The ring of a held faint body comes and goes with the Look at view, also while the sky is at rest. */
+  watchHold(() => again());
+  signal.addEventListener("abort", () => watchHold(null), { once: true });
   /* A look change repaints the discs: their cache keys carry the look, so one redraw is enough. */
   watchTheme(() => sky.maps(painters, layer), signal);
 }

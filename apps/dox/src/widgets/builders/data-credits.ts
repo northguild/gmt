@@ -2,7 +2,7 @@
  * dataCredits: the info button on a drawing of third-party data and the popup of its sources
  * (CORE-88). Each source is a row, label left, credit right.
  *
- * The button is a native `<button popovertarget>` named "Data credits"; the popup is a native
+ * The button is a native `<button popovertarget>` named "Data credits" (or `label`); the popup is a native
  * `popover`, so Escape, outside click and focus return are the browser's
  * (https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/). `watchDataCredits` in `lib/data-credits`
  * keeps `aria-expanded` true to the popup in browsers that do not expose it themselves.
@@ -28,6 +28,10 @@ export interface DataCreditsOptions {
   id: string;
   placement: DataCreditsPlacement;
   credits: readonly DataCredit[];
+  /** The button's name, for a popup that holds more than the sources. */
+  label?: string;
+  /** Markup above the sources in the popup. */
+  lead?: SafeHtml;
 }
 
 const ICON =
@@ -48,6 +52,6 @@ export function creditList(credits: readonly DataCredit[]): SafeHtml {
 /** Nothing for an empty list, so a drawing with nothing to credit gets no button. */
 export function dataCredits(o: DataCreditsOptions): SafeHtml {
   if (o.credits.length === 0) return html``;
-  return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" data-cue aria-label="Data credits" aria-expanded="false">${raw(ICON)}</button
-    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover>${creditList(o.credits)}</div>`;
+  return html`<button type="button" class="${styles.button}" data-placement="${o.placement}" popovertarget="${o.id}" data-cue aria-label="${o.label ?? "Data credits"}" aria-expanded="false">${raw(ICON)}</button
+    ><div id="${o.id}" class="gmt-glass ${styles.panel}" data-placement="${o.placement}" data-credits-panel popover>${o.lead}${creditList(o.credits)}</div>`;
 }

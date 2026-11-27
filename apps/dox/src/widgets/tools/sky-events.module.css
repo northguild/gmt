@@ -1,0 +1,32 @@
+/* The popover's list of coming sky events (`sky-events-kit.ts`), above the credits. It sits in the
+   popover's own panel, so it has no box of its own: a heading, one row per event, a dim note. */
+
+.events {
+  margin-block-end: var(--gmt-space-3);
+  padding-block-end: var(--gmt-space-3);
+  border-block-end: 1px solid var(--gmt-border);
+}
+
+.title {
+  margin: 0 0 var(--gmt-space-2);
+  font-size: var(--gmt-text-sm);
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.rows {
+  display: grid;
+  gap: var(--gmt-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rows strong {
+  font-weight: 600;
+  color: var(--gmt-ice);
+}
+
+.note {
+  margin: var(--gmt-space-2) 0 0;
+}

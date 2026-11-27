@@ -1318,6 +1318,11 @@ async function checkInteraction(browser) {
         )?.textContent ?? "",
     );
   const was = [await value(), await selected()];
+  /* A click selects by the zone outlines, which come after the entrance (`data-regions`). */
+  await page
+    .locator('[data-regions="ready"]')
+    .waitFor({ state: "attached", timeout: 20_000 })
+    .catch(() => {});
   const box = await hitBox(page);
   for (const [dx, dy] of [
     [-0.45, 0.2],
@@ -1943,6 +1948,7 @@ async function checkAccessMode(browser, { label, context, media }) {
 // --- the night sky ---------------------------------------------------------
 
 const SKY_STARS = "[data-sky-canvas='stars']";
+const SKY_NEAR = "[data-sky-canvas='near']";
 const SKY_METEOR = "[data-sky-canvas='meteor']";
 
 /** What the stars canvas says it drew: the view (RA, Dec, instant) and how many draws, how long the last took. */
@@ -2095,7 +2101,7 @@ async function checkSky(browser) {
   for (const problem of problems) fail("page-error", "page", problem, WIDE);
 
   // The credit: the star catalogue and its licence, in the popup the info button opens.
-  await page.getByRole("button", { name: "Data credits" }).click();
+  await page.getByRole("button", { name: "About this sky" }).click();
   for (const text of ["HYG v4.4", "CC BY-SA 4.0"])
     check(
       await page
@@ -2438,8 +2444,8 @@ const SKY_PINS = {
 const SUN_RADIUS_DEG = 0.267;
 const EARTH_HALF_ANGLE_DEG = (Math.asin(1 / 6.61) * 180) / Math.PI;
 
-/** The pixels of the stars canvas in a square of `half` pixels each way around a point, as [r, g, b, a] lists. */
-const skyPixels = (page, x, y, half) =>
+/** The pixels of the stars canvas (or `canvas`, the near one) in a square of `half` pixels each way around a point, as [r, g, b, a] lists. */
+const skyPixels = (page, x, y, half, canvas = SKY_STARS) =>
   page.evaluate(
     ([sel, px, py, h]) => {
       const canvas = document.querySelector(sel);
@@ -2456,7 +2462,7 @@ const skyPixels = (page, x, y, half) =>
         out.push([data[i], data[i + 1], data[i + 2], data[i + 3]]);
       return out;
     },
-    [SKY_STARS, x, y, half],
+    [canvas, x, y, half],
   );
 
 /** The body maps load late, after the first paint and an idle wait: waits until the sky has them (`ready`) or has given up (`failed`). */
@@ -3909,7 +3915,7 @@ async function checkSkyReduced(browser) {
 
 // --- the sky view: Look at, in the zoom stack --------------------------------
 
-/* What each Look at button points at. A disc's angular radius, degrees: the Moon's smallest (at apogee, so the clearance below never fails on a larger real disc) and the Sun's, with the glare the Sun's box adds (`SUN_GLARE_RADII` of sky-aim.ts, two radii past the disc). This script cannot import the TypeScript. */
+/* What each Look at button points at. A disc's angular radius, degrees: the Moon's smallest (at apogee, so the clearance below never fails on a larger real disc) and the Sun's, with the glare the Sun's box adds (`GLARE_RADII`, the Sun row's `reach` in sky-registry.ts: two radii past the disc). This script cannot import the TypeScript. */
 const LOOK_AT_BODIES = {
   moon: { label: "Moon", degrees: 0.245, reach: 1 },
   sun: { label: "Sun", degrees: SUN_RADIUS_DEG, reach: 3 },
@@ -3923,12 +3929,12 @@ const SPIN_DEGREES = 0.6;
 async function openSkyView(
   browser,
   size,
-  { zone, reduce = false, context, maps = true } = {},
+  { zone, reduce = false, context, maps = true, at = SKY_PINS.half.at } = {},
 ) {
   const opened = await open(browser, size, {
     reduce,
     context: { timezoneId: zone, ...context },
-    install: SKY_PINS.half.at,
+    install: at,
   });
   /* Under forced colours the sky is hidden and its maps never load. */
   if (maps) await mapsSettled(opened.page);
@@ -4357,13 +4363,24 @@ async function checkSkyViewKeys(browser) {
   });
   const focusOn = (sel) =>
     page.evaluate((s) => document.activeElement?.matches(s) === true, sel);
-  await page.locator(ZOOM_RESET).focus();
+  /* The stack's shown button just before Look at (Go to my time zone, or Find a zone without it). */
+  const before = await page.evaluate(
+    ([stack, look]) => {
+      const shown = [
+        ...document.querySelector(stack).querySelectorAll("button"),
+      ].filter((b) => b.checkVisibility());
+      const prior = shown[shown.indexOf(document.querySelector(look)) - 1];
+      prior?.focus();
+      return prior?.getAttribute("aria-label") ?? "nothing";
+    },
+    [gate("globe-zoom"), `${LOOK} > button`],
+  );
   await page.keyboard.press("Tab");
   check(
     await focusOn(`${LOOK} > button`),
     "sky-view-keys",
     t,
-    "Tab from Reset zoom did not reach the Look at button",
+    `Tab from the stack's button before Look at (${before}) did not reach the Look at button`,
     WIDE,
   );
   await openBarByKeys(page);
@@ -4484,6 +4501,572 @@ async function checkSkyViewForced(browser) {
   measured++;
 }
 
+// --- the planets ------------------------------------------------------------
+
+/*
+ * 9 November 2028 in Nairobi, Venus and Jupiter 0.66 degrees apart. Pins: JPL Horizons, geocentric
+ * apparent RA and Dec of date and APmag (`COMMAND='299'` and `'599'`, `CENTER='500@399'`,
+ * `QUANTITIES='2,9'`, `TLIST` at each instant). From the camera at 6.61 Earth radii the planets
+ * move by under 0.012 degrees, half a pixel. At `behind` the start camera looks at them through
+ * the Earth's disc; at `place` they stand clear of it, at the right of the hero.
+ */
+const PLANET_PINS = {
+  zone: "Africa/Nairobi",
+  behind: {
+    at: 1_857_410_100_000,
+    venus: { ra: 195.543431, dec: -4.739005, V: -3.964 },
+    jupiter: { ra: 195.536538, dec: -5.397057, V: -1.708 },
+  },
+  place: {
+    at: 1_857_411_900_000,
+    venus: { ra: 195.5672, dec: -4.748648, V: -3.964 },
+    jupiter: { ra: 195.540407, dec: -5.398621, V: -1.708 },
+  },
+};
+/* Sirius from Yangon's start camera, clear of the Earth at the left (J2000 101.287, -16.716,
+   carried to 2028 by precession; the gate finds its brightest pixel within 6 px of there). */
+const SIRIUS_PIN = {
+  zone: "Asia/Yangon",
+  at: 1_857_370_800_000,
+  ra: 101.6,
+  dec: -16.75,
+};
+/** The bar's rows, in order: the Sun, the Moon, then the planets outward from the Sun, Pluto, then Vesta and Apophis. */
+const LOOK_AT_ORDER = [
+  "sun",
+  "moon",
+  "mercury",
+  "venus",
+  "mars",
+  "jupiter",
+  "saturn",
+  "uranus",
+  "pluto",
+  "vesta",
+  "apophis",
+];
+
+/** A sky direction on the stars canvas: the gnomonic projection about the view's centre (`data-sky-view`), north up and east to the left, as from inside the sky; the focal length from the Earth's disc (`data-sky-camera`). */
+function skyPoint(view, camera, { ra, dec }) {
+  const R = Math.PI / 180;
+  const [a, b, d] = [dec * R, view.dec * R, (ra - view.ra) * R];
+  const cos =
+    Math.sin(a) * Math.sin(b) + Math.cos(a) * Math.cos(b) * Math.cos(d);
+  const xi = (Math.cos(a) * Math.sin(d)) / cos;
+  const eta =
+    (Math.sin(a) * Math.cos(b) - Math.cos(a) * Math.sin(b) * Math.cos(d)) / cos;
+  const f = camera.radius / Math.tan(EARTH_HALF_ANGLE_DEG * R);
+  return { x: camera.x - f * xi, y: camera.y - f * eta };
+}
+
+/** The stars canvas's view, camera and planets row, in the canvas's own pixels. */
+const skyRead = (page) =>
+  page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    const [ra, dec, at] = el.dataset.skyView.split(" ").map(Number);
+    const [x, y, radius] = el.dataset.skyCamera.split(" ").map(Number);
+    const planets = Object.fromEntries(
+      (el.dataset.skyPlanets ?? "none")
+        .split(";")
+        .filter((row) => row !== "none")
+        .map((row) => {
+          const [id, ...rest] = row.split(" ");
+          return [
+            id,
+            rest[0] === "earth" || rest[0] === "behind"
+              ? { [rest[0]]: true, V: Number(rest[1]) }
+              : { x: Number(rest[0]), y: Number(rest[1]), V: Number(rest[2]) },
+          ];
+        }),
+    );
+    return { view: { ra, dec, at }, camera: { x, y, radius }, planets };
+  }, SKY_STARS);
+
+/** The landing at a fixed instant, dark, its sky drawn with the planets' layer loaded. */
+async function pinnedPlanets(browser, zone, at, context = {}) {
+  const opened = await open(browser, WIDE, {
+    reduce: true,
+    fixed: at,
+    context: { timezoneId: zone, colorScheme: "dark", ...context },
+  });
+  await opened.page.waitForFunction(
+    (sel) => document.querySelector(sel)?.dataset.skyPlanets !== undefined,
+    SKY_STARS,
+    { timeout: LOAD_TIMEOUT },
+  );
+  return opened;
+}
+
+async function checkPlanetsPlace(browser) {
+  const t = "hero › planets";
+  const { place } = PLANET_PINS;
+  const { page, context, problems } = await pinnedPlanets(
+    browser,
+    PLANET_PINS.zone,
+    place.at,
+  );
+  for (const problem of problems) fail("page-error", "page", problem, WIDE);
+  const sky = await skyRead(page);
+  const wrong = [];
+  for (const id of ["venus", "jupiter"]) {
+    const drawn = sky.planets[id];
+    const pin = skyPoint(sky.view, sky.camera, place[id]);
+    if (!drawn || drawn.earth || drawn.behind) {
+      wrong.push(`${id} is not drawn (pin at ${r1(pin.x)}, ${r1(pin.y)})`);
+      continue;
+    }
+    const off = Math.hypot(drawn.x - pin.x, drawn.y - pin.y);
+    if (off > 1.5)
+      wrong.push(
+        `${id} is drawn at ${r1(drawn.x)}, ${r1(drawn.y)}, ${r1(off)} px from the pin at ${r1(pin.x)}, ${r1(pin.y)} (limit 1.5)`,
+      );
+    if (Math.abs(drawn.V - place[id].V) > 0.1)
+      wrong.push(`${id} has V ${drawn.V}, Horizons ${place[id].V}`);
+  }
+  /* The pinned instant is past the days the shipped Vesta elements are good for. */
+  if ("vesta" in sky.planets)
+    wrong.push("vesta is drawn at the pinned instant");
+  check(wrong.length === 0, "planets-place", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+async function checkPlanetsBehind(browser) {
+  const t = "hero › planets behind the Earth";
+  const { behind } = PLANET_PINS;
+  const { page, context } = await pinnedPlanets(
+    browser,
+    PLANET_PINS.zone,
+    behind.at,
+  );
+  const sky = await skyRead(page);
+  const wrong = [];
+  for (const id of ["venus", "jupiter"]) {
+    const pin = skyPoint(sky.view, sky.camera, behind[id]);
+    const inside =
+      Math.hypot(pin.x - sky.camera.x, pin.y - sky.camera.y) <
+      sky.camera.radius;
+    if (!inside) wrong.push(`the pin for ${id} is not inside the Earth's disc`);
+    if (!sky.planets[id]?.earth)
+      wrong.push(`${id} is not listed behind the Earth`);
+    if (Math.abs((sky.planets[id]?.V ?? NaN) - behind[id].V) > 0.1)
+      wrong.push(`${id} has V ${sky.planets[id]?.V}, Horizons ${behind[id].V}`);
+    const canvas = await page.locator(SKY_STARS).boundingBox();
+    const alpha = Math.max(
+      ...(await skyPixels(page, canvas.x + pin.x, canvas.y + pin.y, 3)).map(
+        ([, , , a]) => a,
+      ),
+    );
+    if (alpha > 0)
+      wrong.push(`the stars canvas has alpha ${alpha} within 3 px of ${id}`);
+  }
+  if ("vesta" in sky.planets)
+    wrong.push("vesta is drawn at the pinned instant");
+  check(wrong.length === 0, "planets-behind", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+/** The light around a point of the stars canvas: the sum of alpha times luminance over a square of 24 px each way, and the point found (the brightest pixel within `search` px). */
+async function lightAround(page, at, search) {
+  const canvas = await page.locator(SKY_STARS).boundingBox();
+  return page.evaluate(
+    ([sel, px, py, h]) => {
+      const c = document.querySelector(sel);
+      const k = c.width / c.getBoundingClientRect().width;
+      const ctx = c.getContext("2d");
+      const near = ctx.getImageData(
+        Math.round((px - h) * k),
+        Math.round((py - h) * k),
+        Math.round(2 * h * k),
+        Math.round(2 * h * k),
+      );
+      const weight = (d, i) =>
+        (d[i + 3] / 255) *
+        (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]);
+      let best = [-1, px, py];
+      for (let i = 0; i < near.data.length; i += 4) {
+        const w = weight(near.data, i);
+        if (w > best[0])
+          best = [
+            w,
+            px - h + ((i / 4) % near.width) / k,
+            py - h + Math.floor(i / 4 / near.width) / k,
+          ];
+      }
+      const R = 24;
+      const box = ctx.getImageData(
+        Math.round((best[1] - R) * k),
+        Math.round((best[2] - R) * k),
+        Math.round(2 * R * k),
+        Math.round(2 * R * k),
+      );
+      let sum = 0;
+      for (let i = 0; i < box.data.length; i += 4) sum += weight(box.data, i);
+      return { light: sum / (k * k), x: best[1], y: best[2], peak: best[0] };
+    },
+    [SKY_STARS, canvas.x + at.x, canvas.y + at.y, search],
+  );
+}
+
+async function checkPlanetsBright(browser) {
+  const t = "hero › Venus outshines Sirius";
+  const venusPage = await pinnedPlanets(
+    browser,
+    PLANET_PINS.zone,
+    PLANET_PINS.place.at,
+  );
+  const venusSky = await skyRead(venusPage.page);
+  const venus = await lightAround(venusPage.page, venusSky.planets.venus, 1);
+  await venusPage.context.close();
+  const siriusPage = await pinnedPlanets(
+    browser,
+    SIRIUS_PIN.zone,
+    SIRIUS_PIN.at,
+  );
+  const siriusSky = await skyRead(siriusPage.page);
+  const sirius = await lightAround(
+    siriusPage.page,
+    skyPoint(siriusSky.view, siriusSky.camera, SIRIUS_PIN),
+    6,
+  );
+  await siriusPage.context.close();
+  console.log(
+    `planets-bright: Venus ${r1(venus.light)}, Sirius ${r1(sirius.light)} (light within 24 px)`,
+  );
+  check(
+    venusSky.camera.radius === siriusSky.camera.radius &&
+      sirius.peak > 0 &&
+      venus.light > sirius.light * 1.5,
+    "planets-bright",
+    t,
+    `Venus (V -3.96) gives ${r1(venus.light)} within 24 px and Sirius (V -1.46) ${r1(sirius.light)} (found ${sirius.peak > 0 ? "" : "no "}star), at Earth radii ${venusSky.camera.radius} and ${siriusSky.camera.radius}; Venus must give over 1.5 times as much at the same zoom`,
+    WIDE,
+  );
+  measured++;
+}
+
+/** Records, in the page, whether the stars canvas carried the planets on the frame the sky first showed. */
+function watchPlanetsLate() {
+  window.__planetsAtReady = undefined;
+  new MutationObserver((_, observer) => {
+    if (!document.querySelector("[data-sky='ready']")) return;
+    window.__planetsAtReady =
+      document.querySelector("[data-sky-canvas='stars']")?.dataset.skyPlanets ??
+      null;
+    observer.disconnect();
+  }).observe(document, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-sky"],
+  });
+}
+
+async function checkPlanetsLate(browser) {
+  const t = "hero › planets load late";
+  const pin = PLANET_PINS.place;
+  const late = await open(browser, WIDE, {
+    reduce: true,
+    fixed: pin.at,
+    context: { timezoneId: PLANET_PINS.zone },
+    init: watchPlanetsLate,
+  });
+  const first = await late.page.evaluate(() => window.__planetsAtReady);
+  const loaded = await late.page
+    .waitForFunction(
+      (sel) => document.querySelector(sel)?.dataset.skyPlanets !== undefined,
+      SKY_STARS,
+      { timeout: LOAD_TIMEOUT },
+    )
+    .then(() => true)
+    .catch(() => false);
+  await late.context.close();
+  const forced = await open(browser, WIDE, {
+    reduce: true,
+    fixed: pin.at,
+    context: { timezoneId: PLANET_PINS.zone, forcedColors: "active" },
+  });
+  await forced.page.waitForTimeout(3000);
+  const underForced = await forced.page.evaluate(
+    (sel) => document.querySelector(sel)?.dataset.skyPlanets ?? null,
+    SKY_STARS,
+  );
+  await forced.context.close();
+  check(
+    first === null && loaded && underForced === null,
+    "planets-late",
+    t,
+    `on the sky's first frame the planets were ${first === null ? "absent" : `"${first}"`}, after the idle load they ${loaded ? "came" : "never came"}, and under forced colours they are ${underForced === null ? "absent" : `"${underForced}"`}; they must come only after the first frame, and never under forced colours`,
+    WIDE,
+  );
+  measured++;
+}
+
+/** A point body's view problems: the clearances `skyViewProblems` holds a drawn point to (its box is 16 px, `POINT_BOX` of sky-aim.ts), the Earth read from the hit box. */
+async function pointViewProblems(page, at) {
+  const hit = await hitBox(page);
+  const earth = {
+    x: hit.x + hit.width / 2,
+    y: hit.y + hit.height / 2,
+    radius: hit.width / 2,
+  };
+  return skyViewProblems(page, { ...at, disc: 0, box: 16, earth });
+}
+async function checkSkyViewPlanet(browser) {
+  const t = "hero › Look at a planet";
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: PLANET_PINS.zone,
+    at: PLANET_PINS.place.at,
+  });
+  const wrong = [];
+  await lookButton(page).focus();
+  await openBarByKeys(page);
+  const rows = await page.evaluate(
+    (bar) =>
+      [...document.querySelectorAll(`${bar} [data-sky-body]`)].map((b) => ({
+        id: b.dataset.skyBody,
+        on: b.getAttribute("aria-disabled") !== "true",
+      })),
+    LOOK_BAR,
+  );
+  if (rows.map(({ id }) => id).join() !== LOOK_AT_ORDER.join())
+    wrong.push(`the bar lists ${rows.map(({ id }) => id).join(", ")}`);
+  for (const id of ["venus", "jupiter"])
+    if (!rows.find((row) => row.id === id)?.on)
+      wrong.push(`${id} is not available`);
+  /* Tab along the bar to Jupiter, then Enter. */
+  for (let i = 0; i < LOOK_AT_ORDER.length; i++) {
+    const on = await page.evaluate(
+      () => document.activeElement?.dataset?.skyBody,
+    );
+    if (on === "jupiter") break;
+    await page.keyboard.press("Tab");
+  }
+  await page.keyboard.press("Enter");
+  await viewIs(page, "jupiter");
+  const at = await planetSettled(page, "jupiter");
+  if (!at) wrong.push("Jupiter is not drawn after the aim");
+  else {
+    wrong.push(...(await pointViewProblems(page, at)));
+    await page.clock.runFor(5_000);
+    await page.waitForTimeout(300);
+    const still = await planetSettled(page, "jupiter");
+    const moved = still ? Math.hypot(still.x - at.x, still.y - at.y) : NaN;
+    if (!(moved <= 8))
+      wrong.push(`Jupiter moved ${r1(moved)} px in 5 s of a held view`);
+    if ((await page.locator(HERO).getAttribute("data-sky-view")) !== "jupiter")
+      wrong.push("the view of Jupiter was not held");
+  }
+  await lookButton(page).focus();
+  await openBarByKeys(page);
+  await page.keyboard.press("Escape");
+  const back = await page.evaluate(
+    (sel) => document.activeElement === document.querySelector(sel),
+    `${LOOK} > button`,
+  );
+  if (!back) wrong.push("Escape in the bar did not return focus to Look at");
+  check(wrong.length === 0, "sky-view-planet", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+// --- Apophis's pass ---------------------------------------------------------
+
+/*
+ * 13 April 2029, Apophis from the start camera of three zones. Pins: JPL Horizons, apparent RA and
+ * Dec of date, APmag and the range, from the camera's own site (`COMMAND='99942'`,
+ * `EPHEM_TYPE=OBSERVER`, `CENTER='coord@399'`, `COORD_TYPE='CYLINDRICAL'`, `TLIST_TYPE='JD'`,
+ * `TIME_TYPE='UT'`, `QUANTITIES='2,9,20'`, `ANG_FORMAT='DEG'`, `EXTRA_PREC='YES'`). A zone's start
+ * camera is `startRotation` of its coordinate, so each `SITE_COORD` is `lon,42164.137 cos(lat),
+ * 42164.137 sin(lat)` (lon east):
+ *
+ * - `place`: Honolulu, 20:00 UT, `SITE_COORD='202.141700,39282.112,15320.905'`: the body 97,000 km
+ *   off, clear of the Earth.
+ * - `behind`: Sydney, 21:40 UT, `'151.216700,35010.414,-23496.497'`: the Earth between.
+ * - `front`: Nouakchott, 21:13 UT, `'344.050000,40077.676,13099.404'`: 2,061 km off, over the disc.
+ *
+ * `gone` is 06:00 UT, before the pass's window opens.
+ */
+const APOPHIS_PINS = {
+  place: {
+    zone: "Pacific/Honolulu",
+    at: 1_870_804_800_000,
+    ra: 168.077135126,
+    dec: -10.539064764,
+    V: 4.422,
+  },
+  behind: {
+    zone: "Australia/Sydney",
+    at: 1_870_810_800_000,
+    ra: 133.803873666,
+    dec: 30.787318346,
+    V: 5.224,
+  },
+  front: {
+    zone: "Africa/Nouakchott",
+    at: 1_870_809_180_000,
+    ra: 324.23139027,
+    dec: -25.20685625,
+    V: -0.969,
+  },
+  gone: { zone: "Pacific/Honolulu", at: 1_870_754_400_000 },
+};
+
+/**
+ * Waits for the close pass's chunk: the layer loads it on the first draw inside the window, and
+ * lists Apophis only from the draw after it arrives.
+ */
+const passLoaded = (page) =>
+  page.waitForFunction(
+    (sel) =>
+      document.querySelector(sel)?.dataset.skyPlanets?.includes("apophis"),
+    SKY_STARS,
+    { timeout: LOAD_TIMEOUT },
+  );
+
+/** The sky's read, Apophis's row, its pin's screen point and the Earth's disc, for one pin. */
+async function apophisAt(browser, pin) {
+  const opened = await pinnedPlanets(browser, pin.zone, pin.at);
+  await passLoaded(opened.page);
+  const sky = await skyRead(opened.page);
+  const at = skyPoint(sky.view, sky.camera, pin);
+  const canvas = await opened.page.locator(SKY_STARS).boundingBox();
+  const inDisc =
+    Math.hypot(at.x - sky.camera.x, at.y - sky.camera.y) < sky.camera.radius;
+  return { ...opened, sky, row: sky.planets.apophis, at, canvas, inDisc };
+}
+
+/** The most alpha within `half` px of a point on a sky canvas. */
+const alphaAt = async (page, canvas, { x, y }, half, selector) =>
+  Math.max(
+    ...(await skyPixels(page, canvas.x + x, canvas.y + y, half, selector)).map(
+      ([, , , a]) => a,
+    ),
+  );
+
+async function checkApophisPlace(browser) {
+  const t = "hero › Apophis in place";
+  const pin = APOPHIS_PINS.place;
+  const { page, context, row, at, canvas, problems } = await apophisAt(
+    browser,
+    pin,
+  );
+  for (const problem of problems) fail("page-error", "page", problem, WIDE);
+  const wrong = [];
+  if (!row || !Number.isFinite(row.x))
+    wrong.push(`it is not drawn (pin at ${r1(at.x)}, ${r1(at.y)})`);
+  else {
+    const off = Math.hypot(row.x - at.x, row.y - at.y);
+    if (off > 2)
+      wrong.push(
+        `it is drawn ${r1(off)} px from the pin at ${r1(at.x)}, ${r1(at.y)} (limit 2)`,
+      );
+    if (Math.abs(row.V - pin.V) > 0.1)
+      wrong.push(`it has V ${row.V}, Horizons ${pin.V}`);
+    /* Nearer than the Moon, so on the near canvas and not on the stars'. */
+    if ((await alphaAt(page, canvas, at, 3, SKY_NEAR)) === 0)
+      wrong.push("the near canvas is empty at the pin");
+    if ((await alphaAt(page, canvas, at, 1, SKY_STARS)) > 0)
+      wrong.push("the stars canvas holds light at the pin");
+  }
+  check(wrong.length === 0, "apophis-place", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+async function checkApophisFront(browser) {
+  const t = "hero › Apophis in front of the Earth";
+  const pin = APOPHIS_PINS.front;
+  const { page, context, row, at, canvas, inDisc } = await apophisAt(
+    browser,
+    pin,
+  );
+  const wrong = [];
+  if (!inDisc) wrong.push("the pin is not inside the Earth's disc");
+  if (!row || !Number.isFinite(row.x)) wrong.push("it is not drawn");
+  else {
+    const off = Math.hypot(row.x - at.x, row.y - at.y);
+    if (off > 2) wrong.push(`it is drawn ${r1(off)} px from the pin (limit 2)`);
+    if (Math.abs(row.V - pin.V) > 0.1)
+      wrong.push(`it has V ${row.V}, Horizons ${pin.V}`);
+  }
+  if ((await alphaAt(page, canvas, at, 2, SKY_NEAR)) === 0)
+    wrong.push("the near canvas has no alpha within 2 px of the pin");
+  check(wrong.length === 0, "apophis-front", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+async function checkApophisBehind(browser) {
+  const t = "hero › Apophis behind the Earth";
+  const pin = APOPHIS_PINS.behind;
+  const { page, context, row, at, canvas, inDisc } = await apophisAt(
+    browser,
+    pin,
+  );
+  const wrong = [];
+  if (!inDisc) wrong.push("the pin is not inside the Earth's disc");
+  if (!row?.earth) wrong.push("it is not listed behind the Earth");
+  else if (Math.abs(row.V - pin.V) > 0.1)
+    wrong.push(`it has V ${row.V}, Horizons ${pin.V}`);
+  for (const [name, selector] of [
+    ["stars", SKY_STARS],
+    ["near", SKY_NEAR],
+  ]) {
+    const alpha = await alphaAt(page, canvas, at, 3, selector);
+    if (alpha > 0)
+      wrong.push(
+        `the ${name} canvas has alpha ${alpha} within 3 px of the pin`,
+      );
+  }
+  check(wrong.length === 0, "apophis-behind", t, wrong.join("; "), WIDE);
+  await context.close();
+  measured++;
+}
+
+/** Apophis's Look at row, by its name. */
+const apophisRow = (page) =>
+  page.locator(`${LOOK_BAR} [data-sky-body="apophis"]`);
+
+async function checkApophisPick(browser) {
+  const t = "hero › Look at Apophis";
+  const wrong = [];
+  const { page, context } = await openSkyView(browser, WIDE, {
+    zone: APOPHIS_PINS.place.zone,
+    at: APOPHIS_PINS.place.at,
+  });
+  await passLoaded(page);
+  await openLook(page);
+  if ((await apophisRow(page).getAttribute("aria-disabled")) === "true")
+    wrong.push("its row is unavailable inside the pass");
+  await apophisRow(page).click();
+  await viewIs(page, "apophis");
+  const at = await planetSettled(page, "apophis");
+  if (!at) wrong.push("it is not drawn after the aim");
+  else {
+    wrong.push(...(await pointViewProblems(page, at)));
+    /* A minute on, the body has moved and the camera has followed: it is still where the aim put it. */
+    await page.clock.runFor(60_000);
+    await page.waitForTimeout(300);
+    const still = await planetSettled(page, "apophis");
+    const moved = still ? Math.hypot(still.x - at.x, still.y - at.y) : NaN;
+    if (!(moved <= 8))
+      wrong.push(`it moved ${r1(moved)} px in a minute of a held view`);
+    if ((await page.locator(HERO).getAttribute("data-sky-view")) !== "apophis")
+      wrong.push("the view of Apophis was not held");
+  }
+  await context.close();
+
+  /* Before the brightness window it is still placed, by the table or a set, so its row is available. */
+  const gone = await openSkyView(browser, WIDE, APOPHIS_PINS.gone);
+  await openLook(gone.page);
+  if ((await apophisRow(gone.page).getAttribute("aria-disabled")) === "true")
+    wrong.push("at 06:00 UT its row is unavailable");
+  await gone.context.close();
+  check(wrong.length === 0, "apophis-pick", t, wrong.join("; "), WIDE);
+  measured++;
+}
+
 // --- the sky's names: a label over a body under the pointer -------------------
 
 const SKY_NAME = gate("sky-name");
@@ -4530,23 +5113,25 @@ async function nameProblems(page, at, text, size) {
   return wrong;
 }
 
-/** A planet's dot in viewport pixels as the sky drew it, once it has stopped (two reads 300 ms apart within half a pixel), or null while it is not drawn. */
-async function planetSettled(page, id) {
+/** A planet's dot in viewport pixels as the sky drew it, or with `ring` the held faint body's ring (`id ring x y V`), once it has stopped (two reads 300 ms apart within half a pixel), or null while it is not listed. `local` is the point in the canvas's own pixels and `V` its magnitude. */
+async function planetSettled(page, id, ring = false) {
   const read = () =>
     page.evaluate(
-      ([sel, which]) => {
+      ([sel, which, ringed]) => {
         const el = document.querySelector(sel);
         const canvas = el.getBoundingClientRect();
         const row = (el.dataset.skyPlanets ?? "none")
           .split(";")
           .map((r) => r.split(" "))
-          .find(([name]) => name === which);
-        const [x, y] = [Number(row?.[1]), Number(row?.[2])];
+          .find(
+            ([name, kind]) => name === which && (kind === "ring") === ringed,
+          );
+        const [x, y, V] = (row ?? []).slice(ringed ? 2 : 1).map(Number);
         return Number.isFinite(x) && Number.isFinite(y)
-          ? { x: canvas.left + x, y: canvas.top + y, r: 0 }
+          ? { x: canvas.left + x, y: canvas.top + y, r: 0, V, local: { x, y } }
           : null;
       },
-      [SKY_STARS, id],
+      [SKY_STARS, id, ring],
     );
   let last = await read();
   for (let i = 0; i < 40; i++) {
@@ -4664,6 +5249,133 @@ async function checkSkyNamesPhone(browser) {
   );
   await context.close();
   measured++;
+}
+
+// --- why a body is too faint: Look at's second lines and the ring --------------
+
+/* 2027-01-01T00:00Z, the instant these checks pin, and the reader's locale and zone: the words are `sky-events.ts`'s for them, golden here because this script cannot import the TypeScript. At this instant Uranus, Pluto, Vesta and Apophis are all placed and too faint, and Apophis is two years from its pass. */
+const REASON_PIN = {
+  zone: "Europe/Helsinki",
+  at: 1_798_761_600_000,
+  context: { locale: "en-GB" },
+};
+/** The second line of a placed, too-faint row (`Too faint · 5.6`): the magnitude comes from the sky. */
+const PLACED_LINE = /^Too faint · -?\d+\.\d$/;
+/** A placed body whose next spell is a pass says so after its magnitude: Apophis is two years from its pass. */
+const APOPHIS_LINE = /^Too faint · -?\d+\.\d · Close pass 13 Apr 2029$/;
+/** Where the data says Uranus is bright enough again, in this zone and locale. */
+const URANUS_AHEAD = "12 Dec 2033";
+
+/** Each named row's state and second line, once the lines are written (neither empty nor still loading) and Apophis's has its date from the data. */
+async function lookLines(page, ids) {
+  await page.waitForFunction(
+    ([bar, wanted]) =>
+      wanted.every((id) => {
+        const text = document.querySelector(
+          `${bar} [data-sky-body="${id}"] [data-sky-line]`,
+        )?.textContent;
+        return text && text !== "Loading" && text !== "Too faint";
+      }),
+    [LOOK_BAR, ids],
+    { timeout: LOAD_TIMEOUT },
+  );
+  return page.evaluate(
+    ([bar, wanted]) =>
+      wanted.map((id) => {
+        const button = document.querySelector(`${bar} [data-sky-body="${id}"]`);
+        const line = button.querySelector("[data-sky-line]");
+        const room = button.getBoundingClientRect();
+        const text = line.getBoundingClientRect();
+        return {
+          id,
+          on: button.getAttribute("aria-disabled") !== "true",
+          line: line.textContent,
+          shown: line.checkVisibility(),
+          clips:
+            button.scrollWidth > button.clientWidth + 1 ||
+            text.right > room.right + 1,
+          named: button.textContent.includes(line.textContent),
+        };
+      }),
+    [LOOK_BAR, ids],
+  );
+}
+
+async function checkLookReasons(browser) {
+  const t = "hero › Look at: why too faint";
+  for (const size of [WIDE, NARROW]) {
+    const { page, context } = await openSkyView(browser, size, {
+      ...REASON_PIN,
+      context: { ...REASON_PIN.context, hasTouch: size === NARROW },
+    });
+    const wrong = [];
+    await lookButton(page).scrollIntoViewIfNeeded();
+    await openLook(page);
+    const rows = await lookLines(page, ["uranus", "pluto", "vesta", "apophis"]);
+    for (const row of rows) {
+      const wanted =
+        row.id === "apophis"
+          ? APOPHIS_LINE.test(row.line)
+          : PLACED_LINE.test(row.line);
+      if (!wanted) wrong.push(`${row.id} reads "${row.line}"`);
+      if (!row.on) wrong.push(`${row.id} is unavailable`);
+      if (!row.shown) wrong.push(`${row.id}'s line is not visible`);
+      if (!row.named) wrong.push(`${row.id}'s line is not in its name`);
+      if (row.clips) wrong.push(`${row.id}'s row clips`);
+    }
+    check(wrong.length === 0, "look-reasons", t, wrong.join("; "), size);
+    await context.close();
+    measured++;
+  }
+}
+
+async function checkFaintRing(browser) {
+  const t = "hero › the ring on a faint body";
+  for (const size of [WIDE, NARROW]) {
+    const phone = size === NARROW;
+    const { page, context } = await openSkyView(browser, size, {
+      ...REASON_PIN,
+      context: { ...REASON_PIN.context, hasTouch: phone, isMobile: phone },
+    });
+    const wrong = [];
+    await lookButton(page).scrollIntoViewIfNeeded();
+    await openLook(page);
+    await lookLines(page, ["uranus"]);
+    await page.locator(`${LOOK_BAR} [data-sky-body="uranus"]`).click();
+    await viewIs(page, "uranus");
+    const at = await planetSettled(page, "uranus", true);
+    if (!at) wrong.push("the sky lists no ring for Uranus");
+    else {
+      wrong.push(...(await pointViewProblems(page, at)));
+      /* The ring's edge is drawn: the stars canvas holds light 8 px from its centre. */
+      const canvas = await page.locator(SKY_STARS).boundingBox();
+      const edge = { x: at.local.x + 8, y: at.local.y };
+      if ((await alphaAt(page, canvas, edge, 1, SKY_STARS)) === 0)
+        wrong.push("the stars canvas is bare at the ring's edge");
+      if (at.V <= 5.5)
+        wrong.push(`the ring's body has V ${at.V}, not past 5.5`);
+      const reason = `Too faint to draw: magnitude ${at.V.toFixed(1)}; the sky draws to 5.5. Bright enough from ${URANUS_AHEAD}.`;
+      if (phone) await page.touchscreen.tap(at.x + 12, at.y);
+      else await page.mouse.move(at.x, at.y);
+      await page.waitForTimeout(600);
+      wrong.push(
+        ...(await nameProblems(page, at, `UranusPlanet${reason}`, size)),
+      );
+      /* Pressing Uranus again lets the view go, and the ring with it. */
+      await openLook(page);
+      await page.locator(`${LOOK_BAR} [data-sky-body="uranus"]`).click();
+      await viewIs(page, null);
+      await page.waitForFunction(
+        (sel) =>
+          !document.querySelector(sel)?.dataset.skyPlanets?.includes("ring"),
+        SKY_STARS,
+        { timeout: LOAD_TIMEOUT },
+      );
+    }
+    check(wrong.length === 0, "faint-ring", t, wrong.join("; "), size);
+    await context.close();
+    measured++;
+  }
 }
 
 async function checkReducedMotion(browser) {
@@ -5942,7 +6654,7 @@ async function checkCarouselAxe(browser) {
   }
 }
 
-// --- natural colours: the Look switch (DOX-G16 slice 4) ------------------------
+// --- natural colours: the Look switch ------------------------
 
 /* `ICE_TINT` is [244, 246, 255]: an ice Moon's blue minus red is 11 at every lit pixel. */
 const ICE_BLUE_OVER_RED = 255 - 244;
@@ -6287,8 +6999,19 @@ async function main() {
       ["sky view, reduced motion", () => checkSkyViewReduced(browser)],
       ["sky view, phone", () => checkSkyViewPhone(browser)],
       ["sky view, forced colours", () => checkSkyViewForced(browser)],
+      ["sky view, a planet", () => checkSkyViewPlanet(browser)],
+      ["planets place", () => checkPlanetsPlace(browser)],
+      ["planets behind", () => checkPlanetsBehind(browser)],
+      ["planets bright", () => checkPlanetsBright(browser)],
+      ["planets late", () => checkPlanetsLate(browser)],
+      ["apophis place", () => checkApophisPlace(browser)],
+      ["apophis front", () => checkApophisFront(browser)],
+      ["apophis behind", () => checkApophisBehind(browser)],
+      ["apophis pick", () => checkApophisPick(browser)],
       ["sky names", () => checkSkyNames(browser)],
       ["sky names, phone", () => checkSkyNamesPhone(browser)],
+      ["look reasons", () => checkLookReasons(browser)],
+      ["faint ring", () => checkFaintRing(browser)],
       ["natural colours", () => checkLookFlip(browser)],
       ["natural colours first paint", () => checkLookFirstPaint(browser)],
       ["natural colours offered", () => checkLookOffered(browser)],

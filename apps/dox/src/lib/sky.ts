@@ -23,12 +23,12 @@
 import { BAND_SCALE, drawBand } from "./sky-band";
 import {
   drawBodies,
-  parseHex,
   type Disc,
   type BodyPainters,
   type Rgb,
   type SkyLayer,
 } from "./sky-bodies";
+import { parseHex } from "./sky-halo";
 import type { SkyMap } from "./sky-map";
 import {
   skyCentre,

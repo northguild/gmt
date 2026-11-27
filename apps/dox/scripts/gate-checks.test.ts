@@ -374,6 +374,8 @@ describe("every browser gate", () => {
     // in a browser (the favicon build) loads none.
     // The Firefox route's own check opens the home page once to prove the tunnel; it measures nothing.
     .filter(({ file }) => file !== "firefox-server.mjs")
+    // `sky-at.mjs` opens a window for a person at a chosen instant; it asserts nothing and is no gate.
+    .filter(({ file }) => file !== "sky-at.mjs")
     .filter(
       ({ source }) =>
         (source.includes('from "@playwright/test"') ||

@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
-import { Temporal } from "@js-temporal/polyfill";
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { setHtml } from "~/widgets/builders";
 import { bodyAt, type AimLens } from "./sky-aim";
-import { providePoints, type SkyBodyId } from "./sky-registry";
+import {
+  providePoints,
+  heldBody,
+  holdBody,
+  type SkyBodyId,
+} from "./sky-registry";
+import type { EventsKit } from "./sky-events";
+import { at, kitOf } from "~/test/events-kit";
 import {
   mountSkyView,
   renderSkyView,
@@ -12,7 +18,14 @@ import {
   type SkyViewEngine,
 } from "./sky-view";
 
-const START = Temporal.Instant.from("2027-04-20T06:30:00Z").epochMilliseconds;
+/* The dates are the file's, so the test hands the bar a kit of its own, or none before the file has loaded. */
+let kit: EventsKit | null = null;
+vi.mock("./sky-events-kit", () => ({
+  eventsKit: () => kit,
+  askEvents: () => Promise.resolve(kit),
+}));
+
+const START = at("2027-04-20T06:30:00Z");
 const FOCAL = 374 * Math.sqrt(6.6107 ** 2 - 1);
 /* Roomy, so a few pixels of drift never push the body's box past the hero's inset. */
 const FRAME = {
@@ -28,7 +41,6 @@ function fakeEngine() {
     rotation: [0, 0] as readonly [number, number],
     zoom: 1,
     moving: false,
-    /* The focal length at the current zoom, as the engine reports it. */
     get focalPx() {
       return FOCAL * this.zoom;
     },
@@ -75,7 +87,10 @@ function mount(fake = fakeEngine()) {
 const lookButton = () => screen.getByRole("button", { name: "Look at" });
 /** A body's button in the bar; the bar may be shut, so hidden buttons count. */
 const bodyButton = (name: string) =>
-  screen.getByRole("button", { name, hidden: true });
+  screen.getByRole("button", {
+    name: new RegExp(`\\b${name}\\b`),
+    hidden: true,
+  });
 /** The button's `aria-pressed`: whether its body is the held one. */
 const selected = (name: string) =>
   bodyButton(name).getAttribute("aria-pressed");
@@ -132,6 +147,8 @@ afterEach(() => {
   mounted?.destroy();
   hero.remove();
   providePoints(null);
+  holdBody(null);
+  kit = null;
   expect(vi.getTimerCount()).toBe(0);
   vi.useRealTimers();
 });
@@ -149,11 +166,14 @@ describe("renderSkyView", () => {
       "Jupiter",
       "Saturn",
       "Uranus",
+      "Pluto Dwarf planet",
+      "Vesta Asteroid",
+      "Apophis Asteroid",
     ];
     const buttons = within(bar).getAllByRole("button", { hidden: true });
-    expect(
-      buttons.map((button) => button.textContent?.trim().slice(-10)),
-    ).toEqual(names.map((name) => expect.stringContaining(name)));
+    expect(buttons.map((button) => button.textContent)).toEqual(
+      names.map((name) => expect.stringContaining(name)),
+    );
     for (const name of names) expect(selected(name)).toBe("false");
     expect(
       screen.queryByRole("group", { name: "Look at" }),
@@ -161,42 +181,115 @@ describe("renderSkyView", () => {
   });
 });
 
-/** A planet layer that draws `drawn` and places every planet ahead of the camera. */
-function points(drawn: string[]) {
+/** A planet layer that places `placed` (id to magnitude) and draws those of them at 5.5 or brighter. */
+function points(placed: Record<string, number>) {
+  const list = () =>
+    Object.entries(placed).map(([id, V]) => ({ id: id as "venus", V }));
   providePoints({
-    place: () => ({ ra: 0, dec: 0 }),
-    drawn: () => drawn.map((id) => ({ id: id as "venus", V: -4 })),
+    place: (id) => (id in placed ? { ra: 0, dec: 0 } : null),
+    placed: list,
+    drawn: () => list().filter(({ V }) => V <= 5.5),
   });
 }
 
+const sync = (fake: ReturnType<typeof fakeEngine>) => {
+  clock += 1000;
+  fake.frames.forEach((frame) => frame());
+};
+
 describe("the planets' buttons", () => {
-  it("are unavailable while the planets load, with the reason as the tip", () => {
+  it("are unavailable while the planets load, and say Loading", () => {
     mount();
     expect(bodyButton("Venus")).toHaveAttribute("aria-disabled", "true");
-    expect(bodyButton("Venus")).toHaveAttribute(
-      "title",
-      "Venus: the planets are still loading",
-    );
+    expect(bodyButton("Venus")).toHaveAccessibleName(/Venus\s*Loading/);
     expect(bodyButton("Sun")).not.toHaveAttribute("aria-disabled");
   });
 
-  it("come on with the layer, and a planet too faint to draw stays off", () => {
+  it("a drawn one is on and has no second line", () => {
     const fake = mount();
-    points(["venus"]);
-    clock += 1000;
-    fake.frames.forEach((frame) => frame());
+    points({ venus: -4 });
+    sync(fake);
     expect(bodyButton("Venus")).not.toHaveAttribute("aria-disabled");
-    expect(bodyButton("Venus")).not.toHaveAttribute("title");
-    expect(bodyButton("Uranus")).toHaveAttribute(
-      "title",
-      "Uranus: too faint to see now",
+    expect(bodyButton("Venus")).toHaveAccessibleName("Venus");
+  });
+
+  it("a drawn asteroid says what it is on its second line", () => {
+    const fake = mount();
+    points({ vesta: 5 });
+    sync(fake);
+    expect(bodyButton("Vesta")).not.toHaveAttribute("aria-disabled");
+    expect(bodyButton("Vesta")).toHaveAccessibleName(/Vesta\s*Asteroid$/);
+  });
+
+  it("a placed body too faint to draw is on, with its magnitude in the name", () => {
+    const fake = mount();
+    points({ uranus: 5.6, vesta: 7.24 });
+    sync(fake);
+    expect(bodyButton("Uranus")).not.toHaveAttribute("aria-disabled");
+    expect(bodyButton("Uranus")).toHaveAccessibleName(
+      /Uranus\s*Too faint · 5\.6/,
     );
+    expect(bodyButton("Vesta")).toHaveAccessibleName(
+      /Vesta\s*Asteroid\s*Too faint · 7\.2/,
+    );
+  });
+
+  it("a body with no place is off and says why before the dates have loaded", () => {
+    const fake = mount();
+    points({ venus: -4 });
+    sync(fake);
+    expect(bodyButton("Apophis")).toHaveAttribute("aria-disabled", "true");
+    expect(bodyButton("Apophis")).toHaveAccessibleName(
+      /Apophis\s*Asteroid\s*Too faint$/,
+    );
+  });
+
+  it("a body with no place dates its next spell, pass or none ahead", () => {
+    kit = kitOf([
+      {
+        id: "vesta",
+        rare: true,
+        startMs: at("2029-07-08T12:00:00Z"),
+        endMs: at("2029-08-02T12:00:00Z"),
+        unit: "day",
+      },
+      {
+        id: "apophis",
+        rare: true,
+        startMs: at("2029-04-13T14:00:00Z"),
+        endMs: at("2029-04-13T22:00:00Z"),
+        unit: "minute",
+      },
+    ]);
+    const fake = mount();
+    points({ venus: -4 });
+    sync(fake);
+    expect(bodyButton("Vesta")).toHaveAccessibleName(
+      /Vesta\s*Asteroid\s*Too faint until 8 Jul 2029/,
+    );
+    expect(bodyButton("Apophis")).toHaveAccessibleName(
+      /Apophis\s*Asteroid\s*Close pass 13 Apr 2029/,
+    );
+    expect(bodyButton("Uranus")).toHaveAccessibleName(
+      /Uranus\s*Too faint through Nov 2036/,
+    );
+  });
+
+  it("choosing a faint placed body aims at it and holds it", async () => {
+    const fake = mount();
+    points({ uranus: 5.6 });
+    sync(fake);
+    await choose(user(), "Uranus");
+    expect(fake.calls).toEqual(["hold:true", "setZoom", "flyTo"]);
+    expect(selected("Uranus")).toBe("true");
+    expect(hero.dataset["skyView"]).toBe("uranus");
+    expect(heldBody()).toBe("uranus");
   });
 
   it("a drawn one is looked at and held", async () => {
     const fake = mount();
-    points(["venus"]);
-    fake.frames.forEach((frame) => frame());
+    points({ venus: -4 });
+    sync(fake);
     await choose(user(), "Venus");
     expect(fake.calls).toEqual(["hold:true", "setZoom", "flyTo"]);
     expect(selected("Venus")).toBe("true");

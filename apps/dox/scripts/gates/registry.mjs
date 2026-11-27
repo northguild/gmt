@@ -225,6 +225,17 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "sky-orbits-fresh",
+    script: "sky-orbits-fresh.mjs",
+    tier: "weekly",
+    browsers: [],
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+    base: false,
+    browserArg: false,
+  },
+  {
     id: "hero-space",
     script: "hero-space-check.mjs",
     tier: "local",

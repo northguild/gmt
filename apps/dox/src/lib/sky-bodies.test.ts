@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { mountSky, type Sky } from "./sky";
 import type { MoonPainter, SunPainter } from "./sky-bodies";
-import { moonRaDec, siderealDeg, sunRaDec } from "./sky-math";
+import { siderealDeg, sunRaDec } from "./sky-math";
+import { moonRaDec } from "./sky-moon";
 import { skyHost } from "~/test/sky-host";
 
 const LIST = readFileSync(resolve(process.cwd(), "src/assets/hero-sky.bin"));

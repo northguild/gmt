@@ -20,19 +20,14 @@ import {
   type SunPainter,
 } from "./sky-bodies";
 import type { SkyMap } from "./sky-map";
-import {
-  moonFromCamera,
-  moonRaDec,
-  SUN_RADIUS,
-  sunRaDec,
-  type RaDec,
-} from "./sky-math";
+import { SUN_RADIUS, sunRaDec, type RaDec } from "./sky-math";
+import { moonFromCamera, moonRaDec } from "./sky-moon";
 
 /** The camera's rotation `[lambda, phi]`, degrees. */
 type Rotation = readonly [number, number];
 
 /** A body's place and angular radius (0 for a point), degrees. */
-export type BodyPlace = RaDec & { radius: number };
+type BodyPlace = RaDec & { radius: number };
 
 interface Row {
   id: string;
@@ -52,6 +47,14 @@ interface DiscRow extends Row {
 
 interface PointRow extends Row {
   kind: "point";
+  /** The astronomical symbol on the point's Look at button. */
+  symbol: string;
+  /**
+   * What the body is, said beside its name. The name label says it always; the Look at bar and
+   * the events list say only a group other than the planets, the sky's ordinary points
+   * (`groupTag` in `sky-events.ts`).
+   */
+  group: "Planet" | "Dwarf planet" | "Asteroid";
   /** Where the point is, or null before `providePoints` (and for a body the source does not hold). */
   place(instantMs: number, rotation?: Rotation): BodyPlace | null;
 }
@@ -67,9 +70,13 @@ const disc = <const I extends string>(
 const point = <const I extends string>(
   id: I,
   name: string,
+  symbol: string,
+  group: PointRow["group"],
 ): PointRow & { id: I } => ({
   id,
   name,
+  symbol,
+  group,
   kind: "point",
   reach: 0,
   place: (instantMs, rotation) => {
@@ -78,7 +85,7 @@ const point = <const I extends string>(
   },
 });
 
-/** Sun first, as it is drawn first, then the Moon in front of it, then the planets by distance from the Sun. */
+/** Sun first, as it is drawn first, then the Moon in front of it, then the planets by distance from the Sun, the dwarf planet, then the asteroids. */
 export const SKY_BODIES = [
   disc("sun", {
     name: "Sun",
@@ -101,12 +108,16 @@ export const SKY_BODIES = [
         paintLook() === "natural" ? null : ICE_TINT,
       ),
   }),
-  point("mercury", "Mercury"),
-  point("venus", "Venus"),
-  point("mars", "Mars"),
-  point("jupiter", "Jupiter"),
-  point("saturn", "Saturn"),
-  point("uranus", "Uranus"),
+  point("mercury", "Mercury", "\u263F", "Planet"),
+  point("venus", "Venus", "\u2640", "Planet"),
+  point("mars", "Mars", "\u2642", "Planet"),
+  point("jupiter", "Jupiter", "\u2643", "Planet"),
+  point("saturn", "Saturn", "\u2644", "Planet"),
+  point("uranus", "Uranus", "\u2645", "Planet"),
+  point("pluto", "Pluto", "\u2647", "Dwarf planet"),
+  point("vesta", "Vesta", "\u26B6", "Asteroid"),
+  /* No astronomical symbol exists for it: its initial. */
+  point("apophis", "Apophis", "A", "Asteroid"),
 ] as const;
 
 export type SkyBody = (typeof SKY_BODIES)[number];
@@ -124,13 +135,16 @@ export const bodyRow = <I extends SkyBodyId>(
 export interface PointSource {
   /** A point's place seen from the camera `rotation` (the geocentre with none) at an instant, or null for a body it does not hold. */
   place(id: string, instantMs: number, rotation?: Rotation): RaDec | null;
-  /** Every point bright enough to draw from the camera at an instant, brightest first: id and magnitude. */
+  /** Every point the layer can place from the camera at an instant, brightest first: id and magnitude, a body too faint to draw among them. */
+  placed(instantMs: number, rotation: Rotation): { id: PointId; V: number }[];
+  /** Those of `placed` bright enough to draw. */
   drawn(instantMs: number, rotation: Rotation): { id: PointId; V: number }[];
 }
 
 /** The source of a layer that failed to load: it holds no body, and the list stops waiting for it. */
 export const EMPTY_POINTS: PointSource = {
   place: () => null,
+  placed: () => [],
   drawn: () => [],
 };
 
@@ -143,3 +157,22 @@ export const providePoints = (next: PointSource | null): void => {
 
 /** The source now, or null while the layer has not loaded. */
 export const pointSource = (): PointSource | null => source;
+
+let held: SkyBodyId | null = null;
+let onHold: (() => void) | null = null;
+
+/**
+ * The body the Look at view holds (null for none), for the planet layer's ring on a held body too
+ * faint to draw. `watchHold` runs when it changes, so a sky at rest draws the ring or drops it.
+ */
+export const holdBody = (id: SkyBodyId | null): void => {
+  held = id;
+  onHold?.();
+};
+
+export const heldBody = (): SkyBodyId | null => held;
+
+/** The one watcher of `holdBody`, the sky's redraw; null takes it away with the sky. */
+export const watchHold = (callback: (() => void) | null): void => {
+  onHold = callback;
+};

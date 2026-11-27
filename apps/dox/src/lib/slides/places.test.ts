@@ -14,7 +14,8 @@ import {
   zoomFor,
 } from "./places";
 import { FIXTURE_STAGE as STAGE } from "~/test/deck-stage-fixture";
-import { moonRaDec, siderealDeg, toUnit } from "~/lib/sky-math";
+import { siderealDeg, toUnit } from "~/lib/sky-math";
+import { moonRaDec } from "~/lib/sky-moon";
 import { createCamera, project } from "~/lib/globe/camera";
 
 // The named places come from the deck's own data; the library holds none.

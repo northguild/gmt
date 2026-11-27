@@ -8,13 +8,12 @@ import { G } from "./globe/pinhole";
 import { skyHost } from "~/test/sky-host";
 import {
   SUN_RADIUS,
-  moonFromCamera,
-  moonRaDec,
   siderealDeg,
   skyCentre,
   sunRaDec,
   toUnit,
 } from "./sky-math";
+import { moonFromCamera, moonRaDec } from "./sky-moon";
 
 const RAD = Math.PI / 180;
 

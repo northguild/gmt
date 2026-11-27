@@ -339,6 +339,31 @@ describe("the bodies' maps", () => {
     expect(stars.dataset["skyMaps"]).toBe("ready");
   });
 
+  it("wait for the page's own signal (the Earth's imagery) before the maps and the planets are fetched, and ask for them at low priority", async () => {
+    decoder();
+    let earth: () => void = () => {};
+    const after = new Promise<void>((resolve) => (earth = resolve));
+    await loadSky({ ...withBodies(), after });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(mapFetches()).toHaveLength(0);
+    earth();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(2);
+    for (const call of mapFetches())
+      expect(call[1]).toMatchObject({ priority: "low" });
+    expect(stars.dataset["skyMaps"]).toBe("ready");
+  });
+
+  it("do not wait for ever on a signal that rejects", async () => {
+    decoder();
+    await loadSky({
+      ...withBodies(),
+      after: Promise.reject(new Error("no globe")),
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(mapFetches()).toHaveLength(2);
+  });
+
   it("load the one map a page declares and leave the other body flat", async () => {
     decoder();
     await loadSky({ ...inputs(), moonMap: "/moon.webp" });
@@ -412,6 +437,7 @@ describe("a page's sky inputs", () => {
     expect(skyInputsOf(host, host, controller.signal)).toEqual({
       stars: host.querySelectorAll("canvas")[1],
       band: host.querySelector("canvas"),
+      near: null,
       host,
       src: "/sky.bin",
       milkyWay: "/mw.webp",
@@ -419,6 +445,16 @@ describe("a page's sky inputs", () => {
       moonMap: "/moon.webp",
       signal: controller.signal,
     });
+  });
+
+  it("take the near canvas from beside the globe, inside the same host", () => {
+    host.dataset["skySrc"] = "/sky.bin";
+    host.querySelector("canvas")!.dataset["skyCanvas"] = "band";
+    host.querySelectorAll("canvas")[1]!.dataset["skyCanvas"] = "stars";
+    const near = document.createElement("canvas");
+    near.dataset["skyCanvas"] = "near";
+    host.append(near);
+    expect(skyInputsOf(host, host, controller.signal)?.near).toBe(near);
   });
 
   it("are null when the page has no star list or no canvases", () => {

@@ -3,7 +3,8 @@
  * `scripts/prepare-hero-sky.mjs`) decoded, grouped by colour and brightness step, and drawn on
  * the stars canvas as one path per group.
  */
-import { drawHalo, parseHex, rgba, type Rgb } from "./sky-bodies";
+import type { Rgb } from "./sky-bodies";
+import { drawHalo, parseHex, rgba } from "./sky-halo";
 import { skyToScreen, toUnit, type SkyLens, type Unit } from "./sky-math";
 
 /** Bytes per star in the list (see the generator). */

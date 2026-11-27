@@ -184,6 +184,66 @@ export const PLANET_ORBITS: DataCredit = {
   ],
 };
 
+/**
+ * Vesta's place in the night sky: the osculating elements of the IAU Minor Planet Center, whose
+ * bright minor planets file is published for use with acknowledgement, and its absolute magnitude
+ * and slope from JPL's Small-Body Database. The change is `sky-orbits.json`'s: the one body kept,
+ * with its elements read as a two-body orbit.
+ */
+export const SMALL_BODY_ORBITS: DataCredit = {
+  label: "Vesta",
+  parts: [
+    "Vesta's orbit: ",
+    {
+      text: "IAU Minor Planet Center",
+      href: "https://www.minorplanetcenter.net/",
+    },
+    ", its brightness: ",
+    {
+      text: "JPL Small-Body Database",
+      href: "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+    },
+    ".",
+  ],
+};
+
+/**
+ * Pluto's place and brightness in the night sky: its orbit is the IAU Minor Planet Center's
+ * distant-bodies file (`sky-orbits.json`'s `small.pluto`), read by `prepare-sky-orbits.ts` beside the
+ * bright-bodies file, and its magnitude is the Explanatory Supplement's law (`magnitude.ts`).
+ */
+export const DISTANT_ORBITS: DataCredit = {
+  label: "Pluto",
+  parts: [
+    "Pluto's orbit: ",
+    {
+      text: "IAU Minor Planet Center",
+      href: "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    },
+    ", its brightness: Urban and Seidelmann (eds.), Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), table 10.6.",
+  ],
+};
+
+/**
+ * The close passes' positions in the night sky: JPL's Horizons integration of
+ * a Small-Body Database orbit solution, a national peer (see `context/dox/built/tier-4-globe.md`,
+ * "Night sky"). It is listed exactly while `sky-orbits.json` ships a pass; `data-credits.test.ts`
+ * holds the two together.
+ */
+export const PASS_ORBITS: DataCredit = {
+  label: "Close approaches",
+  parts: [
+    "Close-approach positions: NASA ",
+    {
+      text: "JPL Small-Body Database",
+      href: "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+    },
+    " and ",
+    { text: "Horizons", href: "https://ssd.jpl.nasa.gov/horizons/" },
+    ".",
+  ],
+};
+
 /** The night sky's rows in reading order: the globe's popover, the deck's and the slides' read this list. */
 export const SKY_CREDITS: readonly DataCredit[] = [
   NIGHT_SKY,
@@ -191,6 +251,9 @@ export const SKY_CREDITS: readonly DataCredit[] = [
   SUN_IMAGERY,
   MOON_IMAGERY,
   PLANET_ORBITS,
+  SMALL_BODY_ORBITS,
+  DISTANT_ORBITS,
+  PASS_ORBITS,
 ];
 
 /** The site's licence note, as the landing popover's last row (everywhere else it is the footer line). */

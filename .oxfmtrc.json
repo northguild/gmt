@@ -5,7 +5,9 @@
     "**/*.yaml",
     "**/*.md",
     "**/*.mdx",
-    "apps/dox/src/assets/sky-orbits.json"
+    "apps/dox/src/assets/sky-orbits.json",
+    "apps/dox/src/assets/sky-passes.json",
+    "apps/dox/src/assets/sky-events.json"
   ],
   "overrides": [
     {

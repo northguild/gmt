@@ -10,13 +10,20 @@
  * adds `5 log10(r delta)`. Against JPL Horizons' APmag (QUANTITIES 9) over 2026 to 2029 and both
  * ends of the span the laws agree within 0.04 mag, except Mars (up to 0.1 at a phase angle of 13
  * to 19 degrees, where the paper's own scatter is 0.1: Mars's albedo markings are not in the law).
+ * Near the faint limit the curve is flat, so 0.01 mag moves a dated event by days: Uranus reaches
+ * 5.5 on 11 December 2033 by this law and on 3 December by Horizons, whose APmag for Uranus has
+ * almost no phase term (this law adds 0.012 at 1.8 degrees).
+ *
+ * An asteroid has no law of its own: `hgMagnitude` is the IAU H, G system (IAU Commission 20,
+ * 1985; Bowell et al. 1989, Asteroids II), from the H and G of its Minor Planet Center row.
+ * Pluto has no IAU law, and the H, G system measurably misfits it (0.42 to 0.57 mag too faint
+ * against Horizons' APmag), so it takes `DWARF_ABSOLUTE`.
  */
 import { SATURN_ROTATION, URANUS_ROTATION } from "./body-rotation";
 import { bodyPole } from "./body-frame";
-import type { PlanetView } from "./ephemeris";
-import type { SkyBodyId } from "./sky-registry";
-
-const RAD = Math.PI / 180;
+import type { Orbits, PlanetView } from "./ephemeris";
+import { RAD } from "./globe/pinhole";
+import type { PointId, SkyBodyId } from "./sky-registry";
 
 /** A polynomial in `x`, constant term first. */
 const poly = (c: readonly number[], x: number): number =>
@@ -29,6 +36,12 @@ export type PlanetId = Extract<
   SkyBodyId,
   "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus"
 >;
+
+/** The dwarf planets the sky places: the ids of the point rows after the planets that have a law of their own. */
+export type DwarfId = Extract<SkyBodyId, "pluto">;
+
+/** The asteroids: the point rows that are neither a planet nor a dwarf planet, each magnitude by the IAU H, G system. */
+export type SmallId = Exclude<PointId, PlanetId | DwarfId>;
 
 const LAWS = {
   mercury: (a) =>
@@ -106,3 +119,58 @@ export const COLOUR_INDEX = {
   saturn: 1.07,
   uranus: 0.5,
 } satisfies Record<PlanetId, number>;
+
+/**
+ * A dwarf planet's absolute visual magnitude at 1 au from the Sun and from the observer, with no
+ * phase term: the Astronomical Almanac's Pluto, V(1,0) = -1.01 (Explanatory Supplement to the
+ * Astronomical Almanac, 3rd ed., Urban and Seidelmann 2013, Table 10.6, p. 413, as corrected by
+ * the USNO errata; Harris 1961's value). Against Horizons' APmag it holds within 0.07 mag
+ * (`magnitude.test.ts`). Its phase angle never exceeds 2 degrees, so a phase term has nothing to
+ * fit. The apparent magnitude adds `5 log10(r delta)`.
+ */
+export const DWARF_ABSOLUTE = { pluto: -1.01 } satisfies Record<
+  DwarfId,
+  number
+>;
+
+/**
+ * An asteroid's apparent visual magnitude from its absolute magnitude `H` and slope `G`: `H + 5
+ * log10(r delta)` less `2.5 log10` of the two phase functions mixed by `G`. Each phase function
+ * blends the long form's smooth fall (constants `A`, `B`) for a wide angle with the short form's
+ * (constant `C`) for a narrow one, by the weight `W` that is 1 at opposition (Bowell et al. 1989,
+ * Table 1 and eq. A4). At a phase angle of 0 the phase term is 0, so it is `H + 5 log10(r delta)`.
+ */
+export function hgMagnitude(
+  H: number,
+  G: number,
+  { delta, r, phase }: PlanetView,
+): number {
+  const alpha = phase * RAD;
+  const half = Math.tan(alpha / 2);
+  const w = Math.exp(-90.56 * half * half);
+  const s = Math.sin(alpha);
+  const mix = (A: number, B: number, C: number) =>
+    w * (1 - (C * s) / (0.119 + 1.341 * s - 0.754 * s * s)) +
+    (1 - w) * Math.exp(-A * half ** B);
+  return (
+    H +
+    5 * Math.log10(r * delta) -
+    2.5 *
+      Math.log10((1 - G) * mix(3.33, 0.63, 0.986) + G * mix(1.87, 1.22, 0.238))
+  );
+}
+
+/** A point body's magnitude as the camera sees it: an asteroid or a pass by its H and G, a dwarf planet by its absolute magnitude, a planet by its own law. The layer and the generator's spell search both read this. */
+export function viewMagnitude(
+  orbits: Orbits,
+  id: PointId,
+  view: PlanetView,
+  instantMs: number,
+): number {
+  if (id in DWARF_ABSOLUTE)
+    return DWARF_ABSOLUTE[id as DwarfId] + 5 * Math.log10(view.r * view.delta);
+  const hg = orbits.small[id as SmallId] ?? orbits.passes[id as SmallId];
+  return hg
+    ? hgMagnitude(hg.H, hg.G, view)
+    : apparentMagnitude(id as PlanetId, view, instantMs);
+}

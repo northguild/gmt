@@ -85,5 +85,112 @@
       "worstArcseconds": 9.2
     }
   },
-  "omitted": []
+  "omitted": [],
+  "smallSource": {
+    "title": "MPC bright minor planets, osculating elements",
+    "publisher": "IAU Minor Planet Center",
+    "page": "https://www.minorplanetcenter.net/iau/Ephemerides/Bright/",
+    "file": {
+      "year": "2026",
+      "url": "https://www.minorplanetcenter.net/iau/Ephemerides/Bright/2026/Soft00Bright.txt",
+      "bytes": 59808,
+      "sha256": "3cb4367cf5fc28c519599d65b7bccab1aa4ea32e89297e225abecdf57febf565"
+    },
+    "elementDays": 720,
+    "photometry": "https://ssd-api.jpl.nasa.gov/sbdb.api?sstr=<name>&phys-par=1",
+    "bodies": {
+      "vesta": {
+        "peak": 5.21,
+        "H": 3.25,
+        "G": 0.32
+      }
+    }
+  },
+  "passSource": {
+    "title": "Close-approach positions: JPL Horizons state vectors of JPL SBDB solutions",
+    "publisher": "NASA JPL Solar System Dynamics",
+    "page": "https://ssd.jpl.nasa.gov/",
+    "bodies": {
+      "apophis": {
+        "designation": "99942",
+        "solution": "220",
+        "epoch": 2461200.5,
+        "solutionDate": "2024-06-25 10:48:08",
+        "observations": 7370,
+        "producer": "Davide Farnocchia",
+        "closestApproach": "2029-04-13T21:46:00Z",
+        "closestKm": 38011,
+        "peak": -9.19,
+        "window": {
+          "from": "2029-04-13T08:40:00Z",
+          "to": "2029-04-14T00:10:00Z"
+        },
+        "table": {
+          "from": "2029-04-12T08:40:00Z",
+          "to": "2029-04-15T00:00:00Z"
+        },
+        "sets": [
+          {
+            "epoch": 2462090.5,
+            "from": "2026-11-26T13:27:00Z",
+            "to": "2029-03-05T13:27:00Z",
+            "worstDegrees": 0.0343
+          },
+          {
+            "epoch": 2462234.5,
+            "from": "2029-03-05T13:27:00Z",
+            "to": "2029-04-12T08:40:00Z",
+            "worstDegrees": 0.0273
+          },
+          {
+            "epoch": 2462242.5,
+            "from": "2029-04-15T00:00:00Z",
+            "to": "2029-08-12T13:27:00Z",
+            "worstDegrees": 0.0259
+          },
+          {
+            "epoch": 2463050.5,
+            "from": "2029-08-12T13:27:00Z",
+            "to": "2036-10-14T13:27:00Z",
+            "worstDegrees": 0.0339
+          },
+          {
+            "epoch": 2462510.5,
+            "from": "2036-10-14T13:27:00Z",
+            "to": "2036-11-23T13:27:47.528Z",
+            "worstDegrees": 0.0159
+          }
+        ],
+        "tolerance": 0.035,
+        "queries": {
+          "approaches": "https://ssd-api.jpl.nasa.gov/cad.api?dist-max=0.002&date-min=<from>&date-max=<to>&body=Earth",
+          "photometry": "https://ssd-api.jpl.nasa.gov/sbdb.api?sstr=<name>&phys-par=1",
+          "vectors": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='<id>'&EPHEM_TYPE=VECTORS&CENTER='500@399'&REF_PLANE=FRAME&VEC_TABLE=2&OUT_UNITS=KM-S&VEC_CORR=NONE&TIME_TYPE=UT&CSV_FORMAT=YES&START_TIME='<from>'&STOP_TIME='<to>'&STEP_SIZE='<step>'",
+          "steps": {
+            "window": "10 min",
+            "table": "20 min"
+          },
+          "elements": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='<id>'&EPHEM_TYPE=ELEMENTS&CENTER='500@10'&REF_PLANE=ECLIPTIC&REF_SYSTEM=ICRF&TP_TYPE=ABSOLUTE&CSV_FORMAT=YES&OUT_UNITS=AU-D&TLIST='<jds>'",
+          "truth": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND='<id>'&EPHEM_TYPE=VECTORS&CENTER='500@399'&REF_PLANE=FRAME&VEC_TABLE=1&OUT_UNITS=KM-S&VEC_CORR='LT'&TIME_TYPE=UT&CSV_FORMAT=YES&START_TIME='<from>'&STOP_TIME='<to>'&STEP_SIZE='<step>'",
+          "truthSteps": {
+            "span": "10 d",
+            "near": "60 min"
+          }
+        }
+      }
+    }
+  },
+  "distantSource": {
+    "title": "MPC distant minor planets, osculating elements",
+    "publisher": "IAU Minor Planet Center",
+    "page": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    "file": {
+      "url": "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/Soft00Distant.txt",
+      "fetched": "2026-11-26T13:27:47.528Z",
+      "bytes": 764329,
+      "sha256": "89aefa5e3b3c059220d1c53f7c9f774464593380df15e87684a98e85452d71d6"
+    },
+    "elementDays": 720,
+    "bodies": ["pluto"]
+  }
 }

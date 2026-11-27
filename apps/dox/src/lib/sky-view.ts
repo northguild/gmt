@@ -6,9 +6,13 @@
  * Earth's limb (`aimBody`), holds it there as the body drifts, and keeps the idle spin off while
  * the view is on; the held body's button is pressed (`aria-pressed`) and the stack's button shows
  * that a view is on. Pressing the held body again, or any work of the reader's on the globe,
- * releases the view and leaves the camera where it is. A planet's button is unavailable
- * (`aria-disabled`, its reason in its `title`) while the planet layer loads, or while the planet
- * is too faint to be drawn.
+ * releases the view and leaves the camera where it is. A point's button is available whenever the
+ * planet layer can place the body, a faint one too (the camera turns to it and the layer rings it,
+ * `holdBody`); it is unavailable (`aria-disabled`) while the layer loads or when the body has no
+ * place. A body that is not a planet says what it is, dim beside its name (`groupTag`:
+ * "Asteroid"). A point's row carries a dim second line (visible, so touch and screen readers get
+ * it) with the reason or the date, from `sky-events.ts`; the data it reads is asked for when the
+ * button of the bar is reached (`askEvents`).
  *
  * Time is the sky's own `now`; the view keeps no timer. It checks the body on the globe's frames
  * (the engine renders one a second at rest), at most once a second of `now`.
@@ -32,7 +36,15 @@ import {
   type AimFrame,
   type AimLens,
 } from "./sky-aim";
-import { pointSource, SKY_BODIES, type SkyBodyId } from "./sky-registry";
+import { groupTag, lookLine } from "./sky-events";
+import { askEvents, eventsKit } from "./sky-events-kit";
+import {
+  holdBody,
+  pointSource,
+  SKY_BODIES,
+  type DiscId,
+  type SkyBodyId,
+} from "./sky-registry";
 import { arcDegrees } from "./slides/places";
 import { SKY_ICON_PATHS } from "./zone-sky";
 
@@ -42,16 +54,10 @@ const symbol = (char: string): SafeHtml =>
 const icon = (path: string): SafeHtml =>
   html`<svg class="${styles.face}" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">${raw(path)}</svg>`;
 
-/** Each body's face on its button: the sky's own icons for the discs, the astronomical symbols for the planets. */
-const FACES: Readonly<Record<SkyBodyId, SafeHtml>> = {
+/** A disc's face on its button: the sky's own icons. A point's is its row's astronomical symbol. */
+const FACES: Readonly<Record<DiscId, SafeHtml>> = {
   sun: icon(SKY_ICON_PATHS.day),
   moon: icon(SKY_ICON_PATHS.night),
-  mercury: symbol("\u263F"),
-  venus: symbol("\u2640"),
-  mars: symbol("\u2642"),
-  jupiter: symbol("\u2643"),
-  saturn: symbol("\u2644"),
-  uranus: symbol("\u2645"),
 };
 
 /** The stack's button and the bar it opens; `idPrefix` namespaces its ids. */
@@ -65,7 +71,7 @@ export function renderSkyView(idPrefix: string): SafeHtml {
     buttonClassName: styles.toggle,
     children: html`<div class="${styles.bar}" role="group" aria-label="Look at" data-gate="sky-look-bar">${SKY_BODIES.map(
       (row) =>
-        html`<button type="button" class="${styles.body}" data-sky-body="${row.id}" aria-pressed="false">${FACES[row.id]}<span>${row.name}</span></button>`,
+        html`<button type="button" class="${styles.body}" data-sky-body="${row.id}" aria-pressed="false">${row.kind === "disc" ? FACES[row.id] : symbol(row.symbol)}<span class="${styles.text}"><span>${row.name}${groupTag(row.id) && html` <span class="${styles.tag}">${groupTag(row.id)}</span>`}</span> ${row.kind === "point" && html`<span class="${styles.line}" data-sky-line></span>`}</span></button>`,
     )}</div>`,
   });
 }
@@ -106,6 +112,24 @@ export interface SkyView {
   destroy(): void;
 }
 
+/**
+ * Writes a second line as its ` · ` parts, each kept whole, so a line too long for the bar breaks
+ * only between parts ("Too faint · 20.7 ·" over "Close pass 13 Apr 2029"), never inside one.
+ */
+function writeLine(slot: Element, line: string | null): void {
+  const parts = (line ?? "").split(" · ").filter(Boolean);
+  slot.replaceChildren(
+    ...parts.flatMap((part, i) => {
+      const keep = document.createElement("span");
+      keep.textContent = part;
+      return i === 0 ? [keep] : [" · ", keep];
+    }),
+  );
+}
+
+/** A point's second line while the planet layer has not loaded. */
+const LOADING = "Loading";
+
 /** How far the body may drift from its spot before the camera follows, px. */
 const DRIFT_PX = 8;
 /** The hold looks at the body no more often than this, ms of `now`. */
@@ -124,7 +148,9 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
     signal,
     light: true,
     onToggle: (open) => {
-      if (open) syncPoints();
+      if (!open) return;
+      syncPoints();
+      reach();
     },
   });
   control.addEventListener(
@@ -139,30 +165,32 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
     { signal },
   );
 
-  /** Marks the planets that cannot be looked at now, with the reason as their tip. */
+  /** Marks the points that cannot be looked at now, and writes each one's second line. */
   function syncPoints(): void {
     const source = pointSource();
-    const drawn = new Set(
-      source?.drawn(now(), engine.getView().rotation).map(({ id }) => id),
+    const at = now();
+    const placed = new Map(
+      source?.placed(at, engine.getView().rotation).map((p) => [p.id, p.V]),
     );
     for (const button of buttons) {
       const row = SKY_BODIES.find((r) => r.id === button.dataset["skyBody"]);
       if (row?.kind !== "point") continue;
-      const why =
-        source === null
-          ? `${row.name}: the planets are still loading`
-          : drawn.has(row.id)
-            ? null
-            : `${row.name}: too faint to see now`;
-      if (why) {
-        button.title = why;
-        button.setAttribute("aria-disabled", "true");
-      } else {
-        button.removeAttribute("title");
-        button.removeAttribute("aria-disabled");
-      }
+      const V = placed.get(row.id) ?? null;
+      const line = source ? lookLine(eventsKit(), row.id, V, at) : LOADING;
+      const slot = button.querySelector("[data-sky-line]");
+      if (slot && slot.textContent !== (line ?? "")) writeLine(slot, line);
+      button.toggleAttribute("data-line", line !== null);
+      if (V === null) button.setAttribute("aria-disabled", "true");
+      else button.removeAttribute("aria-disabled");
     }
   }
+  /* The data the lines read arrives on the first reach of the button; the lines are written again then. */
+  const reach = (): void =>
+    void askEvents().then(() => {
+      if (!signal.aborted) syncPoints();
+    });
+  for (const type of ["pointerenter", "focus"])
+    toggle?.addEventListener(type, reach, { signal });
   syncPoints();
 
   let active: SkyBodyId | null = null;
@@ -180,6 +208,7 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
         "aria-pressed",
         String(button.dataset["skyBody"] === active),
       );
+    holdBody(active);
     if (active) host.dataset["skyView"] = active;
     else delete host.dataset["skyView"];
   }

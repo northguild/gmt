@@ -2,13 +2,12 @@
 import { vi } from "vitest";
 import {
   bodyOnScreen,
-  moonFromCamera,
-  moonRaDec,
   siderealDeg,
   toUnit,
   viewMatrix,
   type SkyLens,
 } from "../lib/sky-math";
+import { moonFromCamera, moonRaDec } from "../lib/sky-moon";
 
 /** The Moon at the centre of the view at `instantMs`, as a 1440 x 844 sky puts it on screen. */
 export function moonSight(lens: SkyLens, instantMs: number) {
