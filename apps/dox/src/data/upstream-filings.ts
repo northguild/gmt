@@ -351,6 +351,8 @@ export function overlayLive(
     const fresh = liveByKey.get(filingKey(own));
     if (fresh === undefined) return own;
     const merged: Record<string, unknown> = { ...fresh };
+    // `new` says the committed file lacked this filing when the live file was written; it has it now.
+    delete merged.new;
     for (const field of HAND_WRITTEN_FIELDS) {
       if (field in own) merged[field] = own[field];
       else delete merged[field];
