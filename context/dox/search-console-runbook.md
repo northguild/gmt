@@ -13,9 +13,9 @@ what crawlers see, or to read the Page indexing report.
 2. **Bing Webmaster Tools** → **Add site → Import from Google Search Console**, then submit the
    same sitemaps. Check: verified, sitemap processed, indexed-page count shown.
 3. **AI Crawl Control** report: per-crawler request counts for the last 30 days. Read-only; the
-   switches stay as §1 sets them. Check: counts for GPTBot, OAI-SearchBot, ChatGPT-User,
-   ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Google-Extended and Bingbot, and no
-   blocked requests.
+   switches stay as [cloudflare-runbook.md §1](cloudflare-runbook.md#1-zone-settings) sets them.
+   Check: counts for GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot,
+   Claude-User, PerplexityBot, Google-Extended and Bingbot, and no blocked requests.
 4. **Reindexing steps** after a change to redirects, the `workers.dev` host rule or `robots.txt`
    reaches production:
    1. **robots.txt report** (Settings → robots.txt). Check that it shows the fetch with the
