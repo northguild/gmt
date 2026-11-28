@@ -338,8 +338,31 @@ setInterval(() => {}, 1000);`;
   assert.equal(r.timedOut, true);
   assert.ok(performance.now() - started < 8_000);
   const grandchild = Number(readFileSync(pidFile, "utf8"));
-  assert.throws(() => process.kill(grandchild, 0), { code: "ESRCH" });
+  // The pipes close as the grandchild dies, a moment before it is reaped. Until then it is a
+  // zombie, which `kill(pid, 0)` still finds, so the test waits for it to be gone.
+  const deadline = performance.now() + 5_000;
+  while (isRunning(grandchild) && performance.now() < deadline) {
+    await new Promise((done) => setTimeout(done, 20));
+  }
+  assert.equal(isRunning(grandchild), false);
 });
+
+/** Whether `pid` is a process that still runs: not gone, and on Linux not a zombie waiting to be reaped. */
+function isRunning(pid) {
+  try {
+    process.kill(pid, 0);
+  } catch (error) {
+    if (error.code === "ESRCH") return false;
+    throw error;
+  }
+  try {
+    // The state is the field after the name, which is in parentheses and may hold spaces.
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    return stat.slice(stat.lastIndexOf(")") + 2)[0] !== "Z";
+  } catch {
+    return true;
+  }
+}
 
 test("a cell that timed out stops the run and says so", async () => {
   await assert.rejects(
