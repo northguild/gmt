@@ -4,16 +4,27 @@ import { raw } from "~/widgets/builders";
 import { renderHtml } from "~/widgets/test-fixture";
 import milkyWay from "../assets/hero-milkyway.json";
 import sky from "../assets/hero-sky.json";
+import moon from "../assets/sky-moon.json";
+import orbitsData from "../assets/sky-orbits.json";
+import orbits from "../assets/sky-orbits.source.json";
+import sun from "../assets/sky-sun.json";
 import {
   COASTLINES,
   EARTH_IMAGERY,
   HYG_COMMIT,
   LICENCE_CREDIT,
   MILKY_WAY,
+  MOON_IMAGERY,
   NE_TAG,
   NIGHT_SKY,
+  DISTANT_ORBITS,
+  PASS_ORBITS,
+  PLANET_ORBITS,
+  SMALL_BODY_ORBITS,
   renderDataCreditsHtml,
+  SKY_CREDITS,
   STATE_BOUNDARIES,
+  SUN_IMAGERY,
   TBB_TAG,
   TZ_BOUNDARIES,
 } from "./data-credits";
@@ -140,6 +151,89 @@ describe("the Milky Way credit", () => {
   });
 });
 
+describe("the Sun credit", () => {
+  it("is labelled Sun, credits ESA's image as ESA asks, and says it was changed", () => {
+    show([SUN_IMAGERY], { id: "c", placement: "stack" });
+    expect(text("Sun")).toHaveTextContent(sun.credit);
+    expect(text("Sun")).toHaveTextContent("22 March 2023");
+    expect(text("Sun")).toHaveTextContent("reduced to grey");
+    expect(
+      screen.getByRole("link", {
+        name: "PHI's view of the Sun in visible light",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", sun.source.page);
+    expect(
+      screen.getByRole("link", { name: "CC BY-SA 3.0 IGO", hidden: true }),
+    ).toHaveAttribute("href", sun.licenseUrl);
+  });
+});
+
+describe("the Moon credit", () => {
+  it("is labelled Moon, credits NASA's visualisation as its guidelines ask, and says it was scaled", () => {
+    show([MOON_IMAGERY], { id: "c", placement: "stack" });
+    expect(text("Moon")).toHaveTextContent(moon.credit);
+    expect(text("Moon")).toHaveTextContent("scaled");
+    expect(
+      screen.getByRole("link", {
+        name: "NASA's Scientific Visualization Studio, CGI Moon Kit",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", moon.source.page);
+    expect(
+      screen.getByRole("link", { name: "NASA media guidelines", hidden: true }),
+    ).toHaveAttribute("href", moon.licenseUrl);
+  });
+
+  it("is listed with the stars, the Milky Way, the Sun, the Moon, the planets, Vesta, Pluto and the close approaches, in that order", () => {
+    expect(SKY_CREDITS.map((credit) => credit.label)).toEqual([
+      "Stars",
+      "Milky Way",
+      "Sun",
+      "Moon",
+      "Planets",
+      "Vesta",
+      "Pluto",
+      "Close approaches",
+    ]);
+  });
+});
+
+describe("the planets credit", () => {
+  it("is labelled Planets, credits VSOP87 and IMCCE as the files ask, and says terms were dropped", () => {
+    show([PLANET_ORBITS], { id: "c", placement: "stack" });
+    expect(text("Planets")).toHaveTextContent("Bretagnon and Francou, IMCCE");
+    expect(text("Planets")).toHaveTextContent("smallest terms dropped");
+    expect(
+      screen.getByRole("link", { name: "VSOP87", hidden: true }),
+    ).toHaveAttribute("href", orbits.source.page);
+  });
+});
+
+describe("the small body credit", () => {
+  it("is labelled Vesta and credits the IAU Minor Planet Center and JPL's Small-Body Database, linked to their sites", () => {
+    show([SMALL_BODY_ORBITS], { id: "c", placement: "stack" });
+    expect(text("Vesta")).toHaveTextContent(
+      "Vesta's orbit: IAU Minor Planet Center, its brightness: JPL Small-Body Database.",
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "JPL Small-Body Database",
+        hidden: true,
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "IAU Minor Planet Center",
+        hidden: true,
+      }),
+    ).toHaveAttribute("href", "https://www.minorplanetcenter.net/");
+  });
+});
+
 describe("the licence credit", () => {
   it("is labelled Licence and reads as the site's licence note, linked to the terms", () => {
     show([LICENCE_CREDIT], { id: "c", placement: "stack" });
@@ -183,5 +277,51 @@ describe("renderDataCreditsHtml", () => {
 
   it("returns an empty string for an empty list, so a drawing with nothing to credit gets no button", () => {
     expect(renderDataCreditsHtml([], { id: "g", placement: "stack" })).toBe("");
+  });
+});
+
+describe("the Pluto credit", () => {
+  it("credits the Minor Planet Center's distant-bodies file for the orbit and the Almanac's supplement for the brightness", () => {
+    show([DISTANT_ORBITS], { id: "c", placement: "stack" });
+    expect(text("Pluto")).toHaveTextContent(
+      "Pluto's orbit: IAU Minor Planet Center, its brightness: Urban and Seidelmann (eds.), Explanatory Supplement to the Astronomical Almanac, 3rd ed. (2013), table 10.6.",
+    );
+    expect(
+      screen.getByRole("link", {
+        name: "IAU Minor Planet Center",
+        hidden: true,
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    );
+  });
+
+  it("is listed exactly while the orbits ship Pluto, from the file the sidecar records", () => {
+    expect(SKY_CREDITS.includes(DISTANT_ORBITS)).toBe(
+      "pluto" in orbitsData.small,
+    );
+    expect(orbits.distantSource.page).toBe(
+      "https://www.minorplanetcenter.net/iau/Ephemerides/Distant/",
+    );
+  });
+});
+
+describe("the close approaches credit", () => {
+  it("credits JPL's Small-Body Database and Horizons, linked to their sites", () => {
+    show([PASS_ORBITS], { id: "c", placement: "stack" });
+    expect(text("Close approaches")).toHaveTextContent(
+      "Close-approach positions: NASA JPL Small-Body Database and Horizons.",
+    );
+    expect(
+      screen.getByRole("link", { name: "Horizons", hidden: true }),
+    ).toHaveAttribute("href", "https://ssd.jpl.nasa.gov/horizons/");
+  });
+
+  it("is listed exactly while the orbits ship a pass", () => {
+    expect(SKY_CREDITS.includes(PASS_ORBITS)).toBe(
+      Object.keys(orbitsData.passes).length > 0,
+    );
+    expect(orbits.passSource.publisher).toBe("NASA JPL Solar System Dynamics");
   });
 });

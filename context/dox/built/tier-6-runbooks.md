@@ -61,6 +61,7 @@ mkdir -p "$SP/after" && rsync -a --exclude node_modules --exclude dist --exclude
 # In each tree (keep the fnm prefix: the base tree may predate the Node pin):
 cd "$SP/<tree>" && eval "$(fnm env)" && fnm use && pnpm install --frozen-lockfile \
   && pnpm --filter @northguild/gmt build \
+  && pnpm --filter @northguild/gmt-oxlint build \
   && DOX_VITE_CACHE_DIR="$SP/vite-<tree>" pnpm --filter @gmt/dox build
 # Serve the branch build for the browser gates, then stop it:
 python3 -m http.server 48391 --bind 127.0.0.1 --directory "$SP/after/apps/dox/dist"

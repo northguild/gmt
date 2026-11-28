@@ -164,6 +164,17 @@ export function referencedScripts(text: string): string[] {
   return [...files];
 }
 
+/** The file names a script's text imports statically: `import"./x.js"` and `from"./x.js"`. */
+export function staticImports(text: string): string[] {
+  const files: string[] = [];
+  for (const match of text.matchAll(
+    /(?:\bimport\s*|\bfrom\s*)["']([^"']+\.js)["']/g,
+  )) {
+    files.push(basename(match[1]!));
+  }
+  return files;
+}
+
 /** The `_astro/` scripts a page loads: `src`, and static `import`/`from` in inline modules. */
 export function scriptFiles(html: string): string[] {
   const files = new Set<string>();
@@ -220,13 +231,11 @@ export function pruneWidgetCss(): AstroIntegration {
             } catch {
               // A name that is not an `_astro/` file adds no text.
             }
-            const imports: string[] = [];
-            for (const match of text.matchAll(
-              /(?:\bimport\s*|\bfrom\s*)["']([^"']+\.js)["']/g,
-            )) {
-              imports.push(basename(match[1]!));
-            }
-            script = { text, imports, all: referencedScripts(text) };
+            script = {
+              text,
+              imports: staticImports(text),
+              all: referencedScripts(text),
+            };
             scriptCache.set(name, script);
           }
           return script;

@@ -1,18 +1,19 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { decodeStars, mountSky, type Sky, type SkyMap } from "./sky";
+import { mountSky, type Sky } from "./sky";
+import { decodeStars } from "./sky-stars";
+import type { SkyMap } from "./sky-map";
 import { G } from "./globe/pinhole";
 import { skyHost } from "~/test/sky-host";
 import {
   SUN_RADIUS,
-  moonFromCamera,
-  moonRaDec,
   siderealDeg,
   skyCentre,
   sunRaDec,
   toUnit,
 } from "./sky-math";
+import { moonFromCamera, moonRaDec } from "./sky-moon";
 
 const RAD = Math.PI / 180;
 

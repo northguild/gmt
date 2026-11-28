@@ -11,8 +11,7 @@
  */
 import {
   EARTH_IMAGERY,
-  MILKY_WAY,
-  NIGHT_SKY,
+  SKY_CREDITS,
   renderDataCreditsHtml,
 } from "~/lib/data-credits";
 import "./sky-credits.css";
@@ -21,7 +20,7 @@ interface Props {
   id: string;
 }
 const { id } = Astro.props;
-const credits = renderDataCreditsHtml([NIGHT_SKY, MILKY_WAY, EARTH_IMAGERY], {
+const credits = renderDataCreditsHtml([...SKY_CREDITS, EARTH_IMAGERY], {
   id,
   placement: "corner",
 });

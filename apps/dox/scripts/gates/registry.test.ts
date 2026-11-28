@@ -40,6 +40,7 @@ describe("the gate registry", () => {
       "sound-check",
       "rail-stored-still",
       "canada-layout-check",
+      "rendered-links",
       "frame-check",
       "slides-check",
       "a11y-axe",
@@ -52,6 +53,7 @@ describe("the gate registry", () => {
       "canada-stored-still",
       "table-fit",
       "plate-fit",
+      "sky-orbits-fresh",
     ]);
     expect(at("local")).toHaveLength(GATES.length);
   });
@@ -77,10 +79,15 @@ describe("the gate registry", () => {
 });
 
 // `a11y-tab-walk` lists a subset of the built pages, `table-fit` lists the built pages that hold a
-// table and `plate-fit` lists the built tool pages, so
+// table, `plate-fit` lists the built tool pages and `rendered-links` the pages that hold a widget, so
 // without `dist` each exits 2 before it reads a flag: its list fails, and its unknown-page case
 // passes for the wrong reason.
-const LISTS_FROM_DIST = new Set(["a11y-tab-walk", "table-fit", "plate-fit"]);
+const LISTS_FROM_DIST = new Set([
+  "a11y-tab-walk",
+  "table-fit",
+  "plate-fit",
+  "rendered-links",
+]);
 
 // Each gate answers the page contract without a browser: a JSON list of site paths, and an unknown
 // page is a usage error (exit 2), so a typo never passes as an empty run.

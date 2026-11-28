@@ -20,6 +20,12 @@ const EXPECTED: Record<string, { id: string; labels: string[] }[]> = {
         "Earth imagery",
         "Stars",
         "Milky Way",
+        "Sun",
+        "Moon",
+        "Planets",
+        "Vesta",
+        "Pluto",
+        "Close approaches",
         "Licence",
       ],
     },
@@ -94,7 +100,8 @@ describe("the built site's data credits", () => {
       "Zoom out",
       "Reset zoom",
       "Find a zone",
-      "Data credits",
+      "Go to my time zone",
+      "About this sky",
     ]);
   });
 

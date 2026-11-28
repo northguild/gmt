@@ -20,6 +20,7 @@ import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { sitemapLastmod } from "./src/lib/sitemap-lastmod.ts";
 import { versionOgImages } from "./src/lib/og-image-version.ts";
 import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
+import { preloadLandingScripts } from "./src/lib/preload-landing-scripts.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
 import { devWorkerProxy } from "./src/lib/dev-worker-proxy.ts";
 import { SITE_BASE, SITE_ORIGIN, withBase } from "./src/lib/site.ts";
@@ -144,6 +145,8 @@ export default defineConfig({
     copyRedirects(),
     // Build only: drops a widget's stylesheet link from the pages that do not show the widget.
     pruneWidgetCss(),
+    // Build only: lists the landing's static script imports as modulepreload links, so they load in one round trip.
+    preloadLandingScripts(),
     // Build only: puts ?v=<hash of the PNG> on og:image and twitter:image. It stays above starlight(),
     // whose Pagefind step runs on the same hook, so Pagefind and the dist gates read the final HTML.
     versionOgImages(),

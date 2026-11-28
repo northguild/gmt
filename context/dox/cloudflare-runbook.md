@@ -35,6 +35,10 @@ the Domains list does not show it.
 | Crawler Hints | Caching → Configuration | On | sends IndexNow pings when cached content changes. Nothing in the repo depends on it; switch it off if Bing Webmaster Tools → IndexNow never lists received URLs |
 | Web Analytics | Analytics & Logs → Web Analytics | site `northguild.dev`, **JS snippet** setup, automatic injection **off** | the tag is already in `Head.astro`; injection would load the beacon twice |
 
+`robots.txt` has two groups: `*` (with Applebot) and a `Googlebot`/`Bingbot` group that also skips
+the `.md` twins and page URLs with a query. The policy is in
+[`apps/dox/scripts/robots-policy.mjs`](../../apps/dox/scripts/robots-policy.mjs).
+
 Checks:
 
 ```sh
@@ -83,6 +87,8 @@ redirect matrix; a red run means a row failed, and its table names it. Then by h
 h $ND/; h $ND/api/x; h $ND/mcp/x   # 200 404 404 (landing)
 h $ND/gmt; h "$ND/gmt?a=1"         # 3xx to /gmt/ and /gmt/?a=1
 h $ND/gmt/; h $ND/gmt/reference/   # 200 200
+h $ND/gmt/reference   # 308 /gmt/reference/
+curl -sI $WD/gmt/ | grep -i x-robots   # noindex
 h $WD/; h "$WD/tools/dst-inspector/?zone=Europe/Paris"   # 301 $ND/gmt/…, query kept
 h -L "$WD/reference/duty/?a=1"     # ends 200 at /gmt/reference/workforce/?a=1
 # as a browser follows a link — curl alone can pass while browsers get a 404
@@ -103,18 +109,8 @@ rollback does not remove the Route, and an older build may lack the `/gmt/` file
 
 ## 4. Search engines and crawler reports
 
-1. **Search Console**, Domain property `northguild.dev` (verified by the
-   `google-site-verification` TXT record). Under **Sitemaps** submit
-   `https://northguild.dev/gmt/sitemap-index.xml`, and the root `sitemap-index.xml` once it
-   exists. Check: status "Success" with a URL count; **Indexing → Pages** shows the not-indexed
-   reasons. **URL Inspection** on `/gmt/`, a reference page and `/gmt/install.md` names the
-   canonical Google chose.
-2. **Bing Webmaster Tools** → **Add site → Import from Google Search Console**, then submit the
-   same sitemaps. Check: verified, sitemap processed, indexed-page count shown.
-3. **AI Crawl Control** report: per-crawler request counts for the last 30 days. Read-only; the
-   switches stay as §1 sets them. Check: counts for GPTBot, OAI-SearchBot, ChatGPT-User,
-   ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Google-Extended and Bingbot, and no
-   blocked requests.
+Search Console, Bing Webmaster Tools, the steps after a deploy and the pages to inspect again:
+[search-console-runbook.md](search-console-runbook.md).
 
 ## 5. GitHub
 

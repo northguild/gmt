@@ -3,7 +3,7 @@
 One-shot data-prep for the DOX-E1d globe imagery (#293).
 
 This script is NOT part of the dox build pipeline. Run it manually to rebuild
-`apps/dox/public/earth-blue-marble.webp`, the Earth imagery the WebGPU globe
+`apps/dox/src/assets/earth-blue-marble.webp`, the Earth imagery the WebGPU globe
 wraps around the sphere. The canvas-2D fallback never downloads it.
 
 Source
@@ -56,7 +56,7 @@ import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-OUTPUT_PATH = REPO_ROOT / "apps/dox/public/earth-blue-marble.webp"
+OUTPUT_PATH = REPO_ROOT / "apps/dox/src/assets/earth-blue-marble.webp"
 
 SOURCE_URL = (
     "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73751/"

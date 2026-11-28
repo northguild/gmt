@@ -4,8 +4,6 @@ import {
   bodyOnScreen,
   MIN_BODY,
   limbOnScreen,
-  moonFromCamera,
-  moonRaDec,
   siderealDeg,
   skyCentre,
   skyLens,
@@ -18,6 +16,7 @@ import {
   type SkyLens,
   type Unit,
 } from "./sky-math";
+import { moonFromCamera, moonRaDec } from "./sky-moon";
 import * as skyMath from "./sky-math";
 
 /** Meeus, Astronomical Algorithms 2nd ed., examples 12.a and 12.b, as Unix milliseconds: 1987-04-10T00:00:00Z and 1987-04-10T19:21:00Z. */

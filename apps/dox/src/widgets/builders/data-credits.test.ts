@@ -2,6 +2,7 @@
 import { screen, within } from "@testing-library/dom";
 import { expectNoAxeViolations } from "~/test/render-widget";
 import { renderHtml } from "../test-fixture";
+import { html } from "./html";
 import { dataCredits, type DataCredit } from "./data-credits";
 
 const SOURCES: DataCredit[] = [
@@ -27,6 +28,32 @@ describe("dataCredits", () => {
     const button = screen.getByRole("button", { name: "Data credits" });
     expect(button).toHaveAttribute("popovertarget", "credits-1");
     expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("names the button by `label` and puts `lead` before the credits", () => {
+    renderHtml(
+      dataCredits({
+        id: "credits-2",
+        placement: "stack",
+        credits: SOURCES,
+        label: "About this sky",
+        lead: html`<h2>Coming up</h2>`,
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: "About this sky" }),
+    ).toHaveAttribute("popovertarget", "credits-2");
+    expect(
+      screen.queryByRole("button", { name: "Data credits" }),
+    ).not.toBeInTheDocument();
+    const heading = screen.getByRole("heading", {
+      name: "Coming up",
+      hidden: true,
+    });
+    const term = screen.getAllByRole("term", { hidden: true })[0]!;
+    expect(
+      heading.compareDocumentPosition(term) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("lists every source with its label and credit", () => {

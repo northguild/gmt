@@ -13,12 +13,14 @@ import {
   parseColour,
   readTheme,
   rendererOverride,
+  watchTheme,
 } from "~/lib/globe/globe-theme";
 import {
   drawWithoutGlobe,
   followGlobe,
   loadClock,
   loadSky,
+  skyInputsOf,
 } from "~/lib/space-sky";
 import { loadDeckGmt } from "./gmt-loader";
 import { rotationFor, zoomFor, type Place, type PlaceContext } from "./places";
@@ -51,23 +53,8 @@ interface BootDeps {
 
 /** Starts the sky, which needs no globe. `null` when the page has no sky to draw. */
 function startSky(d: BootDeps): ReturnType<typeof loadSky> | Promise<null> {
-  const { host } = d;
-  const stars = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="stars"]',
-  );
-  const band = host.querySelector<HTMLCanvasElement>(
-    '[data-sky-canvas="band"]',
-  );
-  return stars && band && host.dataset["skySrc"]
-    ? loadSky({
-        stars,
-        band,
-        host,
-        src: host.dataset["skySrc"],
-        milkyWay: host.dataset["milkyWay"],
-        signal: d.signal,
-      })
-    : Promise.resolve(null);
+  const inputs = skyInputsOf(d.host, d.host, d.signal);
+  return inputs ? loadSky(inputs) : Promise.resolve(null);
 }
 
 /** The engine, or `null` when neither renderer starts (or the stage was torn down meanwhile). */
@@ -146,6 +133,11 @@ export async function bootStage(d: BootDeps): Promise<void> {
   }
   const globe = created;
   s.engine = globe;
+  /* The stage read the theme once at boot; a flip of the colour scheme or the look now reaches the Earth (the sky repaints itself, `space-sky.ts`). */
+  watchTheme(() => {
+    s.theme = readTheme(host);
+    globe.setTheme(s.theme);
+  }, signal);
   hardenCanvases(host);
   globe.onInteract(() => {
     s.commanded = false;

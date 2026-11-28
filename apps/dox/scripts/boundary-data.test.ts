@@ -54,11 +54,11 @@ interface Collection {
 
 function load(name: string): Collection {
   return JSON.parse(
-    readFileSync(resolve(APP, "public", name), "utf8"),
+    readFileSync(resolve(APP, "src/assets", name), "utf8"),
   ) as Collection;
 }
 
-describe.each(FILES)("public/%s", (name) => {
+describe.each(FILES)("src/assets/%s", (name) => {
   const data = load(name);
 
   it("is a FeatureCollection carrying the ODbL notice", () => {
@@ -104,7 +104,7 @@ describe("the Canada file", () => {
 
   it("stays within the 400 KB budget", () => {
     const bytes = readFileSync(
-      resolve(APP, "public/timezone-boundaries-canada.json"),
+      resolve(APP, "src/assets/timezone-boundaries-canada.json"),
     ).length;
     expect(bytes).toBeLessThanOrEqual(400 * 1024);
   });
@@ -132,7 +132,7 @@ describe.each([
     // Every piece of land in the drawn box has a zone, so none is left for the land feature.
     landPoints: {},
   },
-])("the land in public/$name", ({ name, seaPoints, landPoints }) => {
+])("the land in src/assets/$name", ({ name, seaPoints, landPoints }) => {
   const data = load(name);
   const features = data.features as unknown as Array<{
     properties: { tzid?: string; land?: string };
@@ -286,7 +286,7 @@ describe("the United States files", () => {
   ) as { tzdb: string; zones: string[]; undrawn: string[] };
   const zoneData = load("timezone-boundaries-us.json");
   const stateData = JSON.parse(
-    readFileSync(resolve(APP, "public/state-boundaries-us.json"), "utf8"),
+    readFileSync(resolve(APP, "src/assets/state-boundaries-us.json"), "utf8"),
   ) as {
     source: string;
     features: Array<{ properties: { postal: string; name: string } }>;
@@ -350,9 +350,9 @@ describe("the United States files", () => {
   it.each(["timezone-boundaries-us.json", "state-boundaries-us.json"])(
     "%s is under 409,600 bytes",
     (name) => {
-      expect(readFileSync(resolve(APP, "public", name)).length).toBeLessThan(
-        409_600,
-      );
+      expect(
+        readFileSync(resolve(APP, "src/assets", name)).length,
+      ).toBeLessThan(409_600);
     },
   );
 });

@@ -282,12 +282,12 @@ describe("badSitemapLocs", () => {
 });
 
 describe("badJsLiterals", () => {
-  const names = ["fonts", "timezone-boundaries.json", "llms.txt"];
+  const names = ["fonts", "sample-data.json", "llms.txt"];
 
   it("passes base-ful strings and page routes", () => {
     expect(
       badJsLiterals(
-        'f("/gmt/api/chat");g("/tools/dst-inspector/");h("/gmt/timezone-boundaries.json");`${b}/api/x`',
+        'f("/gmt/api/chat");g("/tools/dst-inspector/");h("/gmt/sample-data.json");`${b}/api/x`',
         names,
       ),
     ).toEqual([]);
@@ -313,7 +313,7 @@ describe("badJsLiterals", () => {
 
   it.each([
     'q("/api/chat")',
-    'load("/timezone-boundaries.json")',
+    'load("/sample-data.json")',
     'location.origin+"/api/chat"',
     '{url:u="/api/chat"}',
     'a("/api/chat")', // a call is exempt only by the helper's own name
@@ -333,12 +333,9 @@ describe("badJsLiterals", () => {
   it("flags /api/ and a public file", () => {
     expect(
       values(
-        badJsLiterals(
-          'fetch("/api/chat");fetch("/timezone-boundaries.json")',
-          names,
-        ),
+        badJsLiterals('fetch("/api/chat");fetch("/sample-data.json")', names),
       ),
-    ).toEqual(["/api/chat", "/timezone-boundaries.json"]);
+    ).toEqual(["/api/chat", "/sample-data.json"]);
   });
 
   it("matches a public name only at a boundary", () => {

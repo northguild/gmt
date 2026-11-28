@@ -3,14 +3,26 @@
  * deck's stage (`slides/stage.ts`).
  *
  * The sky has no loop of its own. `loadSky` fetches the star list and the Milky Way map and builds
- * the sky; `followGlobe` draws it once from the globe's camera (which marks the host
+ * the sky, then, once the browser is idle, loads the bodies' maps and the planets' layer and hands the sky their painters; `followGlobe` draws it once from the globe's camera (which marks the host
  * `data-sky="ready"` and so fades the layers in) and then re-draws it on each of the globe's
  * frames; `drawWithoutGlobe` draws it once when no globe will ever mount. Each takes the caller's
  * own elements and signal, so the hero passes a signal it never aborts and the deck aborts its on
  * `destroy()`.
  */
+import { watchTheme } from "./globe/globe-theme";
 import { startRotation } from "./globe-zones";
-import { mountSky, type Sky, type SkyMap } from "./sky";
+import { mountSky, type Sky } from "./sky";
+import type { BodyPainters } from "./sky-bodies";
+import type { SkyMap } from "./sky-map";
+import {
+  EMPTY_POINTS,
+  heldBody,
+  providePoints,
+  SKY_BODIES,
+  watchHold,
+  type SkyBody,
+} from "./sky-registry";
+import { whenIdle } from "./yield-to-main";
 
 type Clock = {
   getUnixNow: typeof import("@northguild/gmt/unix/get").getUnixNow;
@@ -38,6 +50,13 @@ interface SkyInputs {
   /** The star list (`hero-sky.bin`) and, optionally, the Milky Way map. */
   src: string;
   milkyWay?: string | undefined;
+  /** The Sun's and the Moon's maps; fetched late, after `sky.ready` and an idle wait. */
+  sunMap?: string | undefined;
+  moonMap?: string | undefined;
+  /** The canvas above the globe that a body nearer than the Moon is drawn on (`sky-planets.ts`), when the page has one. */
+  near?: HTMLCanvasElement | null;
+  /** The bodies' maps and the planets' layer are fetched only once this has settled (the landing: the Earth has its imagery). */
+  after?: Promise<unknown>;
   signal: AbortSignal;
 }
 
@@ -49,15 +68,20 @@ interface SkyGlobe {
   onFrame(callback: () => void): void;
 }
 
-/** The Milky Way map's pixels, or undefined when it cannot load: the sky then draws the stars alone. */
-async function loadMilkyWay(
+/**
+ * A map image's pixels, or undefined when it cannot load (absent, 404, aborted, undecodable): the
+ * sky then draws without it. The one place an image is decoded to pixels.
+ */
+async function loadSkyMap(
   src: string | undefined,
+  signal: AbortSignal,
+  priority: "high" | "low" = "high",
 ): Promise<SkyMap | undefined> {
   if (!src) return undefined;
   try {
-    const response = await fetch(src);
+    const response = await fetch(src, { signal, priority });
     if (!response.ok) return undefined;
-    /* The map's bytes are brightness, not colour, so no colour space may change them. */
+    /* The map's bytes are brightness or colour as drawn, so no colour space may change them. */
     const image = await createImageBitmap(await response.blob(), {
       colorSpaceConversion: "none",
     });
@@ -75,6 +99,99 @@ async function loadMilkyWay(
 }
 
 /**
+ * The sky inputs a page declares: `data-sky-src`, `data-milky-way` and `data-moon-map` on
+ * `holder`, and the two canvases inside it. Null when the page has no sky to draw.
+ */
+export function skyInputsOf(
+  holder: HTMLElement,
+  host: HTMLElement,
+  signal: AbortSignal,
+): SkyInputs | null {
+  const canvas = (which: string) =>
+    holder.querySelector<HTMLCanvasElement>(`[data-sky-canvas="${which}"]`);
+  const stars = canvas("stars");
+  const band = canvas("band");
+  const src = holder.dataset["skySrc"];
+  if (!stars || !band || !src) return null;
+  return {
+    stars,
+    band,
+    host,
+    src,
+    milkyWay: holder.dataset["milkyWay"],
+    sunMap: holder.dataset["sunMap"],
+    moonMap: holder.dataset["moonMap"],
+    /* Above the globe, so beside it in the host and not in the sky's own box. */
+    near: host.querySelector<HTMLCanvasElement>('[data-sky-canvas="near"]'),
+    signal,
+  };
+}
+
+/** The registry's discs that take a map, whose map the page declares. */
+type MappedDisc = Extract<SkyBody, { kind: "disc" }>;
+
+/**
+ * Once the first paint is done and the browser idle, loads each disc's map and painter chunk and
+ * the planets' layer, and hands them to the sky; a body whose map or chunk fails stays flat (the
+ * planets are then left out) and the others are textured. Nothing is fetched under forced colours
+ * (the sky is hidden) or after the caller has gone.
+ */
+async function loadBodyMaps(
+  sky: Sky,
+  stars: HTMLElement,
+  inputs: Pick<SkyInputs, "sunMap" | "moonMap" | "near" | "after" | "signal">,
+): Promise<void> {
+  const { signal } = inputs;
+  if (globalThis.matchMedia?.("(forced-colors: active)")?.matches) return;
+  const wanted = SKY_BODIES.filter(
+    (row): row is MappedDisc => row.kind === "disc" && !!inputs[row.map],
+  );
+  await sky.ready;
+  /* What the first view needs is on its way or drawn first; the bodies' maps wait their turn. */
+  await inputs.after?.catch(() => {});
+  await whenIdle();
+  if (signal.aborted) return;
+  let again = (): void => {};
+  const [made, planets] = await Promise.all([
+    Promise.all(
+      wanted.map(async ({ map, make }) => {
+        const loaded = await loadSkyMap(inputs[map]!, signal, "low");
+        return loaded ? make(loaded).catch(() => null) : null;
+      }),
+    ),
+    import("./sky-planets")
+      .then((chunk) =>
+        chunk.createPlanetLayer({
+          near: inputs.near,
+          signal,
+          /* A pass's states arrive late: the sky draws again once they have. */
+          redraw: () => again(),
+          held: heldBody,
+        }),
+      )
+      .catch(() => null),
+  ]);
+  if (signal.aborted) return;
+  const painters: BodyPainters = {};
+  wanted.forEach(({ id }, i) => {
+    if (made[i]) Object.assign(painters, { [id]: made[i] });
+  });
+  if (wanted.length)
+    stars.dataset["skyMaps"] = made.some(Boolean) ? "ready" : "failed";
+  /* The sky's own signal ends the source with it; a failed chunk leaves an empty one, so the list stops waiting. */
+  providePoints(planets ?? EMPTY_POINTS);
+  signal.addEventListener("abort", () => providePoints(null), { once: true });
+  const layer = planets ?? undefined;
+  sky.maps(painters, layer);
+  again = () => sky.maps(painters, layer);
+  /* The ring of a held faint body comes and goes with the Look at view, also while the sky is at rest. */
+  watchHold(() => again());
+  signal.addEventListener("abort", () => watchHold(null), { once: true });
+  /* A look change repaints the discs: their cache keys carry the look, so one redraw is enough. */
+  watchTheme(() => sky.maps(painters, layer), signal);
+}
+
+/**
  * Fetches the star list and the Milky Way and builds the sky; the first draw waits for the globe
  * (`followGlobe`) or for `drawWithoutGlobe`. Resolves null when the list or the canvas fails: the
  * page does not depend on the sky.
@@ -84,12 +201,12 @@ export async function loadSky(inputs: SkyInputs): Promise<Sky | null> {
   try {
     const [response, map, time] = await Promise.all([
       fetch(src),
-      loadMilkyWay(milkyWay),
+      loadSkyMap(milkyWay, signal),
       loadClock(),
     ]);
     if (!response.ok || signal.aborted) return null;
     const data = await response.arrayBuffer();
-    return mountSky({
+    const sky = mountSky({
       stars,
       band,
       host,
@@ -99,6 +216,9 @@ export async function loadSky(inputs: SkyInputs): Promise<Sky | null> {
       rotation: startRotation(time.getSystemTimeZone()),
       now: time.getUnixNow,
     });
+    stars.dataset["skyMaps"] = "flat";
+    void loadBodyMaps(sky, stars, inputs);
+    return sky;
   } catch {
     return null;
   }

@@ -22,6 +22,7 @@ export interface FakeEngine {
   spinActive: boolean;
   setZoom: ReturnType<typeof vi.fn>;
   setMarkers: ReturnType<typeof vi.fn>;
+  setTheme: ReturnType<typeof vi.fn>;
   setArcs: ReturnType<typeof vi.fn>;
   refit: ReturnType<typeof vi.fn>;
   requestRender: ReturnType<typeof vi.fn>;
@@ -65,6 +66,7 @@ export const engineMock = () => ({
         spinActive: false,
         setZoom: vi.fn(),
         setMarkers: vi.fn(),
+        setTheme: vi.fn(),
         setArcs: vi.fn(),
         refit: vi.fn(),
         requestRender: vi.fn(),
@@ -182,7 +184,13 @@ export const titleClockMock = () => ({
 });
 
 /** The factory for `vi.mock("~/lib/globe/globe-theme")`. */
-export const themeMock = () => ({
+export const themeMock = async () => ({
+  /* The real observer: a look flip reaches the stage as it does on the page. */
+  watchTheme: (
+    await vi.importActual<typeof import("~/lib/globe/globe-theme")>(
+      "~/lib/globe/globe-theme",
+    )
+  ).watchTheme,
   readTheme: () => ({
     markerPrimary: colour,
     markerOther: colour,
@@ -196,7 +204,10 @@ export const themeMock = () => ({
 export const skyCalls = { drawWithout: 0, follow: 0 };
 
 /** The factory for `vi.mock("~/lib/space-sky")`. */
-export const skyMock = () => ({
+export const skyMock = async () => ({
+  ...(await vi.importActual<typeof import("~/lib/space-sky")>(
+    "~/lib/space-sky",
+  )),
   loadClock: async () => ({
     getUnixNow: () => NOW,
     getSystemTimeZone: () => "UTC",
@@ -268,6 +279,8 @@ export function stageHarness<S extends { destroy(): void }>(
 ): {
   readonly root: HTMLElement;
   readonly signal: AbortSignal;
+  /** Aborts the stage's signal now, as a deck torn down does. */
+  abort(): void;
   /** The stage `mount` put up in this test. */
   readonly stage: S;
   mount(): S;
@@ -302,6 +315,7 @@ export function stageHarness<S extends { destroy(): void }>(
     get signal() {
       return abort.signal;
     },
+    abort: () => abort.abort(),
     get stage() {
       if (!stage) throw new Error("no stage is mounted in this test");
       return stage;

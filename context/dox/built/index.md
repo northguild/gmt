@@ -77,11 +77,15 @@ change.
 | [tier-2-platform.md](tier-2-platform.md) | Component kit, global sheets, widget tests, test isolation, element identity, playground, Escape |
 | [tier-2-tools.md](tier-2-tools.md) | Rules for every tool, registering a tool, industry tags, permalinks, traps |
 | [tier-2-webmcp.md](tier-2-webmcp.md) | Page tools (WebMCP): marker and offer, shared facts, schemas, links, the gate, the origin-trial token |
-| [tier-2-gates.md](tier-2-gates.md) | Gates, the runner, CI jobs |
+| [tier-2-gates.md](tier-2-gates.md) | Gates |
+| [tier-2-runner-and-ci.md](tier-2-runner-and-ci.md) | The gate runner, sharding, CI jobs for Dox |
 | [slides.md](slides.md) | Slide decks: the stage, `.gmt-stage-fit`, presenter previews, text floor, title-safe edges and guide, wake lock, venue runbook |
 | [tier-3-chrome.md](tier-3-chrome.md) | HUD chrome, header, landing entrance, cross-site transition |
 | [tier-3-sound.md](tier-3-sound.md) | Sound engine and cues, the settings control, native panel motion |
-| [tier-4-globe.md](tier-4-globe.md) | Globe engine, controls, night sky, Earth imagery, landing hero |
+| [tier-4-globe.md](tier-4-globe.md) | Globe engine, controls, zone drawer, Earth imagery, landing hero |
+| [tier-4-sky.md](tier-4-sky.md) | Landing sky: stars, Milky Way, Sun and Moon maps, load order |
+| [tier-4-sky-views.md](tier-4-sky-views.md) | Look at bar, aim and hold, names, rare-event list |
+| [tier-4-sky-bodies.md](tier-4-sky-bodies.md) | Planets, Vesta, Pluto, Apophis and the orbit data |
 | [tier-4-zones.md](tier-4-zones.md) | Zone readout, filters, scrubber, boundary data, data credits |
 | [tier-5-scenarios.md](tier-5-scenarios.md) | Scenario and mistake pages |
 | [tier-6-chat.md](tier-6-chat.md) | Dox chat: surface, retrieval, request pipeline, client |

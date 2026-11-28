@@ -8,22 +8,21 @@
  * Every scanner is pure: text in, failures out. None reads the file system.
  */
 
+import {
+  BASE,
+  isPageLinkWithoutSlash,
+  ORIGIN,
+  underBase,
+} from "../lib/page-links.mjs";
+
 export interface BaseFailure {
   value: string;
   where: string;
 }
 
-const ORIGIN = "https://northguild.dev";
-const BASE = "/gmt";
 /** The header's NorthGuild link (#424); equal to `LANDING_URL` in `src/lib/site.ts`. */
 export const LANDING = `${ORIGIN}/`;
 const LEGACY_HOST = "gmt-dox.northguild.workers.dev";
-
-/** `/gmt` or `/gmt/…`, and not a doubled `/gmt/gmt`. */
-function underBase(pathname: string): boolean {
-  if (pathname !== BASE && !pathname.startsWith(`${BASE}/`)) return false;
-  return !(pathname === `${BASE}/gmt` || pathname.startsWith(`${BASE}/gmt/`));
-}
 
 /**
  * The reason a URL fails the rule, or `null` when it passes. Relative URLs, hashes, non-http
@@ -142,21 +141,6 @@ export function badUrlsInHtml(html: string): BaseFailure[] {
     check(cssImports(block[1]), "<style> @import", out);
   }
   return dedupe(out);
-}
-
-/**
- * Whether a URL links to a Dox page without the trailing slash: root-absolute or on the site's
- * origin, under `/gmt`, and with no dot in its last path segment (a dot names a file).
- */
-function isPageLinkWithoutSlash(value: string): boolean {
-  let pathname: string;
-  if (value.startsWith("/") && !value.startsWith("//"))
-    pathname = value.split(/[?#]/)[0];
-  else if (value.startsWith(`${ORIGIN}/`))
-    pathname = value.slice(ORIGIN.length).split(/[?#]/)[0];
-  else return false;
-  if (!underBase(pathname) || pathname.endsWith("/")) return false;
-  return !pathname.slice(pathname.lastIndexOf("/") + 1).includes(".");
 }
 
 /**

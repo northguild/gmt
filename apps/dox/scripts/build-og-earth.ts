@@ -6,7 +6,7 @@
  *
  * Run by hand, never in `build`: `pnpm --filter dox exec tsx scripts/build-og-earth.ts`. The same
  * run always writes the same bytes: a fixed instant, a fixed camera, a fixed seed for the stars and
- * no clock. The sphere is the Blue Marble texture (`public/earth-blue-marble.webp`) projected through
+ * no clock. The sphere is the Blue Marble texture (`src/assets/earth-blue-marble.webp`) projected through
  * the same pinhole camera as the home hero (6.61 Earth radii), lit by the Sun at the fixed instant,
  * with a cyan rim of air. The globe engine itself is not captured: it draws zone pins and labels
  * over the planet, which a share card does not want.
@@ -108,7 +108,7 @@ const midpoint = (
 async function main() {
   const CanvasKit = await getCanvasKit();
   const encoded = readFileSync(
-    resolve(appRoot, "public/earth-blue-marble.webp"),
+    resolve(appRoot, "src/assets/earth-blue-marble.webp"),
   );
   const image = CanvasKit.MakeImageFromEncoded(encoded);
   if (!image) throw new Error("cannot decode earth-blue-marble.webp");

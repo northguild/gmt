@@ -270,6 +270,11 @@ export interface GlobeEngine {
    * this spin moves the globe.
    */
   setSpin(on: boolean): void;
+  /**
+   * Held, the idle spin is never scheduled and one running eases down; released, it is due
+   * `IDLE_MS` later. `ambient: false` and reduced motion never spin, held or not.
+   */
+  holdAmbient(hold: boolean): void;
   /** True from the moment a requested spin starts until its ramp down has ended. */
   isSpinning(): boolean;
   /** Measure the host and `framing` again now, for a host whose frame changed without a resize. */

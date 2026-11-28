@@ -1,12 +1,12 @@
 /**
  * zoneFilters: the globe's settings panel. A gear button that opens a panel of nine filter
  * switches in three fieldsets (local day, daylight saving, local sky), a count of what is
- * showing, and the Earth's look: one "Natural Earth" switch in a fieldset of its own.
+ * showing, and the page's look: one "Natural colours" switch in a fieldset of its own.
  *
  * The switches are built once; `zone-filter-ui.ts` only shows, hides and relabels them, so a
  * keyboard user's place and the checked state survive a refresh. Each filter switch is named
- * by its axis (`name`) and bucket (`value`), which is how the mount finds it again. The Earth
- * fieldset starts hidden: only the mount knows whether this globe draws the photograph.
+ * by its axis (`name`) and bucket (`value`), which is how the mount finds it again. The Look
+ * fieldset starts hidden: only the mount knows whether a body is drawn in imagery.
  */
 import {
   disclosure,
@@ -87,11 +87,11 @@ export function zoneFilters(o: { id: string }): SafeHtml {
         samples: ["Showing 999 of 999 zones"],
       })}
       ${group(
-        "Earth",
+        "Look",
         [
           switchField({
-            label: "Natural Earth",
-            name: "earth",
+            label: "Natural colours",
+            name: "look",
             value: "natural",
             checked: false,
           }),

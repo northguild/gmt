@@ -172,8 +172,9 @@ describe("worker entry — /api/chat", () => {
   });
 });
 
-/** A fake `ASSETS` that serves a small fixture map by pathname and 404s the rest.
- * It applies no `_redirects` and no `html_handling`. */
+/** A fake `ASSETS` that serves a small fixture map by pathname and 404s the rest. A path that is
+ * the folder of a served `<path>/` page answers 307 with a relative Location and the query kept,
+ * as the live binding's `auto-trailing-slash` handling does. It applies no `_redirects`. */
 function fixtureAssets(files: Record<string, string> = {}) {
   const calls: string[] = [];
   return {
@@ -187,10 +188,19 @@ function fixtureAssets(files: Record<string, string> = {}) {
               ? input.href
               : input.url;
         calls.push(href);
-        const body = files[new URL(href).pathname];
-        return body === undefined
-          ? new Response("Dox 404 page", { status: 404 })
-          : new Response(body, { status: 200 });
+        const { pathname, search } = new URL(href);
+        const body = files[pathname];
+        if (body !== undefined) return new Response(body, { status: 200 });
+        if (files[`${pathname}/`] !== undefined) {
+          return new Response(null, {
+            status: 307,
+            headers: {
+              location: `${pathname}/${search}`,
+              "cache-control": "public, max-age=0, must-revalidate",
+            },
+          });
+        }
+        return new Response("Dox 404 page", { status: 404 });
       },
     },
   };
@@ -227,7 +237,17 @@ describe("worker entry — the legacy host (matrix rows 1-17, 31-33)", () => {
       "/guides/concepts/dst-disambiguation/",
       "https://northguild.dev/gmt/guides/concepts/dst-disambiguation/",
     ],
-    ["row 6", "/reference", "https://northguild.dev/gmt/reference"],
+    ["row 6", "/reference", "https://northguild.dev/gmt/reference/"],
+    [
+      "row 6d",
+      "/reference/types/RoundingOptions?a=1",
+      "https://northguild.dev/gmt/reference/types/RoundingOptions/?a=1",
+    ],
+    [
+      "row 6e: a dev key is dropped",
+      "/reference?key=k&a=1",
+      "https://northguild.dev/gmt/reference/?a=1",
+    ],
     [
       "row 7 install.md",
       "/install.md",
@@ -388,15 +408,76 @@ describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
     expect(assets.calls).toEqual(["https://northguild.dev/gmt/nope/"]);
   });
 
-  it("hands a page path to the assets binding untouched, base included", async () => {
-    const assets = fixtureAssets({ "/gmt/reference": "page" });
-    const request = nd("/gmt/reference");
+  it("a page path without its slash is a 308 to the slash URL, the request handed on untouched", async () => {
+    const assets = fixtureAssets({ "/gmt/reference/": "page" });
     const response = await worker.fetch(
-      request,
+      nd("/gmt/reference"),
+      makeEnv({ ASSETS: assets.binding }),
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("/gmt/reference/");
+    expect(response.headers.get("cache-control")).toBe(
+      "public, max-age=0, must-revalidate",
+    );
+    expect(assets.calls).toEqual(["https://northguild.dev/gmt/reference"]);
+  });
+
+  it("keeps the query on the 308, and answers HEAD like GET", async () => {
+    const assets = fixtureAssets({
+      "/gmt/reference/duration/calculate/totalDuration/": "page",
+    });
+    const path = "/gmt/reference/duration/calculate/totalDuration";
+    const get = await worker.fetch(
+      nd(`${path}?a=1`),
+      makeEnv({ ASSETS: assets.binding }),
+    );
+    expect(get.status).toBe(308);
+    expect(get.headers.get("location")).toBe(`${path}/?a=1`);
+    const head = await worker.fetch(
+      nd("/gmt/reference", { method: "HEAD" }),
+      makeEnv({
+        ASSETS: fixtureAssets({ "/gmt/reference/": "page" }).binding,
+      }),
+    );
+    expect(head.status).toBe(308);
+  });
+
+  it("passes a 307 that is not the same path plus a slash through as a 307", async () => {
+    for (const location of [
+      "/gmt/other/",
+      "https://example.com/gmt/reference/",
+      "/gmt/reference/?b=2",
+    ]) {
+      const response = await worker.fetch(
+        nd("/gmt/reference?a=1"),
+        makeEnv({
+          ASSETS: {
+            fetch: async () =>
+              new Response(null, { status: 307, headers: { location } }),
+          },
+        }),
+      );
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(location);
+    }
+  });
+
+  it("passes a 200 from the binding through unchanged", async () => {
+    const assets = fixtureAssets({ "/gmt/reference": "page" });
+    const response = await worker.fetch(
+      nd("/gmt/reference"),
       makeEnv({ ASSETS: assets.binding }),
     );
     expect(response.status).toBe(200);
-    expect(assets.calls).toEqual(["https://northguild.dev/gmt/reference"]);
+    expect(await response.text()).toBe("page");
+  });
+
+  it("a missing page without its slash is the binding's own 404, never a 308", async () => {
+    const response = await worker.fetch(
+      nd("/gmt/nope"),
+      makeEnv({ ASSETS: fixtureAssets().binding }),
+    );
+    expect(response.status).toBe(404);
   });
 
   it("row 22: GET /gmt/api/brains is 200 JSON", async () => {
@@ -459,11 +540,11 @@ describe("worker entry — northguild.dev/gmt (matrix rows 19-25, 34)", () => {
     expect(next.headers.get("location")).toBe("https://northguild.dev/gmt/");
   });
 
-  it("row 25: /gmtx is not under the base; it is a 301 to /gmt/gmtx", async () => {
+  it("row 25: /gmtx is not under the base; it is a 301 to /gmt/gmtx/", async () => {
     const response = await worker.fetch(nd("/gmtx"), makeEnv());
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe(
-      "https://northguild.dev/gmt/gmtx",
+      "https://northguild.dev/gmt/gmtx/",
     );
   });
 

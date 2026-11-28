@@ -6,8 +6,10 @@
  *
  *     node apps/dox/scripts/deploy-smoke.mjs
  *
- * Node 22+, no dependencies. Rows 26-29 (the landing page, the zone and the landing's
- * robots.txt) belong to the landing repo's deploy and are checked by hand after a deploy.
+ * Node 22+, one devDependency (`robots-parser`, through `robots-policy.mjs`). Rows 26-28 (the
+ * landing page and the zone) belong to the landing repo's deploy and are checked by hand after a
+ * deploy. The landing's robots.txt is checked here ("robots policy") against the table in
+ * `robots-policy.mjs`.
  *
  * Requests go through `node:https`, not `fetch`: undici adds its own `sec-fetch-mode`
  * header, and the (N) rows must send exactly the headers a browser following a link sends.
@@ -16,13 +18,17 @@
  * The whole set is retried up to 6 times, 10 s apart, for route propagation. The exit code
  * is 1 with a table of failures when the last attempt still fails. It does not roll back.
  *
- * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers` and the 404
- * page) against a local `wrangler dev` that serves the built `dist`. The redirect rows need the
- * live hosts and are skipped.
+ * `DOX_SMOKE_LOCAL=http://localhost:8787` runs only the crawl-hygiene rows (`_headers`, the 404
+ * page and the slash rows 6a and 6b) against a local `wrangler dev` that serves the built `dist`.
+ * `wrangler dev` answers a slashless page with the assets binding's 307 as production does, so the
+ * 308 the Worker makes from it is checked there too. The old-host redirect rows need the live
+ * hosts and are skipped. The workers.dev `noindex` rows (6c) match a host name, which `localhost`
+ * is not.
  */
 import { readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
+import { checkRobots } from "./robots-policy.mjs";
 
 const LOCAL = process.env.DOX_SMOKE_LOCAL?.replace(/\/$/, "");
 const ND = LOCAL ?? "https://northguild.dev";
@@ -122,6 +128,47 @@ const hop = (rows, label, from, to, { headers, final = 200 } = {}) =>
     steps: [{ status: 301, location: to }, { status: final }],
   });
 
+/**
+ * A row for a page path without its slash: one permanent hop (308) to the slash URL with the query
+ * kept, then the page. The one place the expected status of that hop is written.
+ */
+const slashHop = (rows, label, url) => {
+  const at = url.search(/[?#]/);
+  const path = at === -1 ? url : url.slice(0, at);
+  rows.push({
+    label,
+    url,
+    steps: [
+      {
+        status: 308,
+        location: `${path}/${at === -1 ? "" : url.slice(at)}`,
+      },
+      { status: 200 },
+    ],
+  });
+};
+
+/**
+ * The first page URL in the sitemap that matches `re`: the first `<loc>` of the index, then the
+ * first match in that child sitemap. Each `<loc>` names `northguild.dev`, so its path is read under
+ * `ND`, which is the local server under `DOX_SMOKE_LOCAL`. `undefined` when there is none, so a
+ * row can fail by name.
+ */
+async function firstSitemapUrl(re) {
+  const here = (loc) => `${ND}${new URL(loc).pathname}`;
+  const index = await send("GET", `${ND}/gmt/sitemap-index.xml`);
+  const child = /<loc>([^<]+)<\/loc>/.exec(index.body)?.[1];
+  if (child === undefined) return undefined;
+  const sitemap = await send("GET", here(child));
+  return [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)]
+    .map((m) => here(m[1]))
+    .find((loc) => re.test(loc));
+}
+
+/** A function page from the sitemap, never a name typed here: pages get renamed. */
+const functionPage = () =>
+  firstSitemapUrl(/\/gmt\/reference\/[^/]+\/[^/]+\/[^/]+\/$/);
+
 /** The meta tag that asks a crawler not to index a page. */
 const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
 
@@ -131,6 +178,17 @@ const NOINDEX_META = /<meta\s[^>]*name="robots"[^>]*content="[^"]*noindex/i;
  */
 async function crawlRows() {
   const rows = [];
+  slashHop(rows, "6a", `${ND}/gmt/reference`);
+  const fnPage = await functionPage();
+  if (fnPage === undefined) {
+    rows.push({
+      label: "6b",
+      url: `${ND}/gmt/sitemap-index.xml`,
+      steps: [{ status: 200, check: () => "no function page in the sitemap" }],
+    });
+  } else {
+    slashHop(rows, "6b", `${fnPage.slice(0, -1)}?a=1`);
+  }
   const noindex = ({ headers }) =>
     headers["x-robots-tag"] === "noindex"
       ? undefined
@@ -219,6 +277,53 @@ async function crawlRows() {
   return rows;
 }
 
+/**
+ * The hashed URL a deployed page requests for a data file (`/gmt/_astro/<name>.<hash>.<ext>`). The
+ * build writes it into the script that reads the file, so this walks the page's scripts and the
+ * chunks they import, and answers with the first URL whose name matches. Used by every row that
+ * checks a data file, so the lookup lives once. `undefined` when no script names it.
+ */
+async function hashedAsset(pagePath, name, ext) {
+  const page = await send("GET", `${ND}${pagePath}`);
+  const wanted = new RegExp(
+    `/gmt/_astro/${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.[\\w-]+\\.${ext}`,
+  );
+  const seen = new Set();
+  const queue = [
+    ...page.body.matchAll(/["'](\/gmt\/_astro\/[^"']+\.js)["']/g),
+  ].map((m) => m[1]);
+  while (queue.length > 0 && seen.size < 80) {
+    const path = queue.shift();
+    if (seen.has(path)) continue;
+    seen.add(path);
+    const { body } = await send("GET", `${ND}${path}`);
+    const hit = wanted.exec(body)?.[0];
+    if (hit) return hit;
+    for (const m of body.matchAll(/["']\.\/([^"']+\.js)["']/g))
+      queue.push(`${path.slice(0, path.lastIndexOf("/") + 1)}${m[1]}`);
+  }
+  return undefined;
+}
+
+/** A row for a data file a tool page loads: found by `hashedAsset`, then checked by `check`. */
+async function dataFileRow(label, pagePath, name, ext, check) {
+  const found = await hashedAsset(pagePath, name, ext);
+  return {
+    label,
+    url: found ? `${ND}${found}` : `${ND}${pagePath}`,
+    steps: [
+      {
+        status: 200,
+        type: "json",
+        check: (response) =>
+          found === undefined
+            ? `${pagePath} requests no /gmt/_astro/${name}.*.${ext}`
+            : check(response),
+      },
+    ],
+  };
+}
+
 async function buildRows() {
   const rows = [];
   const add = (r) => rows.push(r);
@@ -249,15 +354,47 @@ async function buildRows() {
   }
 
   hop(rows, "3", `${WD}/reference/`, `${ND}/gmt/reference/`);
-  add({
-    label: "6",
-    url: `${WD}/reference`,
-    steps: [
-      { status: 301, location: `${ND}/gmt/reference` },
-      { status: 307, location: `${ND}/gmt/reference/` },
-      { status: 200 },
-    ],
-  });
+  // The old host adds the page slash in its one 301, so an old link never chains.
+  hop(rows, "6", `${WD}/reference`, `${ND}/gmt/reference/`);
+  // 6a and 6b, the slash rows, are in `crawlRows`; a missing function page fails there as 6b.
+  const fnPage = await functionPage();
+  if (fnPage !== undefined) {
+    const slashless = fnPage.slice(0, -1);
+    hop(
+      rows,
+      "6d",
+      `${WD}${slashless.slice(`${ND}/gmt`.length)}?a=1`,
+      `${fnPage}?a=1`,
+    );
+    // The old host serves the same pages under `/gmt/`; only `northguild.dev` may be indexed.
+    // `wrangler dev` serves on `localhost`, where the host rule cannot match, so these are live only.
+    add({
+      label: "6c workers.dev noindex",
+      url: `${WD}${fnPage.slice(ND.length)}`,
+      steps: [
+        {
+          status: 200,
+          check: ({ headers }) =>
+            String(headers["x-robots-tag"] ?? "").includes("noindex")
+              ? undefined
+              : `x-robots-tag is ${headers["x-robots-tag"]}, not noindex`,
+        },
+      ],
+    });
+    add({
+      label: "6c canonical host",
+      url: fnPage,
+      steps: [
+        {
+          status: 200,
+          check: ({ headers }) =>
+            headers["x-robots-tag"] === undefined
+              ? undefined
+              : `x-robots-tag is ${headers["x-robots-tag"]}`,
+        },
+      ],
+    });
+  }
   hop(rows, "7 install.md", `${WD}/install.md`, `${ND}/gmt/install.md`);
   hop(rows, "7 llms.txt", `${WD}/llms.txt`, `${ND}/gmt/llms.txt`);
   hop(
@@ -297,6 +434,22 @@ async function buildRows() {
     steps: [{ status: 301, location: `${ND}/robots.txt` }],
   });
   add({
+    label: "robots policy",
+    url: `${ND}/robots.txt`,
+    steps: [
+      {
+        status: 200,
+        type: "text/plain",
+        check: ({ body }) => {
+          const failures = checkRobots(body);
+          return failures.length === 0
+            ? undefined
+            : failures.map((f) => `${f.value}: ${f.where}`).join("; ");
+        },
+      },
+    ],
+  });
+  add({
     label: "13",
     url: `${WD}/reference/duty.md`,
     steps: [
@@ -305,13 +458,13 @@ async function buildRows() {
       { status: 200 },
     ],
   });
-  // A moved page without its slash: no dot and no slash, so the Worker runs and hands it to the
-  // assets binding, and only `_redirects` stands between it and the 404 page.
+  // A moved page without its slash: the old host's 301 adds the slash, and only `_redirects`
+  // stands between that URL and the 404 page.
   add({
     label: "13 no slash",
     url: `${WD}/reference/duty`,
     steps: [
-      { status: 301, location: `${ND}/gmt/reference/duty` },
+      { status: 301, location: `${ND}/gmt/reference/duty/` },
       { status: 301, location: `${ND}/gmt/reference/workforce/` },
       { status: 200 },
     ],
@@ -364,7 +517,7 @@ async function buildRows() {
       url: `${ND}/gmt/nope`,
       headers,
       steps: [
-        { status: 307, location: `${ND}/gmt/nope/`, optional: true },
+        { status: 308, location: `${ND}/gmt/nope/`, optional: true },
         { status: 404, type: "text/html" },
       ],
     });
@@ -654,25 +807,23 @@ async function buildRows() {
     url: `${ND}/gmt/check/morocco-2026-clock-change/`,
     steps: [{ status: 200, type: "text/html" }],
   });
-  add({
-    label: "morocco boundary file",
-    url: `${ND}/gmt/timezone-boundaries-morocco.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          try {
-            return JSON.parse(body).license === "ODbL-1.0"
-              ? undefined
-              : "license is not ODbL-1.0";
-          } catch {
-            return "body is not JSON";
-          }
-        },
+  rows.push(
+    await dataFileRow(
+      "morocco boundary file",
+      "/gmt/check/morocco-2026-clock-change/",
+      "timezone-boundaries-morocco",
+      "json",
+      ({ body }) => {
+        try {
+          return JSON.parse(body).license === "ODbL-1.0"
+            ? undefined
+            : "license is not ODbL-1.0";
+        } catch {
+          return "body is not JSON";
+        }
       },
-    ],
-  });
+    ),
+  );
   // The US rows make two calls to the `sunshine-protection-act:` bucket per run (the GET and the
   // HEAD), under its 20 a minute. The PUT answers 405 before the bucket counts it. The answer has
   // one row per zone of `us-region-zones.json`, in that file's order; the offsets follow the
@@ -760,50 +911,45 @@ async function buildRows() {
     url: `${ND}/gmt/check/us-sunshine-protection-act/`,
     steps: [{ status: 200, type: "text/html" }],
   });
-  add({
-    label: "us zone boundary file",
-    url: `${ND}/gmt/timezone-boundaries-us.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          try {
-            return JSON.parse(body).license === "ODbL-1.0"
-              ? undefined
-              : "license is not ODbL-1.0";
-          } catch {
-            return "body is not JSON";
-          }
-        },
+  const US_PAGE = "/gmt/check/us-sunshine-protection-act/";
+  rows.push(
+    await dataFileRow(
+      "us zone boundary file",
+      US_PAGE,
+      "timezone-boundaries-us",
+      "json",
+      ({ body }) => {
+        try {
+          return JSON.parse(body).license === "ODbL-1.0"
+            ? undefined
+            : "license is not ODbL-1.0";
+        } catch {
+          return "body is not JSON";
+        }
       },
-    ],
-  });
-  add({
-    label: "us state boundary file",
-    url: `${ND}/gmt/state-boundaries-us.json`,
-    steps: [
-      {
-        status: 200,
-        type: "json",
-        check: ({ body }) => {
-          let parsed;
-          try {
-            parsed = JSON.parse(body);
-          } catch {
-            return "body is not JSON";
-          }
-          // The 50 states, DC and five territories, keyed by postal code.
-          const n = parsed.features?.length;
-          return n === 56 ? undefined : `${n} state shapes, not 56`;
-        },
+    ),
+    await dataFileRow(
+      "us state boundary file",
+      US_PAGE,
+      "state-boundaries-us",
+      "json",
+      ({ body }) => {
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          return "body is not JSON";
+        }
+        // The 50 states, DC and five territories, keyed by postal code.
+        const n = parsed.features?.length;
+        return n === 56 ? undefined : `${n} state shapes, not 56`;
       },
-    ],
-  });
+    ),
+  );
   add({
     label: "25",
     url: `${ND}/gmtx`,
-    steps: [{ status: 301, location: `${ND}/gmt/gmtx` }, { status: 404 }],
+    steps: [{ status: 301, location: `${ND}/gmt/gmtx/` }, { status: 404 }],
   });
   add({
     label: "30",

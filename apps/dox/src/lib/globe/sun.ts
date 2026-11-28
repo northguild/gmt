@@ -10,8 +10,7 @@
  * (Astronomical Almanac, "Approximate Solar Coordinates"), accurate to well
  * under a degree — far finer than a terminator a few pixels wide needs.
  */
-
-const RAD = Math.PI / 180;
+import { RAD } from "./pinhole";
 
 /** Milliseconds per day. */
 export const DAY_MS = 86_400_000;

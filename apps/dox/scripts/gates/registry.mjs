@@ -142,6 +142,15 @@ export const GATES = [
     needs: null,
   },
   {
+    id: "rendered-links",
+    script: "rendered-links.mjs",
+    tier: "pr",
+    browsers: ["chromium"],
+    fullBrowsers: ["chromium"],
+    themes: false,
+    needs: null,
+  },
+  {
     id: "frame-check",
     script: "frame-check.mjs",
     tier: "pr",
@@ -223,6 +232,17 @@ export const GATES = [
     fullBrowsers: null,
     themes: true,
     needs: null,
+  },
+  {
+    id: "sky-orbits-fresh",
+    script: "sky-orbits-fresh.mjs",
+    tier: "weekly",
+    browsers: [],
+    fullBrowsers: null,
+    themes: false,
+    needs: null,
+    base: false,
+    browserArg: false,
   },
   {
     id: "hero-space",

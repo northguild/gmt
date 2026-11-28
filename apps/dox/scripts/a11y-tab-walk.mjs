@@ -37,6 +37,7 @@ import {
   tabWalkProblems,
 } from "./gate-checks.mjs";
 import { distPages, openRail, parseSweep, sweep } from "./lib/a11y-sweep.mjs";
+import { tabKey } from "./lib/browser-launch.mjs";
 
 const GATE = "a11y-tab-walk";
 const EXTRA_PRESSES = 20;
@@ -360,7 +361,7 @@ async function walkPage(page, { width, browserName, label }) {
     candidates = again;
     if (same) break;
   }
-  const key = browserName === "webkit" ? "Alt+Tab" : "Tab";
+  const key = tabKey(browserName);
   const reported = new Set();
   /** Tab until every candidate is visited or focus revisits a stop; run the per-press checks. */
   const walk = async (wanted) => {

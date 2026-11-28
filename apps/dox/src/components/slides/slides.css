@@ -587,7 +587,7 @@ html[data-deck] .gmt-deck-menu:popover-open {
     margin: 0;
   }
 
-  & dd + dt {
+  & dl > div + div {
     margin-block-start: var(--gmt-space-2);
   }
 
@@ -855,6 +855,11 @@ html[data-deck] .gmt-deck-space .gmt-sky {
 html[data-deck] .gmt-deck-space[data-sky="ready"] .gmt-sky-band,
 html[data-deck] .gmt-deck-space[data-sky="ready"] [data-sky-layer="stars"] {
   opacity: 1;
+}
+
+/* The globe canvas is added after the near canvas, so the near one needs a layer of its own to stay over it. */
+html[data-deck] .gmt-deck-space > .gmt-sky-near {
+  z-index: var(--gmt-z-raised);
 }
 
 /* The globe canvas fills the layer; the engine sizes its drawing buffer. */

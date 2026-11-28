@@ -48,6 +48,7 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
   import { findWidget } from "../widgets/builders";
   import { showUnavailable } from "../lib/widget-mount";
   import { whenIdle } from "../lib/yield-to-main";
+  import { warmGlobe } from "../lib/globe-warmup";
   import { offerPageTool } from "../lib/webmcp/offer";
 
   /* Neither the mount nor its stylesheet is imported here: both load with the
@@ -70,6 +71,9 @@ const prefix = idPrefix ?? (renderCount === 1 ? "globe" : `globe-${renderCount}`
     // The chat rail mounts its own copies; skip anything already claimed.
     if (root.dataset[MOUNTED]) continue;
     root.dataset[MOUNTED] = "pending";
+    /* The landing's Earth is the page's second paint: its imagery and code are fetched as soon as
+       the copy has painted, and the mount below still waits for idle. */
+    if (root.querySelector("[data-space]")) void warmGlobe(stage);
 
     const start = () => {
       if (root.dataset[MOUNTED] === "done") return;

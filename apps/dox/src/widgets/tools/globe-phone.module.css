@@ -3,7 +3,8 @@
    Where the landing is not locked (the negation of `HOME_LOCKED_QUERY`, lib/home-carousel.ts; keep
    the two equal) the zone drawer is a bottom sheet fixed to the visual viewport. `globe-sheet.ts`
    writes `--sheet-bottom` (the keyboard's height) on the drawer's wrapper, and both the sheet and
-   its close read it. On a coarse pointer every control of the zoom stack and the sheet is 44px.
+   its close read it. The zoom stack is a row, which folds and opens along the row; on a coarse
+   pointer every control of it and the sheet is 44px.
 
    The rules override `.root[data-space] .drawer` and `.drawerClose` in globe.module.css, which
    weigh (0,3,0): the sheet and its close carry an attribute (`role`, `aria-controls`) to weigh the
@@ -66,17 +67,44 @@
     margin-inline: var(--gmt-space-4);
   }
 
-  /* Touch: 44px targets, the floor being WCAG 2.5.8's 24px. The stack lies in a row along the
-     stage's bottom edge, where the disc is not, so taller buttons do not shrink the Earth. */
+  /* The stack lies in a row along the stage's bottom edge, where the disc is not, so it never
+     shrinks the Earth, whatever the pointer. */
+  [data-space] .stack {
+    flex-direction: row;
+    inset-block-end: 0;
+
+    /* Folded (globe.module.css), the row keeps its inline end, where the info button is, not its
+       foot. Physical, as `inset()` is: the site is set left to right. */
+    --stack-fold-clip: inset(
+      -1rem -1rem -1rem calc(100% - var(--stack-fold-keep))
+    );
+
+    /* The credits popup (data-credits.module.css) opens above the row, not beside its last
+       button, where a phone leaves it a strip. */
+    --credits-area: block-start span-all;
+    --credits-gap-inline: 12px;
+    --credits-gap-block: var(--gmt-space-2);
+  }
+
+  /* Touch: 44px targets, the floor being WCAG 2.5.8's 24px. */
   @media (pointer: coarse) {
     [data-space] .stack {
-      flex-direction: row;
-      inset-block-end: 0;
+      --stack-fold-keep: calc(2.75rem + 1px);
     }
 
     [data-space] .stack button {
       inline-size: 2.75rem;
       block-size: 2.75rem;
+    }
+
+    /* Seven 44px buttons need 23rem of window. Narrower, Reset goes: a pinch out or Zoom out
+       reaches the same rest zoom (the globe's least). */
+    @media (width < 23rem) {
+      [data-space]
+        .stack:where(:has([data-globe-locate]:not([hidden])))
+        [data-globe-zoom="reset"] {
+        display: none;
+      }
     }
 
     [data-space] .sheet :is(button, input, [role="option"]) {

@@ -5,8 +5,10 @@
  * reader can use or read.
  *
  * Placements, per page:
- *   - `/` and `/tools/zoned-earth/`: the last button of the globe's control stack (the fifth on `/`,
- *     where the zone finder's magnifier comes before it; the fourth on the tool page);
+ *   - `/` and `/tools/zoned-earth/`: the last button of the globe's control stack (the seventh on `/`,
+ *     where the zone finder's magnifier, Locate and Look at come before it; the fifth on the tool
+ *     page, after Locate). The browser's zone is pinned (`ZONE`), so Locate always has a zone to
+ *     go to and shows;
  *   - `/why-gmt/`: a glass square in the time-zone map's corner;
  *   - `/check/canada-2026-clock-change/`: a glass square in the Canada map's corner, added by the client
  *     when the map is drawn (the Worker is stubbed), at every width;
@@ -20,11 +22,15 @@
  *   - the button's rect intersects no other focusable element's rect (the globe's canvas, which the
  *     button is drawn on, aside) and no text node's client rect;
  * and per page and width:
- *   - Tab reaches the button (a stack's from its first sibling, one press per button before it, inside the group
- *     named "Globe controls"), Enter opens the popover, the accessibility tree shows it expanded
+ *   - Tab reaches the button (a stack's by ArrowUp from Zoom in, wrapping round the toolbar named
+ *     "Globe controls", which one Tab leaves), Enter opens the popover, the accessibility tree shows it expanded
  *     (read from the AX tree over CDP, or `ariaSnapshot()`; a native popover button has no
  *     `aria-expanded` attribute), Escape closes it and focus is back on the button;
- *   - the open panel sits inside the viewport and covers none of the control buttons.
+ *   - the open panel sits inside the viewport and covers none of the control buttons: beside a
+ *     column stack; above or below a row one, on whichever side has the more room.
+ *
+ * On `/` it also reads the info popover's "Coming up in the sky" list at two pinned instants
+ * (`events-ahead`, `events-now`).
  *
  * Serve a build statically first (never `astro preview`, never the owner's dev server), for example:
  *   pnpm exec astro build --outDir /tmp/dist-x/gmt
@@ -35,7 +41,7 @@
  */
 import { mkdirSync } from "node:fs";
 import { chromium } from "@playwright/test";
-import { launchBrowser } from "./lib/browser-launch.mjs";
+import { launchBrowser, tabKey } from "./lib/browser-launch.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
@@ -44,18 +50,22 @@ import { gate, resolveMisses } from "./lib/locate.mjs";
 const GATE = "data-credits-check";
 
 const ZOOM_STACK = ["Zoom in", "Zoom out", "Reset zoom"];
+const LOCATE = "Go to my time zone";
+/* A zone the globe places, so the stack's Locate shows (it hides without one). */
+const ZONE = "Europe/London";
 const GLOBE = {
   stack: true,
   frame: gate("globe-stage"),
   id: "globe-data-credits",
-  order: [...ZOOM_STACK, "Data credits"],
+  order: [...ZOOM_STACK, LOCATE, "Data credits"],
 };
 const TARGETS = [
   {
     path: "/",
     slug: "home-globe",
     ...GLOBE,
-    order: [...ZOOM_STACK, "Find a zone", "Data credits"],
+    name: "About this sky",
+    order: [...ZOOM_STACK, "Find a zone", LOCATE, "Look at", "About this sky"],
     // The landing alone carries the night sky, so alone it credits the star catalogue, and alone
     // it holds the licence note instead of the page footer.
     labels: [
@@ -63,6 +73,12 @@ const TARGETS = [
       "Earth imagery",
       "Stars",
       "Milky Way",
+      "Sun",
+      "Moon",
+      "Planets",
+      "Vesta",
+      "Pluto",
+      "Close approaches",
       "Licence",
     ],
   },
@@ -146,12 +162,6 @@ for (const name of browsers) {
 }
 const shots = flag("shots", "");
 if (shots) mkdirSync(shots, { recursive: true });
-
-// Safari on macOS, and so Playwright's WebKit, leaves buttons out of the Tab order unless the
-// reader turns on "Press Tab to highlight each item" (or presses Option+Tab, which walks every
-// control). Plain Tab there reaches only links and fields, for every button on every site, so
-// WebKit's run presses Option+Tab. Chromium's Tab walks buttons.
-const TAB = (name) => (name === "webkit" ? "Alt+Tab" : "Tab");
 
 const failures = [];
 let measured = 0;
@@ -254,16 +264,13 @@ function overlaps(id) {
  * The button's expanded state from the accessibility tree. Chromium: the AX tree over CDP
  * (`expanded` property). Elsewhere: Playwright's `ariaSnapshot()` (`[expanded]`).
  */
-async function accessibleExpanded(page, button, engine) {
+async function accessibleExpanded(page, button, engine, name) {
   if (engine === "chromium") {
     const session = await page.context().newCDPSession(page);
     const { nodes } = await session.send("Accessibility.getFullAXTree");
     await session.detach();
     const node = nodes.find(
-      (n) =>
-        !n.ignored &&
-        n.role?.value === "button" &&
-        n.name?.value === "Data credits",
+      (n) => !n.ignored && n.role?.value === "button" && n.name?.value === name,
     );
     const prop = node?.properties?.find((p) => p.name === "expanded");
     return {
@@ -290,10 +297,15 @@ function geometry({ id, stack, zoom }) {
     h: innerHeight,
     groupLabel: group?.getAttribute("aria-label") ?? null,
     groupRole: group?.getAttribute("role") ?? null,
+    row: group?.getAttribute("aria-orientation") === "horizontal",
     order: group
-      ? [...group.querySelectorAll("button")].map((b) =>
-          b.getAttribute("aria-label"),
-        )
+      ? /* The shut Look at bar's buttons sit in a hidden panel: not the stack's own controls. */
+        [...group.querySelectorAll("button")]
+          .filter((b) => b.closest("[hidden]") === null)
+          .map(
+            /* An icon-only kit button names itself with hidden text, not aria-label. */
+            (b) => b.getAttribute("aria-label") ?? b.textContent?.trim() ?? "",
+          )
       : [],
   };
 }
@@ -332,7 +344,10 @@ if (args.includes("--resolve-only")) {
   const browser = await chromium.launch();
   let missed = 0;
   for (const target of SELECTED) {
-    const context = await browser.newContext({ viewport: VIEWPORTS[0] });
+    const context = await browser.newContext({
+      viewport: VIEWPORTS[0],
+      timezoneId: ZONE,
+    });
     await blockOffSite(context, base);
     const page = await context.newPage();
     if (target.stubWorker) {
@@ -394,7 +409,7 @@ for (const name of browsers) {
   for (const viewport of VIEWPORTS) {
     for (const target of SELECTED) {
       const label = `${name} ${viewport.width}px ${target.path}`;
-      const context = await browser.newContext({ viewport });
+      const context = await browser.newContext({ viewport, timezoneId: ZONE });
       await blockOffSite(context, base);
       const page = await context.newPage();
       if (target.stubWorker) {
@@ -465,24 +480,32 @@ for (const name of browsers) {
       // Keyboard path.
       await button.scrollIntoViewIfNeeded();
       if (target.stack) {
-        // Inside the control stack: Tab from the first sibling reaches the button after one press per button before it.
-        await page.locator('[data-globe-zoom="in"]').first().focus();
-        for (let i = 0; i < target.order.length - 1; i += 1)
-          await page.keyboard.press(TAB(name));
+        // The control stack is one toolbar: one Tab from Zoom in leaves it, and ArrowUp from
+        // Zoom in wraps round to the button, the stack's last.
+        const zoomIn = page.locator('[data-globe-zoom="in"]').first();
+        await zoomIn.focus();
+        await page.keyboard.press(tabKey(name));
+        const left = await page.evaluate(
+          (zoom) => !document.activeElement?.closest(zoom),
+          gate("globe-zoom"),
+        );
+        if (!left) fail(`${label}: one Tab from Zoom in stays in the stack`);
+        await zoomIn.focus();
+        await page.keyboard.press("ArrowUp");
         const reached = await page.evaluate(
           (id) => document.activeElement?.getAttribute("popovertarget") === id,
           target.id,
         );
         if (!reached)
           fail(
-            `${label}: Tab from Zoom in does not reach the button in ${target.order.length - 1} presses`,
+            `${label}: ArrowUp from Zoom in does not wrap round to the button`,
           );
       } else {
         // Tab reachability: tab forward until the button is focused (bounded).
         await page.evaluate(() => document.activeElement?.blur());
         let reached = false;
         for (let i = 0; i < 600 && !reached; i += 1) {
-          await page.keyboard.press(TAB(name));
+          await page.keyboard.press(tabKey(name));
           reached = await page.evaluate(
             (id) =>
               document.activeElement?.getAttribute("popovertarget") === id,
@@ -498,6 +521,7 @@ for (const name of browsers) {
         page,
         button,
         name,
+        target.name ?? "Data credits",
       );
       const shown = await page.evaluate(
         (id) => document.getElementById(id)?.matches(":popover-open"),
@@ -528,15 +552,25 @@ for (const name of browsers) {
         zoom: gate("globe-zoom"),
       });
       if (target.stack) {
-        if (g.groupLabel !== "Globe controls" || g.groupRole !== "group")
+        if (g.groupLabel !== "Globe controls" || g.groupRole !== "toolbar")
           fail(
-            `${label}: the control stack is not a group named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
+            `${label}: the control stack is not a toolbar named "Globe controls" (${g.groupRole}, ${g.groupLabel})`,
           );
         if (g.order.join("|") !== target.order.join("|"))
           fail(`${label}: the stack's order is ${g.order.join(", ")}`);
-        if (g.panel.right > g.button.left + 0.5)
+        // Beside a column stack. A row leaves no room beside its last button, so the panel goes
+        // above it, or below it when the page is scrolled and there is more room there.
+        const below = g.row && g.h - g.button.bottom > g.button.top;
+        const side = g.row ? (below ? "below" : "above") : "beside";
+        if (
+          g.row
+            ? below
+              ? g.panel.top < g.button.bottom - 0.5
+              : g.panel.bottom > g.button.top + 0.5
+            : g.panel.right > g.button.left + 0.5
+        )
           fail(
-            `${label}: the open panel is not beside the stack ${JSON.stringify(g.panel)}`,
+            `${label}: the open panel is not ${side} the stack ${JSON.stringify(g.panel)}`,
           );
       } else if (
         g.panel.bottom > g.button.top + 1 &&
@@ -610,6 +644,97 @@ for (const name of browsers) {
   }
   await browser.close();
 }
+
+/*
+ * The landing's "Coming up in the sky" list, at two pinned instants, in the Helsinki zone and the
+ * en-GB locale. The expected words are `sky-events.ts`'s for the shipped data
+ * (`src/assets/sky-events.json`), golden here because this script cannot import the TypeScript:
+ * they change only when the generator's events do, and then this check says so.
+ */
+const EVENTS_ZONE = "Europe/Helsinki";
+const EVENTS_NOTE = `Times in your time zone (${EVENTS_ZONE}).`;
+const VESTA_ROW = "Vesta · Asteroid · 5 July – 14 July 2029";
+const EVENT_PINS = [
+  {
+    rule: "events-ahead",
+    at: 1_798_761_600_000, // 2027-01-01T00:00Z
+    rows: [
+      "Apophis · Asteroid · 13 April 2029, 16:03 – 14 April 2029, 01:33 · closest 00:46",
+      VESTA_ROW,
+    ],
+  },
+  {
+    rule: "events-now",
+    at: 1_870_804_800_000, // 2029-04-13T20:00Z, inside the pass
+    rows: [
+      "Apophis · Asteroid · In view now, until 14 April 2029, 01:33 · closest 00:46",
+      VESTA_ROW,
+    ],
+  },
+];
+
+async function checkEvents(browser, name, viewport) {
+  for (const pin of EVENT_PINS) {
+    const label = `${name} ${viewport.width}px / @${pin.rule}`;
+    const context = await browser.newContext({
+      viewport,
+      timezoneId: EVENTS_ZONE,
+      locale: "en-GB",
+    });
+    await blockOffSite(context, base);
+    await context.clock.setFixedTime(pin.at);
+    const page = await context.newPage();
+    await page.goto(`${base}/`, { waitUntil: "load" });
+    await page.waitForTimeout(1500);
+    const button = page.getByRole("button", { name: "About this sky" });
+    if ((await button.count()) !== 1) {
+      fail(`${label}: the button named About this sky is not there`);
+      await context.close();
+      continue;
+    }
+    await button.scrollIntoViewIfNeeded();
+    await button.click();
+    const heading = page.getByRole("heading", { name: "Coming up in the sky" });
+    await heading
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .catch(() => {});
+    const read = await page.evaluate(() => {
+      const list = document.querySelector("[data-sky-events]");
+      return {
+        rows: [...(list?.querySelectorAll("li") ?? [])].map((li) => ({
+          text: li.textContent,
+          clips: li.scrollWidth > li.clientWidth + 1,
+        })),
+        note: list?.querySelector("p")?.textContent ?? null,
+        panel: document
+          .querySelector("#globe-data-credits")
+          ?.getBoundingClientRect(),
+        width: innerWidth,
+      };
+    });
+    if (read.rows.map((r) => r.text).join("|") !== pin.rows.join("|"))
+      fail(
+        `${label}: the rows read ${read.rows.map((r) => `"${r.text}"`).join(", ")}`,
+      );
+    if (read.note !== EVENTS_NOTE)
+      fail(`${label}: the note reads "${read.note}"`);
+    if (read.rows.some((r) => r.clips))
+      fail(`${label}: a row overflows the popover`);
+    if (read.panel && (read.panel.left < 0 || read.panel.right > read.width))
+      fail(`${label}: the popover leaves the window`);
+    measured += 1;
+    console.log(`checked ${label}`);
+    await context.close();
+  }
+}
+
+if (SELECTED.some((target) => target.path === "/"))
+  for (const name of browsers) {
+    const browser = await launchBrowser(name);
+    for (const viewport of VIEWPORTS)
+      await checkEvents(browser, name, viewport);
+    await browser.close();
+  }
 
 recordMeasured(GATE, measured);
 if (failures.length) {

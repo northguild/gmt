@@ -145,7 +145,7 @@ describe("selectPages", () => {
     for (const file of [
       "apps/dox/src/components/DoxMark.astro",
       "apps/dox/scripts/build-reference.ts",
-      "apps/dox/public/timezone-boundaries-1.json",
+      "apps/dox/public/fixed-file-1.json",
       "apps/dox/src/lib/unused.ts",
     ]) {
       const plan = select([file]);

@@ -4,7 +4,7 @@ One-shot data-prep for the DOX-E1a globe's timezone-boundary demarcation.
 
 This script is NOT part of the dox build pipeline. Run it manually when the
 upstream `timezone-boundary-builder` dataset is updated and you want to refresh
-`apps/dox/public/timezone-boundaries-globe.json`.
+`apps/dox/src/assets/timezone-boundaries-globe.json`.
 
 Unlike `prepare-timezone-boundaries.py` (which keeps only the 10 CI-matrix zones
 at high fidelity for the flat `TimezoneMap`), this keeps *every* zone but
@@ -18,14 +18,14 @@ Steps:
   2. Simplify every polygon with shapely at SIMPLIFY_TOLERANCE_DEG,
      preserving topology.
   3. Write a compact FeatureCollection of `{ properties: { tzid }, geometry }`
-     to apps/dox/public/timezone-boundaries-globe.json
+     to apps/dox/src/assets/timezone-boundaries-globe.json
 
 The globe maps IANA ids to these `tzid` values verbatim, except `UTC` -> `Etc/UTC`
 (the dataset uses the latter). Zones with no boundary polygon simply get no
 demarcation outline; the globe still plots and clocks them.
 
 The repo's formatter checks the output, so finish with
-`pnpm exec oxfmt --write apps/dox/public/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
+`pnpm exec oxfmt --write apps/dox/src/assets/timezone-boundaries*.json apps/dox/src/lib/canada-zones.json`
 (the files roughly double when pretty-printed; re-check the Canada file is still under budget).
 
 Requires: `uv run --with shapely python scripts/prepare-globe-boundaries.py`
@@ -44,7 +44,7 @@ import zipfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-OUTPUT_PATH = REPO_ROOT / "apps/dox/public/timezone-boundaries-globe.json"
+OUTPUT_PATH = REPO_ROOT / "apps/dox/src/assets/timezone-boundaries-globe.json"
 
 # Pinned release, shared with prepare-region-boundaries.py. Every boundary file names the
 # release it came from.

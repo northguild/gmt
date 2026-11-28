@@ -33,6 +33,19 @@
   }
 }
 
+/* A body nearer than the Moon (a close pass, lib/sky-planets.ts) is drawn on this canvas, after the
+   globe layer in the DOM and so over the Earth, the Moon and the Sun, and under the hero's scrim
+   and copy. It takes no pointer. */
+.gmt-sky-near {
+  position: absolute;
+  inset: 0;
+  z-index: var(--gmt-z-base);
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  pointer-events: none;
+}
+
 /* Drawn eight times brighter (BAND_GAIN in sky.ts); this brings it back without 8-bit banding. */
 .gmt-sky-band canvas {
   opacity: 0.125;
@@ -66,7 +79,8 @@
 
 /* A forced palette has no place for faint light on dark: the whole layer goes. */
 @media (forced-colors: active) {
-  .gmt-sky {
+  .gmt-sky,
+  .gmt-sky-near {
     display: none;
   }
 }

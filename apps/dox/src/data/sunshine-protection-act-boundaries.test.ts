@@ -15,7 +15,7 @@ interface Boundaries {
 
 const boundaries = JSON.parse(
   readFileSync(
-    resolve(__dirname, "../../public/state-boundaries-us.json"),
+    resolve(__dirname, "../assets/state-boundaries-us.json"),
     "utf8",
   ),
 ) as Boundaries;

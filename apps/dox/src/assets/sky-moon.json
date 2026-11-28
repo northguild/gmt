@@ -1,0 +1,40 @@
+{
+  "name": "Moon for the Dox night sky",
+  "source": {
+    "title": "CGI Moon Kit, lroc_color_2k.jpg",
+    "publisher": "NASA's Scientific Visualization Studio",
+    "page": "https://svs.gsfc.nasa.gov/4720",
+    "url": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg",
+    "bytes": 457942,
+    "sha256": "f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170"
+  },
+  "credit": "NASA's Scientific Visualization Studio, CGI Moon Kit, from Lunar Reconnaissance Orbiter LROC data",
+  "license": "NASA media guidelines (public domain, credit asked, no endorsement implied)",
+  "licenseUrl": "https://www.nasa.gov/multimedia/guidelines/index.html",
+  "changes": "Scaled to 1024 x 512 and the brightness remapped to measured albedos (maria 8.5%, highlands 14.5% at their medians), the colour held.",
+  "generator": "apps/dox/scripts/prepare-sky-bodies.mjs",
+  "remap": {
+    "latitudeLimit": 70,
+    "mare": {
+      "percentile": 0.085,
+      "albedo": 0.085,
+      "luminance": 0.24815750731075822
+    },
+    "highland": {
+      "percentile": 0.585,
+      "albedo": 0.145,
+      "luminance": 0.5145238222828175
+    },
+    "offset": 0.029101601434823564,
+    "gain": 0.22525370749786344,
+    "scale": 0.25
+  },
+  "map": {
+    "quality": 80,
+    "file": "sky-moon.webp",
+    "width": 1024,
+    "height": 512,
+    "bytes": 49484,
+    "sha256": "964d5f8da4b291ca30a8f02683dfeb7726ce894132a1a3e5f6edd327c65b6435"
+  }
+}

@@ -6,6 +6,7 @@
   min-inline-size: 0;
   border: 1px solid var(--gmt-border-strong);
   border-radius: var(--gmt-radius-md);
+  corner-shape: bevel;
   background: var(--gmt-surface-widget);
   color: var(--gmt-ice);
 
@@ -29,6 +30,12 @@
   &[aria-selected="true"] {
     background: var(--gmt-selected-fill);
     color: var(--gmt-selected-ink);
+  }
+
+  /* A note the list cannot choose (a source still loading): quiet text, no pointer. */
+  &[aria-disabled="true"] {
+    color: var(--gmt-ice-dim);
+    cursor: default;
   }
 
   /* The chosen option's sonar ping (listbox.ts): the focus ping, raised over the next row so

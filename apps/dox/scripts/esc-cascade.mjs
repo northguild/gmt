@@ -38,6 +38,7 @@ import { isLocked } from "./lib/home-locked.mjs";
 import { blockOffSite } from "./gate-checks.mjs";
 import { applyPageContract } from "./gates/contract.mjs";
 import { recordFinding, recordMeasured } from "./gates/findings.mjs";
+import { stackPress } from "./lib/globe-stack.mjs";
 
 const GATE = "esc-cascade";
 
@@ -323,7 +324,7 @@ const drawerOpen = (page) =>
 async function openDrawer(page) {
   if (await drawerOpen(page)) return;
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.locator("[data-globe-search]").click();
+  await stackPress(page, page.locator("[data-globe-search]"));
   await page.waitForTimeout(500);
 }
 
@@ -548,7 +549,23 @@ async function selectionChecks(page, ctx) {
   const disc = await page.evaluate(discOf);
   if (!disc || viaList.at === null) return;
 
-  // A region of the Earth: selects and centres the same way.
+  // A region of the Earth: selects and centres the same way, once the zone outlines are in (the
+  // globe marks them `data-regions="ready"`; they come after the entrance).
+  const regions = await page
+    .locator('[data-regions="ready"]')
+    .waitFor({ state: "attached", timeout: 20_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!regions) {
+    fail(
+      "globe-click-no-card",
+      browser,
+      width,
+      path,
+      "the zone outlines never loaded, so no region of the Earth can be clicked",
+    );
+    return;
+  }
   const spots = [
     [0.55, 0.1],
     [-0.55, 0.15],
