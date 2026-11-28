@@ -38,8 +38,9 @@
   min-block-size: 0;
   color: var(--gmt-ice-dim);
 
-  /* A view is on: the stack's button says so while the bar is shut. */
-  &[data-held] {
+  /* A view is on: the stack's button says so while the bar is shut. At rest only: on hover and
+     focus the stack's dark icon on the cyan fill shows, as on every other button. */
+  &[data-held]:where(:not(:hover, :focus-visible)) {
     color: var(--gmt-cyan);
   }
 }
