@@ -65,7 +65,7 @@ _Low / Medium / High — and a short justification._
 
 ## Release
 
-The changeset(s) in `.changeset/` and their bump level, per [coding-standards § Changesets](../../../context/coding-standards/changesets.md#changesets). Merging publishes nothing; say so if a reviewer might expect otherwise.
+The changeset file(s) in `.changeset/` by name and their bump level (`patch`, `minor`, or "empty, no bump"), per [coding-standards § Changesets](../../../context/coding-standards/changesets.md#changesets). Every PR carries at least one, so never write "No changeset"; if the diff has none, add an empty one before writing this section. Merging publishes nothing; say so if a reviewer might expect otherwise.
 
 ---
 

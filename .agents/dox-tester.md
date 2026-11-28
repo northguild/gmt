@@ -41,7 +41,7 @@ correctness lives in build output, rendered pages, keyboard paths and live behav
 
 - `node scripts/verdict.mjs validate` is PASS (every check that reads a file the branch changed; `--full` runs them all), and so is the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`).
   Check the task list, not only the exit code: the verdict screen is that list.
-- `git diff --stat packages/gmt` is empty, or a changeset exists.
+- A changeset exists in the diff (empty when `git diff --stat packages/gmt` is empty).
 - `node scripts/verdict.mjs run dox test` (and `check`, `lint`).
 - No `octane` or `@octanejs/*` dependency; no hardcoded version literal in the site.
 - **Reuse** ([rules](../context/dox/built/index.md#reuse-never-reinvent)):

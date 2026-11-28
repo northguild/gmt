@@ -119,7 +119,7 @@ chooses; the main session then resumes you with the choice and you write the spe
 
 - `pnpm run validate` stays green, including the CI timezone matrix (10 zones × Node 22/24/26 — the `gmt-matrix` job in `.github/workflows/ci.yml`); `apps/dox`
   must not perturb `packages/gmt`.
-- A Dox-only change needs no changeset. Any file the work changes under `packages/` needs one, an empty one when no behaviour changes ([rule](../context/coding-standards/changesets.md#changesets)).
+- Every change carries a changeset: an empty one for a Dox-only change or any change with no release; a bump when a file under `packages/` changes behaviour ([rule](../context/coding-standards/changesets.md#changesets)). A spec never says "no changeset".
 - No `octane` or `@octanejs/*` dependency.
 - Every tier after Tier 1 stays independently droppable; the docs work with the chat
   deleted.

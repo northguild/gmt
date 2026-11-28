@@ -113,9 +113,10 @@ pending changesets, highest level winning. Three `minor` changesets against
 **Never hand-edit a version in `package.json`.** `changeset:version` owns those
 numbers. If one looks wrong, the changeset that produced it was wrong.
 
-**A changeset-less PR still ships.** Its code is on `main`, so it goes out with
-the next release — silently, with no changelog entry and no version attributed
-to it. Fine for CI and docs; a trap for a bug fix.
+**Every PR carries a changeset, even an empty one.** A PR's code is on `main`,
+so it goes out with the next release; a bug fix without a `patch` changeset goes
+out silently, with no changelog entry and no version attributed to it. CI, docs
+and Dox PRs carry an empty one.
 
 ## When it goes wrong
 

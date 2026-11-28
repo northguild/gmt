@@ -4,7 +4,7 @@ What `apps/dox` ships, tier by tier: the rules that bind future changes, the tra
 
 ## Rules that bind every change
 
-- **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green, including the CI time-zone matrix (`gmt-matrix` in `.github/workflows/ci.yml`; zones and Node versions in `src/data/gmt-stats.json`). No changesets unless a change also touches `packages/gmt`.
+- **`apps/dox` must not perturb `packages/gmt`.** `pnpm run validate` stays green, including the CI time-zone matrix (`gmt-matrix` in `.github/workflows/ci.yml`; zones and Node versions in `src/data/gmt-stats.json`). Every change carries a changeset, an empty one (no bump) when only `apps/dox` changes ([rule](../../coding-standards/changesets.md#changesets)).
 - **Merging to `main` deploys.** `deploy-dox.yml` runs when the Release workflow finishes on `main` (every push), checks out the commit Release ran on with every tag, and also runs on a daily schedule and `workflow_dispatch`. If Release stops running on pushes, merges stop deploying.
 - **Generate, don't maintain.** `scripts/build-reference.ts` is the single extraction. Never re-derive pages, corpus, manifest or playground seeds by re-walking source or re-parsing MDX.
 - **Import `@northguild/gmt` at module granularity only** (`@northguild/gmt/plain/calculate`). The exports map forbids per-function paths. A namespace barrel loads every module of its namespace and the root barrel every namespace, so use neither. Any module loads the Temporal polyfill. `regex` has no module subpaths, so its namespace barrel is its narrowest import.

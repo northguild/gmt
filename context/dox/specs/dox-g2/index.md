@@ -11,7 +11,7 @@ Make the step from `northguild.dev` to `northguild.dev/gmt/` read as one site. T
 takes the NorthGuild header's mark, wordmark, height and glass. The frameless Earth sits in the
 true sky of the moment; the "Find a zone" panel comes in on use; the copy freezes in like ice. On a desktop the landing never scrolls: its
 condensed sections share one panel beside the Earth. The guides' row tables take the tools' look.
-Site work in `apps/dox` only: no new Dox tool or chat pill, no `packages/gmt` change, no changeset.
+Site work in `apps/dox` only: no new Dox tool or chat pill, no `packages/gmt` change, an empty changeset.
 
 ## Phases
 
