@@ -59,8 +59,8 @@ const gmtNote = filing.gmtGuard ? null : filing.gmtNote;
   </td>
   <td class="gmt-upstream-body">
     {filing.summary && <p class="gmt-upstream-summary" set:html={inlineCodeHtml(filing.summary)} />}
-    {note && <p class="gmt-upstream-muted">{note}</p>}
-    {filing.outcome && <p class="gmt-upstream-muted">{filing.outcome}</p>}
+    {note && <p class="gmt-upstream-muted" set:html={inlineCodeHtml(note)} />}
+    {filing.outcome && <p class="gmt-upstream-muted" set:html={inlineCodeHtml(filing.outcome)} />}
     <div class="gmt-upstream-chips">
       {secondary.map((b) => <span set:html={chip(b)} />)}
       <span class="gmt-upstream-ingmt">

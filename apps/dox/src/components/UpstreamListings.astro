@@ -10,6 +10,7 @@
 import Link from "~/components/Link.astro";
 import { shortRef } from "../data/temporal-compat";
 import { listings } from "../data/upstream-filings";
+import { inlineCodeHtml } from "../lib/inline-code-html";
 import { octicon } from "../lib/octicons";
 import { chip, reviewBadge, stateBadge } from "../lib/upstream-badges";
 import { countLabel, countNoun } from "../lib/upstream-status";
@@ -34,12 +35,12 @@ const COLUMNS = ["Submission", "Details", "Activity"] as const;
                 <td class="gmt-upstream-head">
                   <span class="gmt-upstream-state" set:html={octicon(state.icon)} />
                   <span class="gmt-sr-only">{l.kind === "issue" ? "Issue" : "Pull request"}:</span>
-                  <strong class="gmt-upstream-title">{l.title}</strong>
+                  <strong class="gmt-upstream-title" set:html={inlineCodeHtml(l.title)} />
                   <Link class="gmt-upstream-ref" href={l.url}>{shortRef(l.repo, l.number)}</Link>
                   <span class="gmt-upstream-status" set:html={chip(state, { fill: true })} />
                 </td>
                 <td class="gmt-upstream-body">
-                  <p class="gmt-upstream-summary">{l.summary}</p>
+                  <p class="gmt-upstream-summary" set:html={inlineCodeHtml(l.summary)} />
                   {review && (
                     <div class="gmt-upstream-chips">
                       <span set:html={chip(review)} />
