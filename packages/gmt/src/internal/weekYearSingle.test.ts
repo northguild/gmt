@@ -2,11 +2,6 @@ import { formatDate } from "../plain/format/formatDate";
 import { formatDateTimeToParts } from "../plain/format/formatDateTimeToParts";
 import { formatDateToParts } from "../plain/format/formatDateToParts";
 import { hostFormatter } from "../test/hostIntl";
-import type { CalendarSystem } from "../types";
-import {
-  computationCalendarId,
-  computationYearBias,
-} from "./calendarSystemIds";
 import { normalizeDateTime } from "./normalizeDateTime";
 import { Temporal } from "./temporal";
 import { utcMs } from "../test/utcMs";
@@ -22,23 +17,13 @@ import { utcMs } from "../test/utcMs";
  * changes: month, day, era and separators stay as the locale data has them.
  */
 
-/** A date in `calendar`, read in the calendar it computes in (`coptic` and `ethiopic` in `ethioaa`). */
-function inCalendar(iso: string, calendar: string): Temporal.PlainDate {
-  return Temporal.PlainDate.from(iso).withCalendar(
-    computationCalendarId(calendar as CalendarSystem),
-  );
-}
-
-/** The calendar year and era year of a date, less the offset of the calendar it computes in. */
+/** The calendar year and era year of a date. */
 function yearsOf(
   iso: string,
   calendar: string,
 ): { year: number; eraYear: number } {
-  const date = inCalendar(iso, calendar);
-  const bias = computationYearBias(calendar as CalendarSystem);
-  return bias === 0
-    ? { year: date.year, eraYear: date.eraYear ?? date.year }
-    : { year: date.year - bias, eraYear: date.year - bias };
+  const date = Temporal.PlainDate.from(iso).withCalendar(calendar);
+  return { year: date.year, eraYear: date.eraYear ?? date.year };
 }
 
 function expectedYear(

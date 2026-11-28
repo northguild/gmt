@@ -406,6 +406,17 @@ describe("parseArgs", () => {
     });
   });
 
+  it("reads --swap-skipped for the oracle workflow only", () => {
+    expect(parseArgs(["temporal-oracle", "--swap-skipped"])).toEqual({
+      ok: true,
+      workflow: "temporal-oracle",
+      force: {},
+      print: false,
+      swapSkipped: true,
+    });
+    expect(parseArgs(["leap-seconds", "--swap-skipped"]).ok).toBe(false);
+  });
+
   it("reads the swap flag for the oracle workflow", () => {
     expect(
       parseArgs(["temporal-oracle", "--force-swap-ready", "--print"]),
@@ -798,6 +809,31 @@ describe("main", () => {
     expect(actions.flatMap((a: { findings: string[] }) => a.findings)).toEqual([
       "temporal-polyfill-swap/ready",
     ]);
+  });
+
+  it("--swap-skipped with no swap files files no could-not-run issue", () => {
+    writeOracleFiles();
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+      rmSync(join(root, "artifacts", `temporal-polyfill-swap-${leg}.json`));
+    }
+    const { code, out } = run(["temporal-oracle", "--swap-skipped", "--print"]);
+    expect(code).toBe(0);
+    expect(out).toContain(
+      "Skipped: the pinned temporal-polyfill is the newest release",
+    );
+    expect(out).not.toContain("Not ready");
+    expect(out.trimEnd().endsWith("[]")).toBe(true);
+  });
+
+  it("no swap files without --swap-skipped is a could-not-run issue", () => {
+    writeOracleFiles();
+    for (const leg of ["node", "chromium", "firefox", "webkit"]) {
+      rmSync(join(root, "artifacts", `temporal-polyfill-swap-${leg}.json`));
+    }
+    const { out } = run(["temporal-oracle", "--print"]);
+    const actions = JSON.parse(out.slice(out.indexOf("[\n")));
+    expect(actions).toHaveLength(1);
+    expect(actions[0].findings).toEqual(["temporal-oracle/could-not-run"]);
   });
 
   it("an unreadable swap verdict reads as could-not-run and is listed in the could-not-run issue", () => {

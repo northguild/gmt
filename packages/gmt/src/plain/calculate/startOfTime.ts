@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { plainTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { defaultFractionalDigits } from "../../internal";
@@ -14,7 +15,7 @@ import { fractionalDigitsOption } from "../../internal/typedOptions";
  * import { StartOfTimeUnit } from "@northguild/gmt/plain";
  * const unit: StartOfTimeUnit = "hours";
  */
-export type StartOfTimeUnit = Temporal.SmallestUnit<"day" | Temporal.TimeUnit>;
+export type StartOfTimeUnit = SmallestUnit<"day" | Temporal.TimeUnit>;
 
 const supported: readonly string[] = [
   "day",

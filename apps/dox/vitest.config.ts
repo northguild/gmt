@@ -55,10 +55,11 @@ export default defineConfig({
     setupFiles: ["./src/test/setup-dom.ts"],
     // Vitest's default is 5 s, which was never chosen for this suite. Several tests here are
     // import-bound rather than slow: they `await import()` a GMT namespace, which pulls in
-    // `@js-temporal/polyfill` and costs ~3.9 s in a fresh worker on an idle machine
-    // (`dst-inspector.test.ts`'s instant-format test, measured). `pnpm run validate` then runs
-    // this suite alongside `packages/gmt`'s 36k tests through `pnpm -r run test`, and on a shared
-    // CPU that 3.9 s crossed 5 s and failed the whole gate. 20 s leaves five times the measured
+    // `temporal-polyfill` and, measured on the library's previous polyfill, cost ~3.9 s in a fresh
+    // worker on an idle machine (`dst-inspector.test.ts`'s instant-format test). That figure is
+    // not re-measured on `temporal-polyfill`: the limit stays where it was. `pnpm run validate`
+    // then runs this suite alongside `packages/gmt`'s 36k tests through `pnpm -r run test`, and on
+    // a shared CPU a 3.9 s import crossed 5 s and failed the whole gate. 20 s leaves five times that
     // cost while still failing a test that has genuinely hung.
     testTimeout: 20_000,
     hookTimeout: 20_000,

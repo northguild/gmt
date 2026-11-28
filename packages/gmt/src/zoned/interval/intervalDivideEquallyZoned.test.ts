@@ -31,7 +31,7 @@ describe("intervalDivideEquallyZoned", () => {
 
   // 1 second (no DST involved) does not divide evenly by 3: boundaries are computed from total
   // elapsed real nanoseconds, so the split is exact to the nanosecond. Verified against real
-  // @js-temporal/polyfill: 1e9 ns / 3 rounds to 333333333 and 666666667 ns.
+  // temporal-polyfill 1.0.8: 1e9 ns / 3 rounds to 333333333 and 666666667 ns.
   it("splits to nanosecond precision when the total does not divide evenly by n", () => {
     expect(
       intervalDivideEquallyZoned(

@@ -188,7 +188,7 @@ describe("upstream filings", () => {
     ]) {
       const f = byKey.get(key);
       expect(f?.gmtUnguarded, key).toBeUndefined();
-      expect(f?.gmtNote, key).toContain("@js-temporal/polyfill");
+      expect(f?.gmtNote, key).toContain("`temporal-polyfill`");
     }
   });
 

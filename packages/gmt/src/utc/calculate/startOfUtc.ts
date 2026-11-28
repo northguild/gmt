@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit, SmallestUnit } from "../../internal/temporalTypes";
 import type { FractionalDigit } from "../../types";
 import { startOrEndOfUtc } from "../../internal/startOrEndOfUtc";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -22,7 +22,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function startOfUtc(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   options?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

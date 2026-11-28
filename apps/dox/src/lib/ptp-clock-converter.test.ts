@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ptpToUtc, utcToPtp } from "@northguild/gmt/iot/convert";
 import { taiMinusUtc } from "@northguild/gmt/timescale/calculate";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { iotLib } from "~/test/iot-lib";
 import {
   BEFORE_1972_VERDICT,

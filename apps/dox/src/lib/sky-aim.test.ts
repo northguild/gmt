@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { describe, expect, it, vi } from "vitest";
 import { subsolarPoint } from "~/lib/globe/sun";
 import {

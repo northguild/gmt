@@ -1,4 +1,4 @@
-import type { Temporal } from "./temporal";
+import type { SmallestUnit } from "./temporalTypes";
 import { plainDateOf } from "./inputChecks";
 import { isObject } from "./isObject";
 import type {
@@ -204,7 +204,7 @@ function isZoneBucketBase(unit: string): boolean {
  */
 export function isZoneBucketUnitName(
   unit: unknown,
-): unit is Temporal.SmallestUnit<ZoneBucketUnit> {
+): unit is SmallestUnit<ZoneBucketUnit> {
   if (typeof unit !== "string") {
     return false;
   }

@@ -3,7 +3,7 @@
  * against a remembered rule — the offset case in particular is unobvious, and
  * getting it wrong reintroduces the exact bug this module was written for.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { GMT_MODULES } from "./gmt-modules";
 import { normaliseZonedInput } from "./zoned-input";
 

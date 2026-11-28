@@ -197,7 +197,7 @@ describe("diffZonedAsDuration", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// E7 (issue #152). Same-calendar values: @js-temporal/polyfill@0.5.1. Different calendars
+// E7 (issue #152). Same-calendar values: temporal-polyfill 1.0.8. Different calendars
 // return "" (native Chromium 153 until throws "Mismatched calendars.").
 // ---------------------------------------------------------------------------------------------
 describe("diffZonedAsDuration with RFC 9557 calendar-annotated values", () => {
@@ -229,7 +229,7 @@ describe("diffZonedAsDuration with RFC 9557 calendar-annotated values", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// CORE-6 S5: the calendar part of a zoned difference follows the Intl era/monthCode proposal's
+// S5: the calendar part of a zoned difference follows the Intl era/monthCode proposal's
 // NonISODateUntil, exactly as the plain rows in diffDateAsDuration.test.ts do. Every value is
 // Chromium 153 native Temporal (`PlainDate.withCalendar(c).toZonedDateTime(zone).until(…)`) or
 // test262; offsets are the ones Chromium reads at those instants (New York keeps its -04:56:02
@@ -238,20 +238,20 @@ describe("diffZonedAsDuration with RFC 9557 calendar-annotated values", () => {
 describe("diffZonedAsDuration in non-ISO calendars (CORE-6)", () => {
   it.each`
     start                                                                      | end                                                                        | unit        | expected     | reason
-    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"months"} | ${"P30D"}    | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
-    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"}            | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"}            | ${"months"} | ${"P30D"}    | ${"D6 in a named zone"}
-    ${"2023-08-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}                  | ${"2023-09-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}                  | ${"years"}  | ${"P30D"}    | ${"D6 with largestUnit years"}
-    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=gregory]"}             | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=gregory]"}             | ${"months"} | ${"P30D"}    | ${"D6 gregory (Chromium 153)"}
-    ${"2023-06-19T00:00:00-04:00[America/New_York][u-ca=islamic-civil]"}       | ${"2023-07-18T00:00:00-04:00[America/New_York][u-ca=islamic-civil]"}       | ${"months"} | ${"P29D"}    | ${"D6 islamic-civil (ISO 2023-06-19 to 2023-07-18)"}
-    ${"2024-02-11T00:00:00+00:00[UTC][u-ca=hebrew]"}                           | ${"2025-03-01T00:00:00+00:00[UTC][u-ca=hebrew]"}                           | ${"years"}  | ${"P12M29D"} | ${"D7: Adar I 2 + 1 year is Adar 2, past Adar 1"}
-    ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"years"}  | ${"P12M29D"} | ${"D7 in a named zone"}
-    ${"2025-03-01T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                    | ${"2024-02-11T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                    | ${"years"}  | ${"-P1Y29D"} | ${"D7 negated: Adar 1 - 1 year is Adar I 1, not past Adar I 2"}
-    ${"+275760-07-06T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"months"} | ${"P2M10D"}  | ${"D1: up to the maximum instant"}
-    ${"+275760-07-06T00:00:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"months"} | ${"P2M9D"}   | ${"D1 near the maximum in a named zone"}
-    ${"+275760-07-06T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                 | ${"+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                 | ${"months"} | ${"P2M9D"}   | ${"D1 near the maximum behind UTC"}
-    ${"-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]"}                 | ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"}                 | ${"years"}  | ${"P1Y"}     | ${"D1 near the minimum (ISO -271821-06-03 to -271820-05-23)"}
-    ${"-271821-06-03T12:00:00-04:56:02[America/New_York][u-ca=islamic-civil]"} | ${"-271820-05-23T12:00:00-04:56:02[America/New_York][u-ca=islamic-civil]"} | ${"years"}  | ${"P1Y"}     | ${"D1 near the minimum in a named zone"}
-    ${"-271821-06-03T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}          | ${"-271820-05-23T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}          | ${"years"}  | ${"P1Y"}     | ${"D1 near the minimum behind UTC"}
+    ${"2023-08-31T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"2023-09-30T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"months"} | ${"P30D"}    | ${"month-end overshoot: Aug 31 + 1 month is Sep 31, past Sep 30"}
+    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=buddhist]"}            | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=buddhist]"}            | ${"months"} | ${"P30D"}    | ${"month-end overshoot in a named zone"}
+    ${"2023-08-31T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}                  | ${"2023-09-30T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}                  | ${"years"}  | ${"P30D"}    | ${"month-end overshoot with largestUnit years"}
+    ${"2023-08-31T00:00:00-04:00[America/New_York][u-ca=gregory]"}             | ${"2023-09-30T00:00:00-04:00[America/New_York][u-ca=gregory]"}             | ${"months"} | ${"P30D"}    | ${"month-end overshoot gregory (Chromium 153)"}
+    ${"2023-06-19T00:00:00-04:00[America/New_York][u-ca=islamic-civil]"}       | ${"2023-07-18T00:00:00-04:00[America/New_York][u-ca=islamic-civil]"}       | ${"months"} | ${"P29D"}    | ${"month-end overshoot islamic-civil (ISO 2023-06-19 to 2023-07-18)"}
+    ${"2024-02-11T00:00:00+00:00[UTC][u-ca=hebrew]"}                           | ${"2025-03-01T00:00:00+00:00[UTC][u-ca=hebrew]"}                           | ${"years"}  | ${"P12M29D"} | ${"Adar I overshoot: Adar I 2 + 1 year is Adar 2, past Adar 1"}
+    ${"2024-02-11T00:00:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"2025-03-01T00:00:00-05:00[America/New_York][u-ca=hebrew]"}              | ${"years"}  | ${"P12M29D"} | ${"Adar I overshoot in a named zone"}
+    ${"2025-03-01T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                    | ${"2024-02-11T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                    | ${"years"}  | ${"-P1Y29D"} | ${"Adar I overshoot negated: Adar 1 - 1 year is Adar I 1, not past Adar I 2"}
+    ${"+275760-07-06T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"months"} | ${"P2M10D"}  | ${"range limit: up to the maximum instant"}
+    ${"+275760-07-06T00:00:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=hebrew]"}           | ${"months"} | ${"P2M9D"}   | ${"range limit near the maximum in a named zone"}
+    ${"+275760-07-06T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                 | ${"+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"}                 | ${"months"} | ${"P2M9D"}   | ${"range limit near the maximum behind UTC"}
+    ${"-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]"}                 | ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"}                 | ${"years"}  | ${"P1Y"}     | ${"range limit near the minimum (ISO -271821-06-03 to -271820-05-23)"}
+    ${"-271821-06-03T12:00:00-04:56:02[America/New_York][u-ca=islamic-civil]"} | ${"-271820-05-23T12:00:00-04:56:02[America/New_York][u-ca=islamic-civil]"} | ${"years"}  | ${"P1Y"}     | ${"range limit near the minimum in a named zone"}
+    ${"-271821-06-03T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}          | ${"-271820-05-23T12:00:00-12:00[Etc/GMT+12][u-ca=islamic-civil]"}          | ${"years"}  | ${"P1Y"}     | ${"range limit near the minimum behind UTC"}
     ${"1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"1000-02-28T00:00:00+00:00[UTC][u-ca=buddhist]"}                         | ${"months"} | ${"P28D"}    | ${"proleptic buddhist: ISO 1000-01-31 to 1000-02-28, no Julian leap day"}
     ${"1000-01-31T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"}         | ${"1000-02-28T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"}         | ${"months"} | ${"P28D"}    | ${"proleptic buddhist in a named zone"}
     ${"-100000-01-01T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"-100000-02-10T00:00:00+00:00[UTC][u-ca=hebrew]"}                        | ${"months"} | ${"P1M11D"}  | ${"hebrew year <= 0: ISO -100000-01-01 + 40 days"}
@@ -355,7 +355,7 @@ describe("diffZonedAsDuration with singular unit names", () => {
   });
 });
 
-// Defect 4 (D11) across two identifiers of one time zone: native Temporal gives P2M for ceil and
+// The nudge window across two identifiers of one time zone: native Temporal gives P2M for ceil and
 // expand and P1M for floor and trunc over 2024-01-31 to 2024-02-29T12:00.
 describe("diffZonedAsDuration rounds by months across two identifiers of one time zone", () => {
   it.each`

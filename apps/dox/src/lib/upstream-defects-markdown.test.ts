@@ -17,7 +17,7 @@ const rows = renderMdxComponents("<UpstreamDefects />")
   .split("\n")
   .filter((line) => line.startsWith("| **"));
 
-/** The middle cell: the state badge, the count and, on a guard row, the reason. */
+/** The middle cell: the state badge, and the count. */
 const stateCell = (row: string): string => row.split(/(?<!\\)\|/)[2]!.trim();
 
 describe("<UpstreamDefects /> as Markdown", () => {
@@ -26,22 +26,6 @@ describe("<UpstreamDefects /> as Markdown", () => {
     compatGroups.forEach((group, i) => {
       expect(rows[i], groupLabel(group)).toContain(`**${groupLabel(group)}**`);
     });
-  });
-
-  it("shows 'Kept on purpose' on exactly the guard rows, each with its reason", () => {
-    const guards = compatGroups.filter((g) => g.state === "guard");
-    const kept = rows.filter((row) => row.includes("Kept on purpose"));
-    expect(kept).toHaveLength(guards.length);
-    for (const group of guards) {
-      const row = rows[compatGroups.indexOf(group)]!;
-      expect(row, groupLabel(group)).toContain("Kept on purpose");
-      expect(row, groupLabel(group)).toContain(
-        group.guard!.reason.replaceAll("|", "\\|"),
-      );
-      expect(stateCell(row)).toBe(
-        `Kept on purpose — ${group.probes} of ${group.probes} checks pass. ${group.guard!.reason.replaceAll("|", "\\|")}`,
-      );
-    }
   });
 
   it("shows '✓ Yes' on exactly the still-needed and out-of-scope rows and 'No' on exactly the removable ones", () => {
@@ -61,7 +45,6 @@ describe("<UpstreamDefects /> as Markdown", () => {
       const expected = {
         "still-needed": "✓ Yes",
         removable: "No",
-        guard: "Kept on purpose",
         "out-of-scope": `✓ Yes, on ${(group.engines ?? []).map(engineLabel).join(" and ")}`,
       }[group.state];
       expect(cell.startsWith(`${expected} — `), groupLabel(group)).toBe(true);
@@ -94,7 +77,7 @@ describe("escapeMarkdownInline", () => {
 
   it("leaves plain prose, digits, parentheses, dots and # alone", () => {
     const text =
-      "Polyfill 0.5.1 is older (tc39/proposal-temporal#3292), so it passes.";
+      "Polyfill 1.0.8 is newer (tc39/proposal-temporal#3292), so it passes.";
     expect(escapeMarkdownInline(text)).toBe(text);
   });
 
@@ -104,32 +87,6 @@ describe("escapeMarkdownInline", () => {
 });
 
 describe("<UpstreamDefects /> free text as Markdown", () => {
-  it("leaves every real guard reason unchanged apart from its pipes", () => {
-    for (const g of compatGroups.filter((g) => g.guard)) {
-      expect(escapeMarkdownInline(g.guard!.reason)).toBe(
-        g.guard!.reason.replaceAll("|", "\\|"),
-      );
-    }
-  });
-
-  it("escapes Markdown in a guard reason", () => {
-    const hostile = "a*b_c[d](e) `f` <g> h\\i | j";
-    const guard = compatGroups.find((g) => g.guard)!;
-    const saved = guard.guard!.reason;
-    try {
-      guard.guard!.reason = hostile;
-      const row = renderMdxComponents("<UpstreamDefects />")
-        .split("\n")
-        .filter((line) => line.startsWith("| **"))[
-        compatGroups.indexOf(guard)
-      ]!;
-      expect(stateCell(row)).toContain(escapeMarkdownInline(hostile));
-      expect(row).not.toContain(hostile);
-    } finally {
-      guard.guard!.reason = saved;
-    }
-  });
-
   it("escapes every what-breaks cell the way the helper does", () => {
     compatGroups.forEach((group, i) => {
       expect(rows[i]).toContain(

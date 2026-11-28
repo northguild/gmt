@@ -1,17 +1,17 @@
 import { diffDateAsDuration } from "./diffDateAsDuration";
 
-// Expected values: Chromium 152 native Temporal, recorded in the CORE-6 research scan
+// Expected values: Chromium 152 native Temporal, recorded in the research scan
 // (q2-xscan-chromium152.json / q2-grid-chromium152.json; the scan is scripts/temporal-compat/scan-body.js).
 // Strings are RFC 9557: the ISO date plus [u-ca=<id>]. Each was converted from the CORE-6
 // calendar-field string by native Temporal (Chromium 153.0.8010.12,
 // `Temporal.PlainDate.from({ calendar, year | era + eraYear, month, day }, { overflow: "reject" })`).
 // "" is the sentinel where Chromium throws. Never GMT output, never the polyfill.
 
-// CORE-6 §4.4 modern grid for buddhist, persian, indian, ethioaa, japanese, roc and iso8601: from 2023-06-01 + i days, i in {0, 61, 91, 122, 245, 274},
+// §4.4 modern grid for buddhist, persian, indian, ethioaa, japanese, roc and iso8601: from 2023-06-01 + i days, i in {0, 61, 91, 122, 245, 274},
 // to k days later (and back, in years), k in {28, 29, 30, 31, 58, 59, 60, 61, 354, 355, 365, 366,
-// 383, 384, 385}. Month-end starts exercise D6 (NonISODateSurpasses); Hebrew leap spans D7.
+// 383, 384, 385}. Month-end starts exercise month-end overshoot (NonISODateSurpasses); Hebrew leap spans Adar I overshoot.
 // islamic-umalqura rows are in diffDateAsDuration.umalqura.test.ts (Chromium 153.0.8010.12 recording).
-describe("diffDateAsDuration at ordinary dates (CORE-6 §4.4 grid, solar)", () => {
+describe("diffDateAsDuration at ordinary dates (§4.4 grid, solar)", () => {
   it.each`
     date1                          | date2                          | unit        | expected       | source
     ${"2023-06-01[u-ca=buddhist]"} | ${"2023-06-29[u-ca=buddhist]"} | ${"months"} | ${"P28D"}      | ${"grid buddhist i=0 +28 d"}

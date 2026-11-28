@@ -1,5 +1,3 @@
-import type { CalendarSystem } from "../types";
-import { computationCalendarId } from "./calendarSystemIds";
 import { Temporal } from "./temporal";
 
 /*
@@ -172,15 +170,11 @@ export function withoutYear(text: string, digits: ReadonlySet<string>): string {
 }
 
 /**
- * The calendar year of a mid-year date, the anchor every probe date is counted from. The year is
- * the computation calendar's (`ethioaa` for `coptic` and `ethiopic`, `computationCalendarId`): the
- * polyfill (0.5.1) throws "Era am ... was not matched by any era" for every `coptic` and
- * `ethiopic` date. Probe years are only counted from it and passed to `dateIn`, never printed.
+ * The calendar year of a mid-year date, the anchor every probe date is counted from. Probe years
+ * are only counted from it and passed to `dateIn`, never printed.
  */
 export function anchorYear(calendar: string): number {
-  return Temporal.PlainDate.from("2024-07-01").withCalendar(
-    computationCalendarId(calendar as CalendarSystem),
-  ).year;
+  return Temporal.PlainDate.from("2024-07-01").withCalendar(calendar).year;
 }
 
 /** The date `month` / `day` of `year` in a calendar, `year` counted as `anchorYear` counts it. */
@@ -191,7 +185,7 @@ export function dateIn(
   day: number,
 ): Temporal.PlainDate {
   return Temporal.PlainDate.from({
-    calendar: computationCalendarId(calendar as CalendarSystem),
+    calendar,
     year,
     month,
     day,

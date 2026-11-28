@@ -43,9 +43,9 @@ const SNAPSHOT_PATH = "apps/dox/src/data/temporal-compat.json";
 
 /**
  * @typedef {{ workaround: { defects: string[], title: string, trigger: string, steps: string[],
- *     engines?: string[], guard?: { package: string, through: string, reason: string } },
+ *     engines?: string[] },
  *   results: unknown[], passing: number,
- *   state: "still-needed" | "removable" | "guard" | "out-of-scope", guardLapsed: boolean }} CompatGroup
+ *   state: "still-needed" | "removable" | "out-of-scope" }} CompatGroup
  */
 
 /**
@@ -58,7 +58,6 @@ function compatCounts(groups) {
     workarounds: groups.length,
     stillNeeded: inState("still-needed"),
     removable: inState("removable"),
-    guard: inState("guard"),
     outOfScope: inState("out-of-scope"),
   };
 }
@@ -68,7 +67,7 @@ function compatCounts(groups) {
  * @param {CompatGroup[]} groups
  */
 function compatRows(groups) {
-  return groups.map(({ workaround, results, passing, state, guardLapsed }) => ({
+  return groups.map(({ workaround, results, passing, state }) => ({
     id: workaround.defects.join("+"),
     defects: workaround.defects,
     title: workaround.title,
@@ -77,9 +76,6 @@ function compatRows(groups) {
     probes: results.length,
     failing: results.length - passing,
     ...(workaround.engines ? { engines: workaround.engines } : {}),
-    ...(workaround.guard
-      ? { guard: { ...workaround.guard, lapsed: guardLapsed } }
-      : {}),
     steps: workaround.steps,
   }));
 }
@@ -233,15 +229,16 @@ export function nativeSuiteVerdict({
 }
 
 /**
- * The verdict of one `temporal-polyfill` swap leg (CORE-92). `failing` is what fails on the swap and
- * passes on the control in the same runtime; the verdict keeps the first 50, each message cut to 300
+ * The verdict of one upgrade-check leg (CORE-92, CORE-108): the newest `temporal-polyfill` (the
+ * candidate, `version`) against the pinned one (`pinned`). `failing` is what fails on the candidate
+ * and passes on the control in the same runtime; the verdict keeps the first 50, each message cut to 300
  * characters, and says when it cut. `counts.failed` is the full number. `both` and `fixed` are
  * counts only: their rows stay in the uploaded Vitest reports. `sweep` (the offset sweep) and
  * `calendarSweep` (the calendar sweep, CORE-110) are `null` off Node.
- * `entryLoaded` is whether the swap pass's own check passed: the seam's `Temporal` was the swap
- * entry's object. Without it the counts say nothing about `temporal-polyfill`.
+ * `entryLoaded` is whether the swap pass's own check passed: the seam's `Temporal` was the
+ * candidate's object. Without it the counts say nothing about the candidate.
  *
- * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", version: string, entry: string,
+ * @param {{ leg: "node" | "chromium" | "firefox" | "webkit", version: string, pinned: string, entry: string,
  *           entryLoaded: boolean,
  *           runtime: { node: string, vitest: string, playwright: string | null,
  *                      browser: string | null },
@@ -256,6 +253,7 @@ export function nativeSuiteVerdict({
 export function polyfillSwapVerdict({
   leg,
   version,
+  pinned,
   entry,
   entryLoaded,
   runtime,
@@ -269,6 +267,7 @@ export function polyfillSwapVerdict({
     status: "ran",
     leg,
     version,
+    pinned,
     entry,
     entryLoaded,
     runtime,

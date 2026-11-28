@@ -3,7 +3,7 @@ import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { hasDaylightSaving } from ".";
 
 // Expected values per battle-test timeZone at 2019-06-15T12:00:00Z, read off each zone's
-// offset changes in a plain @js-temporal/polyfill script: true when the zone is in a daylight
+// offset changes in a plain temporal-polyfill script: true when the zone is in a daylight
 // period then, or one begins within 365 days. Pacific/Apia's daylight period of 2019-09-29 to
 // 2020-04-05 makes it true; its last one ended 2021-04-04.
 const hasDaylightSavingByZone = {
@@ -79,7 +79,7 @@ describe("hasDaylightSaving", () => {
     },
   );
 
-  // Each zone's own offset changes, from a plain @js-temporal/polyfill script.
+  // Each zone's own offset changes, from a plain temporal-polyfill script.
   // Europe/Istanbul: daylight 2015-03-29 to 2015-11-08; the advance of 2016-03-27 was never undone.
   // America/Sao_Paulo: last daylight period 2018-11-04 to 2019-02-17.
   // Europe/Moscow: daylight 2010-03-28 to 2010-10-31; the advance of 2011-03-27 held until 2014-10-26.

@@ -86,7 +86,7 @@ describe("endOfZoned", () => {
 
   // A boundary is always the real bucket end. The source sits in the second, repeated 1am, so the
   // hour ends at the next hour's start (02:00 -05:00, 03:00 +01:00) minus 1 ns, checked with
-  // `ZonedDateTime.subtract` on @js-temporal/polyfill@0.5.1.
+  // `ZonedDateTime.subtract` on temporal-polyfill 1.0.8.
   it.each`
     value                                            | expected
     ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"2024-11-03T01:59:59.999999999-05:00[America/New_York]"}
@@ -122,7 +122,7 @@ describe("endOfZoned", () => {
 // The end is one nanosecond before the next real zone bucket starts, written at nanosecond
 // precision, so it is never before the input. Each expected value is the next bucket's start (the
 // next local hour or minute, or `startOfDay()` of the next date) minus 1 ns, checked with
-// `ZonedDateTime.add({ nanoseconds: 1 })` on @js-temporal/polyfill@0.5.1.
+// `ZonedDateTime.add({ nanoseconds: 1 })` on temporal-polyfill 1.0.8.
 describe("endOfZoned across zone transitions with default options", () => {
   it.each`
     value                                               | unit        | expected                                                      | description
@@ -157,7 +157,7 @@ describe("endOfZoned across zone transitions with default options", () => {
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
   // ends on the second pass (-04:00). The end is the second midnight (2010-11-07T00:00:00-04:00)
-  // minus 1 ns, checked on @js-temporal/polyfill@0.5.1.
+  // minus 1 ns, checked on temporal-polyfill 1.0.8.
   it.each`
     options                       | expected
     ${{ weekStartsOn: "sunday" }} | ${"2010-11-06T23:59:59.999999999-04:00[America/Goose_Bay]"}
@@ -292,12 +292,12 @@ describe("endOfZoned for an input inside the unit's final second", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("endOfZoned across the 1844 date-line crossings (zoned.E)", () => {
+describe("endOfZoned across the 1844 date-line crossings", () => {
   // 1844-12-30 ends 1ns before the crossing; its week (Monday 12-30 to Sunday 01-05, one date
   // short) ends 1ns before Monday 1845-01-06, five days after the crossing.
   it.each(dateLineCrossingTimeZones)(

@@ -208,9 +208,8 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
     },
   );
 
-  // Before ISO year 1 (native Temporal: ethiopic era `aa` 5491 and 5493). The polyfill cannot read
-  // ethiopic at all, so `TEMPORAL_STAND_IN` computes the years and the printed years must be
-  // accepted as the calendar years. Coptic has one era `am` for every year (Intl era/monthCode
+  // Before ISO year 1 (ethiopic era `aa` 5491 and 5493, in the polyfill and native Temporal): the
+  // printed years must be accepted as the calendar years. Coptic has one era `am` for every year (Intl era/monthCode
   // Table 2, 4.1.12: eraYear is year), so -285 and -283 are the answer; the engine's own "1 - year"
   // text is D31 and `copticEra.ts` repairs it (below).
   it.each`
@@ -249,9 +248,9 @@ describe("repairRangeYear: calendars the polyfill cannot project", () => {
     expect(text).toContain(`${minus}283`);
   });
 
-  // The polyfill throws for `indian` before ISO year 1 (V8 bug 10529), so nothing is measured
-  // and ICU's own text is the answer.
-  it("returns the engine text for an indian range before ISO year 1", () => {
+  // An indian range across ISO year 1 is measured like any other; ICU prints its years right, so
+  // its own text is the answer.
+  it("returns the engine text for an indian range across ISO year 1", () => {
     const options = { ...monthly, calendar: "indian" };
     const formatter = new Intl.DateTimeFormat("ak", options);
     const start = at("-000001-07-10T12:00:00");

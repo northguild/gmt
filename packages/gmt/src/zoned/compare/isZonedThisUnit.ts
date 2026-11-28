@@ -1,11 +1,11 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
+import { Temporal } from "../../internal/temporal";
 import { getLocaleFirstDayOfWeek } from "../../internal/getLocaleFirstDayOfWeek";
 import { localeStartOfWeek, sameDateBy } from "../../internal/plainDateSteps";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { isDateUnitName } from "../../internal/unitNames";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value`'s local calendar day falls in the same `unit` as
@@ -43,7 +43,7 @@ import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
  */
 export function isZonedThisUnit(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
+  unit: SmallestUnit<Temporal.DateUnit>,
   locale?: string | string[],
 ): boolean {
   try {
@@ -60,7 +60,9 @@ export function isZonedThisUnit(
     }
 
     try {
-      const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId).toPlainDate();
+      const today = Temporal.Now.zonedDateTimeISO(
+        zonedDateTime.timeZoneId,
+      ).toPlainDate();
       const valueDate = zonedDateTime.toPlainDate();
 
       if (resolvedUnit === "week" && locale !== undefined) {

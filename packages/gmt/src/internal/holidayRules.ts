@@ -4,10 +4,7 @@ import {
   resolveParts,
   type ResolvedBusinessCalendar,
 } from "./businessCalendar";
-import {
-  canonicalCalendarSystem,
-  computationCalendarId,
-} from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { easterEpochDay } from "./easter";
 import {
   epochDayOf,
@@ -150,8 +147,7 @@ function parseCalendarFixed(
   }
 
   // A day the month never has (Hebrew M01 day 31) is no holiday in any year, so the rule is invalid.
-  const calendarId = computationCalendarId(canonical);
-  if (!isIntegerIn(day, 1, longestDayOfMonthCode(calendarId, monthCode))) {
+  if (!isIntegerIn(day, 1, longestDayOfMonthCode(canonical, monthCode))) {
     return null;
   }
 
@@ -161,7 +157,7 @@ function parseCalendarFixed(
     ? null
     : {
         kind: "calendarFixed",
-        calendarId,
+        calendarId: canonical,
         monthCode,
         day,
         policy,

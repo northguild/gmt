@@ -152,7 +152,6 @@ export interface WorkaroundCounts {
   total: number;
   stillNeeded: number;
   removable: number;
-  guards: number;
   other: number;
 }
 
@@ -163,13 +162,11 @@ export function countWorkarounds(
     groups.filter((g) => g.state === state).length;
   const stillNeeded = count("still-needed");
   const removable = count("removable");
-  const guards = count("guard");
   return {
     total: groups.length,
     stillNeeded,
     removable,
-    guards,
-    other: groups.length - stillNeeded - removable - guards,
+    other: groups.length - stillNeeded - removable,
   };
 }
 

@@ -11,7 +11,7 @@ import { todayDate } from "./todayDate";
  * @example compareToToday("2024-03-14") // -1, if today is 2024-03-15
  * @example compareToToday("invalid") // null
  */
-export function compareToToday(value: unknown): -1 | 0 | 1 | null {
+export function compareToToday(value: unknown): number | null {
   const date = plainDateOf(value);
   if (date === null) {
     return null;

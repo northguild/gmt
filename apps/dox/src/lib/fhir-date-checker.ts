@@ -18,7 +18,7 @@ import type {
   FhirDateType,
   FhirPrecision,
 } from "@northguild/gmt/types";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { TimelineSpec } from "./edi-picture";
 import { callResultsText } from "./edi-render";
 import {

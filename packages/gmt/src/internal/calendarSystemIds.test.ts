@@ -1,7 +1,6 @@
 import {
   calendarSystems,
   canonicalCalendarSystem,
-  computationCalendarId,
   isCalendarSystem,
 } from "./calendarSystemIds";
 
@@ -83,22 +82,5 @@ describe("canonicalCalendarSystem", () => {
     ${""}                | ${"empty"}
   `("returns null for '$value' ($reason)", ({ value }) => {
     expect(canonicalCalendarSystem(value)).toBeNull();
-  });
-});
-
-describe("computationCalendarId", () => {
-  // The Ethiopic family computes through "ethioaa" (polyfill 0.5.1 cannot read ethiopic or coptic
-  // fields under ICU 78); every other calendar computes in itself.
-  it.each`
-    calendar      | expected
-    ${"ethiopic"} | ${"ethioaa"}
-    ${"coptic"}   | ${"ethioaa"}
-    ${"ethioaa"}  | ${"ethioaa"}
-    ${"hebrew"}   | ${"hebrew"}
-    ${"iso8601"}  | ${"iso8601"}
-    ${"gregory"}  | ${"gregory"}
-    ${"roc"}      | ${"roc"}
-  `("computes $calendar in $expected", ({ calendar, expected }) => {
-    expect(computationCalendarId(calendar)).toBe(expected);
   });
 });

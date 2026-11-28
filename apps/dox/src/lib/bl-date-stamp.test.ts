@@ -5,7 +5,7 @@
  * lit day of each lane is the library's date for it, and it is the day the
  * gate falls in.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { blDateLib } from "~/test/ledger-lib";
 import {
   BL_DATE_PRESETS,

@@ -7,7 +7,7 @@
  * library or the widget fails here.
  */
 import { screen, within } from "@testing-library/dom";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   WIDGET_REGISTRY,
   type AnyWidgetEntry,

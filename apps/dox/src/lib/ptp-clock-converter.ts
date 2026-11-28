@@ -14,7 +14,7 @@
  *
  * No DOM, no library import (the library arrives as an `IotLib`).
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { IotLib } from "./iot-lib";
 import {
   CUSTOM_PRESET_ID,

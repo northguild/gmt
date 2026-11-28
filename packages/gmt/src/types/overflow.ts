@@ -1,4 +1,4 @@
-import type { Temporal } from "../internal/temporal";
+import type { ArithmeticOptions } from "../internal/temporalTypes";
 
 /**
  * What to do when a date or time field is out of range, as Temporal's `overflow` option
@@ -6,4 +6,4 @@ import type { Temporal } from "../internal/temporal";
  * nearest valid value, so January 31 plus one month is the last day of February; `"reject"`
  * refuses the value.
  */
-export type Overflow = Temporal.ArithmeticOptions["overflow"];
+export type Overflow = ArithmeticOptions["overflow"];

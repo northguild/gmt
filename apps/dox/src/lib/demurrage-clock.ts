@@ -13,7 +13,7 @@
  * `clockPair`, and it holds no table either: it asks the library. It calls
  * `demurrageClock` with one event of each of the seven types at seven known,
  * rising instants, and reads the two types back from the strings that come
- * out. `@js-temporal/polyfill` is imported for drawing only, in the helpers
+ * out. `Temporal` comes from `@northguild/gmt` and is used for drawing only, in the helpers
  * this module shares with the other ledger tools.
  *
  * The terminal clock is a display zone. It sets the day columns and the local

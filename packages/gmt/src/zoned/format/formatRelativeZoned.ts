@@ -9,7 +9,6 @@ import type { RelativeRoundingMethod, RelativeUnit } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { isOptionsObject } from "../../internal/isObject";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeZoned`: how the phrase is worded, the unit it counts in, how the
@@ -134,7 +133,7 @@ function resolveZonedReference(
 ): Temporal.ZonedDateTime {
   if (reference === undefined) {
     // "now" in value's own zone — keeps the calendar context consistent.
-    return nowZonedDateTimeISO(timeZoneId);
+    return Temporal.Now.zonedDateTimeISO(timeZoneId);
   }
   if (typeof reference === "string") {
     // UTC string → place into value's zone for a consistent calendar anchor.

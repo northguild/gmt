@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { DAY_MS, subsolarPoint } from "~/lib/globe/sun";
 import {
   SUN_GLIDE_MS,

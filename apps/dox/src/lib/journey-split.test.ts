@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { journeyLib as lib } from "~/test/ledger-lib";
 import { permalinkOf as deliveryPermalink } from "./delivery-scheduler";
 import {

@@ -109,3 +109,30 @@ describe("getUnixNow", () => {
     });
   });
 });
+
+// 1960-01-01T00:00:00Z is -315619200000 ms and 2027-01-01T00:00:00Z is 1798761600000 ms (TC39
+// Temporal SystemUTCEpochMilliseconds floors the system time; test262
+// built-ins/Temporal/Now/instant/return-value-value.js).
+describe("getUnixNow after the clock was set before 1970", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns -315619200000 for two readings at 1960-01-01T00:00:00Z", () => {
+    vi.setSystemTime("1960-01-01T00:00:00Z");
+    getUnixNow();
+    expect(getUnixNow()).toBe(-315619200000);
+  });
+
+  it("returns 1798761600000 at 2027-01-01T00:00:00Z read after a 1960 clock", () => {
+    vi.setSystemTime("1960-01-01T00:00:00Z");
+    getUnixNow();
+    getUnixNow();
+    vi.setSystemTime("2027-01-01T00:00:00Z");
+    expect(getUnixNow()).toBe(1798761600000);
+  });
+});

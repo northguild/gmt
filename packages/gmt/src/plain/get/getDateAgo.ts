@@ -3,7 +3,6 @@ import { isDateDurationUnitName } from "../../internal/unitNames";
 import { Temporal } from "../../internal/temporal";
 import { plainDateAdd } from "../../internal/plainDateAdd";
 import { readLengthUnits } from "../../internal/lengthFromNow";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { systemTimeZone } from "../../internal/resolveLocale";
 import type { DateDurationUnit } from "../../types";
 
@@ -47,7 +46,7 @@ export function getDateAgo(
       return "";
     }
 
-    const today = nowZonedDateTimeISO(timeZone).toPlainDate();
+    const today = Temporal.Now.zonedDateTimeISO(timeZone).toPlainDate();
     return plainDateAdd(
       today,
       Temporal.Duration.from(amounts).negated(),

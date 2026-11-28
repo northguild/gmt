@@ -1,4 +1,4 @@
-import { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { durationTotal, resolveDurationRelativeTo } from "../../internal";
 import { isDateTimeDurationUnitName } from "../../internal/unitNames";
 import type { DateTimeDurationUnit, DurationRelativeTo } from "../../types";
@@ -69,7 +69,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function totalDuration(
   value: string,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
+  unit: DateTimeDurationUnit | DateTimeUnit,
   options?: {
     /**
      * The date or zoned date-time the duration is measured from. It is required whenever a year,

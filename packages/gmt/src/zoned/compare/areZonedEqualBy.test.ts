@@ -139,7 +139,7 @@ describe("areZonedEqualBy", () => {
 // the same real local bucket (see `startOfZoned`) — the bucket starts are compared as instants,
 // as `areUnixEqualBy` does. Chatham's 15-minute 03:00 hour is a bucket of its own, so 03:50 and
 // 04:05 are different hours; New York's two 01:00 hours share a label but not a bucket. Every
-// start verified against `floorToZone` on @js-temporal/polyfill@0.5.1.
+// start recomputed directly on temporal-polyfill 1.0.8 from wall-clock labels, not through GMT.
 describe("areZonedEqualBy across zone transitions", () => {
   it.each`
     value1                                            | value2                                            | unit      | expected | description
@@ -220,12 +220,12 @@ describe("areZonedEqualBy across zone transitions", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("areZonedEqualBy across the 1844 date-line crossings (zoned.E)", () => {
+describe("areZonedEqualBy across the 1844 date-line crossings", () => {
   // Monday 1844-12-30 and Thursday 1845-01-02 share a week; Sunday 12-29 closes the one before.
   it.each(dateLineCrossingTimeZones)(
     "puts 1844-12-30 and 1845-01-02 in one week in $timeZone, and 1844-12-29 in the one before",

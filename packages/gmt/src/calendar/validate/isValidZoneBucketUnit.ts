@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { isZoneBucketUnitName } from "../../internal/unitNames";
 import type { ZoneBucketUnit } from "../../types";
 
@@ -32,6 +32,6 @@ import type { ZoneBucketUnit } from "../../types";
  */
 export function isValidZoneBucketUnit(
   unit: unknown,
-): unit is Temporal.SmallestUnit<ZoneBucketUnit> {
+): unit is SmallestUnit<ZoneBucketUnit> {
   return isZoneBucketUnitName(unit);
 }

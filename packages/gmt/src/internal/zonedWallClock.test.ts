@@ -1,10 +1,6 @@
 import { Temporal } from "./temporal";
 import { dateLineCrossingTimeZones } from "../test/timeZoneMatrix";
-import {
-  isWithinIsoDaysRange,
-  POLYFILL_TRANSITION_SEARCH_FLOOR,
-  zonedDateTimeFrom,
-} from "./zonedWallClock";
+import { isWithinIsoDaysRange, zonedDateTimeFrom } from "./zonedWallClock";
 
 // Epoch nanoseconds of the last representable instant, +275760-09-13T00:00:00Z (TC39 nsMaxInstant).
 const MAX_INSTANT = 8_640_000_000_000_000_000_000n;
@@ -95,7 +91,7 @@ describe("zonedDateTimeFrom", () => {
     );
   });
 
-  describe("a Z string is an exact instant under every offset option (temporalCompat D15)", () => {
+  describe("a Z string is an exact instant under every offset option", () => {
     // ToTemporalZonedDateTime sets offsetBehaviour to ~exact~ for a `Z` or `z` designator, and
     // InterpretISODateTimeOffset applies "ignore" only when offsetBehaviour is ~option~, so the
     // string's own instant is kept under "ignore" as under "use", "prefer" and "reject".
@@ -250,25 +246,7 @@ describe("isWithinIsoDaysRange", () => {
   });
 });
 
-describe("the pre-1847 transition assumption (zoned.E)", () => {
-  // `missedNextTransition` / `missedPreviousTransition` find the one offset change a zone makes
-  // before the polyfill's transition search starts (1847-01-01) by comparing two offsets and
-  // bisecting. That is only sound while no zone changes offset before 1844 and each of the five
-  // date-line zones changes exactly once in 1844-1847. Offsets come from Intl, which the polyfill
-  // reads correctly; only its transition *search* is floored. A tzdb release that adds an earlier
-  // change fails here, naming the zone, instead of being silently mishandled.
-  const MIN_INSTANT = -8_640_000_000_000_000_000_000n;
-  const offsetAt = (timeZone: string, epochNanoseconds: bigint) =>
-    new Temporal.ZonedDateTime(epochNanoseconds, timeZone).offsetNanoseconds;
-  const epochOf = (instant: string) =>
-    Temporal.Instant.from(instant).epochNanoseconds;
-  const monthStarts = Array.from({ length: 37 }, (_, month) =>
-    epochOf(
-      `${1844 + Math.floor(month / 12)}-${String((month % 12) + 1).padStart(2, "0")}-01T00:00:00Z`,
-    ),
-  );
-  const timeZones = Intl.supportedValuesOf("timeZone");
-
+describe("a date-only string on a skipped date-line day", () => {
   it.each(dateLineCrossingTimeZones)(
     "starts the date-only 1844-12-31 string in $timeZone at the crossing, $instant",
     ({ timeZone, instant }) => {
@@ -279,38 +257,4 @@ describe("the pre-1847 transition assumption (zoned.E)", () => {
       ).toBe(instant);
     },
   );
-
-  it("puts the floor at 1847-01-01T00:00:00Z (js-temporal lib/ecmascript.ts BEFORE_FIRST_DST)", () => {
-    expect(POLYFILL_TRANSITION_SEARCH_FLOOR).toBe(
-      epochOf("1847-01-01T00:00:00Z"),
-    );
-  });
-
-  it("finds no zone whose offset changes between the minimum instant and 1844-01-01", () => {
-    const changed = timeZones.filter(
-      (timeZone) =>
-        offsetAt(timeZone, MIN_INSTANT) !==
-        offsetAt(timeZone, epochOf("1844-01-01T00:00:00Z")),
-    );
-
-    expect(changed).toEqual([]);
-  });
-
-  it("finds exactly the five date-line zones changing between 1844-01-01 and 1847-01-01, once each", () => {
-    const changes = timeZones
-      .map((timeZone) => {
-        const offsets = monthStarts.map((epoch) => offsetAt(timeZone, epoch));
-        const count = offsets.filter(
-          (offset, index) => index > 0 && offset !== offsets[index - 1],
-        ).length;
-        return { timeZone, count };
-      })
-      .filter(({ count }) => count > 0);
-
-    expect(changes).toEqual(
-      dateLineCrossingTimeZones
-        .map(({ timeZone }) => ({ timeZone, count: 1 }))
-        .sort((a, b) => a.timeZone.localeCompare(b.timeZone)),
-    );
-  });
 });

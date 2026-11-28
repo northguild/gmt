@@ -704,12 +704,12 @@ describe("roundZoned at the maximum instant", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("roundZoned across the 1844 date-line crossings (zoned.E)", () => {
+describe("roundZoned across the 1844 date-line crossings", () => {
   // 1844-12-30 is 24 hours long, so its noon is an exact half and halfExpand rounds up to the
   // next day's start, the crossing; 11:00 rounds down.
   it.each(dateLineCrossingTimeZones)(

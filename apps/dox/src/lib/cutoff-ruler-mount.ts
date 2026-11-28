@@ -10,7 +10,7 @@
  * with ids from `idScope(idPrefix)`, and `mount` finds its parts by those ids. The drawn parts
  * are placed by `--gmt-at` fractions, so nothing is measured and nothing observes a resize.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

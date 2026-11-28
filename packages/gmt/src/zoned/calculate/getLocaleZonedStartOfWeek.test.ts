@@ -186,7 +186,7 @@ describe("getLocaleZonedStartOfWeek", () => {
 
   // A Sunday-first locale's week in America/Sao_Paulo starts on 2018-11-04, whose midnight is a
   // gap (00:00 -> 01:00). The week starts at that Sunday's first real instant — Temporal's
-  // `startOfDay()`. Verified on @js-temporal/polyfill@0.5.1.
+  // `startOfDay()`. Verified on temporal-polyfill 1.0.8.
   it("returns the real week start across a midnight gap", () => {
     expect(
       getLocaleZonedStartOfWeek(
@@ -226,9 +226,8 @@ describe("getLocaleZonedStartOfWeek", () => {
 });
 
 // The week is the real local bucket in the
-// value's own zone, so its start is never after the value. Expected values verified against the
-// `internal/zonedBucket.ts` walker, `floorToZone` for the Monday week, and Temporal's
-// `startOfDay()` for Santiago, on @js-temporal/polyfill@0.5.1.
+// value's own zone, so its start is never after the value. Expected values recomputed directly
+// on temporal-polyfill 1.0.8: week labels from wall-clock dates, and `startOfDay()` for Santiago.
 describe("getLocaleZonedStartOfWeek across zone transitions with default options", () => {
   it.each`
     value                                               | locale                  | expected                                            | description
@@ -280,12 +279,12 @@ describe("getLocaleZonedStartOfWeek across zone transitions with default options
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("getLocaleZonedStartOfWeek across the 1844 date-line crossings (zoned.E)", () => {
+describe("getLocaleZonedStartOfWeek across the 1844 date-line crossings", () => {
   // en-GB weeks start on Monday (CLDR weekData), so 1845-01-02's week starts on 1844-12-30.
   it.each(dateLineCrossingTimeZones)(
     "starts the en-GB week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",

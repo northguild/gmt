@@ -25,8 +25,9 @@ const at = (epochNanoseconds: bigint, timeZone: string) =>
  * Every expected value below is TC39 Temporal's answer, read from Chromium 152's built-in Temporal
  * (the same calls, with the exact times written here) and walked through the spec's
  * DifferenceZonedDateTime / NudgeToCalendarUnit / NudgeToZonedTime / BubbleRelativeDuration steps.
- * `@js-temporal/polyfill` 0.5.1 throws for the rows marked "polyfill throws": wall clocks past the
+ * `@js-temporal/polyfill` 0.5.1 threw for the rows marked "polyfill throws": wall clocks past the
  * maximum in zones ahead of UTC, and the minimum instant's local dates in zones behind UTC.
+ * `temporal-polyfill` 1.0.8 answers them with the same values.
  */
 
 describe("zonedUntil at the range limits", () => {
@@ -268,9 +269,38 @@ describe("durationCompare at the range limits", () => {
   );
 });
 
+/*
+ * TC39 Duration.compare returns +0 early only when all ten fields are equal. `{ months: N,
+ * seconds: 1 }` and `{ months: N, milliseconds: 1000 }` print the same ("PT1S") but are different
+ * field sets, so the specification goes on to add the months to relativeTo; N is past the date
+ * range, so that throws RangeError. The same field set twice is +0.
+ */
+describe("durationCompare equal-fields shortcut", () => {
+  const PAST_RANGE = 4_294_967_295;
+  const relativeTo = Temporal.PlainDate.from("2024-01-15[u-ca=hebrew]");
+
+  it("fields that differ but print alike → RangeError, not 0", () => {
+    const seconds = Temporal.Duration.from({ months: PAST_RANGE, seconds: 1 });
+    const milliseconds = Temporal.Duration.from({
+      months: PAST_RANGE,
+      milliseconds: 1000,
+    });
+    expect(seconds.toString()).toBe(milliseconds.toString());
+    expect(() => durationCompare(seconds, milliseconds, relativeTo)).toThrow(
+      RangeError,
+    );
+  });
+
+  it("the same fields twice → 0", () => {
+    const one = Temporal.Duration.from({ months: PAST_RANGE, seconds: 1 });
+    const two = Temporal.Duration.from({ months: PAST_RANGE, seconds: 1 });
+    expect(durationCompare(one, two, relativeTo)).toBe(0);
+  });
+});
+
 // Two identifiers of one time zone (TimeZoneEquals) take the same range-limit repair as one
 // identifier: Australia/ACT is a link to Australia/Sydney. TC39, read from Node's built-in
-// Temporal, answers P1D; the polyfill throws for this pair.
+// Temporal, answers P1D; `temporal-polyfill` 1.0.8 gives P1D too (0.5.1 threw for this pair).
 describe("zonedUntil across two identifiers of one time zone at the range limit", () => {
   it("returns P1D from Australia/Sydney at max - 1d to Australia/ACT at max", () => {
     expect(

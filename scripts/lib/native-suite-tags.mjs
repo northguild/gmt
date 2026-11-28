@@ -9,7 +9,7 @@
  * Two lists, because there are two kinds of known failure (see `classify`):
  *
  * - `KNOWN_NATIVE_FAILURES`: a test fails on the native engine and passes on
- *   `@js-temporal/polyfill` in the same runtime. One row per test, one defect per row.
+ *   `temporal-polyfill` in the same runtime. One row per test, one defect per row.
  * - `KNOWN_HOST_FAILURES`: a test fails on both engines in one runtime, so the runtime's data or
  *   setup is the cause, not Temporal. One group per cause, matched by pattern.
  *

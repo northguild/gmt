@@ -9,7 +9,7 @@ import {
 import { mockTemporalNowZonedDateTimeISOThrow } from "../../test/mocks";
 import { getZonedToday } from "./getZonedToday";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const zonedTodayByZone = {
   UTC: "2024-02-29",
   GMT: "2024-02-29",

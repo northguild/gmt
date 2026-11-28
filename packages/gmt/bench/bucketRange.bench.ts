@@ -1,5 +1,4 @@
 import { bucketRange } from "../src/calendar";
-import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { bench, utcMidnight } from "./fixtures";
 
 // Exercises `certainlyTouchesMoreBuckets`.
@@ -36,7 +35,6 @@ describe("bucketRange by day, a 40-year range refused by the pre-check", () => {
     bench(
       `${timeZone}, from ${start}, 40 y cold`,
       () => {
-        clearTransitionMemo();
         bucketRange(from, to, "day", timeZone);
       },
       { time: 500 },

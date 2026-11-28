@@ -17,7 +17,7 @@ describe("intervalDivideEquallyDate", () => {
 
   // 9 days does not divide evenly by 4: PlainDate has no fractional-day representation, so
   // rounding produces a 2/3/2/2-day split rather than four exact 2.25-day pieces. Verified
-  // against real @js-temporal/polyfill: Math.round(9*1/4)=2, Math.round(9*2/4)=5, Math.round(9*3/4)=7.
+  // against real temporal-polyfill 1.0.8: Math.round(9*1/4)=2, Math.round(9*2/4)=5, Math.round(9*3/4)=7.
   it("rounds boundaries to the nearest whole day when n does not divide the total evenly", () => {
     expect(intervalDivideEquallyDate("2024-01-01", "2024-01-10", 4)).toEqual([
       { start: "2024-01-01", end: "2024-01-03" },
@@ -58,7 +58,7 @@ describe("intervalDivideEquallyDate", () => {
     );
   });
   // E5 (issue #78): start and end must share the same calendar tag (or both be bare ISO). Golden
-  // verified directly against @js-temporal/polyfill.
+  // verified directly against temporal-polyfill 1.0.8.
   it("divides in the shared calendar when start and end carry the same tag", () => {
     expect(
       intervalDivideEquallyDate(

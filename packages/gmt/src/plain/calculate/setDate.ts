@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { PlainDateFields } from "../../internal/temporalTypes";
 import { resolveOverflow } from "../../internal/resolveOverflow";
 import { withDateFields } from "../../internal/readSetFields";
 import type { Overflow } from "../../types";
@@ -47,7 +47,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function setDate(
   value: string,
-  fields: Omit<Temporal.PlainDateLike, "calendar" | "era" | "eraYear">,
+  fields: PlainDateFields,
   options?: {
     /**
      * What to do when the fields do not form a real date. `"constrain"` clamps to the last valid

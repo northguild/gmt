@@ -1,3 +1,4 @@
+import type { DateTimeUnit } from "./temporalTypes";
 import type { Temporal } from "./temporal";
 import { resolveDateTimeUnit } from "./resolveDateTimeUnit";
 import {
@@ -12,7 +13,7 @@ import { frameZoned, normalizeZoneFrame, type ZoneFrame } from "./zoneFrame";
 export interface ResolvedUnixInterval {
   startVal: Temporal.ZonedDateTime;
   endVal: Temporal.ZonedDateTime;
-  resolvedUnit: Temporal.DateTimeUnit;
+  resolvedUnit: DateTimeUnit;
   epochUnit: UnixEpochUnit;
   /** The frame both ends were placed on; `frameInstant` turns a result back into an instant. */
   frame: ZoneFrame;

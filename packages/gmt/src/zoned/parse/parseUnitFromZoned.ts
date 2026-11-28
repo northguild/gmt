@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { weekNumberOf } from "../../internal/weekNumber";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
@@ -33,7 +33,7 @@ import { isoYearString } from "../../internal/isoYearString";
  * const u: ZonedParseUnit = "month";
  */
 export type ZonedParseUnit =
-  | Temporal.SmallestUnit<
+  | SmallestUnit<
       | "year"
       | "month"
       | "week"

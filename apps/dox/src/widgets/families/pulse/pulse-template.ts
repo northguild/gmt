@@ -177,7 +177,6 @@ function lifeSentence(life: PulseLife): SafeHtml {
       const parts = [
         `${c.stillNeeded} still needed`,
         `${c.removable} removable`,
-        `${c.guards} ${c.guards === 1 ? "guard" : "guards"}`,
       ];
       if (c.other > 0) parts.push(`${c.other} only on some engines`);
       return html`Retires with its workarounds: ${parts.join(", ")}.`;

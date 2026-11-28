@@ -323,7 +323,7 @@ describe("addZoned", () => {
 
 // ---------------------------------------------------------------------------------------------
 // E7 (issue #152) — GMT calendar-annotated zoned strings. Every expected value below was produced
-// by running @js-temporal/polyfill@0.5.1, never hand-written.
+// by running temporal-polyfill 1.0.8, never hand-written.
 // ---------------------------------------------------------------------------------------------
 describe("addZoned with GMT calendar-annotated values", () => {
   const H = calendarZonedFixtures.hebrewLeapMonth;
@@ -468,16 +468,16 @@ describe("addZoned at the maximum instant", () => {
   );
 });
 
-// CORE-6 S5: the calendar part of a zoned add follows the Intl era/monthCode proposal's
+// S5: the calendar part of a zoned add follows the Intl era/monthCode proposal's
 // NonISODateAdd. Values: Chromium 153 native Temporal
 // (`PlainDate.withCalendar(c).toZonedDateTime(zone).add(…)`), offsets as Chromium writes them
 // (TemporalZonedDateTimeToString rounds a local mean time offset to the minute).
 describe("addZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     value                                                              | units            | expected                                                           | reason
-    ${"+275759-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${{ years: 1 }}  | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"D1: lands exactly on the maximum instant"}
-    ${"+275759-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"D1 near the maximum in a named zone"}
-    ${"+275759-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${"D1 near the maximum behind UTC"}
+    ${"+275759-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${{ years: 1 }}  | ${"+275760-09-13T00:00:00+00:00[UTC][u-ca=buddhist]"}              | ${"range limit: lands exactly on the maximum instant"}
+    ${"+275759-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=buddhist]"} | ${"range limit near the maximum in a named zone"}
+    ${"+275759-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${{ years: 1 }}  | ${"+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=buddhist]"}       | ${"range limit near the maximum behind UTC"}
     ${"+275760-08-14T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${{ months: 1 }} | ${"+275760-09-12T00:00:00+00:00[UTC][u-ca=hebrew]"}                | ${"hebrew near the maximum"}
     ${"+275760-08-14T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${{ months: 1 }} | ${"+275760-09-12T00:00:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"hebrew near the maximum in a named zone"}
     ${"1000-01-31T00:00:00-04:56:02[America/New_York][u-ca=buddhist]"} | ${{ months: 1 }} | ${"1000-02-28T00:00:00-04:56[America/New_York][u-ca=buddhist]"}    | ${"proleptic buddhist: ISO 1000 has no Feb 29"}

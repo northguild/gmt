@@ -1,5 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { largestDateTimeDurationUnit } from "../../internal/resolveDurationUnit";
 import type { DateTimeDurationUnit } from "../../types";
 
@@ -24,7 +24,7 @@ import type { DateTimeDurationUnit } from "../../types";
  * @example getLargestDateTimeDurationUnit(["seconds", "fortnights"]) // "" (an invalid unit)
  */
 export function getLargestDateTimeDurationUnit(
-  units: Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
+  units: Array<DateTimeDurationUnit | DateTimeUnit>,
 ): DateTimeDurationUnit | "" {
   return largestDateTimeDurationUnit(units);
 }

@@ -10,6 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { chartKey } from "../src/widgets/builders/chart-key";
 
 const css = readFileSync(
   path.resolve(import.meta.dirname, "..", "src", "styles", "gmt-content.css"),
@@ -41,5 +42,17 @@ describe("the prose bullet rule", () => {
     for (const selector of selectors) {
       expect(selector, selector).toContain(EXCLUSION);
     }
+  });
+});
+
+describe("the chart key", () => {
+  it("sits inside a .not-content element, so no prose bullet sits beside a swatch", () => {
+    const markup = chartKey([
+      { kind: "own", words: "its own functions" },
+    ]).value;
+    expect(markup).toMatch(
+      /^<div class="not-content"><ul [^>]*aria-label="Key">/,
+    );
+    expect(markup.endsWith("</ul></div>")).toBe(true);
   });
 });

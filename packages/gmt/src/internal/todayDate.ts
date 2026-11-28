@@ -1,5 +1,4 @@
-import type { Temporal } from "./temporal";
-import { nowZonedDateTimeISO } from "./temporalCompat";
+import { Temporal } from "./temporal";
 import { systemTimeZone } from "./resolveLocale";
 
 /**
@@ -13,7 +12,7 @@ export function todayDate(): Temporal.PlainDate | null {
   const timeZone = systemTimeZone();
   if (timeZone === "") return null;
   try {
-    return nowZonedDateTimeISO(timeZone).toPlainDate();
+    return Temporal.Now.zonedDateTimeISO(timeZone).toPlainDate();
   } catch {
     return null;
   }

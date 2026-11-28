@@ -1,6 +1,5 @@
 import { Temporal } from "../../internal/temporal";
 import { zonedDateTimeOf } from "../../internal/zonedWallClock";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Return true when `value`'s local calendar day falls `offsetDays` days from
@@ -33,7 +32,9 @@ export function isZonedRelativeDay(value: string, offsetDays: number): boolean {
   }
 
   try {
-    const today = nowZonedDateTimeISO(zonedDateTime.timeZoneId).toPlainDate();
+    const today = Temporal.Now.zonedDateTimeISO(
+      zonedDateTime.timeZoneId,
+    ).toPlainDate();
     const target = today.add({ days: offsetDays });
 
     return (

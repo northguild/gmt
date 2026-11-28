@@ -56,13 +56,7 @@ function removalStepsSection(): string {
 }
 
 const ZONED_DIFFERENCE = "packages/gmt/src/internal/zonedDifference";
-const MODULES = [
-  "calendarArithmetic",
-  "nudgeOrigin",
-  "nudgeWindow",
-  "rangeLimit",
-  "utcValidity",
-];
+const MODULES = ["nudgeOrigin"];
 
 /**
  * The text of the `Removal:` bullet in a module's header comment: from the `Removal:` line up to the

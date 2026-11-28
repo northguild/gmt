@@ -29,7 +29,7 @@ import { hasDaylightSaving } from "../zoned/validate/hasDaylightSaving";
  * tz data predates tzdb 2026c: update Node or the browser, not the code.
  *
  * Expected values: worked out from the rule above, then checked against tzdb's `africa` file and
- * plain `@js-temporal/polyfill` and `Intl` calls on Node 26.12.1 (tz 2026e). The `old` column, where there is one, is what a
+ * plain `temporal-polyfill` and `Intl` calls on Node 26.12.1 (tz 2026e). The `old` column, where there is one, is what a
  * runtime with tz 2026b (Node 24.19.0) gives.
  */
 

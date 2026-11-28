@@ -8,7 +8,7 @@
  * `webkit` runs on Linux and `webkit-macos` on macOS; on another host a leg writes could-not-run
  * verdicts and exits 2, because its verdict names the data of the host it ran on.
  *
- * A leg runs the suite twice on the same host: once on @js-temporal/polyfill (the control) and
+ * A leg runs the suite twice on the same host: once on the pinned temporal-polyfill (the control) and
  * once on the native engine. A test that fails natively and passes on the control is a
  * divergence; one that fails on both is the runtime's own data or setup; one that fails on the
  * control alone is a wrong answer GMT gives on the polyfill in that runtime. Known divergences and
@@ -516,7 +516,7 @@ export function passSetup(leg, pass) {
         pass === "control"
           ? { GMT_TEMPORAL: "polyfill" }
           : pass === "swap"
-            ? { GMT_TEMPORAL: "temporal-polyfill" }
+            ? { GMT_TEMPORAL: "candidate" }
             : {},
     };
   }
@@ -910,8 +910,8 @@ function readVerdict(root, source) {
 function compatLine(compat) {
   const c = compat.counts;
   return (
-    `${c.workarounds} workarounds on @js-temporal/polyfill ${compat.runtime.polyfill} in ` +
-    `${compat.engine}: ${c.stillNeeded} still needed, ${c.removable} removable, ${c.guard} guard, ` +
+    `${c.workarounds} workarounds on temporal-polyfill ${compat.runtime.polyfill} in ` +
+    `${compat.engine}: ${c.stillNeeded} still needed, ${c.removable} removable, ` +
     `${c.outOfScope} out of scope on ${compat.engineId}`
   );
 }

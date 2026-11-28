@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { Temporal } from "../../internal/temporal";
 import { formatCalendarInstants } from "../../internal/formatCalendarDays";
 import { normalizeTimeZone } from "../../internal/normalizeTimeZone";
-import { nowInstant } from "../../internal/temporalCompat";
 import type { CalendarOptions } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
 import { stringOptionOrDefault } from "../../internal/typedOptions";
@@ -83,7 +83,7 @@ export function formatCalendarUtc(
     let reference = parsedReference;
     if (reference === undefined) {
       try {
-        reference = nowInstant();
+        reference = Temporal.Now.instant();
       } catch {
         return "";
       }

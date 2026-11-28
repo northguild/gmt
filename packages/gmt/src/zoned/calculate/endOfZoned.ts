@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import type { DateTimeUnit, FractionalDigit } from "../../types";
 import { startOrEndOfZoned } from "../../internal/startOrEndOfZoned";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -33,7 +33,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function endOfZoned(
   value: string,
-  unit: Temporal.SmallestUnit<DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

@@ -1,17 +1,16 @@
-import { Temporal } from "./temporal";
 import { plainYearMonthOf } from "./inputChecks";
 import { readDurationUnits } from "./readDurationUnits";
 import { isYearMonthDurationUnit } from "./isYearMonthDurationUnit";
 import { yearMonthString } from "./yearMonth";
+import { assertMonthsInRange } from "./temporalCompat";
 
 /**
  * AddDurationToYearMonth for `addYearMonth` and `subtractYearMonth`: move a year-month by years
  * and months and write the result, or `""`.
  *
- * It runs the specification's steps on a `PlainDate` at day 1 (CalendarDateFromFields with
- * `Set fields.[[Day]] to 1`), because polyfill 0.5.1's `PlainYearMonth#add` and `#subtract`
- * predate tc39 `41faca474a` (record Y). Day 1 of `-271821-04` is before the date limit, so the
- * lowest year-month throws, as in the specification, even for a zero amount.
+ * `Temporal.PlainYearMonth#add` and `#subtract` run the specification's steps, which start from
+ * day 1 of the month (CalendarDateFromFields with `Set fields.[[Day]] to 1`). Day 1 of
+ * `-271821-04` is before the date limit, so the lowest year-month throws even for a zero amount.
  *
  * @param value the candidate year-month string
  * @param units the caller's `units` argument
@@ -32,14 +31,12 @@ export function moveYearMonth(
     if (yearMonth === null || amounts === null) {
       return "";
     }
-    const start = Temporal.PlainDate.from({
-      year: yearMonth.year,
-      month: yearMonth.month,
-      day: 1,
-    });
+    assertMonthsInRange(amounts.months); // D9
     const moved =
-      direction === "add" ? start.add(amounts) : start.subtract(amounts);
-    return yearMonthString(moved.toPlainYearMonth());
+      direction === "add"
+        ? yearMonth.add(amounts)
+        : yearMonth.subtract(amounts);
+    return yearMonthString(moved);
   } catch {
     return "";
   }

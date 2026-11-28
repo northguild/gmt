@@ -1,5 +1,4 @@
 import { addOperatingTime, operatingTimeBetween } from "../src/calendar";
-import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import { bench, londonSchedule, utcMidnight } from "./fixtures";
 
 describe("operatingTimeBetween, Europe/London", () => {
@@ -25,7 +24,6 @@ describe("operatingTimeBetween, Europe/London", () => {
   bench(
     "10 years cold",
     () => {
-      clearTransitionMemo();
       operatingTimeBetween("2024-01-01T00:00:00Z", coldEnd, londonSchedule);
     },
     { time: 500 },

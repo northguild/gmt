@@ -1,3 +1,4 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import type { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveLocale } from "../../internal/resolveLocale";
@@ -53,7 +54,7 @@ import { isDateUnitName } from "../../internal/unitNames";
  */
 export function isThisUnit(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateUnit>,
+  unit: SmallestUnit<Temporal.DateUnit>,
   locale?: string | string[],
 ): boolean {
   try {

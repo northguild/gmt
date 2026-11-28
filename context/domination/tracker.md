@@ -114,6 +114,7 @@ first uses it.
 | 61  | CORE-113 | Core       | Validators and readers accept text<br>after a valid date or time                                         | —          | #528  | —       | Done        |
 | 62  | CORE-114 | Core       | The same call gives different values<br>on different runtimes                                            | —          | #560  | —       | Done        |
 | 63  | CORE-115 | Core       | `isValidOperatingSchedule`, a validator<br>for `OperatingSchedule`                                       | —          | #567  | —       | Not started |
+| 64  | CORE-108 | Core       | Move GMT onto `temporal-polyfill`<br>(smaller bundle, fewer workarounds)                                 | —          | #460  | —       | In progress |
 
 ---
 

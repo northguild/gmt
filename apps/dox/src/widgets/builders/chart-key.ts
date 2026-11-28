@@ -11,17 +11,23 @@ import styles from "./chart-key.module.css";
 
 export type ChartKeyKind = "own" | "shared";
 
+/** The series colour of a swatch: spring unless the chart names another. */
+export type ChartKeyHue = "spring" | "polyfill-shipped" | "polyfill-previous";
+
 export interface ChartKeyItem {
   kind: ChartKeyKind;
+  /** The series colour; `spring` when omitted. */
+  hue?: ChartKeyHue;
   /** What the swatch stands for. Required. */
   words: string;
 }
 
 export function chartKey(items: readonly ChartKeyItem[]): SafeHtml {
-  return html`<ul class="${styles.key}" aria-label="Key">${items.map(
+  // Page prose draws a dash before each list item; Starlight's opt-out works only on an ancestor.
+  return html`<div class="not-content"><ul class="${styles.key}" aria-label="Key">${items.map(
     (item) =>
-      html`<li><span class="${styles.swatch}" data-kind="${item.kind}" aria-hidden="true"></span><span>${item.words}</span></li>`,
-  )}</ul>`;
+      html`<li><span class="${styles.swatch}" data-kind="${item.kind}"${item.hue && item.hue !== "spring" ? html` data-hue="${item.hue}"` : ""} aria-hidden="true"></span><span>${item.words}</span></li>`,
+  )}</ul></div>`;
 }
 
 export function chartSummary(lines: readonly string[]): SafeHtml {

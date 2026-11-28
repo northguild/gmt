@@ -111,9 +111,8 @@ describe(
 );
 
 /*
- * Slice 3c before ISO year 1, in the calendars the polyfill cannot project directly (`TEMPORAL_STAND_IN`
- * for coptic and ethiopic, `readable()` for indian). Each year is the Temporal year of the
- * endpoint (native Temporal, which projects these calendars before ISO year 1): coptic has the
+ * Slice 3c before ISO year 1, in coptic, ethiopic and indian. Each year is the Temporal year of
+ * the endpoint (the polyfill and native Temporal agree before ISO year 1): coptic has the
  * one era `am` for every year (Intl era/monthCode Table 2, 4.1.12: eraYear is year), so coptic
  * year -285 (ISO -0001-07-10) and -283 print as they are, with the locale's minus and the era name
  * (D31, `copticEra.ts`; ICU prints 286 and 284 with no era); ethiopic prints the era year of the

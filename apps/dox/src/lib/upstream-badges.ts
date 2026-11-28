@@ -151,8 +151,6 @@ const DEFECT_TONE: Readonly<Record<CompatGroup["state"], Tone>> = {
   "still-needed": "neutral",
   // Nothing left to work around.
   removable: "spring",
-  // Every check passes only because the installed polyfill cannot show the bug yet.
-  guard: "purple",
   // The defect is real but outside what GMT supports.
   "out-of-scope": "spring",
 };

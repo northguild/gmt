@@ -28,7 +28,7 @@ maintains two specifications:
 replace `Date`. It has separate types for plain and zoned values, explicit time zones and
 calendars, and instants counted in nanoseconds.
 
-**GMT** is built on Temporal (through `@js-temporal/polyfill`) and follows its specification for
+**GMT** is built on Temporal (through `temporal-polyfill`) and follows its specification for
 every type and every piece of arithmetic. No `Date` object appears anywhere, and three dedicated
 lint packages enforce that. Where the polyfill disagrees with the specification, GMT
 returns the specified answer and reports the difference upstream; see

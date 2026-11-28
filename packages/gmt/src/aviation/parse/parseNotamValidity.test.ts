@@ -197,9 +197,11 @@ describe("parseNotamValidity", () => {
       for (const { value, yearWindow } of NOTAM_SENTINEL_ROWS) {
         parseNotamValidity(value, { yearWindow });
       }
-      const calls = spies.map((s) => s.mock.calls.length);
+      // temporal-polyfill lowercases the calendar id it resolves (CanonicalizeCalendar's
+      // ASCII-lowercase step), so `iso8601` is the one receiver allowed: NOTAM text never is.
+      const receivers = spies.flatMap((s) => s.mock.contexts.map(String));
       vi.restoreAllMocks();
-      expect(calls).toStrictEqual([0, 0, 0, 0, 0]);
+      expect(receivers.filter((r) => r !== "iso8601")).toStrictEqual([]);
     });
   });
 });

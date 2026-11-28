@@ -3,7 +3,7 @@
  * expected literal is an appendix Z row (C1-C10).
  */
 import { toOffsetInstant } from "@northguild/gmt/instant/convert";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { isPastCutoff, timeToCutoff } from "@northguild/gmt/transport/compare";
 import { etaAtZone } from "@northguild/gmt/transport/convert";
 import { isValidTimeZone } from "@northguild/gmt/zoned/validate";

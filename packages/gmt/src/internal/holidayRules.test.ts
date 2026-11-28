@@ -348,8 +348,8 @@ describe("parseHolidayRule calendar resolution", () => {
     ${"islamicc"}            | ${"islamic-civil"}
     ${"Islamic-Civil"}       | ${"islamic-civil"}
     ${"ethiopic-amete-alem"} | ${"ethioaa"}
-    ${"ethiopic"}            | ${"ethioaa"}
-    ${"coptic"}              | ${"ethioaa"}
+    ${"ethiopic"}            | ${"ethiopic"}
+    ${"coptic"}              | ${"coptic"}
     ${"hebrew"}              | ${"hebrew"}
     ${"gregory"}             | ${"gregory"}
   `(

@@ -30,7 +30,7 @@ stops with exit code 2 if its zone resolves to UTC or `Etc/*`.
   also carries `hosts`. A cell is `same` only when it is the same on every host.
 - GMT and Temporal must give identical results on every host. If either does not, the runner
   stops with exit code 1 and names the case.
-- Each Temporal call runs on `@js-temporal/polyfill` and on native `Temporal`. If the two give
+- Each Temporal call runs on `@js-temporal/polyfill` 0.5.1 (pinned on purpose, as one of the libraries this folder compares; GMT itself runs on `temporal-polyfill`) and on native `Temporal`. If the two give
   different results the runner stops with exit code 1 and names the case.
 - GMT is bundled from `packages/gmt/src` into `.cache/gmt.mjs` with esbuild. The runner never
   builds `packages/gmt` and never reads `packages/gmt/dist`.

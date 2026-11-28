@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { screen } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
 import { aimBody, aimLens, behindEarth, bodyAt } from "./sky-aim";

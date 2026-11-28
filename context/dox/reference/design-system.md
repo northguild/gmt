@@ -55,6 +55,16 @@ Values live in `gmt-tokens.css`; these are the rules around them.
   chart. They alias palette colours, so they re-tint and need no light block. Series 3 and 4 inks
   reach only 5.7 to 6.7:1, so a series colour goes on marks, stems, edges and swatches, never on
   text. The series' name in `--gmt-ice` carries its meaning.
+- **Polyfill tokens** (`--gmt-polyfill-shipped` green, `--gmt-polyfill-previous` slate grey)
+  colour the two polyfills on `/bundle-size`. Each has one value for both themes and reaches 3:1
+  against void, surface, surface-2 and the glass composite (`polyfill-tokens.test.ts`). They are
+  not spring or signal: spring is the site's accent and amber is NO SIGNAL alone. Marks and
+  swatches only, never text.
+  - A `/bundle-size` bar is the token itself, not the `/why-gmt` gradient, so the colour matches
+    the key. In the split chart the polyfill is solid and GMT's code is hatched in the same hue
+    (`barHatch`). The shipped bar sits above the previous one by the report's `shipped` flag,
+    never by position. Under forced colours the hatched edge goes dashed and the shipped bars
+    take `CanvasText`. The key and the hidden summary name the packages in words.
 - **Theme-role tokens** (`--gmt-code-surface`, `--gmt-sidebar-link`, ...) resolve to a different
   token per theme, so the rule that uses one needs no light block.
 - **`-ink` tokens** are the text-safe variant of an accent (rule 6).

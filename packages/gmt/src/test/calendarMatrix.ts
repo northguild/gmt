@@ -34,8 +34,7 @@ export const MustTestCalendars: Record<CalendarSystem, CalendarSystem> = {
  * - `islamicTabular` (`islamic-tbla`) — lunar 354/355-day year; representative of the three
  *   Islamic variants, which genuinely diverge from each other by 1-2 days in their fields.
  * - `japanese` — era reset mid-arithmetic.
- * - `ethiopic` — 13-month + Pagumen (short 13th month), and a calendar that computes through
- *   `"ethioaa"` (see `internal/calendarSystemIds.ts` `computationCalendarId`).
+ * - `ethiopic` — 13-month + Pagumen (short 13th month).
  * - `persian` — independent solar leap-year cycle (not Gregorian-aligned, unlike Buddhist/ROC/Indian).
  */
 export const SampledCalendars = {

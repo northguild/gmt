@@ -4,7 +4,7 @@
  * Extracted from DstInspector.astro so they can be unit-tested without jsdom.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { OFFSET_SOURCE, offsetMinutes } from "./exact-offset";
 
 export interface DstTransition {

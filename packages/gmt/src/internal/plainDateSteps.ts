@@ -1,3 +1,4 @@
+import type { DateTimeUnit } from "./temporalTypes";
 import { Temporal } from "./temporal";
 import { isoDateLikeOf } from "./inputChecks";
 
@@ -51,7 +52,7 @@ export function startOfPlainDate(
  */
 export function startOfPlainDateTime(
   dateTime: Temporal.PlainDateTime,
-  unit: Temporal.DateTimeUnit,
+  unit: DateTimeUnit,
   weekStartsOn: "monday" | "sunday",
 ): Temporal.PlainDateTime {
   switch (unit) {

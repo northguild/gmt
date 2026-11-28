@@ -55,7 +55,7 @@ describe("intervalOverlappingDaysZoned", () => {
   });
 
   // An empty interval strictly inside the other overlaps it, but the intersection is that empty
-  // span [12:00, 12:00), which holds no instant and so no date (CORE-6 empty-interval rule).
+  // span [12:00, 12:00), which holds no instant and so no date (empty-interval rule).
   it.each`
     aStart                              | aEnd                                | bStart                              | bEnd
     ${"2024-01-01T00:00:00+00:00[UTC]"} | ${"2024-01-03T00:00:00+00:00[UTC]"} | ${"2024-01-02T12:00:00+00:00[UTC]"} | ${"2024-01-02T12:00:00+00:00[UTC]"}
@@ -228,17 +228,17 @@ describe("intervalOverlappingDaysZoned", () => {
     const start = "1970-01-01T00:00:00-05:00[America/New_York]";
     const end = "7000-01-01T00:00:00-05:00[America/New_York]";
     expect(intervalOverlappingDaysZoned(start, end, start, end)).toBeNull();
-    // 10,000 transition lookups, each sampling the zone every 5 days (temporalCompat D13): about
+    // 10,000 transition lookups, each sampling the zone every 5 days: about
     // 2.5 s locally and more on a CI runner, so the default 5 s is too tight.
   }, 60_000);
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("intervalOverlappingDaysZoned across the 1844 date-line crossings (zoned.E)", () => {
+describe("intervalOverlappingDaysZoned across the 1844 date-line crossings", () => {
   // 1844-12-29T12:00 to 1845-01-01T12:00 touches 12-29, 12-30 and 01-01; 12-31 never happened.
   it.each(dateLineCrossingTimeZones)(
     "shares 3 dates across the crossing in $timeZone",
@@ -264,7 +264,7 @@ describe("intervalOverlappingDaysZoned over thousands of years with no clock cha
 
 describe("intervalOverlappingDaysZoned over Pacific/Apia's deleted day", () => {
   // 29 and 31 December 2011: the zone skipped the 30th, so the runtime gives
-  // 2011-12-29T00:00-10:00 + 24 h = 2011-12-31T00:00+14:00. Verified on @js-temporal/polyfill@0.5.1.
+  // 2011-12-29T00:00-10:00 + 24 h = 2011-12-31T00:00+14:00. Verified on temporal-polyfill 1.0.8.
   it("counts a span against itself as 2 dates", () => {
     const start = "2011-12-29T00:00:00-10:00[Pacific/Apia]";
     const end = "2012-01-01T00:00:00+14:00[Pacific/Apia]";

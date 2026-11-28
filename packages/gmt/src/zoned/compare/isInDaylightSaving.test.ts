@@ -42,7 +42,7 @@ describe("isInDaylightSaving", () => {
   });
 
   // Expected values below are read off each zone's own list of offset changes
-  // (`getTimeZoneTransition` in a plain `@js-temporal/polyfill` script), by the
+  // (`getTimeZoneTransition` in a plain `temporal-polyfill` script), by the
   // rule in the JSDoc: daylight time runs from a forward change to the backward
   // change of the same size that undoes it, less than 365 days later.
 

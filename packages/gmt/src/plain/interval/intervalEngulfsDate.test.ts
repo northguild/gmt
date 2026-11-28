@@ -87,7 +87,7 @@ describe("intervalEngulfsDate", () => {
     },
   );
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
-  // accepted. Golden verified directly against @js-temporal/polyfill.
+  // accepted. Golden verified directly against temporal-polyfill 1.0.8.
   it("accepts mixed calendars since engulfment is an ordering check, not a value", () => {
     expect(
       intervalEngulfsDate(

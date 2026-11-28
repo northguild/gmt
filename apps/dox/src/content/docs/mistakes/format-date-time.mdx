@@ -96,7 +96,7 @@ formatMonthDay("--12-25", "en-US"); // "12/25"`}
 <Mistake
   severity="high"
   title="Calling toLocaleString on an ISO year-month"
-  description="Temporal.PlainYearMonth has the ISO calendar, and toLocaleString throws a RangeError when the locale's calendar differs, which it does for en-US. This throws in polyfill 0.5.1, in Chromium 153 and in WebKit 26.6. formatYearMonth formats through the Gregorian calendar and returns text, or an empty string for invalid input."
+  description="Temporal.PlainYearMonth has the ISO calendar, and toLocaleString throws a RangeError when the locale's calendar differs, which it does for en-US. This throws in temporal-polyfill 1.0.8, in Chromium 153 and in WebKit 26.6. formatYearMonth formats through the Gregorian calendar and returns text, or an empty string for invalid input."
   wrongCode={`Temporal.PlainYearMonth.from("2026-10").toLocaleString("en-US");
 // throws a RangeError`}
   rightCode={`import { formatYearMonth } from "@northguild/gmt";

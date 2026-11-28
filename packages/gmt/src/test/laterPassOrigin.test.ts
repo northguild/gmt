@@ -24,7 +24,7 @@ import {
  * starts the window at the origin's own exact time when no unit has been added
  * (tc39/proposal-temporal #3148, #3149, and tc39/ecma262#3759 commit `1f4e6717ef23` for the condition),
  * and `DifferenceZonedDateTime` subtracts the two exact times when both fall on one local date
- * (#3141). `@js-temporal/polyfill` 0.5.1 does neither. From the later pass it turns the wall clock back
+ * (#3141). `temporal-polyfill` 1.0.8 gets the origin right, but where TC39 has no value it answers one. A polyfill that did neither would, from the later pass, turn the wall clock back
  * into an exact time with `"compatible"`, which takes the earlier pass, so the origin moves an hour
  * early. From the earlier pass, an end in the later pass at a lower wall clock on the same date makes
  * it back up a day it should never have left, which reads as `-P2D` or throws.

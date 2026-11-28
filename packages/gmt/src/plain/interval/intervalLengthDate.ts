@@ -28,7 +28,7 @@ function daysBetween(from: Temporal.PlainDate, to: Temporal.PlainDate): number {
 /**
  * `Duration.total({ unit, relativeTo: start })` of a non-ISO calendar difference, computed as TC39
  * `TotalRelativeDuration` → `NudgeToCalendarUnit` does, over the Temporal compat layer's calendar
- * add and until (CORE-6: the polyfill's own `total` runs its D1/D6/D7-affected arithmetic):
+ * add and until (the polyfill's own `total` is not used here):
  * `r1` whole units from `CalendarDateUntil`, plus the days from `start + r1` to `end` over the days
  * from `start + r1` to `start + (r1 + 1)`, both added with `constrain`. `start <= end`.
  */

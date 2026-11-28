@@ -76,7 +76,7 @@ describe("getTimeZoneOffset", () => {
   );
 
   // Strict-shape rule (see coding-standards): an instant string is ISO 8601 extended format before its first `[`.
-  // Polyfill 0.5.1 reads each of these as 2024-07-15T16:00Z, where New York is at -04:00.
+  // `temporal-polyfill` 1.0.8 reads each of these as 2024-07-15T16:00Z, where New York is at -04:00.
   it.each`
     instant                       | spelling
     ${"2024-07-15T16:00:00z"}     | ${"lower-case z"}

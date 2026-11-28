@@ -53,7 +53,7 @@ const AUTO_UNITS: Array<{ unit: RelativeUnit; maxSeconds: number }> = [
  * @param locale BCP 47 locale(s) passed through to `Intl.RelativeTimeFormat`
  * @param options display style, numeric mode, largest unit and rounding method
  * @param calendarTotal the total in `unit` against the caller's anchor; called only when the unit
- *   is calendrical (month, year) and `diff.total(unit)` throws without a `relativeTo`
+ *   is calendrical (month, year) and `diff.total({ unit })` throws without a `relativeTo`
  * @returns the formatted phrase; throws where `Intl` or Temporal throws, for the caller's sentinel
  * @example formatRelativeDuration(Temporal.Duration.from({ minutes: -30 }), "en-GB", {}, () => 0) // "30 minutes ago"
  * @example formatRelativeDuration(Temporal.Duration.from({ hours: 36 }), "de-DE", { largestUnit: "hour" }, () => 0) // "in 36 Stunden"
@@ -77,7 +77,7 @@ export function formatRelativeDuration(
 
   let total: number;
   try {
-    total = diff.total(unit);
+    total = diff.total({ unit });
   } catch {
     // month/year are calendrical and need a relativeTo anchor.
     total = calendarTotal(unit);

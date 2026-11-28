@@ -25,7 +25,7 @@
  * by their RINEX tokens (`GPS`, `GAL`, `BDT`, `QZS`, `GLO`, `IRN`).
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { runCall, type EdiCall } from "./edi-widgets";
 import { toEpochMs } from "./dwell-ledger";
 import {

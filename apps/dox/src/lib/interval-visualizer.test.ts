@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   INTERVAL_OPERATIONS,
   RELATIONSHIP_PRESETS,

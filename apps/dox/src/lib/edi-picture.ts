@@ -10,7 +10,7 @@
  * timeline's positions are drawing only, from the polyfill's epoch milliseconds,
  * as `markPositions` always was.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { WidestGap } from "./edi-widgets";
 
 // ---------------------------------------------------------------------------

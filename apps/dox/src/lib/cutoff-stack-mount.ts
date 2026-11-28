@@ -10,7 +10,7 @@
  * are placed by `--gmt-at` fractions of one axis, so nothing is measured and nothing observes a
  * resize. Every listener is delegated on the root and tied to the mount's signal.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { defineElements } from "~/widgets/define";
 import {
   aside,

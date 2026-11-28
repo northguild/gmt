@@ -194,7 +194,7 @@ describe("splitIntervalByUnitDate", () => {
   // boundaries) happens in that calendar -- a Hebrew leap year splits into 13 month-slices, not
   // 12. Each boundary's tag is re-derived from the stepped date, never copied. Different
   // calendars return [] (TC39 CalendarEquals). Goldens verified directly against
-  // @js-temporal/polyfill.
+  // temporal-polyfill 1.0.8.
   it("splits a Hebrew leap year into 13 month-slices, not 12 (ISO's answer for the same span)", () => {
     const slices = splitIntervalByUnitDate(
       "2023-09-16[u-ca=hebrew]",
@@ -222,15 +222,15 @@ describe("splitIntervalByUnitDate", () => {
     },
   );
 
-  // CORE-6: boundaries step through the calendar-correct add. Polyfill 0.5.1 throws `Invalid ISO
-  // date` stepping a month from islamic-civil min+68 (D1) and "Missing month" from Hebrew year -41
-  // (D3), so both splits used to return []. Boundaries: Chromium 152 (q2-xscan-chromium152.json),
+  // CORE-6: boundaries step through the calendar-correct add. Polyfill 0.5.1 threw `Invalid ISO
+  // date` stepping a month from islamic-civil min+68 (range limit) and "Missing month" from Hebrew year -41
+  // (negative year), so both splits used to return []. Boundaries: Chromium 152 (q2-xscan-chromium152.json),
   // the Hebrew one through the Dershowitz–Reingold oracle; the last boundary is `end` itself.
   it.each`
     start                                  | end                                    | unit        | expected                                                                                                                                                                                | reason
-    ${"-271821-06-26[u-ca=islamic-civil]"} | ${"-271821-08-24[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-271821-06-26[u-ca=islamic-civil]", end: "-271821-07-25[u-ca=islamic-civil]" }, { start: "-271821-07-25[u-ca=islamic-civil]", end: "-271821-08-24[u-ca=islamic-civil]" }]} | ${"D1: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
-    ${"-003801-01-03[u-ca=hebrew]"}        | ${"-003801-03-03[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-003801-01-03[u-ca=hebrew]", end: "-003801-02-02[u-ca=hebrew]" }, { start: "-003801-02-02[u-ca=hebrew]", end: "-003801-03-03[u-ca=hebrew]" }]}                             | ${"D3/D4: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
-    ${"-271821-06-03[u-ca=islamic-civil]"} | ${"-271820-05-23[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-271821-06-03[u-ca=islamic-civil]", end: "-271820-05-23[u-ca=islamic-civil]" }]}                                                                                           | ${"D1: +1 year is end (xscan min[45] +1 year = min[400])"}
+    ${"-271821-06-26[u-ca=islamic-civil]"} | ${"-271821-08-24[u-ca=islamic-civil]"} | ${"months"} | ${[{ start: "-271821-06-26[u-ca=islamic-civil]", end: "-271821-07-25[u-ca=islamic-civil]" }, { start: "-271821-07-25[u-ca=islamic-civil]", end: "-271821-08-24[u-ca=islamic-civil]" }]} | ${"range limit: +1 month constrains to Jumada I 29 (xscan min[68]); +2 months is Rajab 30 = end"}
+    ${"-003801-01-03[u-ca=hebrew]"}        | ${"-003801-03-03[u-ca=hebrew]"}        | ${"months"} | ${[{ start: "-003801-01-03[u-ca=hebrew]", end: "-003801-02-02[u-ca=hebrew]" }, { start: "-003801-02-02[u-ca=hebrew]", end: "-003801-03-03[u-ca=hebrew]" }]}                             | ${"negative year: Shevat 16 -> Adar 16 -> Nisan 16 (xscan stride k=979)"}
+    ${"-271821-06-03[u-ca=islamic-civil]"} | ${"-271820-05-23[u-ca=islamic-civil]"} | ${"years"}  | ${[{ start: "-271821-06-03[u-ca=islamic-civil]", end: "-271820-05-23[u-ca=islamic-civil]" }]}                                                                                           | ${"range limit: +1 year is end (xscan min[45] +1 year = min[400])"}
   `(
     "splits $start to $end by 1 $unit ($reason)",
     ({ start, end, unit, expected }) => {

@@ -1,4 +1,5 @@
 // Re-exported from `internal/index.ts` (all of its symbols); the CCSDS ASCII functions import it from there.
+import type { ToStringPrecisionOptions } from "./temporalTypes";
 import { Temporal } from "./temporal";
 import { isoYearString } from "./isoYearString";
 import { LEAP_SECOND_STEPS, taiOfUtc } from "./leapSeconds";
@@ -157,7 +158,7 @@ function ccsdsTimeText(
 ): string {
   const time = wall.toPlainTime().toString({
     fractionalSecondDigits:
-      digits as Temporal.ToStringPrecisionOptions["fractionalSecondDigits"],
+      digits as ToStringPrecisionOptions["fractionalSecondDigits"],
     roundingMode: "trunc",
   });
   return reading.secondSixty ? `${time.slice(0, 6)}60${time.slice(8)}` : time;

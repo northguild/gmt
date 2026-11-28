@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   EARTH_HALF_ANGLE_DEG,
   MOON_OFFSET_DEG,

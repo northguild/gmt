@@ -1,4 +1,4 @@
-import type { Temporal } from "../internal/temporal";
+import type { ZonedDateTimeAssignmentOptions } from "../internal/temporalTypes";
 
 /**
  * What to do when the UTC offset written in a zoned value disagrees with its time zone, as
@@ -9,4 +9,4 @@ import type { Temporal } from "../internal/temporal";
  * from the zone, `"prefer"` keeps the offset when it is valid for the zone and otherwise takes
  * the zone's, and `"reject"` refuses the mismatch.
  */
-export type Offset = Temporal.ZonedDateTimeAssignmentOptions["offset"];
+export type Offset = ZonedDateTimeAssignmentOptions["offset"];

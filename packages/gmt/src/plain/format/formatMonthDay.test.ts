@@ -21,7 +21,7 @@ describe("formatMonthDay", () => {
   // pattern (ECMA-402 AdjustDateTimeStyleFormat), so medium and long are the locale's: de-DE medium
   // "25.12.", ja-JP long "12/25". Every dateStyle cell is what native
   // PlainMonthDay#toLocaleString prints with calendar gregory in Chromium 153 and WebKit 26.6; on
-  // Node the Temporal is polyfill 0.5.1, which maps the style to fixed widths instead. full gives
+  // Node the Temporal is temporal-polyfill 1.0.8, which maps the style to fixed widths instead. full gives
   // the long cell in all 17. monthLong is { month: "long", day: "numeric" }: zh and ja write the
   // month as a name there and as a number in every dateStyle. tr-TR short: "25/12" on ICU 78.3
   // (Node 24.22.1, Chromium 153), "25.12" on WebKit 26.6.

@@ -8,7 +8,6 @@ import { utcInstantOf } from "../../internal/utcInstant";
 import { isValidZonedFormatReference } from "../../internal/zonedFormatReference";
 import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatCalendarZoned`: the moment the day label is measured from and the length of
@@ -81,7 +80,7 @@ export function formatCalendarZoned(
 
       let reference: Temporal.ZonedDateTime;
       if (referenceOption === undefined) {
-        reference = nowZonedDateTimeISO(timeZone);
+        reference = Temporal.Now.zonedDateTimeISO(timeZone);
       } else if (typeof referenceOption === "string") {
         const referenceInstant = utcInstantOf(referenceOption);
         reference =

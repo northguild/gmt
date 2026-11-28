@@ -86,7 +86,7 @@ describe("getDstTransitions", () => {
     expect(result[2].offsetAfter).toBe("+01:00");
   });
 
-  // Transition count per battle-test zone in 2024, verified against @js-temporal/polyfill.
+  // Transition count per battle-test zone in 2024, verified against temporal-polyfill 1.0.8.
   const expectedTransitionsIn2024 = {
     UTC: 0,
     GMT: 0,
@@ -211,11 +211,11 @@ describe("getDstTransitions in the last representable year", () => {
   });
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01).
-describe("getDstTransitions across the 1844 date-line crossings (zoned.E)", () => {
+describe("getDstTransitions across the 1844 date-line crossings", () => {
   // The crossing is local 1845-01-01T00:00, so by the "local January 1 00:00 belongs to that
   // year" rule it is 1845's transition and 1844 has none.
   it.each(dateLineCrossingTimeZones)(

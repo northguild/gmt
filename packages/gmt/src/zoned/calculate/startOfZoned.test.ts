@@ -95,8 +95,8 @@ describe("startOfZoned", () => {
   });
 
   // A boundary is always the real bucket start, as TC39's `startOfDay()` gives. The source sits in
-  // the second, repeated 1am, so the hour starts at its own 01:00. Verified against `floorToZone` on
-  // @js-temporal/polyfill@0.5.1.
+  // the second, repeated 1am, so the hour starts at its own 01:00. The boundaries are those
+  // recomputed directly on temporal-polyfill 1.0.8 for the same instants in startOfUnix.test.ts.
   it.each`
     value                                            | expected
     ${"2024-11-03T01:45:00-05:00[America/New_York]"} | ${"2024-11-03T01:00:00-05:00[America/New_York]"}
@@ -130,7 +130,7 @@ describe("startOfZoned", () => {
 
   // Local midnight itself is a DST gap (America/Sao_Paulo jumped 00:00 -> 01:00 on 2018-11-04), so
   // the day starts at its first real instant, 01:00 — Temporal's `startOfDay()`. Verified on
-  // @js-temporal/polyfill@0.5.1.
+  // temporal-polyfill 1.0.8.
   it("returns the day's first real instant across a midnight gap", () => {
     expect(
       startOfZoned("2018-11-04T12:00:00-02:00[America/Sao_Paulo]", "day"),
@@ -155,10 +155,9 @@ describe("startOfZoned", () => {
   });
 });
 
-// The start is the real zone boundary — the
-// bucket `floorToZone` walks — so it is never after the input. Every expected value verified
-// against `floorToZone` (and Temporal's `startOfDay()` for the Sunday week) on
-// @js-temporal/polyfill@0.5.1.
+// The start is the real zone boundary, so it is never after the input. The boundaries are those
+// recomputed directly on temporal-polyfill 1.0.8 (wall-clock labels, and `startOfDay()` for the
+// Sunday week) for the same instants in startOfUnix.test.ts.
 describe("startOfZoned across zone transitions with default options", () => {
   it.each`
     value                                               | unit        | expected                                            | description
@@ -192,8 +191,8 @@ describe("startOfZoned across zone transitions with default options", () => {
   });
 
   // Goose Bay fell back at 00:01 Sunday into Saturday 23:01, re-opening a Sunday-first week that
-  // starts at 23:01 (-04:00). Verified against the `internal/zonedBucket.ts` walker (weekStartsOn 7)
-  // on @js-temporal/polyfill@0.5.1.
+  // starts at 23:01 (-04:00). Same boundary as the Goose Bay
+  // Sunday-week row in startOfUnix.test.ts, recomputed directly on temporal-polyfill 1.0.8.
   it("returns 2010-11-06T23:01:00-04:00 for Goose Bay's re-opened Sunday week", () => {
     expect(
       startOfZoned("2010-11-06T23:30:00-04:00[America/Goose_Bay]", "week", {
@@ -203,8 +202,8 @@ describe("startOfZoned across zone transitions with default options", () => {
   });
 
   // Chatham's local 03:00 never happened on 2024-09-29, so the hour holding 03:50 starts at the
-  // real 03:45 boundary, never after the input. Verified against `floorToZone` on
-  // @js-temporal/polyfill@0.5.1.
+  // real 03:45 boundary, never after the input. Same boundary as the Chatham row
+  // in startOfUnix.test.ts, recomputed directly on temporal-polyfill 1.0.8.
   it("returns the real boundary 2024-09-29T03:45:00+13:45 for Chatham's skipped hour", () => {
     expect(
       startOfZoned("2024-09-29T03:50:00+13:45[Pacific/Chatham]", "hour"),
@@ -356,12 +355,12 @@ describe("startOfZoned at the maximum instant", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("startOfZoned across the 1844 date-line crossings (zoned.E)", () => {
+describe("startOfZoned across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "starts the week of 1845-01-02T12:00 in $timeZone on Monday 1844-12-30",
     (crossing) => {
@@ -377,7 +376,7 @@ describe("startOfZoned across the 1844 date-line crossings (zoned.E)", () => {
   );
 });
 
-// temporalCompat D13: the midnight of 2000-10-08 is skipped (00:00 → 01:00) and the clocks went
+// The midnight of 2000-10-08 is skipped (00:00 → 01:00) and the clocks went
 // back a week later, inside one of the polyfill's 14-day search steps, so its start of day
 // throws or lands a year on. Native Temporal (Node 26.10.0): the day starts at 01:00.
 describe("startOfZoned beside a daylight period 7 days long", () => {

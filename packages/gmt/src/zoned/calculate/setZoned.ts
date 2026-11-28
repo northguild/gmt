@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { ZonedDateTimeFields } from "../../internal/temporalTypes";
 import { resolveOverflow } from "../../internal/resolveOverflow";
 import { setZonedFields } from "../../internal/setZonedFields";
 import type { Disambiguation, Offset, Overflow } from "../../types";
@@ -53,10 +53,7 @@ import { stringOptionOrDefault } from "../../internal/typedOptions";
  */
 export function setZoned(
   value: string,
-  fields: Omit<
-    Temporal.ZonedDateTimeLike,
-    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
-  >,
+  fields: ZonedDateTimeFields,
   options?: {
     /**
      * What happens when the result names a day its month does not have, such as setting `month: 2`

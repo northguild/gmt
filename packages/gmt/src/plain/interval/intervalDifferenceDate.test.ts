@@ -110,7 +110,7 @@ describe("intervalDifferenceDate", () => {
     },
   );
   // E5 (issue #78): same shared-calendar-or-reject rule as intervalUnionDate. Golden
-  // verified directly against @js-temporal/polyfill.
+  // verified directly against temporal-polyfill 1.0.8.
   it("computes the difference in the shared calendar when all four arguments carry the same tag", () => {
     expect(
       intervalDifferenceDate(

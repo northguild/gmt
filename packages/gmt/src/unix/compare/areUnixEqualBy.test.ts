@@ -104,8 +104,8 @@ describe("areUnixEqualBy", () => {
 });
 
 // Across zone transitions, two epochs are equal by `unit` when they fall in the same real local
-// bucket (see `startOfUnix`). Every start verified against `floorToZone` on
-// @js-temporal/polyfill@0.5.1.
+// bucket (see `startOfUnix`). Every start recomputed directly on
+// temporal-polyfill 1.0.8 from wall-clock labels, not through GMT.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
 // 1727533200000 is 2024-09-29T04:05:00+13:45[Pacific/Chatham]
 // 1727532060000 is 2024-09-29T03:46:00+13:45[Pacific/Chatham]
@@ -169,12 +169,12 @@ describe("areUnixEqualBy with an invalid weekStartsOn", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("areUnixEqualBy across the 1844 date-line crossings (zoned.E)", () => {
+describe("areUnixEqualBy across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "puts 1844-12-30 and 1845-01-02 in one week in $timeZone",
     (crossing) => {

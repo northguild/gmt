@@ -16,14 +16,17 @@ import type {
 
 /*
  * ---------------------------------------------------------------------------------------------
- * Defect 5 — an origin in a repeated hour is measured from the wrong instant (D22)
+ * D22 — a length from an origin in a repeated hour
  * ---------------------------------------------------------------------------------------------
- * 5. **An origin in a repeated hour is measured from the wrong instant** (D22). A zoned `relativeTo`
+ * **A length from an origin in a repeated hour can be mismeasured, or have no spec value** (D22).
+ *    `temporal-polyfill` 1.0.8 measures both passes right and fails only where there is no spec
+ *    value (the last bullet below). A zoned `relativeTo`
  *    or start can name either pass of a repeated hour. TC39 `ComputeNudgeWindow` takes the window's
  *    start from the origin's own exact time when no date unit has been added (tc39/ecma262#3759,
  *    commit `1f4e6717ef23`), and `DifferenceZonedDateTime` subtracts the exact times when both fall
- *    on one local date. The polyfill does neither, and turns the wall clock back into an exact time
- *    with `"compatible"`, which takes the earlier pass. Each pass goes wrong its own way:
+ *    on one local date. A polyfill that does neither turns the wall clock back into an exact time with `"compatible"`,
+ *    which takes the earlier pass (`temporal-polyfill` 1.0.8 does not: its repros for both passes
+ *    pass). That error goes wrong its own way in each pass:
  *    - From the later pass the answer is measured from an hour before the instant the caller named.
  *      `PT0S` from `2024-11-03T01:30:00-05:00[America/New_York]` totals 0.04 days where TC39 and
  *      Chromium 153 give 0, `PT11H45M` rounds to `P1D` where they give `PT0S`, and `PT1H` in days and
@@ -33,8 +36,8 @@ import type {
  *      `2024-11-03T01:30:00-04:00[America/New_York]` totals 0.0208 days where they give 0.02, rounds
  *      to `-P2D` in days where they give `PT0S`, and `until` the same end throws where they give
  *      `PT30M`.
- *    - Some lengths have no spec value at all, and the polyfill extrapolates one, because its release
- *      builds strip `assert`. Each Assert in `./operations.ts` names the tc39/proposal-temporal issue that asks what
+ *    - Some lengths have no spec value at all, and `temporal-polyfill` 1.0.8 answers one where TC39 Asserts.
+ *      Each Assert in `./operations.ts` names the tc39/proposal-temporal issue that asks what
  *      should happen. **GMT's decision: where the Assert fails, the operations in `./operations.ts` throw, so the public
  *      function returns its sentinel: `null` for a number, `""` for a string. It never
  *      extrapolates.** Four Asserts are reached:
@@ -63,33 +66,28 @@ import type {
  *    - Trigger: `isNudgeOriginCompatNeeded()` — the D22 probe fails — with a date unit and
  *      `originNeedsSpecPath`: the origin or the target names two instants, or the target is earlier
  *      and a window's end bound falls in a gap. The operation then takes the spec path in `./operations.ts`.
- *    - Retired by: a js-temporal release containing `3c403686d39` ("fix for issues #3141, #3148 and
- *      #3149", on `main`). That release must also carry tc39/proposal-temporal#3319, or `P7D` with
- *      `largestUnit: "week"` regresses to `P1W1D`: `3c403686d39` tests `r1 = 0`, where #3319 and
- *      tc39/ecma262#3759 test for an empty date duration, which is what `computeNudgeWindow` in `./operations.ts`
- *      does. It must also give no value for every read in `totalsWithNoValue`, `noDayCorrection`
- *      and `emptyDaySpan`. `main`'s Asserts are written (`lib/ecmascript.ts`, read, not run) and
- *      `rollup.config.js` strips them from a production build, so a release built that way fails
- *      those repros and this stays. They are samples, not proof: `test/noSpecValue.test.ts` must
- *      also pass on the release. Removing it earlier would turn the sentinels back into numbers.
+ *    - Retired by: a temporal-polyfill release on which every D22 repro passes, `P7D` with
+ *      `largestUnit: "week"` giving `P1W` among them, and which gives no value for every read in
+ *      `totalsWithNoValue`, `noDayCorrection` and `emptyDaySpan` (tc39/proposal-temporal#3336,
+ *      #3311, #3310). On 1.0.8 `totalsWithNoValue` and `noDayCorrection` answer a value, so this
+ *      stays. The repros are samples, not proof: `test/noSpecValue.test.ts` must also pass on the
+ *      release. Removing it earlier would turn the sentinels back into numbers.
  *    - Removal: delete this file and its three calls in `../zonedWallClockDifference.ts` (the
  *      `originTotalBySpec` and `originRoundBySpec` operands in `durationTotal` and `durationRound`,
- *      and the defect 5 term in `untilTakesSpecPath`), the D22 rows in
+ *      and the repeated-hour term in `untilTakesSpecPath`), the D22 rows in
  *      `../temporalCompat/probeRepros.ts`, and the export of `possibleEpochNanoseconds` from
  *      `../zonedWallClock.ts`. Keep the throws in `./operations.ts`: they are this port's own
- *      Asserts. The last of defects 3–5 to go also deletes `untilTakesSpecPath`, the
- *      `// defects 3–5` block in `zonedUntil` that calls `untilAtLimit`, and the `bySpec` blocks in
- *      `durationTotal` and `durationRound`. Then drop the imports and locals tsc reports unused, and
+ *      Asserts. Then drop the imports and locals tsc reports unused, and
  *      the `./operations.ts` exports fallow reports unused.
  * ---------------------------------------------------------------------------------------------
  */
 
 /**
- * True when a length from `zoned` must take the spec path (defect 5): the runtime would mismeasure
+ * True when a length from `zoned` must take the spec path (D22): the runtime would mismeasure
  * it, or the specification has no value for it. `length` is the target's exact time, or a duration
  * to add to `zoned`. At most four wall-clock resolutions, and no loop.
  *
- * - `zoned` is either pass of a repeated wall clock, which the runtime mismeasures.
+ * - `zoned` is either pass of a repeated wall clock, which a runtime can mismeasure.
  * - `target` is. A forward window's end bound can only fall short of the target when its nominal wall
  *   clock is past the target's and its exact time is before it, so a backward transition lies between
  *   them and the target's wall clock repeats. A date difference that disagrees in sign needs the same.
@@ -131,7 +129,7 @@ export function originNeedsSpecPath(
 }
 
 /**
- * Defect 5: `Duration#total` by the spec when `originNeedsSpecPath` holds. Time units subtract exact
+ * `Duration#total` by the spec when `originNeedsSpecPath` holds. Time units subtract exact
  * times, so only a date unit can reach it. Where the specification has no value this throws.
  */
 export function originTotalBySpec(
@@ -148,7 +146,7 @@ export function originTotalBySpec(
 }
 
 /**
- * Defect 5: `Duration#round` by the spec when `originNeedsSpecPath` holds. The `largestUnit` decides:
+ * `Duration#round` by the spec when `originNeedsSpecPath` holds. The `largestUnit` decides:
  * a date one builds a date difference even when `smallestUnit` is an hour. Where the specification
  * has no value this throws.
  */

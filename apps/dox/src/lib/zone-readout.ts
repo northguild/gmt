@@ -23,9 +23,9 @@
  * so the DST yellow is `--gmt-dst-gold`, which already exists for exactly this
  * job in the DST inspector's gap badge.
  *
- * Pure: no DOM, no clock, and no `@js-temporal/polyfill`. Live values reach it
+ * Pure: no DOM, no clock, and no `Temporal`. Live values reach it
  * as a `ZoneReading` from `./zone-clock`, which is the only module allowed to
- * touch the polyfill.
+ * touch Temporal.
  */
 
 import type { SafeHtml } from "~/widgets/builders";

@@ -213,12 +213,12 @@ describe("getHoursInZonedDay at the range limits", () => {
   });
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () => {
+describe("getHoursInZonedDay across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "gives 1844-12-30 and 1845-01-01 24 hours each in $timeZone",
     (crossing) => {
@@ -240,7 +240,7 @@ describe("getHoursInZonedDay across the 1844 date-line crossings (zoned.E)", () 
     expect(getHoursInZonedDay(value)).toBe(expected);
   });
 
-  // temporalCompat D13: the midnight of 2000-10-08 is skipped (clocks went 00:00 → 01:00) and the
+  // The midnight of 2000-10-08 is skipped (clocks went 00:00 → 01:00) and the
   // clocks went back a week later, inside one of the polyfill's 14-day search steps. Native
   // Temporal (Node 26.10.0) and zdump: a 23-hour day, and 24 hours the day before.
   it.each`

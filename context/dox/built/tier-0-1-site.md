@@ -152,3 +152,14 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
   position (same specificity as the terminal rule), never `!important`. The `frame-check` gate
   clicks each tab.
 - `/why-gmt/` is a normal doc page with plain `##` headings; only the landing uses `splash`.
+- `/bundle-size` shows GMT on each of the two polyfills, from `src/generated/bundle-size.json`
+  (`scripts/bundle-size.mjs report`). Its `polyfills[]` holds one set per package, found by the
+  `shipped` flag, never by index. `src/lib/bundle-size-figures.ts` holds every figure and imports
+  only the JSON, so the chart module never reaches the corpus; the page states them as
+  `polyfillFigures.<key>`, one `page-expression-values.ts` entry per key, and no package name,
+  version or entry name is typed in the module. Chart 1 is each polyfill alone; chart 2 splits
+  each single-function import into the polyfill (solid) and GMT's code (hatched), without `root`.
+  A function the previous release lacks has no bar and a "not in GMT {version}" cell.
+  `PolyfillCompare.astro` is the table and the charts' text alternative; the charts are
+  `bundle-size-charts.ts`, joined with `why-gmt-charts.ts` in `bar-charts.ts` through
+  `bar-chart-kit.ts`.

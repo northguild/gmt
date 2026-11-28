@@ -1,5 +1,7 @@
 # Temporal polyfill swap: `@js-temporal/polyfill` or `temporal-polyfill`
 
+> GMT runs on `temporal-polyfill` 1.0.8 (CORE-108). The sections below record the comparison that led to it.
+
 **Purpose:** Record whether GMT should replace `@js-temporal/polyfill` with `temporal-polyfill`
 (fullcalendar/temporal-polyfill), what the swap costs, and what tells us to make it.
 

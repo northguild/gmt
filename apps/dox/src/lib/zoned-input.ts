@@ -56,7 +56,7 @@
  * kind of half-fix that looks correct in a test that asks the wrong question.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 /** A trailing numeric offset, e.g. `-04:00` or `+09:00`, at the very end,
  *  with any seconds (`-00:44:30`, Monrovia before 1972) in group 2. */

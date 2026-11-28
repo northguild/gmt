@@ -1,7 +1,6 @@
 import { DATE_KEYS, TIME_KEYS, verdictKey } from "./patternKey";
 import { plainOptionEntries } from "./plainOptionEntries";
 import { Temporal } from "./temporal";
-import { nowInstant } from "./temporalCompat/clock";
 import { forgetRanges, markRangeHandled, rangeHooks } from "./rangeHooks";
 import { createNameMask, createPartsSynth } from "./weekYearSynth";
 import {
@@ -213,7 +212,9 @@ function toMilliseconds(date: Date | number | undefined): number {
   if (typeof date === "number") {
     return date;
   }
-  return date === undefined ? nowInstant().epochMilliseconds : Number(date);
+  return date === undefined
+    ? Temporal.Now.instant().epochMilliseconds
+    : Number(date);
 }
 
 /** The formatter that stands in for a flagged one; `format` and the parts hold the calendar year. */

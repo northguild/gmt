@@ -1,5 +1,4 @@
 import { chargeableDays } from "../src/intermodal";
-import { clearTransitionMemo } from "../src/internal/zonedTransitionSearch";
 import {
   bench,
   businessCalendar,
@@ -78,7 +77,6 @@ describe("chargeableDays, cold", () => {
   bench(
     "Europe/London, 10 years cold",
     () => {
-      clearTransitionMemo();
       chargeableDays(freeTimeStart, end, 3, {
         basis: "calendar",
         chargeBasis: "calendar",

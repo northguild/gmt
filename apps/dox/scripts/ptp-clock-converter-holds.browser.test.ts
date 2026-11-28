@@ -487,8 +487,10 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       try {
         await openOnClock(page, base, MOUNT_INSTANT);
+        // Instant#toString drops trailing zeros, so a clock with no digits past the
+        // millisecond prints `.25`; one that adds them prints `.250` and more.
         expect(await plate(page, "UTC now")).toMatch(
-          /^2024-06-12T15:20:00\.250\d{0,6}Z$/,
+          /^2024-06-12T15:20:00\.25\d{0,7}Z$/,
         );
         expect(await plate(page, "PTP seconds")).toBe("1718205637n");
         await expectNanosOfUtc(page);
@@ -573,7 +575,7 @@ describe.each(ENGINES)("PTP Clock Converter holds in %s", (_name, type) => {
         await page.emulateMedia({ reducedMotion: "reduce" });
         await openOnClock(page, base, MOUNT_INSTANT);
         const read = await plate(page, "UTC now");
-        expect(read).toMatch(/^2024-06-12T15:20:00\.250\d{0,6}Z$/);
+        expect(read).toMatch(/^2024-06-12T15:20:00\.25\d{0,7}Z$/);
         expect(await plate(page, "PTP seconds")).toBe("1718205637n");
         await expectNanosOfUtc(page);
         await expect(

@@ -1,8 +1,5 @@
 import { Temporal } from "./temporal";
-import {
-  canonicalCalendarSystem,
-  computationCalendarId,
-} from "./calendarSystemIds";
+import { canonicalCalendarSystem } from "./calendarSystemIds";
 import { hasCalendarDateShape } from "./isoStringBody";
 
 /**
@@ -37,12 +34,9 @@ export const temporalStringLeapSecond =
  * - The calendar must be a `CalendarSystem`. Temporal also knows `chinese`, `dangi`, `islamic` and
  *   `islamic-rgsa`, which GMT does not support (`chinese` and `dangi`: hosts print different dates,
  *   compat D33).
- * - The result computes in `computationCalendarId(calendar)`: `"ethiopic"` and `"coptic"` are read
- *   in `"ethioaa"`, so callers that write a string back take the calendar from
- *   `calendarSystemOfDateValue(value)`, not from `date.calendarId`.
  *
  * @param value an extended ISO date or date-time, optionally with one calendar annotation
- * @returns the Temporal.PlainDate, in the computation calendar
+ * @returns the Temporal.PlainDate, in the canonical calendar
  */
 export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   // Temporal.PlainDate.from also takes objects and property bags; GMT reads strings only.
@@ -62,7 +56,7 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
   if (!calendar) {
     throw new RangeError(`Unsupported calendar: ${date.calendarId}`);
   }
-  return date.withCalendar(computationCalendarId(calendar));
+  return date.withCalendar(calendar);
 }
 
 /**
@@ -70,7 +64,7 @@ export function parseCalendarDateValue(value: string): Temporal.PlainDate {
  * `null` where it throws.
  *
  * @param value the candidate; a value that is not a non-empty string is not a calendar date
- * @returns the `PlainDate` in the computation calendar, else `null`
+ * @returns the `PlainDate` in the canonical calendar, else `null`
  *
  * @example calendarDateOf("2024-10-03[u-ca=hebrew]")?.calendarId // "hebrew"
  * @example calendarDateOf("2024-02-30") // null

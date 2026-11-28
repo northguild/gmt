@@ -132,6 +132,33 @@ export default defineConfig({
     "no-unused-vars": "warn",
   },
   overrides: [
+    // CORE-108: Dox takes `Temporal` from `@northguild/gmt`, never from a polyfill.
+    {
+      files: ["src/**", "scripts/**", "tests/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error",
+          {
+            paths: [
+              {
+                name: "@js-temporal/polyfill",
+                message: "Import Temporal from @northguild/gmt",
+              },
+            ],
+            patterns: [
+              {
+                group: ["@js-temporal/polyfill/**"],
+                message: "Import Temporal from @northguild/gmt",
+              },
+              {
+                group: ["temporal-polyfill", "temporal-polyfill/**"],
+                message: "Import Temporal from @northguild/gmt",
+              },
+            ],
+          },
+        ],
+      },
+    },
     // Mounts and widgets stay on the component kit.
     {
       files: ["src/lib/**/*.ts", "src/widgets/**/*.{ts,tsx}"],

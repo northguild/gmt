@@ -1,4 +1,4 @@
-import { Temporal } from "../../internal/temporal";
+import type { ZonedDateTimeFields } from "../../internal/temporalTypes";
 import {
   DATE_TIME_FIELDS,
   readSetFields,
@@ -49,10 +49,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function setUtc(
   value: string,
-  fields: Omit<
-    Temporal.ZonedDateTimeLike,
-    "calendar" | "timeZone" | "offset" | "era" | "eraYear"
-  >,
+  fields: ZonedDateTimeFields,
   options?: {
     /**
      * What to do when the result is not a real date. `"constrain"` clamps it to the last valid day,

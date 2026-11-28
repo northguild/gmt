@@ -56,12 +56,10 @@ function hasRelativeToShape(value: string): boolean {
  *   it: with a time zone annotation it is a ZonedDateTime (`"2024-02-24T00:00:00+02:00[Asia/Jerusalem][u-ca=hebrew]"`,
  *   `parseCalendarZonedValue`), otherwise a PlainDate (`"2024-02-24[u-ca=hebrew]"`, or a date-time
  *   whose time Temporal drops, `parseCalendarDateValue`). Annotations follow Temporal's
- *    rules: at most one `u-ca` after the body (and the zone, for the zoned form). An elective
+ *   rules: at most one `u-ca` after the body (and the zone, for the zoned form). An elective
  *   unknown annotation, a second `u-ca`, an unknown critical annotation, a calendar before the
- *   zone and `;era=` are rejected. The
- *   calendar must be a `CalendarSystem`, and `"ethiopic"`/`"coptic"` compute in `"ethioaa"`,
- *   which polyfill 0.5.1 can read. The digits are ISO, so this is the date Temporal itself would
- *   read.
+ *   zone and `;era=` are rejected. The calendar must be a `CalendarSystem`. The digits are ISO, so
+ *   this is the date Temporal itself would read.
  * - A zoned string without a calendar annotation is read with `zonedDateTimeFrom`, so its offset
  *   is matched against the zone as TC39 `ToRelativeTemporalObject` matches it: an offset written
  *   to the minute may be the zone's sub-minute offset rounded, and one written with seconds must
@@ -74,9 +72,10 @@ function hasRelativeToShape(value: string): boolean {
  *   bag, a number, `null`) throws `TypeError`: `relativeTo` is a string, and Temporal would clamp an
  *   invalid property bag (`{ year: 2024, month: 2, day: 30 }` is 29 February).
  *
- * A PlainDate string resolves to a `Temporal.PlainDateTime` (midnight, same calendar) only because
- * the polyfill's TypeScript declaration lists `PlainDateTime`, not `PlainDate`. Temporal's `GetTemporalRelativeToOption` converts a `PlainDateTime` with
- * `CreateTemporalDate` and drops the time, so the result is identical.
+ * A calendar-annotated plain string resolves to a `Temporal.PlainDate`, as Temporal's
+ * `GetTemporalRelativeToOption` makes it with `CreateTemporalDate`. That checks only
+ * `ISODateWithinLimits`, so `"-271821-04-19[u-ca=gregory]"` is a valid `relativeTo` although
+ * midnight on that date is not a valid `PlainDateTime`.
  *
  * Throws on invalid input. Callers already wrap the Temporal call consuming this in
  * `try { ... } catch { return sentinel }` per GMT's contract.
@@ -99,9 +98,8 @@ export function resolveDurationRelativeTo(
     );
   }
   if (!anyCalendarAnnotation.test(relativeTo)) {
-    // A zoned string is read here, not handed on as text: `zonedDateTimeFrom` matches an offset
-    // written with seconds exactly, as TC39 `ToRelativeTemporalObject` requires and polyfill
-    // 0.5.1 does not (temporalCompat D12).
+    // Read once here, so every caller gets a ZonedDateTime and a bad offset throws in this
+    // function (TC39 `ToRelativeTemporalObject`), not later in the caller's Temporal call.
     return timeZoneAnnotation.test(relativeTo)
       ? zonedDateTimeFrom(relativeTo)
       : relativeTo;
@@ -109,5 +107,5 @@ export function resolveDurationRelativeTo(
   if (timeZoneAnnotation.test(relativeTo)) {
     return parseCalendarZonedValue(relativeTo);
   }
-  return parseCalendarDateValue(relativeTo).toPlainDateTime();
+  return parseCalendarDateValue(relativeTo);
 }

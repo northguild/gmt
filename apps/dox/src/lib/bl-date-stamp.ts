@@ -7,11 +7,11 @@
  * against the UTC date and up to three other calendars, on lanes that share
  * one time axis.
  *
- * No DOM and no gmt import. Every function that calls the library takes a
+ * No DOM and no gmt function import (only `Temporal`). Every function that calls the library takes a
  * `BlDateLib`, loaded by the mount (`ledger-lib.ts`). The widget draws the
  * library's results and computes none of them: every date on screen is a
  * `bolTimestamp` result, and the comparisons ("same date", "after") are
- * `areDatesEqual` and `isAfterDate`. `@js-temporal/polyfill` is imported for
+ * `areDatesEqual` and `isAfterDate`. `Temporal` comes from `@northguild/gmt` and is used for
  * drawing only: where a day begins and ends on a lane, and a moment as a clock
  * time. The one site-side rule is `blNullText`, and it holds no table either:
  * it probes the library with a known moment.
@@ -22,7 +22,7 @@
  * be named as an example (a preset's zone).
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   createLedgerCanvas,
   dayCells,

@@ -1,7 +1,7 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import { Temporal } from "../../internal/temporal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
 import { frameZoned, normalizeZoneFrame } from "../../internal/zoneFrame";
-import { nowInstant } from "../../internal/temporalCompat";
 import { durationTotal } from "../../internal/zonedWallClockDifference";
 import type { RelativeTimeFormatOptions, RelativeUnit } from "../../types";
 import { utcInstantOf } from "../../internal/utcInstant";
@@ -91,7 +91,7 @@ export function formatRelativeUtc(
     let reference = parsedReference;
     if (reference === undefined) {
       try {
-        reference = nowInstant();
+        reference = Temporal.Now.instant();
       } catch {
         return "";
       }

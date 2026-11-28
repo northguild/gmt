@@ -1,4 +1,4 @@
-import type { Temporal } from "./temporal";
+import type { RoundingMode } from "./temporalTypes";
 
 /** The nine rounding modes of Temporal's GetRoundingModeOption (Temporal §14.5.2.2). */
 const ROUNDING_MODES: readonly unknown[] = [
@@ -33,8 +33,8 @@ const ROUNDING_MODES: readonly unknown[] = [
  */
 export function resolveManualRoundingOptions(
   roundingIncrement: number | undefined,
-  roundingMode: Temporal.RoundingMode | undefined,
-): { increment: number; mode: Temporal.RoundingMode } | null {
+  roundingMode: RoundingMode | undefined,
+): { increment: number; mode: RoundingMode } | null {
   const increment =
     roundingIncrement === undefined ? 1 : Math.trunc(roundingIncrement);
   if (!Number.isFinite(increment) || increment < 1) return null;

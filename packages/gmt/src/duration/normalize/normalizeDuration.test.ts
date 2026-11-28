@@ -285,14 +285,14 @@ describe("normalizeDuration relative to the first days of the range", () => {
   );
 });
 
-// CORE-6 S7: a non-ISO calendar `relativeTo` follows TC39 Duration#round with a plain relativeTo
+// S7: a non-ISO calendar `relativeTo` follows TC39 Duration#round with a plain relativeTo
 // (DifferencePlainDateTimeWithRounding, GetUTCEpochNanoseconds). Values: Chromium 153 native
 // `Duration.from(d).round({ largestUnit, relativeTo: PlainDate })`.
 describe("normalizeDuration with a non-ISO calendar relativeTo (CORE-6)", () => {
   it.each`
     duration  | relativeTo                      | expected    | reason
-    ${"P40D"} | ${"+275760-07-20[u-ca=hebrew]"} | ${"P1M10D"} | ${"D1: 1 month then 10 days, just before the maximum"}
-    ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${"P30D"}   | ${"D6: Aug 31 + 1 month is Sep 31, past Sep 30"}
+    ${"P40D"} | ${"+275760-07-20[u-ca=hebrew]"} | ${"P1M10D"} | ${"range limit: 1 month then 10 days, just before the maximum"}
+    ${"P30D"} | ${"2023-08-31[u-ca=buddhist]"}  | ${"P30D"}   | ${"month-end overshoot: Aug 31 + 1 month is Sep 31, past Sep 30"}
     ${"P40D"} | ${"1000-01-15[u-ca=buddhist]"}  | ${"P1M9D"}  | ${"proleptic buddhist: ISO 1000-01-15 + 1 month is Feb 15"}
     ${"P40D"} | ${"-100000-01-01[u-ca=hebrew]"} | ${"P1M11D"} | ${"hebrew year <= 0: M06 has 29 days"}
   `(

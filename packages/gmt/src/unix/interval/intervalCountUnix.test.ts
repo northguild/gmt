@@ -198,8 +198,8 @@ describe("intervalCountUnix", () => {
 });
 
 // Transition zones, counted in the timeZone option. Epochs are the same instants as
-// intervalCountZoned.test.ts's transition table; every expected value verified against
-// `bucketRange(...).length` on @js-temporal/polyfill@0.5.1.
+// intervalCountZoned.test.ts's transition table; every expected value is the bucket
+// count recomputed directly on temporal-polyfill 1.0.8, not through GMT.
 // 1727532300000 is 2024-09-29T03:50:00+13:45[Pacific/Chatham]
 // 1727533500000 is 2024-09-29T04:10:00+13:45[Pacific/Chatham]
 // 1712408700000 is 2024-04-07T02:50:00+13:45[Pacific/Chatham]
@@ -282,12 +282,12 @@ describe("intervalCountUnix epochUnit and timeZone options", () => {
   );
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("intervalCountUnix across the 1844 date-line crossings (zoned.E)", () => {
+describe("intervalCountUnix across the 1844 date-line crossings", () => {
   // December 1844 has 31 dates less the skipped 12-31, January 31: 61 local days.
   it.each(dateLineCrossingTimeZones)(
     "counts 61 days from 1844-12-01 to 1845-02-01 in $timeZone",

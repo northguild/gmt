@@ -115,13 +115,13 @@ describe("zonedUnitStart transition walk-back exhaustion", () => {
       .spyOn(Temporal.ZonedDateTime.prototype, "getTimeZoneTransition")
       .mockImplementation(function (
         this: Temporal.ZonedDateTime,
-        direction: Parameters<
-          Temporal.ZonedDateTime["getTimeZoneTransition"]
-        >[0],
+        direction: Temporal.TransitionOptions | "next" | "previous",
       ) {
-        return direction === "previous"
+        const wanted =
+          typeof direction === "string" ? direction : direction.direction;
+        return wanted === "previous"
           ? this.subtract({ minutes: 1 })
-          : realGetTimeZoneTransition.call(this, direction);
+          : realGetTimeZoneTransition.call(this, { direction: wanted });
       });
 
   afterEach(() => {
@@ -257,7 +257,7 @@ describe("zonedUnitEnd", () => {
   });
 });
 
-describe("the 1844 date-line crossings (zoned.E)", () => {
+describe("the 1844 date-line crossings", () => {
   // Each zone skipped 1844-12-31 (Chromium 153: the offset jumps a whole day forward at local
   // 1844-12-31T00:00 in LMT), so Monday 1844-12-30's week runs straight into Wednesday 1845-01-01.
   // Buckets are built from exact times: the constructor resolves no wall clock.

@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { CONVERTER_LOCALES, CURATED_TIMEZONES } from "./curated-timezones";
 
 /** One northern-winter instant: the three southern zones read one hour above

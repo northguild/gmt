@@ -43,6 +43,7 @@ nothing below is released. "Nothing" in the last column means only a release is 
 | `D31`: a coptic year before AM 1 prints `1 − year` and no era (§ AG) | [unicode-org/icu#4081](https://github.com/unicode-org/icu/pull/4081), open, not in ICU 79.1. ICU-23277 (not ours) | An ICU release with ICU-23277 in the engines GMT supports (Firefox 147+ patches its ICU, Bugzilla 2002735) |
 | `D32`: the Islamic era changes in the middle of 1 Muharram of year 1 in WebKit (§ R, § AG) | None. WebKit 331724 | A WebKit that switches the era at the start of the day |
 | `D34`: the Coptic era changes in the middle of 1 Tout AM 1 in WebKit (§ AG) | WebKit/WebKit#81144 | A WebKit that switches the era at the start of the day |
+| `D35`: `Duration.compare` from a plain `relativeTo` throws when a day or time amount would take the date past the first or last date | None. fullcalendar/temporal-polyfill#130 (someone else's PR), open | That PR merged and a `temporal-polyfill` release |
 
 To check, without cloning anything:
 
@@ -99,7 +100,7 @@ and `D19`.
 | tc39/ecma402 | [#1116](https://github.com/tc39/ecma402/issues/1116) | AG | open |
 | fc | [#119](https://github.com/fullcalendar/temporal-polyfill/issues/119), [#120](https://github.com/fullcalendar/temporal-polyfill/issues/120), [#121](https://github.com/fullcalendar/temporal-polyfill/issues/121), [#125](https://github.com/fullcalendar/temporal-polyfill/issues/125) | swap check | closed, fixed in 1.0.7 and 1.0.8 |
 | fc | [#126](https://github.com/fullcalendar/temporal-polyfill/issues/126) | E | closed, fixed in 1.0.8 |
-| fc | [#127](https://github.com/fullcalendar/temporal-polyfill/issues/127), PR [#131](https://github.com/fullcalendar/temporal-polyfill/pull/131) | swap check (Persian) | open |
+| fc | [#127](https://github.com/fullcalendar/temporal-polyfill/issues/127), PR [#131](https://github.com/fullcalendar/temporal-polyfill/pull/131) | swap check (Persian) | closed, fix merged, not yet in a release |
 | fc | [#128](https://github.com/fullcalendar/temporal-polyfill/issues/128), PR [#132](https://github.com/fullcalendar/temporal-polyfill/pull/132) | swap check (Chinese, Dangi) | open |
 | nodejs/node | [#67076](https://github.com/nodejs/node/issues/67076) | AF (D23) | open |
 | nodejs/node | [#67457](https://github.com/nodejs/node/issues/67457) | AD | open |

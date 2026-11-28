@@ -1,9 +1,9 @@
-import { nowInstant } from "../../internal/temporalCompat";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current day from the Unix timestamp in UTC as a zero-padded string.
  *
- * - Uses nowInstant() converted to UTC zoned date time.
+ * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns zero-padded string to 2 digits.
  *
  * @returns current day string (zero-padded to 2 digits)
@@ -11,5 +11,8 @@ import { nowInstant } from "../../internal/temporalCompat";
  * @example getUnixDay() // "29"
  */
 export function getUnixDay(): string {
-  return nowInstant().toZonedDateTimeISO("UTC").day.toString().padStart(2, "0");
+  return Temporal.Now.instant()
+    .toZonedDateTimeISO("UTC")
+    .day.toString()
+    .padStart(2, "0");
 }

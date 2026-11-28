@@ -138,6 +138,7 @@ export function parseDateTimeWithPattern(
       // Temporal is what proves the value is real: `overflow: "reject"`
       // throws instead of silently clamping an out-of-range field, which
       // is what the default "constrain" would do.
+      if (fields.day === undefined) return "";
       return Temporal.PlainDateTime.from(
         {
           year: fields.year,

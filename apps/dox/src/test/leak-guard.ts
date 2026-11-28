@@ -9,7 +9,8 @@
  * sets up while it is imported is not counted, and compares it after the file's last test.
  * Listeners are seen through a wrapper on the four `window` and `document` methods, installed
  * once per worker. A listener added with `once` or an `AbortSignal` removes itself, so it is
- * not recorded.
+ * not recorded. A file that leaves one of those methods, or `EventTarget.prototype`'s, replaced
+ * is named too: every later file's listeners would pass through its wrapper.
  */
 
 interface ListenerRecord {
@@ -24,13 +25,22 @@ export interface State {
   intl: Map<string, unknown>;
   env: Map<string, string | undefined>;
   listeners: ListenerRecord[];
+  methods: Map<string, unknown>;
 }
 
 /** Flags a library sets on first use and leaves set, which carry no state a test could change. */
 const LIBRARY_FLAGS = new Set(["IS_REACT_ACT_ENVIRONMENT"]);
 
 const LISTENERS = Symbol.for("dox.leak-guard.listeners");
-type Tracked = typeof globalThis & { [LISTENERS]?: ListenerRecord[] };
+/**
+ * The targets already wrapped, so none is wrapped twice. Kept by target, not read off the
+ * method: a test's own wrapper on top would otherwise be wrapped again, replacing both methods.
+ */
+const WRAPPED = Symbol.for("dox.leak-guard.wrapped");
+type Tracked = typeof globalThis & {
+  [LISTENERS]?: ListenerRecord[];
+  [WRAPPED]?: WeakSet<EventTarget>;
+};
 
 const captureOf = (
   o?: boolean | AddEventListenerOptions | EventListenerOptions,
@@ -48,9 +58,6 @@ function isPageLifetime(record: ListenerRecord): boolean {
     record.capture
   );
 }
-
-/** Marks a wrapper, so a window already wrapped is not wrapped twice. */
-const WRAPPED = Symbol.for("dox.leak-guard.wrapped");
 
 /**
  * Whether a package, not the test or the code under test, is adding the listener. User-event,
@@ -74,13 +81,15 @@ function fromLibrary(): boolean {
 function trackListeners(): ListenerRecord[] {
   const root = globalThis as Tracked;
   const records = (root[LISTENERS] ??= []);
+  const wrapped = (root[WRAPPED] ??= new WeakSet());
   if (typeof window === "undefined") return records;
   // jsdom's selector engine registers its own listeners on first use. Wake it before the
   // wrappers go on, so they are not mistaken for a test's.
   document.querySelector("html");
   for (const target of [window, document] as EventTarget[]) {
     const add = target.addEventListener;
-    if ((add as { [WRAPPED]?: boolean })[WRAPPED]) continue;
+    if (wrapped.has(target)) continue;
+    wrapped.add(target);
     const remove = target.removeEventListener;
     const wrappedAdd: typeof add = function (type, listener, options) {
       const flags =
@@ -101,7 +110,6 @@ function trackListeners(): ListenerRecord[] {
       if (at >= 0) records.splice(at, 1);
       return remove.call(target, type, listener, options);
     };
-    (wrappedAdd as { [WRAPPED]?: boolean })[WRAPPED] = true;
     target.addEventListener = wrappedAdd;
     target.removeEventListener = wrappedRemove;
   }
@@ -127,12 +135,30 @@ export function captureState(): State {
     const descriptor = Object.getOwnPropertyDescriptor(Intl, key);
     if (descriptor) intl.set(key, valueOf(descriptor));
   }
+  const listeners = [...trackListeners()];
   return {
     globals,
     intl,
     env: new Map(Object.entries(process.env)),
-    listeners: [...trackListeners()],
+    listeners,
+    methods: listenerMethods(),
   };
+}
+
+/** The add and remove methods every listener goes through, by where they live. */
+function listenerMethods(): Map<string, unknown> {
+  const methods = new Map<string, unknown>();
+  if (typeof window === "undefined") return methods;
+  const hosts: [string, EventTarget][] = [
+    ["window", window],
+    ["document", document],
+    ["EventTarget.prototype", EventTarget.prototype],
+  ];
+  for (const [name, host] of hosts) {
+    methods.set(`${name}.addEventListener`, host.addEventListener);
+    methods.set(`${name}.removeEventListener`, host.removeEventListener);
+  }
+  return methods;
 }
 
 /** Names what differs, one line each. Empty when nothing leaked. */
@@ -160,6 +186,7 @@ export function describeLeaks(before: State, after: State): string[] {
   compare("globalThis.", before.globals, after.globals);
   compare("Intl.", before.intl, after.intl);
   compare("process.env.", before.env, after.env);
+  compare("", before.methods, after.methods);
   for (const record of after.listeners) {
     if (!before.listeners.includes(record) && !isPageLifetime(record)) {
       const where = record.target === globalThis.window ? "window" : "document";

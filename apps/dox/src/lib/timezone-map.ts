@@ -7,7 +7,7 @@ import {
 } from "d3-geo";
 import { feature } from "topojson-client";
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { ChartPoint, ChartTooltipBodyTarget } from "@tanstack/charts";
 import { defineChart } from "@tanstack/charts";
 import { mountChartRenderer } from "@tanstack/charts/renderer";

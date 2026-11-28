@@ -1,9 +1,9 @@
-import { nowInstant } from "../../internal/temporalCompat";
+import { Temporal } from "../../internal/temporal";
 
 /**
  * Return the current minute from the Unix timestamp in UTC as a zero-padded string.
  *
- * - Uses nowInstant() converted to UTC zoned date time.
+ * - Uses Temporal.Now.instant() converted to UTC zoned date time.
  * - Returns zero-padded string to 2 digits.
  *
  * @returns current minute string (zero-padded to 2 digits)
@@ -11,7 +11,7 @@ import { nowInstant } from "../../internal/temporalCompat";
  * @example getUnixMinute() // "30"
  */
 export function getUnixMinute(): string {
-  return nowInstant()
+  return Temporal.Now.instant()
     .toZonedDateTimeISO("UTC")
     .minute.toString()
     .padStart(2, "0");

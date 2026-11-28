@@ -1,4 +1,5 @@
-import { Temporal as PolyfillTemporal } from "@js-temporal/polyfill";
+import { Temporal as PolyfillTemporal } from "@northguild/gmt";
+import { describe, expect, it } from "vitest";
 import {
   parseLongOffset,
   sweepOffsets,

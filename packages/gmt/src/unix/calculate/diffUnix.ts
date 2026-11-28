@@ -1,5 +1,5 @@
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import { roundingOptionsOf } from "../../internal/typedOptions";
-import type { Temporal } from "../../internal/temporal";
 import {
   addToZoned,
   frameZoned,
@@ -77,8 +77,8 @@ export function diffUnix(
   value2: number | string,
   units:
     | DateTimeDurationUnit
-    | Temporal.DateTimeUnit
-    | Array<DateTimeDurationUnit | Temporal.DateTimeUnit>,
+    | DateTimeUnit
+    | Array<DateTimeDurationUnit | DateTimeUnit>,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
@@ -96,7 +96,7 @@ export function diffUnix(
      * @defaultValue `"UTC"`
      */
     timeZone?: string;
-  } & RoundingOptions<Temporal.DateTimeUnit>,
+  } & RoundingOptions<DateTimeUnit>,
 ): number | Record<DateTimeDurationUnit, number> | null {
   try {
     // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
@@ -148,7 +148,7 @@ export function diffUnix(
         add: (from, amount) => addToZoned(from, amount),
         until: (from, to, largest) =>
           zonedUntil(from, to, {
-            largestUnit: largest as Temporal.DateTimeUnit,
+            largestUnit: largest as DateTimeUnit,
           }),
       });
     } catch {

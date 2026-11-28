@@ -2,7 +2,7 @@
  * `cutoff-widgets.ts`'s pure helpers, against the real gmt modules — imported
  * by module path, as `transport-widgets.test.ts` does for the TRAN-9 widgets.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { cutoffSchedule } from "@northguild/gmt/transport/calculate";
 import { isValidDateTime } from "@northguild/gmt/plain/validate";
 import {

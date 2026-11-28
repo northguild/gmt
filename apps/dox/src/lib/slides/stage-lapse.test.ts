@@ -9,7 +9,7 @@
  * on the calls it makes to the (faked) engine.
  */
 /* oxlint-disable dox-test/no-markup-read, dox-test/no-implementation-assert, dox-test/no-class-query, testing-library/no-node-access */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { pick, recordLapses, textOf } from "~/test/deck-events";
 import { installJsdomShims, stubReducedMotion } from "~/test/jsdom-shims";
 import { NOW, stageHarness } from "~/test/stage-fixture";

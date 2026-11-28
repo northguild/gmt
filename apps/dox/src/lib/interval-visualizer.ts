@@ -11,7 +11,7 @@
  * module is timeline math, presets, and display formatting only.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 export interface ZonedInterval {
   start: string;

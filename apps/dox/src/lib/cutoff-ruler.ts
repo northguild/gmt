@@ -5,14 +5,14 @@
  * marked.
  *
  * Every reading, and the hours before departure beside it, comes from
- * `cutoffAt` and `timeToCutoff` alone. `@js-temporal/polyfill`'s
- * `getTimeZoneTransition` finds the one DST change between the readings and
+ * `cutoffAt` and `timeToCutoff` alone. `Temporal` (from `@northguild/gmt`) has
+ * `getTimeZoneTransition`, which finds the one DST change between the readings and
  * the departure, for drawing a marker — never to move a reading.
  *
- * No DOM and no gmt import: `CutoffLib` comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): `CutoffLib` comes in from the mount.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   isZoneless,
   localLabel,

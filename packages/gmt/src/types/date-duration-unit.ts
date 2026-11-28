@@ -5,6 +5,6 @@ import type { Temporal } from "../internal/temporal";
  * `"days"`. It names the unit an amount of dates is given in or a date difference is measured in.
  */
 export type DateDurationUnit = keyof Pick<
-  Temporal.DurationLike,
+  Temporal.DurationLikeObject,
   "years" | "months" | "weeks" | "days"
 >;

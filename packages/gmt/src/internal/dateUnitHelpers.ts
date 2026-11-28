@@ -1,28 +1,15 @@
 import type { Temporal } from "./temporal";
-import {
-  calendarDateAdd,
-  calendarDateFromFields,
-  calendarFieldsOf,
-} from "./temporalCompat";
+import { calendarDateAdd } from "./temporalCompat";
 
 /**
- * Day 1 of `source`'s month, or of month 1 of its year when `month` is 1, in `source`'s calendar.
- * Non-ISO calendars build it from corrected reads through the Temporal compat layer (CORE-6: the
- * polyfill's `with` is wrong or throws where its fields → ISO conversion is).
+ * Day 1 of `source`'s month, or of month 1 of its year when `month` is 1, in `source`'s calendar
+ * (a Hebrew month starts on its day 1).
  */
 function startOfCalendarPeriod(
   source: Temporal.PlainDate,
   month?: 1,
 ): Temporal.PlainDate {
-  if (source.calendarId === "iso8601") {
-    return source.with(month === undefined ? { day: 1 } : { month, day: 1 });
-  }
-  const fields = calendarFieldsOf(source, source.calendarId);
-  return calendarDateFromFields(
-    source.calendarId,
-    { year: fields.year, month: month ?? fields.month, day: 1 },
-    "reject",
-  );
+  return source.with(month === undefined ? { day: 1 } : { month, day: 1 });
 }
 
 /**

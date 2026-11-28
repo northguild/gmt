@@ -1,4 +1,4 @@
-import type { Temporal } from "../internal/temporal";
+import type { ToStringPrecisionOptions } from "../internal/temporalTypes";
 
 /**
  * Precision options for the ISO 8601 duration string a `diff*AsDuration` function writes, passed
@@ -16,7 +16,7 @@ export type DurationStringOptions = {
    *
    * @defaultValue None. The precision comes from `fractionalSecondDigits`.
    */
-  toStringSmallestUnit?: Temporal.ToStringPrecisionOptions["smallestUnit"];
+  toStringSmallestUnit?: ToStringPrecisionOptions["smallestUnit"];
   /**
    * The number of fractional-second digits written: `0` to `9` writes exactly that many, and
    * `"auto"` writes as many as the duration needs, with no trailing zeros. It has no effect when
@@ -24,12 +24,12 @@ export type DurationStringOptions = {
    *
    * @defaultValue `"auto"`, Temporal's default.
    */
-  fractionalSecondDigits?: Temporal.ToStringPrecisionOptions["fractionalSecondDigits"];
+  fractionalSecondDigits?: ToStringPrecisionOptions["fractionalSecondDigits"];
   /**
    * How the duration is rounded when the precision asked for drops digits. `"trunc"` cuts them
    * off; `"halfExpand"` rounds to the nearest value, a half going away from zero.
    *
    * @defaultValue `"trunc"`, Temporal's default.
    */
-  toStringRoundingMode?: Temporal.ToStringPrecisionOptions["roundingMode"];
+  toStringRoundingMode?: ToStringPrecisionOptions["roundingMode"];
 };

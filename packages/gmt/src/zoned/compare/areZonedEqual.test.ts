@@ -61,7 +61,7 @@ describe("areZonedEqual", () => {
 
 // Temporal `ZonedDateTime.prototype.equals`: equal epoch nanoseconds, then TimeZoneEquals (same
 // primary identifier, offset zones by offset), then CalendarEquals. Every value below was checked
-// against `@js-temporal/polyfill` and native Temporal on Node.
+// against `temporal-polyfill` 1.0.8 and native Temporal on Node.
 describe("areZonedEqual compares the instant, the time zone and the calendar", () => {
   it.each`
     value1                                                       | value2                                                       | expected | label

@@ -6,7 +6,7 @@
  * Like the month grid, the strip is `role="img"` with a label that names its span and the
  * weekend, and a list of every marked date follows it, one sentence each.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { gateAttr } from "../../builders/gate";
 import { html, type SafeHtml } from "../../builders/html";
 import { weekdayList, type CellMark } from "~/lib/holiday-widgets";

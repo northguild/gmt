@@ -21,6 +21,7 @@
  *
  * Imports one constant (`ENGINE_IDS`) and nothing that reads or writes.
  */
+import { compareReleases } from "./release-order.mjs";
 import { ENGINE_IDS } from "./workarounds.mjs";
 
 /** Label every canary issue carries. */
@@ -42,11 +43,11 @@ export const ISSUE_TYPE = "Task";
  */
 export const NATIVE_LEGS = Object.keys(ENGINE_IDS);
 /**
- * The `temporal-polyfill` swap legs (CORE-92). The swap runs on one host per engine, so it keeps
+ * The upgrade-check legs (CORE-92, CORE-108). The swap runs on one host per engine, so it keeps
  * its own four legs when the native suite gains a second WebKit leg.
  */
 export const SWAP_LEGS = ["node", "chromium", "firefox", "webkit"];
-/** The swap legs' verdict sources, in leg order. */
+/** The upgrade-check legs' verdict sources (CORE-92, CORE-108), in leg order. */
 export const SWAP_SOURCES = SWAP_LEGS.map(
   (leg) => `temporal-polyfill-swap-${leg}`,
 );
@@ -88,6 +89,19 @@ export const WORKFLOW_SOURCES = {
 };
 
 /**
+ * The sources a run reads. With `swapSkipped` (the pin is the newest release, so the four swap
+ * legs were skipped on purpose) the swap sources are left out: no verdict from them is expected.
+ * @param {keyof typeof WORKFLOW_SOURCES} workflow
+ * @param {boolean} [swapSkipped]
+ * @returns {string[]}
+ */
+export function expectedSources(workflow, swapSkipped = false) {
+  return WORKFLOW_SOURCES[workflow].filter(
+    (source) => !(swapSkipped && SWAP_SOURCES.includes(source)),
+  );
+}
+
+/**
  * How many untagged groups a body or comment tables. Defined here, not imported from
  * `canary-verdict.mjs` (`UNTAGGED_ROWS_IN_VERDICT`, also 50), so this module keeps importing nothing.
  * Each groups row embeds its example row as JSON, so an uncapped table could push the body past
@@ -112,11 +126,11 @@ const SWAP_LEG_NAMES = {
 };
 
 const TRIAGE_PARAGRAPH =
-  "Each row failed on the native engine and passed on @js-temporal/polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
+  "Each row failed on the native engine and passed on temporal-polyfill in the same runtime. Decide which it is: a GMT defect (fix it), a polyfill defect or an engine or specification defect (record it in context/domination/js-temporal-polyfill-bugs.md and tag the test in scripts/lib/native-suite-tags.mjs). Never skip the test.";
 const HOST_PARAGRAPH =
-  "Each row failed on the native engine and on @js-temporal/polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
+  "Each row failed on the native engine and on temporal-polyfill in the same runtime, so the cause is the runtime (its locale or time zone data, or its setup), not Temporal. Find what the runtime lacks, then add or widen a group in KNOWN_HOST_FAILURES in scripts/lib/native-suite-tags.mjs with that reason — one group per cause, never one entry per test — or fix the test if it depends on the host by mistake. Never skip the test.";
 const CONTROL_PARAGRAPH =
-  "Each row failed on @js-temporal/polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
+  "Each row failed on temporal-polyfill and passed on the native engine in the same runtime. GMT ships the polyfill, so this is a wrong answer GMT gives users of that runtime. Find the polyfill defect, record it in context/domination/js-temporal-polyfill-bugs.md and fix GMT's answer with a temporalCompat workaround, or fix GMT if the defect is its own. There is no tag for these rows. Never skip the test.";
 const FORCED_NATIVE_ROW = {
   file: "src/dry-run.test.ts",
   test: "dry run: forced failure (no real test failed)",
@@ -125,7 +139,7 @@ const FORCED_NATIVE_ROW = {
 
 const NO_VERDICT = "no verdict file: an earlier step or job failed";
 const FLOOR_STEP =
-  "Raise the @js-temporal/polyfill floor in packages/gmt/package.json to the release that made this removable, so no install resolves one with the defect.";
+  "Raise the temporal-polyfill pin in packages/gmt/package.json to the release that made this removable, so no install resolves one with the defect.";
 const FORCED_LEAP_LINE = "dry run: forced difference (no real row differs)";
 const FORCED_US_LINE = "dry run: forced difference (nothing real differs)";
 const US_REVIEW_STEP =
@@ -151,13 +165,12 @@ const FORCED_ROW = {
 
 /**
  * @typedef {{ polyfill: string, node: string, icu: string }} Runtime
- * @typedef {{ package: string, through: string, reason: string, lapsed: boolean }} Guard
  * @typedef {{
  *   id: string, defects: string[], title: string, trigger: string,
- *   state: "still-needed" | "removable" | "guard" | "out-of-scope",
- *   probes: number, failing: number, engines?: string[], guard?: Guard, steps: string[],
+ *   state: "still-needed" | "removable" | "out-of-scope",
+ *   probes: number, failing: number, engines?: string[], steps: string[],
  * }} Workaround
- * @typedef {{ workarounds: number, stillNeeded: number, removable: number, guard: number,
+ * @typedef {{ workarounds: number, stillNeeded: number, removable: number,
  *   outOfScope: number }} CompatCounts
  * @typedef {{
  *   source: "temporal-compat-check", status: "ran", engineId: "v8", runtime: Runtime,
@@ -219,7 +232,7 @@ const FORCED_ROW = {
  *   | NativeSuiteVerdict | CouldNotRunVerdict} Verdict
  * @typedef {{
  *   source: string, status: "ran", leg: "node" | "chromium" | "firefox" | "webkit",
- *   version: string, entry: string, entryLoaded: boolean,
+ *   version: string, pinned: string, entry: string, entryLoaded: boolean,
  *   runtime: { node: string, vitest: string, playwright: string | null, browser: string | null },
  *   counts: { files: number, tests: number, passed: number, skipped: number, failed: number,
  *             both: number, fixed: number },
@@ -237,7 +250,8 @@ const FORCED_ROW = {
  * }} SwapVerdict
  * @typedef {{ removable?: string, mismatch?: boolean, nativeFailure?: boolean,
  *   leapDifference?: boolean, usClockDifference?: boolean, swapReady?: boolean }} Force
- * @typedef {{ workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", runUrl: string }} Context
+ * @typedef {{ workflow: "temporal-oracle" | "leap-seconds" | "us-clock-watch", runUrl: string,
+ *   swapSkipped?: boolean }} Context
  * @typedef {{ lead: string, items: string[], tail: string, dropped: number }} EventList
  *   the parts of an event finding's body: the opening paragraph, the bullet lines, the closing
  *   paragraph, and how many oldest lines were dropped to fit
@@ -443,7 +457,7 @@ function exampleCell(example) {
  */
 function runtimeLine(runtime, chromium) {
   const parts = [
-    `@js-temporal/polyfill ${runtime.polyfill}`,
+    `temporal-polyfill ${runtime.polyfill}`,
     `Node ${runtime.node}`,
     `ICU ${runtime.icu}`,
   ];
@@ -634,7 +648,7 @@ function removableFinding(state, check, isForced, runUrl) {
     ? `Forced removable for a dry run. Real state on this run: ${inScope
         .map((e) => `${engineStateText(e)} on ${e.engine ?? e.source}`)
         .join("; ")}.`
-    : `Every probe for **${id}** returns the spec value on @js-temporal/polyfill ${polyfill} on every engine in its scope (${scopeLabels}), so the workaround can go.`;
+    : `Every probe for **${id}** returns the spec value on temporal-polyfill ${polyfill} on every engine in its scope (${scopeLabels}), so the workaround can go.`;
   const scope = w.engines
     ? `only ${w.engines.join(", ")}: only that engine's Intl shows the defect, so the other rows are out of scope and count for nothing`
     : "every engine";
@@ -652,12 +666,6 @@ function removableFinding(state, check, isForced, runUrl) {
       ]),
     )}`,
   ];
-  const lapsed = inScope.find((e) => e.row?.guard?.lapsed)?.row?.guard;
-  if (lapsed) {
-    paragraphs.push(
-      `**Guard lapsed:** it held through ${lapsed.package} ${lapsed.through} (${lapsed.reason.replace(/\.$/, "")}). Before removing, confirm the installed release is the trigger; if it is not, raise guard.through to it and close this issue.`,
-    );
-  }
   const steps = [...w.steps, FLOOR_STEP];
   paragraphs.push(
     `### Removal steps\n\n${steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
@@ -1258,13 +1266,13 @@ function usClockWatchFindings(verdicts, runUrl) {
 }
 
 /**
- * CORE-92: whether the `temporal-polyfill` swap passed on every runtime. Ready only when all four
- * legs ran, name one version, have no test that fails on the swap and passes on the control, and
- * the Node leg's offset sweep ran and found no differing zone, and its calendar sweep ran and found
- * no differing calendar. Fail closed: each leg must say its swap pass loaded `temporal-polyfill`
- * (`entryLoaded: true`), and `counts.failed`, `differingZones` and `differingCalendars` must be the
- * number 0, so a missing or malformed field blocks. Otherwise the reason names the first condition
- * that failed, in that order.
+ * CORE-92, CORE-108: whether the newest `temporal-polyfill` (the candidate) passed on every runtime.
+ * Ready only when all four legs ran, name one version, have no test that fails on the candidate and
+ * passes on the pinned version (the control), and the Node leg's offset sweep ran and found no
+ * differing zone, and its calendar sweep ran and found no differing calendar. Fail closed: each leg
+ * must say its swap pass loaded the candidate (`entryLoaded: true`), and `counts.failed`,
+ * `differingZones` and `differingCalendars` must be the number 0, so a missing or malformed field
+ * blocks. Otherwise the reason names the first condition that failed, in that order.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @returns {{ ready: true, version: string } | { ready: false, reason: string }}
  */
@@ -1294,7 +1302,7 @@ export function swapReady(verdicts) {
     if (v.entryLoaded !== true) {
       return {
         ready: false,
-        reason: `${v.source}: the swap pass did not load temporal-polyfill`,
+        reason: `${v.source}: the swap pass did not load the candidate`,
       };
     }
   }
@@ -1306,7 +1314,7 @@ export function swapReady(verdicts) {
         ready: false,
         reason:
           Number.isInteger(n) && /** @type {number} */ (n) > 0
-            ? `${v.source}: ${n} ${n === 1 ? "test fails" : "tests fail"} on the swap`
+            ? `${v.source}: ${n} ${n === 1 ? "test fails" : "tests fail"} on the candidate`
             : `${v.source}: the failed count is missing`,
       };
     }
@@ -1380,14 +1388,38 @@ function swapRuntimeName(leg, v) {
 }
 
 /**
- * The swap issue's paragraphs, built from whichever legs ran. `ready` is false only in a forced dry
- * run, whose text must not claim a pass the run did not have.
+ * True when `version` is an older release than `pinned`, such as a version given by hand to test
+ * the check. Such a run never says to raise the pin, which would be a downgrade.
+ * @param {string} version
+ * @param {string} pinned  "" when no leg says
+ * @returns {boolean}
+ */
+function olderThanPin(version, pinned) {
+  const release = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+  return (
+    release.test(version) &&
+    release.test(pinned) &&
+    compareReleases(version, pinned) < 0
+  );
+}
+
+/**
+ * The upgrade issue's paragraphs, built from whichever legs ran. `pinned` is the version the
+ * control pass ran (`packages/gmt/package.json`), or "" when no leg says. `ready` is false only in
+ * a forced dry run, whose text must not claim a pass the run did not have.
  * @param {Record<string, Verdict | null | undefined>} verdicts
  * @param {string} version
+ * @param {string} pinned
  * @param {boolean} ready
  * @returns {string[]}
  */
-function swapParagraphs(verdicts, version, ready) {
+function swapParagraphs(verdicts, version, pinned, ready) {
+  const against = pinned ? `the pinned ${pinned}` : "the pinned version";
+  const pinnedName = pinned || "the pin";
+  const selfTest = pinned !== "" && pinned === version;
+  const passed = ready
+    ? `temporal-polyfill ${version} passes the GMT suite on every runtime against ${against}, and it passed every check on this run.`
+    : `temporal-polyfill ${version} was checked against ${against} on this run.`;
   const rows = SWAP_LEGS.map((leg) => {
     const v = verdictOf(verdicts, SWAP(leg));
     if (v?.status !== "ran") {
@@ -1428,22 +1460,61 @@ function swapParagraphs(verdicts, version, ready) {
         ? `Calendar sweep: every one of ${calendarSweep.calendars} calendars matches the built-in Temporal on the first day, months and days of each year ${span}.`
         : `Calendar sweep: ${calendarSweep.differingCalendars} of ${calendarSweep.calendars} calendars differ from the built-in Temporal in some year ${span}.`;
   }
+  if (olderThanPin(version, pinned)) {
+    return [
+      passed,
+      table(
+        [
+          "Runtime",
+          "Tests",
+          `Fail on ${version} only`,
+          "Fail on both",
+          `Fail on ${pinnedName} only`,
+        ],
+        rows,
+      ),
+      sweepLine,
+      calendarLine,
+      `${version} is older than the pin in \`packages/gmt/package.json\`, ${pinned}, so there is nothing to change. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}).`,
+    ];
+  }
+  if (selfTest) {
+    return [
+      ready
+        ? `The self-test passed: temporal-polyfill ${version} passes the GMT suite on every runtime, and it passed every check on this run.`
+        : `The self-test ran: temporal-polyfill ${version} was checked against itself on this run.`,
+      table(
+        ["Runtime", "Tests", `Fail on ${version} only`, "Fail on both"],
+        rows.map((row) => row.slice(0, 4)),
+      ),
+      sweepLine,
+      calendarLine,
+      `The pin in \`packages/gmt/package.json\` is already ${version}, so there is nothing to change. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}).`,
+    ];
+  }
   return [
-    `temporal-polyfill ${version}, imported from \`temporal-polyfill/full/implementation\`, ${ready ? "passed every check" : "was checked"} on this run.`,
+    passed,
     table(
       [
         "Runtime",
         "Tests",
-        "Fail on swap only",
+        `Fail on ${version} only`,
         "Fail on both",
-        "Fail only on @js-temporal/polyfill",
+        `Fail on ${pinnedName} only`,
       ],
       rows,
     ),
     sweepLine,
     calendarLine,
-    `What the swap involves is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}). Type errors are not checked here; § 5 lists them.`,
-    "A person makes the swap. CI opens issues, never pull requests.",
+    [
+      "To raise the pin:",
+      "",
+      `1. Set \`dependencies["temporal-polyfill"]\` in \`packages/gmt/package.json\` to \`${version}\`, then run \`pnpm install\`.`,
+      "2. Run `pnpm compat`, then remove each workaround it reports as removable, following the steps it prints.",
+      "3. Run `pnpm size`, then change the bundle budgets only by a reviewed edit.",
+    ].join("\n"),
+    `Type errors are not checked here: run \`pnpm typecheck\` after step 1. The history of this check is in [temporal-polyfill-swap.md § 5 and § 7](${SWAP_RESEARCH_URL}).`,
+    "A person raises the pin. CI opens issues, never pull requests.",
   ];
 }
 
@@ -1466,11 +1537,20 @@ function swapFindings(verdicts, runUrl) {
     )
   );
   const version = result.ready ? result.version : (firstRan?.version ?? "");
-  const paragraphs = swapParagraphs(verdicts, version, result.ready);
+  const paragraphs = swapParagraphs(
+    verdicts,
+    version,
+    firstRan?.pinned ?? "",
+    result.ready,
+  );
   /** @type {Finding} */
   const real = {
     key: "temporal-polyfill-swap/ready",
-    title: `Swap to temporal-polyfill ${version}: it passes the GMT suite and both sweeps`,
+    title: olderThanPin(version, firstRan?.pinned ?? "")
+      ? `temporal-polyfill ${version} passes on every runtime, but it is older than the pinned ${firstRan?.pinned}: nothing to change`
+      : firstRan?.pinned && firstRan.pinned === version
+        ? `temporal-polyfill ${version} self-test passed: the pin is already ${version}, nothing to change`
+        : `temporal-polyfill ${version} passes on every runtime against ${firstRan?.pinned ? `the pinned ${firstRan.pinned}` : "the pinned version"}: raise the pin`,
     labels: [CANARY_LABEL],
     body: withRun(paragraphs.join("\n\n"), runUrl),
   };
@@ -1569,7 +1649,7 @@ function failedSources(verdicts, sources) {
  */
 export function findings(verdicts, context) {
   const { workflow, runUrl } = context;
-  const sources = WORKFLOW_SOURCES[workflow];
+  const sources = expectedSources(workflow, context.swapSkipped);
   /** @type {[string, (v: Record<string, Verdict | null>, url: string) => Finding[]][]} */
   const perSource = [
     [CHECK, compatFindings],

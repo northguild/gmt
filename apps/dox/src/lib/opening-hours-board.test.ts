@@ -1,5 +1,5 @@
 /** The Board's facts against the real library: one row per kind, and every preset. */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { toEpochMs } from "./dwell-ledger";
 import { loadHoursLib, type HoursLib } from "./hours-lib";
 import {

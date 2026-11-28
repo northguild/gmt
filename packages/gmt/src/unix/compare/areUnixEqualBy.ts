@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit, PluralUnit } from "../../internal/temporalTypes";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { startOrEndOfUnix } from "../../internal/startOrEndOfUnix";
 import { isDateTimeUnitName } from "../../internal/unitNames";
@@ -44,7 +44,7 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function areUnixEqualBy(
   value1: number | string,
   value2: number | string,
-  unit: Temporal.DateTimeUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
+  unit: DateTimeUnit | PluralUnit<DateTimeUnit>,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or

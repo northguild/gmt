@@ -79,7 +79,7 @@ describe("isValidDateInterval", () => {
   });
   // E5 (issue #78): accepts GMT calendar-annotated PlainDate strings; mixed calendars are
   // accepted since ordering is calendar-independent. Golden verified directly against
-  // @js-temporal/polyfill.
+  // temporal-polyfill 1.0.8.
   it("accepts mixed calendars", () => {
     expect(isValidDateInterval("2024-10-03[u-ca=hebrew]", "2024-10-31")).toBe(
       true,

@@ -916,7 +916,7 @@
     "format": "oxfmt"
   },
   "dependencies": {
-    "@js-temporal/polyfill": "^0.5.1"
+    "temporal-polyfill": "1.0.8"
   },
   "devDependencies": {
     "@northguild/gmt-oxlint": "workspace:*",

@@ -12,7 +12,7 @@
  * through these helpers instead.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 /**
  * A UTC offset as Temporal writes it, unanchored for use inside a larger

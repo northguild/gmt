@@ -1,8 +1,3 @@
-import type { CalendarSystem } from "../types";
-import {
-  computationCalendarId,
-  computationYearBias,
-} from "./calendarSystemIds";
 import { isRangeHandled } from "./rangeHooks";
 import { Temporal } from "./temporal";
 import {
@@ -57,10 +52,6 @@ interface RefYear {
 interface Env {
   readonly weekday: boolean;
   readonly calendar: string;
-  /** The Temporal calendar that computes this one's dates (`computationCalendarId`). */
-  readonly temporalCalendar: string;
-  /** What `temporalCalendar` adds to this calendar's year number. */
-  readonly yearBias: number;
   readonly timeZone: string;
   readonly numberingSystem: string;
   readonly digits: ReadonlySet<string>;
@@ -142,8 +133,6 @@ function envOf(formatter: Intl.DateTimeFormat): Env {
   const env: Env = {
     weekday,
     calendar,
-    temporalCalendar: computationCalendarId(calendar as CalendarSystem),
-    yearBias: computationYearBias(calendar as CalendarSystem),
     timeZone,
     numberingSystem,
     digits: new Set(digitList),
@@ -282,7 +271,7 @@ function refYear(ms: number, env: Env): RefYear {
 const zonedOf = (ms: number, env: Env): Temporal.ZonedDateTime =>
   Temporal.Instant.fromEpochMilliseconds(ms)
     .toZonedDateTimeISO(env.timeZone)
-    .withCalendar(env.temporalCalendar);
+    .withCalendar(env.calendar);
 
 /**
  * Move a moment by `k` calendar years, keeping month code, day and wall time. `exact` (used to
@@ -380,7 +369,7 @@ const kCandidates = (direction: number): number[] => [
 function yearsOf(ms: number, env: Env): { calendar: number; iso: number } {
   const zoned = zonedOf(ms, env);
   return {
-    calendar: zoned.year - env.yearBias,
+    calendar: zoned.year,
     iso: zoned.withCalendar("iso8601").year,
   };
 }
@@ -1051,7 +1040,7 @@ function yearStarts(env: Env, anchor: number): Map<number, Temporal.PlainDate> {
     year++
   ) {
     let first = Temporal.PlainDate.from({
-      calendar: env.temporalCalendar,
+      calendar: env.calendar,
       year,
       monthCode: "M01",
       day: 1,
@@ -1131,7 +1120,7 @@ function earlierEraProbes(
 ): Probe[] {
   const here = atDate(
     Temporal.PlainDate.from({
-      calendar: env.temporalCalendar,
+      calendar: env.calendar,
       year: anchor,
       monthCode: "M06",
       day: 1,
@@ -1155,7 +1144,7 @@ function earlierEraProbes(
     let earlier: Temporal.PlainDate;
     try {
       earlier = Temporal.PlainDate.from({
-        calendar: env.temporalCalendar,
+        calendar: env.calendar,
         year: anchor - step,
         monthCode: "M06",
         day: 1,
@@ -1202,7 +1191,7 @@ function earlierEraProbes(
  */
 function computeProbes(env: Env): Probe[] {
   const anchor = Temporal.PlainDate.from("2024-07-01").withCalendar(
-    env.temporalCalendar,
+    env.calendar,
   ).year;
   const starts = yearStarts(env, anchor);
   const offsets = [...starts.keys()].sort((x, y) => x - y);
@@ -1305,15 +1294,6 @@ function isWholeWeekYear(wrong: Wrong, env: Env): boolean {
   );
 }
 
-/** Whether the polyfill can project the instant onto the formatter's calendar. */
-const readable = (ms: number, env: Env): boolean => {
-  try {
-    return Number.isFinite(yearsOf(ms, env).calendar);
-  } catch {
-    return false;
-  }
-};
-
 /**
  * The range text with each week-based year run replaced by the endpoint's calendar year: ICU's
  * year, signed with the locale's minus, in the formatter's numbering system, ungrouped, at the
@@ -1337,11 +1317,6 @@ export function repairRangeYear(
 ): string | null {
   try {
     const env = envOf(formatter);
-    if (!readable(startMs, env) || !readable(endMs, env)) {
-      // The polyfill refuses a date the calendar cannot project (`indian` before ISO year 1,
-      // V8 bug 10529), so no week-year can be measured there: ICU's text stands.
-      return formatter.formatRange(startMs, endMs);
-    }
     const checked = checkRange(formatter, startMs, endMs, options, env);
     if (checked === null) {
       return null;

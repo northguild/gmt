@@ -1,9 +1,9 @@
+import { Temporal } from "../../internal/temporal";
 import { plainTimeOf } from "../../internal/inputChecks";
 import { formatRelativeAmount } from "../../internal/formatRelativeDuration";
 import type { RelativeTimeFormatOptions, RelativeTimeUnit } from "../../types";
 import { resolveRelativeUnit } from "../../internal/resolveRelativeUnit";
 import { isOptionsObject } from "../../internal/isObject";
-import { nowPlainTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeTime`: the reference time, the display unit, the rounding and the
@@ -76,7 +76,7 @@ export function formatRelativeTime(
     try {
       const forcedUnit = resolveRelativeUnit(options.largestUnit, TIME_UNITS);
       const roundingMethod = options.roundingMethod;
-      const reference = referenceOptionParsed ?? nowPlainTimeISO();
+      const reference = referenceOptionParsed ?? Temporal.Now.plainTimeISO();
 
       const diff = target.since(reference);
       const absSeconds = Math.abs(diff.total("second"));

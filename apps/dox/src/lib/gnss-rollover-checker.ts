@@ -24,7 +24,7 @@
  * by the library's own names (`GPS-LNAV`, `GAL`, `IRN-L1NV`).
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { runCall, type EdiCall } from "./edi-widgets";
 import { toEpochMs } from "./dwell-ledger";
 import {

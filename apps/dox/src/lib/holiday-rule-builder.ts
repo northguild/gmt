@@ -18,7 +18,7 @@ import type {
   ObservancePolicy,
   WeekdayOrdinal,
 } from "@northguild/gmt";
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   MAX_RULES,
   formatPolicyText,

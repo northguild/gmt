@@ -340,11 +340,11 @@ describe("roundZonedDateTime to a day, every rounding mode", () => {
   );
 });
 
-describe("the 1844 date-line crossings (zoned.E)", () => {
+describe("the 1844 date-line crossings", () => {
   // Each zone jumps a whole day forward at local 1844-12-31T00:00 in its LMT offset, so
   // 1844-12-31 never happened and 1845-01-01T00:00 in the new offset is the transition itself.
-  // Expected values: Chromium 153 native Temporal. The polyfill's transition search starts at
-  // 1847-01-01 and misses these (js-temporal/temporal-polyfill#372).
+  // Expected values: Chromium 153 native Temporal. `@js-temporal/polyfill` 0.5.1's transition
+  // search started at 1847-01-01 and missed these (js-temporal/temporal-polyfill#372); 1.0.8 finds them.
   const MIN_INSTANT = -MAX_INSTANT;
   const epochOf = (instant: string) =>
     Temporal.Instant.from(instant).epochNanoseconds;

@@ -68,8 +68,8 @@ describe("startOfQuarterForUnix", () => {
 });
 
 // The quarter starts at the real local
-// bucket of its first month with every sub-second field reset. Expected values verified
-// against `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+// bucket of its first month with every sub-second field reset. Expected values recomputed
+// directly on temporal-polyfill 1.0.8 from the zone's month labels, not through GMT.
 // 1715776496789 is 2024-05-15T12:34:56.789Z; 1711929600000 is 2024-04-01T00:00:00Z
 // 1285882200000 is 2010-09-30T23:30:00+02:00[Africa/Cairo]; 1277931600000 is 2010-07-01T00:00:00+03:00
 describe("startOfQuarterForUnix with default options", () => {
@@ -102,7 +102,7 @@ describe("startOfQuarterForUnix sub-second reset with explicit options", () => {
 
 // Tunis repeated Q4's first local hour on 1978-10-01. The quarter starts at its first real
 // instant — the removed `disambiguation: "later"` used to return the
-// second pass (276044400000, 1978-10-01T00:00:00+01:00). Verified on @js-temporal/polyfill@0.5.1.
+// second pass (276044400000, 1978-10-01T00:00:00+01:00). Verified on temporal-polyfill 1.0.8.
 // 276046200000 is 1978-10-01T00:30:00+01:00[Africa/Tunis]
 // 276040800000 is 1978-10-01T00:00:00+02:00[Africa/Tunis]
 describe("startOfQuarterForUnix at a zone transition", () => {

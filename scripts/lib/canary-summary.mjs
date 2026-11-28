@@ -73,23 +73,10 @@ function table(header, rows) {
 
 /** @param {any} check */
 function workaroundBlocks(check) {
-  const guards = check.workarounds.filter(
-    (/** @type {any} */ w) => w.state === "guard",
-  );
-  const guardCell =
-    check.counts.guard === 0 || guards.length === 0
-      ? String(check.counts.guard)
-      : `${check.counts.guard} (${guards
-          .map(
-            (/** @type {any} */ w) =>
-              `${w.id}, through ${w.guard.package} ${w.guard.through}`,
-          )
-          .join("; ")})`;
   return [
     table("Workarounds", [
       ["Still needed", String(check.counts.stillNeeded)],
       ["Removable", String(check.counts.removable)],
-      ["Guard", guardCell],
     ]),
   ];
 }
@@ -110,7 +97,6 @@ function compatEngineBlocks(verdicts) {
         "—",
         "—",
         "—",
-        "—",
       ];
     }
     const v = found.ran;
@@ -121,14 +107,13 @@ function compatEngineBlocks(verdicts) {
       `${engine} (${v.engineId})`,
       String(c.stillNeeded),
       String(c.removable),
-      String(c.guard),
       String(c.outOfScope),
     ];
   });
   return [
     [
-      "| Compat source | Engine | Still needed | Removable | Guard | Out of scope |",
-      "| --- | --- | --- | --- | --- | --- |",
+      "| Compat source | Engine | Still needed | Removable | Out of scope |",
+      "| --- | --- | --- | --- | --- |",
       ...rows.map((r) => `| ${r.join(" | ")} |`),
     ].join("\n"),
   ];
@@ -280,12 +265,19 @@ const SWAP_ZONES_LISTED = 10;
 const SWAP_CALENDARS_LISTED = 10;
 
 /**
- * The `temporal-polyfill` swap (CORE-92): the verdict line, one table row per leg, the offset
+ * The upgrade check (CORE-92, CORE-108): the verdict line, one table row per leg, the offset
  * sweep and the calendar sweep (CORE-110). A leg that did not run keeps its row.
  * @param {Record<string, Verdict | null | undefined>} verdicts
+ * @param {boolean} [swapSkipped]  the legs were skipped on purpose; the block says why
  * @returns {string[]}
  */
-function swapBlocks(verdicts) {
+function swapBlocks(verdicts, swapSkipped = false) {
+  if (swapSkipped) {
+    return [
+      "### Temporal polyfill upgrade check",
+      "Skipped: the pinned temporal-polyfill is the newest release, so there is nothing to check.",
+    ];
+  }
   const legs = SWAP_LEGS.map((leg) => ({
     leg,
     found: sourceOf(verdicts, `temporal-polyfill-swap-${leg}`),
@@ -297,9 +289,9 @@ function swapBlocks(verdicts) {
       : "temporal-polyfill";
   const result = swapReady(/** @type {any} */ (verdicts));
   const state = result.ready
-    ? "Ready to swap"
+    ? "Ready to raise the pin"
     : `Not ready: ${oneLine(result.reason)}`;
-  const header = ["Runtime", "Tests", "Fail on swap only", "Fail on both"];
+  const header = ["Runtime", "Tests", "Fail on candidate only", "Fail on both"];
   const rows = legs.map(({ leg, found }) => {
     if (!("ran" in found)) {
       const why =
@@ -359,7 +351,7 @@ function swapBlocks(verdicts) {
     sweepBlocks.push("Calendar sweep: did not run.");
   }
   return [
-    "### Temporal polyfill swap",
+    "### Temporal polyfill upgrade check",
     `${version} — ${state}`,
     [
       `| ${header.join(" | ")} |`,
@@ -383,7 +375,7 @@ function runtimeLine(verdicts) {
     null;
   if (!runtime) return null;
   const parts = [
-    `@js-temporal/polyfill ${runtime.polyfill}`,
+    `temporal-polyfill ${runtime.polyfill}`,
     `Node ${runtime.node}`,
     `ICU ${runtime.icu}`,
   ];
@@ -517,6 +509,7 @@ function usClockWatchBlocks(verdicts) {
  * @param {string} [notFiledReason]  with null `results`: the applyForce message, shown as the
  *        reason nothing was filed; omitted means `--print`
  * @param {Skipped[]} [skipped]  the force flags `applyForce` left out, each with its reason
+ * @param {boolean} [swapSkipped]  the swap legs were skipped because the pin is the newest release
  * @returns {string}
  */
 export function summaryMarkdown(
@@ -526,6 +519,7 @@ export function summaryMarkdown(
   results,
   notFiledReason,
   skipped = [],
+  swapSkipped = false,
 ) {
   /** @type {string[]} */
   const blocks = [];
@@ -541,7 +535,7 @@ export function summaryMarkdown(
     blocks.push(
       ...checkNotes(verdicts),
       ...nativeBlocks(verdicts),
-      ...swapBlocks(verdicts),
+      ...swapBlocks(verdicts, swapSkipped),
     );
   } else if (workflow === "us-clock-watch") {
     blocks.push(...usClockWatchBlocks(verdicts));

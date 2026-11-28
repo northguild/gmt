@@ -199,7 +199,6 @@ describe("defectBadge", () => {
     state             | engines        | text                 | tone         | icon
     ${"still-needed"} | ${undefined}   | ${"Yes"}             | ${"neutral"} | ${"check"}
     ${"removable"}    | ${undefined}   | ${"No"}              | ${"spring"}  | ${undefined}
-    ${"guard"}        | ${undefined}   | ${"Kept on purpose"} | ${"purple"}  | ${undefined}
     ${"out-of-scope"} | ${["firefox"]} | ${"Yes, on Firefox"} | ${"spring"}  | ${"check"}
   `("$state reads $text", ({ state, engines, text, tone, icon }) => {
     const badge = defectBadge(group(state, engines));

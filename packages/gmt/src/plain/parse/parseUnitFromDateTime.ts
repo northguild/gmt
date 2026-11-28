@@ -1,6 +1,6 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { plainDateTimeOf } from "../../internal/inputChecks";
-import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
 import { weekNumberOf } from "../../internal/weekNumber";
@@ -39,7 +39,7 @@ import { isoYearString } from "../../internal/isoYearString";
 export function parseUnitFromDateTime(
   value: string,
   unit:
-    | Temporal.SmallestUnit<
+    | SmallestUnit<
         | "year"
         | "month"
         | "day"

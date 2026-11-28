@@ -1,3 +1,4 @@
+import { Temporal } from "../../internal/temporal";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { cachedFormatter } from "../../internal/formatterCache";
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
@@ -6,7 +7,6 @@ import { plainTimeStyle } from "../../internal/plainFormatOptions";
 import type { CalendarOptions } from "../../types";
 import { stringOptionOrDefault } from "../../internal/typedOptions";
 import { isOptionsObject } from "../../internal/isObject";
-import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatCalendar`: the date-time the value is compared with, and the style of the
@@ -89,7 +89,8 @@ export function formatCalendar(
       return "";
 
     try {
-      const reference = referenceOptionParsed ?? nowPlainDateTimeISO();
+      const reference =
+        referenceOptionParsed ?? Temporal.Now.plainDateTimeISO();
 
       const diffDays = target.toPlainDate().since(reference.toPlainDate()).days;
       // "long"/"full" are outside the type but reachable from JS; their zone

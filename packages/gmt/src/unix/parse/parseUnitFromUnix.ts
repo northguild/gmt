@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit, PluralUnit } from "../../internal/temporalTypes";
 import { unixUnitString } from "../../internal/unixWallClock";
 import type { UnixUnit } from "../validate";
 import { isOptionsArgument } from "../../internal/isObject";
@@ -69,7 +69,7 @@ export type PlainNowUnit =
  */
 export function parseUnitFromUnix(
   value: number | string,
-  unit: PlainNowUnit | Temporal.PluralUnit<Temporal.DateTimeUnit>,
+  unit: PlainNowUnit | PluralUnit<DateTimeUnit>,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or

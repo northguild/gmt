@@ -19,7 +19,7 @@
  * across every zone — the true extremes the matrix can ever show at once,
  * which is what "at any given moment" in the why-gmt copy claims.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 const REFERENCE_YEAR = 2025;
 const MINUTES_PER_NANOSECOND = 1 / 60_000_000_000;

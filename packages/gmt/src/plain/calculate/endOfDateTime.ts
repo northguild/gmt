@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
+import type { DateTimeUnit, SmallestUnit } from "../../internal/temporalTypes";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { Temporal } from "../../internal/temporal";
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
@@ -46,7 +47,7 @@ const supported = [
  */
 export function endOfDateTime(
   value: string,
-  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   optionsArg?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

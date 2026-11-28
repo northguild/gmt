@@ -6,8 +6,9 @@ industries: [core]
 
 import TemporalMap from "../../../components/TemporalMap.astro";
 import { zoneMatrixLine } from "../../../data/zone-matrix";
+import { polyfillFigures } from "~/lib/bundle-size-figures";
 
-GMT is built on `@js-temporal/polyfill`, so it runs on a runtime that has no native Temporal. This page lists where Temporal is native and which GMT function matches each Temporal call.
+GMT is built on a Temporal polyfill, `temporal-polyfill` in {polyfillFigures.firstShippedGmt} and later and `@js-temporal/polyfill` up to {polyfillFigures.previousGmt}, so it runs on a runtime that has no native Temporal. This page lists where Temporal is native and which GMT function matches each Temporal call.
 
 ## Where Temporal runs
 

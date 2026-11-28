@@ -10,7 +10,8 @@ import { floorToZone } from "./floorToZone";
 /** The spec's own example instant: 03:00 UTC on 15 June, which is 14 June in the Americas. */
 const sourceInstant = "2024-06-15T03:00:00Z";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, recomputed directly on temporal-polyfill 1.0.8
+// (`startOfDay()` and wall-clock labels), not through GMT.
 const dayFloorByZone = {
   UTC: "2024-06-15T00:00:00Z",
   GMT: "2024-06-15T00:00:00Z",
@@ -383,12 +384,12 @@ describe("floorToZone", () => {
   });
 });
 
-// The 1844 date-line crossings (zoned.E): Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
+// The 1844 date-line crossings: Asia/Manila, Pacific/Guam, Saipan, Kosrae and Palau
 // skipped 1844-12-31, jumping a whole day forward at local 1844-12-31T00:00 in LMT. Expected values
 // are Chromium 153 native Temporal, never the polyfill (whose transition search starts at
 // 1847-01-01). `dateLineCrossingAt(zone, h)` is the zone h hours from its crossing, from exact time.
 
-describe("floorToZone across the 1844 date-line crossings (zoned.E)", () => {
+describe("floorToZone across the 1844 date-line crossings", () => {
   it.each(dateLineCrossingTimeZones)(
     "floors 1845-01-02T12:00 in $timeZone to Monday 1844-12-30 by week",
     (crossing) => {

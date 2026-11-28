@@ -2,7 +2,7 @@
  * `eta-drift.ts`'s pure helpers, against the real gmt modules. Every expected
  * library result is an appendix Z row (ED1 to ED4, EDR1 to EDR7).
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   classifyPunctuality,

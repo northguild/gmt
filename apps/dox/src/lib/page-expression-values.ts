@@ -33,9 +33,12 @@ import {
   formatCount,
   formatNamespaceList,
   gmtStats,
+  industryFunctions,
   industryNamespaces,
   runsPerTest,
 } from "../data/gmt-stats";
+import { nativeFailures } from "../data/native-engine-failures";
+import { polyfillFigures } from "./bundle-size-figures";
 import { syntaxFloor } from "../generated/syntax-floor";
 import { gmtNodeEngines } from "../generated/versions";
 import { measurementDateRange } from "./library-compare-tables";
@@ -76,6 +79,19 @@ export function pageExpressionValues(): Record<string, string> {
 
   return {
     ...checkedLines,
+    // The /bundle-size figures: one entry per key, so a new key cannot be forgotten.
+    ...Object.fromEntries(
+      Object.entries(polyfillFigures).map(([key, value]) => [
+        `polyfillFigures.${key}`,
+        value,
+      ]),
+    ),
+    ...Object.fromEntries(
+      Object.entries(nativeFailures).map(([key, value]) => [
+        `nativeFailures.${key}`,
+        value,
+      ]),
+    ),
     ...zoneMatrixLines,
     "zoneMatrix.zones.length": String(zoneMatrixSummary.zones.length),
     'zoneMatrix.nodes.join(", ")': zoneMatrixSummary.nodes.join(", "),
@@ -106,6 +122,7 @@ export function pageExpressionValues(): Record<string, string> {
     "industryNamespaces.length": String(industryNamespaces.length),
     coreNamespaceList: formatNamespaceList(coreNamespaces),
     industryNamespaceList: formatNamespaceList(industryNamespaces),
+    industryFunctions: String(industryFunctions),
     "formatCount(coreFunctions)": formatCount(coreFunctions),
     "formatCount(plainAndZoned)": formatCount(plainAndZoned),
     offsetWindowHours: String(offsetWindowHours),

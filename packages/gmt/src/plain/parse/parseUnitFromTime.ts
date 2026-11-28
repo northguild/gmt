@@ -1,5 +1,5 @@
+import type { SmallestUnit } from "../../internal/temporalTypes";
 import { plainTimeOf } from "../../internal/inputChecks";
-import { Temporal } from "../../internal/temporal";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 
@@ -27,7 +27,7 @@ import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
  */
 export function parseUnitFromTime(
   value: string,
-  unit: Temporal.SmallestUnit<
+  unit: SmallestUnit<
     "hour" | "minute" | "second" | "millisecond" | "microsecond" | "nanosecond"
   >,
 ): string {

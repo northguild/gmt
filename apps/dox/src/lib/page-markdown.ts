@@ -175,21 +175,32 @@ export function stripMdx(
     part.replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ""),
   );
 
-  // Substitute template variables
-  if (vars.gmtVersion != null) {
-    md = md.replace(/\{gmtVersion\}/g, vars.gmtVersion);
-  }
-
-  // Figures the pages state as expressions over the stats modules.
-  const values = vars.values ?? {};
+  // Figures the pages state as expressions: `{gmtVersion}` and any `values` given. A backtick
+  // span is skipped, because MDX prints its braces as written; resolving one here would hide
+  // from the text surfaces a figure the page itself shows as `{name}`.
+  const values = { ...vars.values };
+  if (vars.gmtVersion != null) values.gmtVersion = vars.gmtVersion;
   md = outsideFences(md, (part) =>
     part
-      .replace(/\{([^{}\n]+)\}/g, (whole, expression: string) => {
-        const resolved = values[expression.trim()];
-        return resolved === undefined ? whole : resolved;
-      })
+      .replace(
+        /(`[^`\n]*`)|\{([^{}\n]+)\}/g,
+        (
+          whole,
+          codeSpan: string | undefined,
+          expression: string | undefined,
+        ) => {
+          if (codeSpan !== undefined || expression === undefined) return whole;
+          return values[expression.trim()] ?? whole;
+        },
+      )
       // `{" "}` is JSX line-break padding.
       .replace(/\{"\s*"\}/g, " "),
+  );
+
+  // Prose that names a function from a figure writes it as `<code>{name}</code>`, because a
+  // backtick span cannot hold an expression. Once the value is in, it is a code span again.
+  md = outsideFences(md, (part) =>
+    part.replace(/<code>([^<>\n]+)<\/code>/g, "`$1`"),
   );
 
   // A `.map(…)` block is a generated table or chart, whose figures the prose already states.

@@ -21,7 +21,7 @@ import { mergeIntervalsZoned } from "./mergeIntervalsZoned";
 // day count of intervalOverlappingDaysZoned is a difference, so it rejects a mismatch too, as
 // TC39 CalendarEquals makes ZonedDateTime#until throw (native Chromium 153: "Mismatched calendars.").
 //
-// Every expected value was produced by running @js-temporal/polyfill@0.5.1.
+// Every expected value was produced by running temporal-polyfill 1.0.8.
 
 // Four instants in America/New_York, deliberately spanning both 2024 DST transitions.
 const A1 = "2024-01-01T00:00:00-05:00[America/New_York]";

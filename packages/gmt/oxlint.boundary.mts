@@ -7,10 +7,17 @@
  * gitignore-style `group`; and `../*` does not reach `../validate/isValidDate`, so use `../**`.
  */
 const CORE_DIRS = ["internal", "regex", "types"];
-const POLYFILL = {
-  name: "@js-temporal/polyfill",
-  message: "Import Temporal from internal/temporal",
-};
+const POLYFILL_MESSAGE =
+  "GMT runs on temporal-polyfill; import Temporal from internal/temporal";
+const POLYFILL = { name: "@js-temporal/polyfill", message: POLYFILL_MESSAGE };
+/** Either polyfill's subpaths, and `temporal-polyfill` itself: only `internal/temporal.ts` names it. */
+const POLYFILL_PATTERNS = [
+  { group: ["@js-temporal/polyfill/**"], message: POLYFILL_MESSAGE },
+  {
+    group: ["temporal-polyfill", "temporal-polyfill/**"],
+    message: "Import Temporal from internal/temporal",
+  },
+];
 
 /** Bans value imports under `prefixes`, except from the core directories, at any depth below `src/`. */
 function coreOnly(prefixes: string[], message: string) {
@@ -23,7 +30,10 @@ function coreOnly(prefixes: string[], message: string) {
     "error",
     {
       paths: [POLYFILL],
-      patterns: [{ group, allowTypeImports: true, message }],
+      patterns: [
+        ...POLYFILL_PATTERNS,
+        { group, allowTypeImports: true, message },
+      ],
     },
   ] as const;
 }
@@ -47,4 +57,7 @@ export const CORE_NESTED_RULE = coreOnly(
 );
 
 /** The polyfill ban alone (CORE-80). */
-export const POLYFILL_RULE = ["error", { paths: [POLYFILL] }] as const;
+export const POLYFILL_RULE = [
+  "error",
+  { paths: [POLYFILL], patterns: POLYFILL_PATTERNS },
+] as const;

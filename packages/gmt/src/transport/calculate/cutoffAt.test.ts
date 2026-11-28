@@ -23,7 +23,7 @@ const weekdays: BusinessCalendar = {
 describe("cutoffAt", () => {
   // Expected values derived by hand from the rule (the offset's exact part off the anchor's
   // instant, its calendar part off the local date or wall clock, then atLocalTime) and checked
-  // against plain @js-temporal/polyfill ZonedDateTime/PlainDate arithmetic.
+  // against plain temporal-polyfill 1.0.8 ZonedDateTime/PlainDate arithmetic.
   describe("the ocean cut-off stack", () => {
     it.each`
       cutoff        | offset     | atLocalTime  | expected

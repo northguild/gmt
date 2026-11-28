@@ -4,7 +4,7 @@
  * (a factory is imported inside `vi.mock`'s callback, so hoisting cannot reach it early), and the
  * three-slide deck they run over. A test file keeps its own `root`, `abort` and `stage`.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 
 export const NOW = Temporal.Instant.from(
   "2027-02-06T12:00:00Z",

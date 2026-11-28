@@ -1,4 +1,4 @@
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type { CronLib, CronLibRun } from "./cron-lib";
 import {
   CRON_PRESETS,

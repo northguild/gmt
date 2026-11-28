@@ -1,4 +1,5 @@
 // fallow-ignore-file code-duplication -- cross-family Temporal type clone, by design (rule 5)
+import { Temporal } from "../../internal/temporal";
 import { plainDateTimeOf } from "../../internal/inputChecks";
 import { durationTotal } from "../../internal";
 import { formatRelativeDuration } from "../../internal/formatRelativeDuration";
@@ -7,7 +8,6 @@ import type {
   RelativeTimeFormatOptions,
 } from "../../types";
 import { isOptionsObject } from "../../internal/isObject";
-import { nowPlainDateTimeISO } from "../../internal/temporalCompat";
 
 /**
  * Options for `formatRelativeDateTime`: the reference date-time, the display unit, the rounding
@@ -69,7 +69,8 @@ export function formatRelativeDateTime(
       return "";
 
     try {
-      const reference = referenceOptionParsed ?? nowPlainDateTimeISO();
+      const reference =
+        referenceOptionParsed ?? Temporal.Now.plainDateTimeISO();
 
       const diff = target.since(reference);
       // month/year are calendrical — relativeTo needs a PlainDate

@@ -61,10 +61,6 @@ are read values, never string content.
 - **No converter from the pre-1.16.0 calendar-native-digit strings.** No standard defines them, and
   most are also valid RFC 9557 strings, so the two readings cannot be told apart. Do not add
   heuristic detection; a stored old string is regenerated from its ISO date.
-- **`ethiopic` and `coptic` compute in `ethioaa`** (`computationCalendarId`): polyfill 0.5.1 cannot
-  read their fields under ICU ≥ 78, and the three share months, days and arithmetic, differing by a
-  constant year. A parsed value therefore carries `ethioaa`; code that writes a string back takes the
-  calendar from `calendarSystemOfDateValue` / `calendarSystemOfZonedValue`, never from `calendarId`.
 - **Where it is accepted.** `plain/`: `isValidCalendarDate` and the functions gated on it
   (`convertDateToCalendar`, `addDate`, `subtractDate`, `diffDate`, `diffDateAsDuration`, the
   `Date`-suffixed `plain/interval/*`), plus `duration/`'s `relativeTo` (`internal/resolveDurationRelativeTo.ts`,

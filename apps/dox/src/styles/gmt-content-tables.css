@@ -1002,11 +1002,6 @@
   font-weight: 400;
 }
 
-/* A short reference such as `tc39 #3292` reads as one token, so it never splits at its space. */
-.gmt-defects-reason a {
-  white-space: nowrap;
-}
-
 .sl-markdown-content .gmt-defects-refs {
   margin: 0;
   padding: 0;

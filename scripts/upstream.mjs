@@ -15,9 +15,10 @@
  * servers (Mozilla, WebKit). Every entry has a `tracker` and that tracker's own identity fields;
  * `scripts/lib/upstream-trackers.mjs` says how each one is named, fetched and read.
  *
- * GMT reports the `@js-temporal/polyfill` and `tc39/proposal-temporal` defects it works around
- * upstream (`context/domination/js-temporal-polyfill-bugs.md`), and the docs site's `/upstream/`
- * page tracks every filing's status live. This is `stats.mjs` applied to that tracker: a
+ * GMT runs on `temporal-polyfill`. It reports the `temporal-polyfill` and `tc39/proposal-temporal`
+ * defects it works around upstream, and the filings also keep the `@js-temporal/polyfill` defects
+ * found before the move (`context/domination/js-temporal-polyfill-bugs.md`). The docs site's `/upstream/`
+ * page tracks every filing's status live. This script is `stats.mjs` applied to that tracker: a
  * generator plus an offline check, so the published numbers can never drift from GitHub's own
  * or from the guard groups in `packages/gmt/src/internal/temporalCompat/{probeRepros,repros}.ts`.
  *

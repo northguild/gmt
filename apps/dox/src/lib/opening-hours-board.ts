@@ -11,7 +11,7 @@
  * No DOM. Text is passed as typed. The WebMCP tool calls this function too.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   createLedgerCanvas,
   formatHandleValue,

@@ -1,6 +1,6 @@
 /**
  * Prints a value as source, one line. Kept in its own module so a tool that only prints its
- * calls does not pull in the holiday builder, and with it `@js-temporal/polyfill`.
+ * calls does not pull in the holiday builder, and with it the Temporal polyfill.
  */
 
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;

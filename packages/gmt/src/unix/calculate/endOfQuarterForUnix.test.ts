@@ -67,8 +67,8 @@ describe("endOfQuarterForUnix", () => {
 });
 
 // The quarter ends just before the next
-// quarter's first local month bucket, never before the input. Expected values verified against
-// `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+// quarter's first local month bucket, never before the input. Expected values recomputed directly
+// on temporal-polyfill 1.0.8 from the zone's month labels, not through GMT.
 // 1285882200000 is 2010-09-30T23:30:00+02:00[Africa/Cairo] (second pass of the repeated hour)
 // 1285878600000 is 2010-09-30T23:30:00+03:00[Africa/Cairo] (first pass)
 // 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
@@ -88,7 +88,7 @@ describe("endOfQuarterForUnix with default options", () => {
 
 // Cairo repeated Q3's last local hour. The quarter ends on the second pass — the removed
 // `disambiguation: "compatible"` used to end it on the first pass
-// (1285880399999, 23:59:59.999+03:00), before the input. Verified on @js-temporal/polyfill@0.5.1.
+// (1285880399999, 23:59:59.999+03:00), before the input. Verified on temporal-polyfill 1.0.8.
 // 1285883999999 is 2010-09-30T23:59:59.999+02:00[Africa/Cairo]
 describe("endOfQuarterForUnix at a zone transition", () => {
   it.each`

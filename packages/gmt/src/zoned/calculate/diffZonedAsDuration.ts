@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import {
   durationUntilString,
   isCalendarDifferenceAcrossZones,
@@ -60,8 +60,8 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function diffZonedAsDuration(
   value1: string,
   value2: string,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
-  options?: RoundingOptions<Temporal.DateTimeUnit> & DurationStringOptions,
+  unit: DateTimeDurationUnit | DateTimeUnit,
+  options?: RoundingOptions<DateTimeUnit> & DurationStringOptions,
 ): string {
   // Temporal GetOptionsObject: options are an object or omitted; null and primitives are invalid.
   if (!isOptionsArgument(options)) {

@@ -74,7 +74,7 @@ describe("startOfQuarterForZoned", () => {
 // The quarter starts at the real local bucket of its first month, and every wall-clock field
 // below it is reset — including the
 // milliseconds, microseconds and nanoseconds the input carried. Expected values verified
-// against `bucketRange` month buckets on @js-temporal/polyfill@0.5.1.
+// against `bucketRange` month buckets on temporal-polyfill 1.0.8.
 describe("startOfQuarterForZoned with default options", () => {
   it.each`
     value                                         | fractionalSecondDigits | expected

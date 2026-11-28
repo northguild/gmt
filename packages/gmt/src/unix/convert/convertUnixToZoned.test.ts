@@ -2,7 +2,7 @@ import { battleTestTimeZones, MustTestDstTimeZones } from "../../test";
 import { parseTimeZoneFromZoned } from "../../zoned/parse";
 import { convertUnixToZoned } from "./convertUnixToZoned";
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone, verified against temporal-polyfill 1.0.8.
 const epochByZone = {
   UTC: "1970-01-01T00:00:00+00:00[UTC]",
   GMT: "1970-01-01T00:00:00+00:00[GMT]",

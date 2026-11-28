@@ -8,28 +8,28 @@ import {
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { gmtStats } from "../src/data/gmt-stats";
 import { localeMatrixRows } from "../src/lib/locale-families";
+import { renderBarChartSvg } from "../src/lib/bar-chart-kit";
+import { BAR_CHARTS, type BarChartId } from "../src/lib/bar-charts";
 import {
-  BAR_CHARTS,
-  industryLegend,
-  industrySummary,
-  type BarChartId,
-} from "../src/lib/why-gmt-charts";
+  BUNDLE_SIZE_CHARTS,
+  polyfillLegendHtml,
+  polyfillSummaryHtml,
+  type BundleSizeChartId,
+} from "../src/lib/bundle-size-charts";
+import { industryLegend, industrySummary } from "../src/lib/why-gmt-charts";
 
 // The static SVG is the no-JS fallback; ChartContainer.astro mounts the same
 // definition live on top of it to add the hover tooltip.
 function renderBarChart(id: BarChartId): string {
-  const chart = BAR_CHARTS[id];
-  const runtime = createChartRuntime();
-  const scene = runtime.render(chart.definition(), {
-    width: chart.width,
-    height: chart.height,
-  });
-  const svg = renderChartSvg(scene, {
-    ariaLabel: chart.ariaLabel,
-    idPrefix: chart.idPrefix,
-  });
-  runtime.destroy();
-  return svg;
+  return renderBarChartSvg(BAR_CHARTS[id]);
+}
+
+/** Every /bundle-size chart as build-time SVG, keyed by chart id. */
+function renderBundleSizeCharts(): Record<BundleSizeChartId, string> {
+  const ids = Object.keys(BUNDLE_SIZE_CHARTS) as BundleSizeChartId[];
+  return Object.fromEntries(
+    ids.map((id) => [id, renderBarChart(id)]),
+  ) as Record<BundleSizeChartId, string>;
 }
 
 export function renderTestExecutionChart(): string {
@@ -172,3 +172,15 @@ export const industryDistributionSvg = renderIndustryChart();
 export const industryLegendHtml = industryLegend();
 export const industrySummaryHtml = industrySummary();
 export const localeMatrixSvg = renderLocaleMatrixChart();
+/** The /bundle-size charts, their keys and their counts in words. */
+export const bundleSizeSvgs = renderBundleSizeCharts();
+export const polyfillLegends = {
+  floor: polyfillLegendHtml("floor"),
+  split: polyfillLegendHtml("split"),
+};
+export const polyfillSummaries = {
+  "floor-gzipped": polyfillSummaryHtml("floor", "gzipped"),
+  "floor-minified": polyfillSummaryHtml("floor", "minified"),
+  "split-gzipped": polyfillSummaryHtml("split", "gzipped"),
+  "split-minified": polyfillSummaryHtml("split", "minified"),
+};

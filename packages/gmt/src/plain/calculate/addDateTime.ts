@@ -4,6 +4,7 @@ import { plainDateTimeOf } from "../../internal/inputChecks";
 import { readDurationUnits, resolveOverflow } from "../../internal";
 import type { DateTimeDurationUnit, Overflow } from "../../types";
 import { isOptionsArgument } from "../../internal/isObject";
+import { assertMonthsInRange } from "../../internal/temporalCompat";
 
 /**
  * Return a PlainDateTime ISO string with `units` added to `value`.
@@ -46,6 +47,7 @@ export function addDateTime(
     }
 
     try {
+      assertMonthsInRange(amounts.months); // D9
       return dateTime
         .add(amounts, { overflow: resolveOverflow(options?.overflow) })
         .toString();

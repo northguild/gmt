@@ -13,7 +13,8 @@ import {
 const REF = "2024-03-15T13:00:00Z"; // 09:00 in America/New_York
 const VAL = "2024-03-16T18:30:00Z"; // 14:30 in America/New_York
 
-// Expected values per battle-test timeZone, verified against @js-temporal/polyfill.
+// Expected values per battle-test timeZone. Zone offsets and wall times recomputed directly on
+// temporal-polyfill 1.0.8; the label wording is GMT's.
 const calendarLabelByZone = {
   UTC: "tomorrow at 6:30 PM",
   GMT: "tomorrow at 6:30 PM",

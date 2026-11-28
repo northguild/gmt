@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit } from "../../internal/temporalTypes";
 import {
   durationUntilString,
   frameZoned,
@@ -63,7 +63,7 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function diffUnixAsDuration(
   value1: number | string,
   value2: number | string,
-  unit: DateTimeDurationUnit | Temporal.DateTimeUnit,
+  unit: DateTimeDurationUnit | DateTimeUnit,
   options?: {
     /**
      * The unit the epoch values are counted in: `"seconds"` or `"milliseconds"`, singular or
@@ -81,7 +81,7 @@ export function diffUnixAsDuration(
      * @defaultValue `"UTC"`
      */
     timeZone?: string;
-  } & RoundingOptions<Temporal.DateTimeUnit> &
+  } & RoundingOptions<DateTimeUnit> &
     DurationStringOptions,
 ): string {
   try {

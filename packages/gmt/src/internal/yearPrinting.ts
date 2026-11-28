@@ -5,7 +5,6 @@ import {
   isJapaneseTwoDigitYearCompatNeeded,
   isRelatedYearWidthCompatNeeded,
 } from "./temporalCompat/capabilities";
-import { nowInstant } from "./temporalCompat/clock";
 import { markRangeHandled, rangeHooks } from "./rangeHooks";
 import { digitSetOf, digitsOf } from "./weekYearText";
 
@@ -69,7 +68,9 @@ export function toMilliseconds(date: Date | number | undefined): number {
   if (typeof date === "number") {
     return date;
   }
-  return date === undefined ? nowInstant().epochMilliseconds : Number(date);
+  return date === undefined
+    ? Temporal.Now.instant().epochMilliseconds
+    : Number(date);
 }
 
 /** The first date the japanese calendar prints a Japanese era for: ISO 1873 (Meiji 6). */

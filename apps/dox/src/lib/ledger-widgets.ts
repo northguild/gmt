@@ -7,7 +7,7 @@
  * holds what the five tools share beyond the grid: the markup of a row of day
  * columns, and four small texts.
  *
- * No DOM and no gmt import. `@js-temporal/polyfill` is imported for drawing
+ * No DOM. `Temporal` comes from `@northguild/gmt` and is used for drawing
  * only: the weekday on a column's label, a date or a clock time as words. Every
  * date, duration and verdict a tool shows is a library call that the tool's own
  * mount makes, and these functions only set it in type.
@@ -16,7 +16,7 @@
  * an agency, a carrier or a court.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { formatDayLabel, toEpochMs } from "./dwell-ledger";
 import { FIXED_OFFSET_ZONES, TRANSPORT_ZONES } from "./transport-widgets";
 

@@ -154,7 +154,7 @@ describe("parseCalendarZonedValue / formatZonedInCalendar", () => {
   it.each`
     value                                                           | calendarId         | label
     ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=hebrew]"}   | ${"hebrew"}        | ${"[u-ca=hebrew]"}
-    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"} | ${"ethioaa"}       | ${"[u-ca=ethiopic]"}
+    ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=ethiopic]"} | ${"ethiopic"}      | ${"[u-ca=ethiopic]"}
     ${"2024-09-18T14:30:00-04:00[America/New_York][u-ca=islamicc]"} | ${"islamic-civil"} | ${"[u-ca=islamicc]"}
   `(
     "parses a value with annotations $label, computing in $calendarId",

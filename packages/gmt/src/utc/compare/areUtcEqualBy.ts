@@ -1,4 +1,4 @@
-import { Temporal } from "../../internal/temporal";
+import type { DateTimeUnit, SmallestUnit } from "../../internal/temporalTypes";
 
 import { resolveDateTimeUnit } from "../../internal/resolveDateTimeUnit";
 import { resolveWeekStartsOn } from "../../internal/resolveWeekStartsOn";
@@ -39,7 +39,7 @@ import { isOptionsArgument } from "../../internal/isObject";
 export function areUtcEqualBy(
   value1: string,
   value2: string,
-  unit: Temporal.SmallestUnit<Temporal.DateTimeUnit>,
+  unit: SmallestUnit<DateTimeUnit>,
   options?: {
     /**
      * The first day of the week, which sets where a `"week"` unit starts. `"monday"` is the ISO

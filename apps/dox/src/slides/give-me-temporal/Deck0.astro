@@ -62,6 +62,7 @@ import StandIns from "./components/StandIns.astro";
 import WallFigures from "./components/WallFigures.astro";
 import { dateFaults } from "~/data/date-faults";
 import { BUNDLE_COLUMNS, bundleCells, bundleRows } from "~/lib/bundle-size";
+import { polyfillSets } from "~/lib/bundle-size-figures";
 import bundleReport from "~/generated/bundle-size.json";
 import familiar from "~/slides/give-me-temporal/familiar.json";
 import { gmtStats } from "~/data/gmt-stats";
@@ -141,9 +142,8 @@ const sizeRows = bundleRows()
       ["polyfill", "isValidDate", "formatDate", "root"].indexOf(b.name),
   );
 const sizeLabel = (name: string) =>
-  name === "polyfill" ? "@js-temporal/polyfill" : name === "root" ? "@northguild/gmt" : name;
+  name === "polyfill" ? polyfillSets().shipped.package : name === "root" ? "@northguild/gmt" : name;
 const measuredOn = bundleReport.measuredAt.slice(0, 10);
-const guardCount = compatGroups.filter((g) => g.state === "guard").length;
 ---
 
 <Deck slug="give-me-temporal" presenter={presenter} credits={[wallCredit()]} start={deck.start}>
@@ -483,7 +483,7 @@ const guardCount = compatGroups.filter((g) => g.state === "guard").length;
   <Slide id="guards" title="Workarounds, checked every week" minutes={0.5} place="greenwich">
     <p>
       We know of {compatGroups.length} bugs. {groupsStillNeeded} still need a
-      workaround{guardCount > 0 ? `, and we keep ${guardCount} more on purpose` : ""}. {probeTotals.probes} small tests watch
+      workaround. {probeTotals.probes} small tests watch
       them, and {probeTotals.failing} still show a bug today.
     </p>
     <p>

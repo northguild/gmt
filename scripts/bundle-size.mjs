@@ -2,8 +2,9 @@
 /**
  * Bundle-size gate for `@northguild/gmt`.
  *
- *   node scripts/bundle-size.mjs [check]            table; exit 1 over a budget or a listed
- *                                                   `absent` path, exit 2 when esbuild fails
+ *   node scripts/bundle-size.mjs [check]            table; exit 1 over a budget, or an `absent`
+ *                                                   path that is bundled or no longer names a
+ *                                                   file, exit 2 when esbuild fails
  *   node scripts/bundle-size.mjs report            the same table and the same --json file, but
  *                                                   exit 0 over a budget (still 2 when esbuild
  *                                                   fails); the Dox build uses it to write the
@@ -17,63 +18,67 @@
  * the minified sizes are byte-for-byte repeatable for a pinned esbuild. Gzipped sizes are
  * reported, never gated: they vary with zlib's version.
  *
- * The `--json` file holds `floor` (the entry every other size contains, `polyfill`) and, per entry,
- * its minified and gzipped bytes and its `budget` (a number, or null for an entry with none).
+ * Two sets are measured with the same esbuild settings:
+ *   shipped    GMT's own source on `temporal-polyfill`. It is gated by `check`.
+ *   previous   the last GMT release on `@js-temporal/polyfill` (pinned through the root
+ *              devDependency `gmt-js-temporal-release`; the pin moves only by a reviewed edit). It is never gated, and only a run with `--json` measures it.
+ *              A name the release does not export is recorded as null.
+ *
+ * The `--json` file holds `floor` (the entry every other size contains, `polyfill`) and, per entry
+ * of the shipped set, its minified and gzipped bytes and its `budget` (a number, or null for an
+ * entry with none). It also holds `polyfills`: one item per set, shipped first, each with its
+ * `package`, `version`, `import` line, `shipped` flag, measured `gmt` version, `from` ("source" or
+ * "npm") and `entries` (minified and gzipped bytes, or null). `apps/dox` reads it.
  *
  * Budgets live in `scripts/bundle-size.budgets.json`. A budget is raised only by a reviewed edit
  * to that file; `--update` is for that edit.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gzipSync } from "node:zlib";
-import { build, version as esbuildVersion } from "esbuild";
+import { version as esbuildVersion } from "esbuild";
+import {
+  absentPathFailures,
+  measureEntry,
+  reportShape,
+} from "./lib/bundle-size.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GMT_DIR = path.join(ROOT, "packages", "gmt");
 const BUDGETS_FILE = path.join(ROOT, "scripts", "bundle-size.budgets.json");
 
-const fromSrc = (name) => `export { ${name} } from "./src/index.ts";`;
-
-/** Every measured entry, each one a `stdin` string bundled from `packages/gmt`. */
-const ENTRIES = {
-  root: `export * from "./src/index.ts";`,
-  // The floor: reported, not budgeted.
-  polyfill: `export { Temporal } from "@js-temporal/polyfill";`,
-  isValidDate: fromSrc("isValidDate"),
-  formatDate: fromSrc("formatDate"),
-  businessDaysBetween: fromSrc("businessDaysBetween"),
-  addBusinessDays: fromSrc("addBusinessDays"),
-  chargeableDays: fromSrc("chargeableDays"),
-  operatingTimeBetween: fromSrc("operatingTimeBetween"),
-  dutyViolations: fromSrc("dutyViolations"),
-};
+const SHIPPED_POLYFILL = "temporal-polyfill";
+const SHIPPED_IMPORT = "temporal-polyfill/full/implementation";
+const PREVIOUS_POLYFILL = "@js-temporal/polyfill";
+const RELEASE_ALIAS = "gmt-js-temporal-release";
+const FUNCTIONS = [
+  "isValidDate",
+  "formatDate",
+  "businessDaysBetween",
+  "addBusinessDays",
+  "chargeableDays",
+  "operatingTimeBetween",
+  "dutyViolations",
+];
 const FLOOR = "polyfill";
 
-const toForward = (p) => p.split(path.sep).join("/").replaceAll("\\", "/");
+const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
 
-async function measure(name) {
-  const result = await build({
-    stdin: { contents: ENTRIES[name], resolveDir: GMT_DIR, loader: "ts" },
-    bundle: true,
-    minify: true,
-    format: "esm",
-    platform: "neutral",
-    mainFields: ["module", "main"],
-    target: "es2022",
-    write: false,
-    metafile: true,
-    logLevel: "silent",
-  });
-  const bytes = result.outputFiles[0].contents;
-  const output = Object.values(result.metafile.outputs)[0];
-  return {
-    minified: bytes.length,
-    gzipped: gzipSync(bytes, { level: 9 }).length,
-    inputs: output.inputs,
-  };
-}
+/** A set of entries: each name maps to the `stdin` string esbuild bundles for it. */
+const entriesFor = (from, floorImport) => ({
+  root: `export * from "${from}";`,
+  // The floor: reported, not budgeted.
+  [FLOOR]: `export { Temporal } from "${floorImport}";`,
+  ...Object.fromEntries(
+    FUNCTIONS.map((name) => [name, `export { ${name} } from "${from}";`]),
+  ),
+});
+
+/** The shipped set bundles this checkout's source. */
+const ENTRIES = entriesFor("./src/index.ts", SHIPPED_IMPORT);
+
+const toForward = (p) => p.split(path.sep).join("/").replaceAll("\\", "/");
 
 function git(...args) {
   try {
@@ -118,10 +123,62 @@ if (args.files !== null && !(args.files in ENTRIES)) {
   process.exit(2);
 }
 
+/**
+ * The previous set: the published release, bundled from its package directory. Its own polyfill is
+ * resolved by esbuild from the release's real path, because pnpm only links it next to the release.
+ */
+async function measurePrevious() {
+  let releaseDir;
+  try {
+    releaseDir = realpathSync(path.join(ROOT, "node_modules", RELEASE_ALIAS));
+  } catch {
+    console.error(
+      `bundle-size: ${RELEASE_ALIAS} is not installed; run pnpm install`,
+    );
+    process.exit(2);
+  }
+  const release = readJson(path.join(releaseDir, "package.json"));
+  const sets = entriesFor(RELEASE_ALIAS, PREVIOUS_POLYFILL);
+  const previous = {};
+  for (const [name, contents] of Object.entries(sets)) {
+    const resolveDir = name === FLOOR ? releaseDir : ROOT;
+    try {
+      // A name the release does not export is a null entry, never an error.
+      previous[name] = await measureEntry(contents, resolveDir, {
+        missingIsNull: name !== FLOOR,
+      });
+    } catch (error) {
+      console.error(
+        `bundle-size: esbuild failed on previous entry "${name}": ${error.message}`,
+      );
+      process.exit(2);
+    }
+  }
+  // esbuild resolved the release's own polyfill; read its version from the file it bundled.
+  const marker = `node_modules/${PREVIOUS_POLYFILL}/`;
+  const bundled = Object.keys(previous[FLOOR].inputs)
+    .map(toForward)
+    .find((f) => f.includes(marker));
+  // esbuild's metafile paths are relative to its working directory, the current one.
+  const polyfillDir = path.resolve(
+    bundled.slice(0, bundled.indexOf(marker) + marker.length),
+  );
+  return {
+    package: PREVIOUS_POLYFILL,
+    version: readJson(path.join(polyfillDir, "package.json")).version,
+    importPath: PREVIOUS_POLYFILL,
+    gmt: release.version,
+    from: "npm",
+    measured: previous,
+  };
+}
+
 const measured = {};
 for (const name of Object.keys(ENTRIES)) {
   try {
-    measured[name] = await measure(name);
+    measured[name] = await measureEntry(ENTRIES[name], GMT_DIR, {
+      missingIsNull: false,
+    });
   } catch (error) {
     console.error(
       `bundle-size: esbuild failed on entry "${name}": ${error.message}`,
@@ -129,6 +186,14 @@ for (const name of Object.keys(ENTRIES)) {
     process.exit(2);
   }
 }
+
+const absentFailures = absentPathFailures(budgets, GMT_DIR, (file) => {
+  try {
+    return statSync(file).isFile() ? "file" : "directory";
+  } catch {
+    return "missing";
+  }
+});
 
 if (args.mode === "update") {
   for (const name of Object.keys(budgets.entries)) {
@@ -151,7 +216,7 @@ console.log(
     padL("over floor", 11),
   ].join(" "),
 );
-const failures = [];
+const failures = [...absentFailures];
 for (const [name, m] of Object.entries(measured)) {
   const budget = budgets.entries[name]?.minified;
   console.log(
@@ -190,29 +255,36 @@ if (args.files !== null) {
 }
 
 if (args.json !== null) {
-  const entries = {};
-  for (const [name, m] of Object.entries(measured)) {
-    entries[name] = {
-      minified: m.minified,
-      gzipped: m.gzipped,
-      budget: budgets.entries[name]?.minified ?? null,
-    };
-  }
+  const previous = await measurePrevious();
+  const shipped = {
+    package: SHIPPED_POLYFILL,
+    version: readJson(
+      path.join(GMT_DIR, "node_modules", SHIPPED_POLYFILL, "package.json"),
+    ).version,
+    importPath: SHIPPED_IMPORT,
+    gmt: readJson(path.join(GMT_DIR, "package.json")).version,
+    from: "source",
+    measured,
+  };
   writeFileSync(
     path.resolve(args.json),
     `${JSON.stringify(
-      {
-        // `date`, not a native Date: the repo bans it even in scripts.
-        measuredAt: execFileSync("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"], {
-          encoding: "utf8",
-        }).trim(),
-        node: process.version,
-        esbuild: esbuildVersion,
-        commit: git("rev-parse", "HEAD"),
-        dirty: git("status", "--porcelain") !== "",
+      reportShape({
+        meta: {
+          // `date`, not a native Date: the repo bans it even in scripts.
+          measuredAt: execFileSync("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"], {
+            encoding: "utf8",
+          }).trim(),
+          node: process.version,
+          esbuild: esbuildVersion,
+          commit: git("rev-parse", "HEAD"),
+          dirty: git("status", "--porcelain") !== "",
+        },
         floor: FLOOR,
-        entries,
-      },
+        budgets,
+        shipped,
+        previous,
+      }),
       null,
       2,
     )}\n`,

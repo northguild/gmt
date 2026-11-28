@@ -1,5 +1,5 @@
+import { Temporal } from "../../internal/temporal";
 import { wholeSecondsUntil } from "../../internal/lengthFromNow";
-import { nowInstant } from "../../internal/temporalCompat";
 import { httpDateInstantOf } from "../../internal/httpDateFields";
 
 // RFC 9110 section 10.2.3: delay-seconds = 1*DIGIT. `\d` is ASCII-only in ECMA-262, and
@@ -50,7 +50,7 @@ export function secondsUntilRetryAfter(value: string): number | null {
       return null;
     }
 
-    return wholeSecondsUntil(instant, nowInstant());
+    return wholeSecondsUntil(instant, Temporal.Now.instant());
   } catch {
     // Never throws (Core Rule 3): a hostile argument is invalid input, not an exception.
     return null;

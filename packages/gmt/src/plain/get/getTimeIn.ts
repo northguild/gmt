@@ -1,7 +1,7 @@
+import { Temporal } from "../../internal/temporal";
 // fallow-ignore-file code-duplication -- sibling variant keeps its own guard, parse and try/catch, by design
 import { isTimeDurationUnitName } from "../../internal/unitNames";
 import { readLengthUnits } from "../../internal/lengthFromNow";
-import { nowZonedDateTimeISO } from "../../internal/temporalCompat";
 import { systemTimeZone } from "../../internal/resolveLocale";
 import type { TimeDurationUnit } from "../../types";
 
@@ -43,7 +43,7 @@ export function getTimeIn(
       return "";
     }
 
-    return nowZonedDateTimeISO(timeZone)
+    return Temporal.Now.zonedDateTimeISO(timeZone)
       .toPlainTime()
       .add(amounts)
       .toString({ smallestUnit: "second", roundingMode: "floor" });

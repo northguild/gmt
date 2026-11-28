@@ -9,7 +9,7 @@
  * presets, the grouping of runs that share an instant, the join of the two next-run
  * lists, and tick and mark positions, which are drawing and use the polyfill.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import type {
   CronLib,
   CronLibExpression,

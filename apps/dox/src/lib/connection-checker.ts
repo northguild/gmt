@@ -9,10 +9,10 @@
  * nothing moves the zone's offset between the two ends and disagrees when a
  * DST transition or a zone change does.
  *
- * No DOM and no gmt import: `TransportLib` comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): `TransportLib` comes in from the mount.
  */
 
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import {
   departureAt,
   diagnose,

@@ -27,7 +27,7 @@ Leave finished work **unstaged**. Never stage, commit, branch, push or open a PR
 
 ## Core Rules (Quick Reference)
 
-1. **No `Date` object.** `@js-temporal/polyfill` only, imported through `packages/gmt/src/internal/temporal.ts`.
+1. **No `Date` object.** `temporal-polyfill` (`/full/implementation`) only, imported through `packages/gmt/src/internal/temporal.ts`.
 2. **String-in, string-out.** Never return Temporal objects.
 3. **Invalid input returns a sentinel, never throws.** Table: [API Contract](./context/coding-standards/api-contract.md#api-contract).
 4. **Wrap every Temporal call in `try-catch`.** One exception: [the UTC clock readers](./context/coding-standards/api-contract.md#scoped-exception-the-utc-clock-readers).

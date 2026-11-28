@@ -4,15 +4,15 @@
  * recorded.
  *
  * Every pick, drift, revision count and `exceedsTolerance` comes from a real
- * `PunctualityLib` call. `@js-temporal/polyfill` is used only through
+ * `PunctualityLib` call. `Temporal` (from `@northguild/gmt`) is used only through
  * `punctuality-widgets.ts` for drawing (instants, tick positions). The tool's
  * one naive value is the latest-recorded event of any class, ties to the later
  * index (`naivePick`).
  *
- * No DOM and no gmt import: the library comes in from the mount.
+ * No DOM and no gmt function import (only `Temporal`): the library comes in from the mount.
  */
 
-import type { Temporal } from "@js-temporal/polyfill";
+import type { Temporal } from "@northguild/gmt";
 import {
   epochMs,
   isoToMinutes,

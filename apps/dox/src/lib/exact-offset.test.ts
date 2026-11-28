@@ -2,7 +2,7 @@
  * `exactOffsetText` against the real library: every string it writes must read
  * back, through gmt's instant reader, as the instant it was given.
  */
-import { Temporal } from "@js-temporal/polyfill";
+import { Temporal } from "@northguild/gmt";
 import { toOffsetInstant } from "@northguild/gmt/instant/convert";
 import {
   exactOffsetText,

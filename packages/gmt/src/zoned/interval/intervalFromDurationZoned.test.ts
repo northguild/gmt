@@ -237,7 +237,7 @@ describe("intervalFromDurationZoned", () => {
 
 // ---------------------------------------------------------------------------------------------
 // E7 (issue #152). Single calendar-tagged input, so no D5 pair policy applies — but the R1
-// rebuild fix does. Every expected value produced by running @js-temporal/polyfill@0.5.1.
+// rebuild fix does. Every expected value produced by running temporal-polyfill 1.0.8.
 // ---------------------------------------------------------------------------------------------
 describe("intervalFromDurationZoned with GMT calendar-annotated values", () => {
   const H = calendarZonedFixtures.hebrewLeapMonth;
@@ -319,14 +319,14 @@ describe("intervalFromDurationZoned at the maximum instant", () => {
   );
 });
 
-// CORE-6 S5: the calendar part of the span follows NonISODateAdd. Values: Chromium 153 native
+// S5: the calendar part of the span follows NonISODateAdd. Values: Chromium 153 native
 // `start.add(duration)` / `end.subtract(duration)` in the calendar.
 describe("intervalFromDurationZoned in non-ISO calendars (CORE-6)", () => {
   it.each`
     value                                                      | duration | anchor     | expected                                                                                                                            | reason
     ${"1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]"}         | ${"P1M"} | ${"start"} | ${{ start: "1000-01-31T00:00:00+00:00[UTC][u-ca=buddhist]", end: "1000-02-28T00:00:00+00:00[UTC][u-ca=buddhist]" }}                 | ${"proleptic buddhist: ISO 1000 has no Feb 29"}
     ${"+275760-08-14T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]"} | ${"P1M"} | ${"start"} | ${{ start: "+275760-08-14T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]", end: "+275760-09-12T00:00:00-12:00[Etc/GMT+12][u-ca=hebrew]" }} | ${"hebrew near the maximum"}
-    ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"} | ${"P1Y"} | ${"end"}   | ${{ start: "-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]", end: "-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]" }} | ${"D1 near the minimum"}
+    ${"-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]"} | ${"P1Y"} | ${"end"}   | ${{ start: "-271821-06-03T12:00:00+00:00[UTC][u-ca=islamic-civil]", end: "-271820-05-23T12:00:00+00:00[UTC][u-ca=islamic-civil]" }} | ${"range limit near the minimum"}
   `(
     "builds $expected from $value, $duration and anchor $anchor ($reason)",
     ({ value, duration, anchor, expected }) => {

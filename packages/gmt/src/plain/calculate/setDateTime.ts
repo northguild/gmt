@@ -1,4 +1,4 @@
-import type { Temporal } from "../../internal/temporal";
+import type { PlainDateTimeFields } from "../../internal/temporalTypes";
 import { resolveOverflow } from "../../internal/resolveOverflow";
 import { withDateTimeFields } from "../../internal/readSetFields";
 import type { Overflow } from "../../types";
@@ -41,7 +41,7 @@ import { isOptionsArgument } from "../../internal/isObject";
  */
 export function setDateTime(
   value: string,
-  fields: Omit<Temporal.PlainDateTimeLike, "calendar" | "era" | "eraYear">,
+  fields: PlainDateTimeFields,
   options?: {
     /**
      * What to do when the fields do not form a real date-time. `"constrain"` clamps each field to

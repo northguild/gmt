@@ -49,3 +49,31 @@ describe("getUtcYear with the clock outside years 0000 to 9999", () => {
     expect(isValidDate(`${year}-06-15`)).toBe(true);
   });
 });
+
+// 1960-01-01T00:00:00Z is -315619200000 ms and 2027-01-01T00:00:00Z is 1798761600000 ms. The clock
+// is set to 1960 first, and the year is read twice, so a second reading after a clock before 1970
+// is the year the clock was set to (TC39 Temporal SystemUTCEpochMilliseconds floors the system
+// time; test262 built-ins/Temporal/Now/instant/return-value-value.js).
+describe("getUtcYear after the clock was set before 1970", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns 1960 for two readings at 1960-01-01T00:00:00Z", () => {
+    vi.setSystemTime("1960-01-01T00:00:00Z");
+    getUtcYear();
+    expect(getUtcYear()).toBe("1960");
+  });
+
+  it("returns 2027 at 2027-01-01T00:00:00Z read after a 1960 clock", () => {
+    vi.setSystemTime("1960-01-01T00:00:00Z");
+    getUtcYear();
+    getUtcYear();
+    vi.setSystemTime("2027-01-01T00:00:00Z");
+    expect(getUtcYear()).toBe("2027");
+  });
+});

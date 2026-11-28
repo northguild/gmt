@@ -1,5 +1,7 @@
 # `@js-temporal/polyfill` — upstream defects GMT works around
 
+> **GMT no longer runs on `@js-temporal/polyfill`.** It runs on `temporal-polyfill` 1.0.8 (CORE-108). This file stays as the record of the 0.5.1 defects and of every filing; each item describes the old package unless it says otherwise.
+
 One section per defect GMT needs fixed upstream (in `js-temporal/temporal-polyfill`, `tc39/proposal-temporal`, or an
 engine or ICU/CLDR where noted). Each section keeps the defect, a minimal repro, GMT's workaround, the upstream
 links, and what retires the workaround. Code comments link to these section letters (`§ C`), so the letters and

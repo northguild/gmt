@@ -20,23 +20,9 @@ import snapshot from "./temporal-compat.json";
 export const COMPAT_STATES = [
   "still-needed",
   "removable",
-  "guard",
   "out-of-scope",
 ] as const;
 export type CompatState = (typeof COMPAT_STATES)[number];
-
-/**
- * Why a group whose probes all pass is still kept, and until which release of which package.
- * Written by `workaroundState` in `pnpm compat:snapshot`, from the guard the script declares.
- */
-export interface CompatGuard {
-  /** The package whose version decides the guard. */
-  package: string;
-  /** The last version on which the passing probes prove nothing. */
-  through: string;
-  /** Plain-English reason the probes pass without proving the defect is gone. Shown on the page as written. */
-  reason: string;
-}
 
 export interface CompatGroup {
   /** The canary ids this group covers, e.g. `["D3", "D4"]`. */
@@ -59,18 +45,12 @@ export interface CompatGroup {
    * rather than `removable`: its probes pass there because the defect does not show there.
    */
   engines?: readonly string[];
-  /**
-   * Present when the group declares a guard, from `workaroundState` in `pnpm compat:snapshot`.
-   * With `state: "removable"` the guard has lapsed and the page shows no reason.
-   */
-  guard?: CompatGuard;
 }
 
 type SnapshotRow = (typeof snapshot.groups)[number];
 
 /**
- * A JSON import types `state` as `string`, so each row is narrowed here, and a guarded row must say
- * why. Only the script writes the file and `snapshot --check` guards it, so a throw can fire only
+ * A JSON import types `state` as `string`, so each row is narrowed here. Only the script writes the file and `snapshot --check` guards it, so a throw can fire only
  * on a hand-edited copy; it fails the build rather than rendering a wrong or empty column. The
  * row's values pass through unchanged: nothing is computed or corrected here.
  */
@@ -81,19 +61,6 @@ export const toCompatGroup = (row: SnapshotRow): CompatGroup => {
     throw new Error(
       `temporal-compat.json: group ${label} has unknown state "${row.state}" — run pnpm compat:snapshot`,
     );
-  }
-  if (state === "guard") {
-    const { guard } = row;
-    if (
-      guard === undefined ||
-      !guard.package ||
-      !guard.through ||
-      !guard.reason
-    ) {
-      throw new Error(
-        `temporal-compat.json: group ${label} has state "guard" but no complete guard (package, through, reason) — run pnpm compat:snapshot`,
-      );
-    }
   }
   if (
     state === "out-of-scope" &&
@@ -139,11 +106,6 @@ export const stateLine = (g: CompatGroup): { badge: string; count: string } => {
       };
     case "removable":
       return { badge: "No", count: `${g.probes} of ${g.probes} checks pass` };
-    case "guard":
-      return {
-        badge: "Kept on purpose",
-        count: `${g.probes} of ${g.probes} checks pass`,
-      };
     case "out-of-scope":
       return {
         badge: `✓ Yes, on ${(g.engines ?? []).map(engineLabel).join(" and ")}`,
@@ -171,49 +133,6 @@ const KNOWN_REPOS: Readonly<Record<string, string>> = {
  */
 export const shortRef = (repo: string, number: number): string =>
   `${KNOWN_REPOS[repo] ?? repo} #${number}`;
-
-/** A run of plain text in a guard reason, or a reference the page prints as a link. */
-export type ReasonPart = { text: string } | { text: string; href: string };
-
-const escapeRegExp = (text: string): string =>
-  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/**
- * A guard reason split for the page. Each `owner/repo#n` becomes a short link, so the narrow
- * state column never has to break a 27-character token mid-word. The snapshot, the Markdown twin
- * and the canary issue keep the full reference.
- *
- * A reference links only when its repository is one the site knows (`repos`, by default the two
- * repositories `shortRef` names). Syntax alone cannot tell `tc39/proposal-temporal#3292` from
- * `and/or#1`: both are a legal owner and repository, and a link to a repository nobody chose to
- * track is a wrong guess presented as a fact. A name that is not listed stays text. The match
- * must also start at a boundary, not after a word, `.`, `/`, `:` or `-` character, so a number
- * anchor on a URL (`…/issues/3292#3`) or a longer name (`x-owner/repo#1`) is never read as a
- * reference, and it must end at the digits, so `#3abc` is not one either.
- */
-export const reasonParts = (
-  reason: string,
-  repos: readonly string[] = Object.keys(KNOWN_REPOS),
-): readonly ReasonPart[] => {
-  if (repos.length === 0) return reason ? [{ text: reason }] : [];
-  const ref = new RegExp(
-    `(?<![\\w.:/-])(${repos.map(escapeRegExp).join("|")})#(\\d+)(?!\\w)`,
-    "g",
-  );
-  const parts: ReasonPart[] = [];
-  let last = 0;
-  for (const m of reason.matchAll(ref)) {
-    const [whole, repo, number] = m;
-    if (m.index > last) parts.push({ text: reason.slice(last, m.index) });
-    parts.push({
-      text: shortRef(repo, Number(number)),
-      href: `https://github.com/${repo}/issues/${number}`,
-    });
-    last = m.index + whole.length;
-  }
-  if (last < reason.length) parts.push({ text: reason.slice(last) });
-  return parts;
-};
 
 /** Every probe across every group, and how many still fail. */
 export const probeTotals: { probes: number; failing: number } =
@@ -246,25 +165,10 @@ export const groupSummary = (g: CompatGroup): string => {
  * otherwise silently fall back to the maintainer wording.
  */
 const WHAT_BREAKS: Readonly<Record<string, string>> = {
-  D1: "Dates within about a year of the earliest or latest date Temporal can represent, in the non-ISO calendars",
-  D2: "Buddhist calendar dates before 1582, read through an old Julian/Gregorian switch",
-  "D3 + D4": "Hebrew calendar years at or before year 0",
-  D5: "Indian national calendar dates before ISO year 1",
-  D6: "Counting months between two dates in a non-ISO calendar, at the end of a month",
-  D7: "Counting years from a leap-month date in the Hebrew calendar",
-  D8: "Japanese era codes, and the date the Meiji era starts",
-  D9: "Adding or counting very large numbers of months in a non-ISO calendar",
-  D10: "Coptic and Ethiopic dates in far years, where a short thirteenth month can be skipped",
-  D11: "Rounding or measuring a span in months from the 29th, 30th or 31st",
-  D12: "Zoned strings whose offset is written with seconds, in a zone whose offset was not a whole number of minutes",
-  D13: "Finding a zone's clock changes, and the start or length of a day, where two changes fall less than 14 days apart",
-  D14: "Rounding a zoned time to the day on a date that starts twice, because the clocks went back across midnight",
-  D15: "Zoned strings that end in Z, read with the offset option set to ignore, where the time was taken as local clock time rather than UTC",
+  D9: "Adding a very large number of months in a non-ISO calendar, where the polyfill takes a long time to refuse an amount that is out of range",
   D16: "Time ranges that name the time zone in a long or offset form, such as Eastern Standard Time or GMT-5, which Chrome, Node and Safari cut to a short name or drop",
   D17: "Time ranges that show a flexible day period and a time zone, such as 10 in the morning GMT-5, which Firefox writes as 10 AM",
-  D18: "Islamic calendar dates before the Hijra (622 CE), which Safari reads as positive years in a second era, so a count of months across them never finished",
   D19: "Two names for one zone, such as UTC and Etc/UTC or Asia/Kolkata and Asia/Calcutta, which the polyfill treats as different zones in Safari and WebKit",
-  D21: "The current time when a test fakes a clock before 1970, which the polyfill reads one millisecond early, so a clock function can return the previous year, day or second at a boundary",
   D22: "A length in days or larger measured from a repeated hour, which the polyfill can measure from the wrong pass or refuse, so it can be an hour too long or missing. Where the specification has no value, which also happens after a skipped hour, GMT returns its sentinel",
   D23: "Some languages and calendars, among them Scottish Gaelic, Galician, Burmese and Telugu, whose date patterns use the week-of-year year: asking Node or Chrome for the parts of such a date, or of a range, stopped the process with no error to catch",
   D24: "Dates in the same languages near the start or end of a year, which every browser prints with the year the week belongs to rather than the calendar year, and with some calendars, such as Buddhist in Telugu, on every day of the year",
@@ -278,14 +182,7 @@ const WHAT_BREAKS: Readonly<Record<string, string>> = {
   D32: "Islamic calendar dates on the first day of the year 1 AH (ISO 0622-07-19, and 0622-07-18 for islamic-tbla), which Safari prints for its first hours as the year 0 Before Hijra, and, west of UTC, the last hours of the day before as AH. GMT prints year 1 AH for the whole day",
   D33: "Chinese and Korean (Dangi) calendar dates on a runtime that prints them differently from the Purple Mountain Observatory (Chinese) or KASI (Dangi) date, such as Node and Chrome, which put the Chinese New Year 2027 on 7 February where the observatory has 6 February. GMT has no calendar data of its own, so on such a runtime a Chinese or Dangi date format returns its empty value. A runtime that prints the observatory date keeps its own text",
   D34: "Coptic calendar dates on the first day of the year 1 AM (ISO 284-08-29), which Safari prints for its first hours with the long era name Anno Martyrum, and ranges across that day, which Safari prints with the era twice. GMT prints AM for the whole day",
-  "zoned.A":
-    "Zoned times within a day of the earliest or latest instant Temporal supports",
-  "zoned.B":
-    "Finding the next time zone transition within about two months of the latest instant",
-  "zoned.D":
-    "A calculation in UTC near the range limit that should be rejected, but quietly returned a value",
-  "zoned.E":
-    "Time zone transitions before 1847, including the 1844 date-line move in Asia/Manila and four Pacific zones",
+  D35: "Comparing two durations from a plain date, where a day or hour amount would reach a date past the supported range, which the polyfill refuses, so the answer was missing. Only the years, months and weeks move the date, so GMT answers",
 };
 
 /** The plain-language line for a group, falling back to the canary's own wording. */

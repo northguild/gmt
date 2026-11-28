@@ -276,6 +276,20 @@ describe("affected: which checks a change runs", () => {
       ],
     },
     {
+      name: "the bundle-size helpers run the bundle-size checks, not every check",
+      changes: [{ path: "scripts/lib/bundle-size.mjs", status: "M" }],
+      checks: [
+        "format",
+        "bundle-size",
+        "build:gmt-oxlint",
+        "build:gmt",
+        "build:dox",
+        "dox-dist",
+        "typecheck:dox",
+        "test:dox",
+      ],
+    },
+    {
       name: "a Windows path matches like a POSIX one",
       changes: ["context\\domination\\tracker.md"],
       checks: ["deps"],

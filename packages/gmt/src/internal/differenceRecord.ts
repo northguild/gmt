@@ -19,7 +19,7 @@ export type DurationField = (typeof DURATION_FIELDS)[number];
 
 /** How one Temporal type moves by a duration and measures the difference to another value. */
 export interface DifferenceOperations<T> {
-  add: (from: T, duration: Temporal.DurationLike) => T;
+  add: (from: T, duration: Temporal.DurationLikeObject) => T;
   until: (from: T, to: T, largestUnit: DurationField) => Temporal.Duration;
 }
 
