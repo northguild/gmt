@@ -8,9 +8,9 @@ The one rule; other docs link here.
 | -------------------------------------------------------------- | ------------------------------------------------------ |
 | Bug fix, including a behaviour correction to shipped API       | `patch`                                                |
 | Speed or size gain; no output, option or signature change      | `patch`                                                |
-| Anything else: refactor, docs, tests, CI, agent config, Dox, canary | empty                                                  |
 | New public API (function, option, namespace)                   | `minor`                                                |
 | Breaking change (removed option, changed output or signature)  | `minor`, with a **Breaking changes** migration section |
+| Anything else: refactor, docs, tests, CI, agents, Dox          | empty                                                  |
 
 `major` is never used. GMT's users are internal, so a breaking change ships in the next minor
 release (owner decision, 2026-09-17). Fix to the standard: no compatibility shim, no deprecation

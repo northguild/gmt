@@ -74,7 +74,7 @@ The changeset file(s) in `.changeset/` by name and their bump level (`patch`, `m
 - [ ] Each "What Changed" section has a corresponding entry
 - [ ] Type-check passed
 - [ ] No secrets committed
-- [ ] Changeset present with the correct bump (empty for no behaviour change under `packages/`; none for a change outside it)
+- [ ] Changeset present with the correct bump (empty when nothing is released, a change outside `packages/` included)
 
 ---
 
