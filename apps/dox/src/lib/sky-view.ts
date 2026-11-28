@@ -12,7 +12,8 @@
  * place. A body that is not a planet says what it is, dim beside its name (`groupTag`:
  * "Asteroid"). A point's row carries a dim second line (visible, so touch and screen readers get
  * it) with the reason or the date, from `sky-events.ts`; the data it reads is asked for when the
- * button of the bar is reached (`askEvents`).
+ * button of the bar is reached (`askEvents`). The bar's rows are one roving list (`roving`): opening
+ * the bar focuses the held body, or the first, and the arrow keys, Home and End move between the rows.
  *
  * Time is the sky's own `now`; the view keeps no timer. It checks the body on the globe's frames
  * (the engine renders one a second at rest), at most once a second of `now`.
@@ -24,6 +25,7 @@ import {
   wireDisclosure,
   type SafeHtml,
 } from "~/widgets/builders";
+import { roving } from "~/widgets/primitives/roving";
 import styles from "~/widgets/tools/sky-look.module.css";
 import { hopDuration } from "./globe/controller";
 import {
@@ -151,6 +153,8 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
       if (!open) return;
       syncPoints();
       reach();
+      /* Into the bar, as a menu button opens: the arrow keys work on its rows at once. */
+      stop?.current()?.focus({ preventScroll: true });
     },
   });
   control.addEventListener(
@@ -164,6 +168,8 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
     },
     { signal },
   );
+  const bar = control.querySelector<HTMLElement>('[data-gate="sky-look-bar"]');
+  const stop = bar ? roving(bar, { items: () => buttons, signal }) : null;
 
   /** Marks the points that cannot be looked at now, and writes each one's second line. */
   function syncPoints(): void {
@@ -208,6 +214,9 @@ export function mountSkyView(options: SkyViewOptions): SkyView {
         "aria-pressed",
         String(button.dataset["skyBody"] === active),
       );
+    /* The held body is the bar's tab stop, so Tab comes back to it. */
+    const held = buttons.find((b) => b.dataset["skyBody"] === active);
+    if (held) stop?.set(held);
     holdBody(active);
     if (active) host.dataset["skyView"] = active;
     else delete host.dataset["skyView"];

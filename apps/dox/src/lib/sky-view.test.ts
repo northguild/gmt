@@ -337,6 +337,31 @@ describe("mountSkyView", () => {
     expect(fake.flights).toHaveLength(2);
   });
 
+  it("opens onto its first row, and moves between the rows with the arrow keys, Home and End, wrapping", async () => {
+    mount();
+    const who = user();
+    await who.click(lookButton());
+    expect(bodyButton("Sun")).toHaveFocus();
+    await who.keyboard("{ArrowDown}");
+    expect(bodyButton("Moon")).toHaveFocus();
+    await who.keyboard("{ArrowUp}{ArrowUp}");
+    expect(bodyButton("Apophis")).toHaveFocus();
+    await who.keyboard("{Home}");
+    expect(bodyButton("Sun")).toHaveFocus();
+    expect(bodyButton("Sun")).toHaveAttribute("tabindex", "0");
+    expect(bodyButton("Moon")).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("makes the held body the bar's one tab stop, and opens onto it", async () => {
+    mount();
+    const who = user();
+    await choose(who, "Moon");
+    expect(bodyButton("Moon")).toHaveAttribute("tabindex", "0");
+    expect(bodyButton("Sun")).toHaveAttribute("tabindex", "-1");
+    await who.click(lookButton());
+    expect(bodyButton("Moon")).toHaveFocus();
+  });
+
   it("releases when the held body is chosen again, without a camera call", async () => {
     const fake = mount();
     const who = user();
