@@ -10,7 +10,7 @@ its sky, is a `DOX-*` row here. `/plan-story` writes a `DOX-G*` story as a spec 
 [specs/](specs/), by `dox-architect` or `architect`, with no tool shortlist; `/pipeline` says who
 builds it.
 
-`apps/dox` is private, so no changesets unless a change also touches `packages/gmt`.
+`apps/dox` is private, so a Dox-only change carries an empty changeset (no bump); one that also touches `packages/gmt` bumps per the [rule](../coding-standards/changesets.md#changesets).
 
 | Order | Story                                       | Blocked by | GitHub Issue | Status |
 | ----- | ------------------------------------------- | ---------- | ------------ | ------ |
@@ -50,6 +50,7 @@ builds it.
 | 34    | DOX-G15                                     | —          | #569         | Done   |
 | 35    | DOX-G16                                     | —          | #578         | Done   |
 | 36    | DOX-G17                                     | —          | #559         | Done   |
+| 37    | DOX-G18                                     | —          | #583         | Done   |
 
 Owed verification, not work:
 

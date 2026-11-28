@@ -29,7 +29,7 @@ A federal bill to keep the United States on daylight time all year has passed on
 
 ## Phase 1 (shipped)
 
-Phase 1 needs no law and no tz release. It adds a Dox page, not a library function, and no changeset.
+Phase 1 needs no law and no tz release. It adds a Dox page, not a library function, and an empty changeset.
 
 - **The Sunshine Protection Act page** at `/check/us-sunshine-protection-act/`: a map with a Today
   view (every US zone as the tz database models it) and a Proposals view (each state's adopted

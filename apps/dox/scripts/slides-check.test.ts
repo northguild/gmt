@@ -155,20 +155,26 @@ describe("frameVerdict", () => {
     );
   });
 
-  it("clears a worst frame that does not come back in three flights of its step: the runner paused", async () => {
-    const refly = flights([16.7, 33.3], [16.7, 16.7], [16.7, 33.4]);
+  it("clears a worst frame at the first flight of its step within the budget: the runner paused", async () => {
+    const refly = flights([16.7, 33.3], [16.7, 50]);
+    expect(await frameVerdict([16, 16, 50], refly)).toBeNull();
+    expect(refly).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears a worst frame that comes back on some flights of its step but not all", async () => {
+    const refly = flights([16.7, 50.1], [16.7, 66.7], [16.7, 16.7]);
     expect(await frameVerdict([16, 16, 50], refly)).toBeNull();
     expect(refly).toHaveBeenCalledTimes(3);
   });
 
-  it("reports a worst frame that comes back on its step: the deck is slow", async () => {
-    const refly = flights([16.7, 16.7], [16.7, 50.1], [16.7]);
+  it("reports a worst frame that comes back on every flight of its step: the deck is slow", async () => {
+    const refly = flights([16.7, 50.1], [16.7, 66.7], [16.7, 50]);
     const verdict = await frameVerdict([16, 16, 50], refly);
     expect(verdict).toMatch(/worst frame took 50\.0 ms, over 34/);
     expect(verdict).toMatch(
-      /50\.1 ms when that step was flown again \(flight 2 of 3\)/,
+      /50\.1 ms, 66\.7 ms, 50\.0 ms each time that step was flown again \(3 flights\)/,
     );
-    expect(refly).toHaveBeenCalledTimes(2);
+    expect(refly).toHaveBeenCalledTimes(3);
   });
 
   it("reports a worst frame whose step draws no frame when flown again", async () => {

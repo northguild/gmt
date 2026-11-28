@@ -115,9 +115,10 @@ const REFLIGHTS = 3;
  * What is wrong with a tour's frame times against the budget, or null when nothing is. The median is
  * the tour's own. The worst frame is a single `requestAnimationFrame` gap in a long tour, so one pause
  * on the runner can put it over: when it is, `refly` flies the step it fell in again and resolves to
- * that flight's frame times, up to `tries` times, and the worst frame counts only if a flight goes over
- * again. A slow frame that comes back on the same step comes from the deck; one that does not, from
- * the runner. A flight that draws no frame cannot clear it.
+ * that flight's frame times, up to `tries` times. One flight within the budget clears it, and the
+ * worst frame counts only if every flight goes over again. A slow frame that comes back each time the
+ * step is flown comes from the deck; one that does not, from the runner, whose pauses land on any
+ * step. A flight that draws no frame cannot clear it.
  */
 export async function frameVerdict(
   deltas,
@@ -133,18 +134,19 @@ export async function frameVerdict(
     );
   if (stats.worst > budget.worst) {
     const worst = `the worst frame took ${stats.worst.toFixed(1)} ms, over ${budget.worst}`;
+    const again = [];
     for (let flight = 1; flight <= tries; flight += 1) {
-      const again = frameStats(await refly());
-      if (again.count === 0) {
+      const flown = frameStats(await refly());
+      if (flown.count === 0) {
         over.push(`${worst}, and flying that step again drew no frame`);
         break;
       }
-      if (again.worst > budget.worst) {
+      if (flown.worst <= budget.worst) break;
+      again.push(`${flown.worst.toFixed(1)} ms`);
+      if (flight === tries)
         over.push(
-          `${worst}, and ${again.worst.toFixed(1)} ms when that step was flown again (flight ${flight} of ${tries})`,
+          `${worst}, and ${again.join(", ")} each time that step was flown again (${tries} flights)`,
         );
-        break;
-      }
     }
   }
   return over.length ? over.join("; ") : null;

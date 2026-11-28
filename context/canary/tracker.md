@@ -7,8 +7,8 @@ and `/implement` take a `CNRY-*` ID like any other.
 The four canary stories built before this epic keep their `CORE-*` IDs, and their rows stay in
 [../domination/tracker.md](../domination/tracker.md) as well. A story ID never changes.
 
-`CNRY-*` work ships nothing in `packages/gmt`, so it carries no changeset unless it also changes
-the package.
+`CNRY-*` work ships nothing in `packages/gmt`, so it carries an empty changeset (no bump) unless it
+also changes the package.
 
 | Order | Story    | Title                                                                           | Blocked by | GitHub Issue | Status |
 | ----- | -------- | ------------------------------------------------------------------------------- | ---------- | ------------ | ------ |

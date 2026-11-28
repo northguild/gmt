@@ -34,13 +34,13 @@ and [§ Git — Only on an Explicit Instruction](../../../AGENTS.md#git--only-on
 | **A. Story** | A tracker story: realm (`MAR-*`, `CORE-*`, …) or `DOX-*` | [`/plan-story`](../plan-story/SKILL.md) in its own session, then the gate, then `tdd-dev` → (`tester`) → `gmt-reviewer` → (`dox-builder` → `dox-tester`) → `finalizer` | per rule |
 | **B. Bug fix** | Incorrect behaviour or a failing test | (`researcher`) → `tdd-dev` → `tester` → `gmt-reviewer` → `finalizer` | `patch` |
 | **C. Refactor** | Internals only, no behaviour change | `tdd-dev` → `tester` → `finalizer` (commit message only) | empty |
-| **D. Documentation** | Docs, READMEs, JSDoc | `finalizer` (documentation steps only) | empty if `packages/` changed |
+| **D. Documentation** | Docs, READMEs, JSDoc | `finalizer` (documentation steps only) | empty |
 | **E. Research** | Temporal behaviour, design options | `researcher` only; do not implement unless asked | — |
 | **F. Code review** | Review code or a diff | `gmt-reviewer` ([checklist](../../../context/code-review-checklist.md) first) | — |
 | **G. Owner's spec, no story** | The owner hands over a complete spec for work with no tracker row | `tdd-dev` → `gmt-reviewer` → `finalizer` | per rule |
 | **H. Dox fix, no story** | A change in `apps/dox` with no story id | `dox-architect` → `dox-builder` → `dox-tester` | per rule |
 
-Changeset levels follow the one [changeset rule](../../../context/coding-standards/changesets.md#changesets).
+Changeset levels follow the one [changeset rule](../../../context/coding-standards/changesets.md#changesets). Every PR carries one; "empty" is still a file.
 
 **The plan gate runs for category A only** — exactly when the work is a tracker story. Every
 story is planned with `/plan-story`, however small: a small story gets a small spec (an index

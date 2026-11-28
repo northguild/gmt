@@ -19,6 +19,7 @@ import rehypeTableScroll from "./src/lib/rehype-table-scroll.ts";
 import { copyRedirects } from "./src/lib/copy-redirects.ts";
 import { sitemapLastmod } from "./src/lib/sitemap-lastmod.ts";
 import { versionOgImages } from "./src/lib/og-image-version.ts";
+import { pageShellGroup, recordClientChunks } from "./src/lib/page-shell.ts";
 import { pruneWidgetCss } from "./src/lib/prune-widget-css.ts";
 import { preloadLandingScripts } from "./src/lib/preload-landing-scripts.ts";
 import { gmtReferenceWatch } from "./src/lib/gmt-reference-watch.ts";
@@ -90,7 +91,8 @@ export default defineConfig({
       // DOX_WORKER_PORT). Why the key is not `/gmt/api`: src/lib/dev-worker-proxy.ts.
       proxy: devWorkerProxy(process.env.DOX_WORKER_PORT),
     },
-    plugins: [tailwindcss()],
+    // The recorder writes the client chunk graph that scripts/page-shell-built.test.ts reads.
+    plugins: [tailwindcss(), recordClientChunks()],
     css: {
       // Component kit (src/widgets): one CSS Module per component. Names are
       // readable and stable (`gmt-range__thumb`), so html-diff stays legible and
@@ -134,6 +136,17 @@ export default defineConfig({
     resolve: {
       alias: {
         "@northguild/gmt": gmtPkg,
+      },
+    },
+    environments: {
+      // The client environment only: on `vite.build` Astro spreads the group into the ssr and
+      // prerender builds too, and a merge there breaks static route generation.
+      client: {
+        build: {
+          rolldownOptions: {
+            output: { codeSplitting: { groups: [pageShellGroup()] } },
+          },
+        },
       },
     },
   },

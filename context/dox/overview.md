@@ -54,4 +54,4 @@ code, tables and plotted widget values stay high-contrast and plain. Spec:
 ## Tracking
 
 Statuses and issue numbers are in [tracker.md](tracker.md); what each tier ships is in
-[built/](built/index.md). `apps/dox` is private, so no changesets unless a change also touches `packages/gmt`.
+[built/](built/index.md). `apps/dox` is private, so a Dox-only change carries an empty changeset (no bump); one that also touches `packages/gmt` bumps per the [rule](../coding-standards/changesets.md#changesets).
