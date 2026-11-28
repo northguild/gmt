@@ -1,5 +1,5 @@
 {
-  "checked": "2026-11-20T13:12:44.336358876Z",
+  "checked": "2026-11-28T06:47:46.872462451Z",
   "filings": [
     {
       "tracker": "github",
@@ -515,10 +515,10 @@
       "state": "open",
       "draft": false,
       "reviewDecision": null,
-      "comments": 0,
-      "maintainerComments": 0,
+      "comments": 1,
+      "maintainerComments": 1,
       "createdAt": "2026-11-19",
-      "updatedAt": "2026-11-19",
+      "updatedAt": "2026-11-20",
       "closedAt": null,
       "mergedAt": null
     },
@@ -688,14 +688,15 @@
       "dependsOn": [],
       "gmtGuard": null,
       "gmtNote": "GMT runs on `@js-temporal/polyfill`, which gets these Persian years right, so this can't affect GMT. GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
-      "state": "open",
+      "outcome": "Closed as fixed by fullcalendar/temporal-polyfill#131, merged on 2026-11-26.",
+      "state": "closed",
       "draft": false,
       "reviewDecision": null,
       "comments": 2,
       "maintainerComments": 0,
       "createdAt": "2026-11-06",
-      "updatedAt": "2026-11-13",
-      "closedAt": null,
+      "updatedAt": "2026-11-26",
+      "closedAt": "2026-11-26",
       "mergedAt": null
     },
     {
@@ -736,15 +737,15 @@
       "dependsOn": [],
       "gmtGuard": null,
       "gmtNote": "GMT runs on `@js-temporal/polyfill`, which gets these Persian years right, so this can't affect GMT. GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
-      "state": "open",
+      "state": "closed",
       "draft": false,
       "reviewDecision": null,
       "comments": 0,
       "maintainerComments": 0,
       "createdAt": "2026-11-13",
-      "updatedAt": "2026-11-13",
-      "closedAt": null,
-      "mergedAt": null
+      "updatedAt": "2026-11-26",
+      "closedAt": "2026-11-26",
+      "mergedAt": "2026-11-26"
     },
     {
       "tracker": "github",
@@ -760,14 +761,15 @@
       "dependsOn": [],
       "gmtGuard": null,
       "gmtNote": "GMT runs on `@js-temporal/polyfill`, whose 0.5.1 release throws on Chinese and Dangi dates under ICU 78 instead (js-temporal/temporal-polyfill#360, fixed on its `main` and not yet released). GMT's weekly swap check compares each calendar's years with native Temporal on every new `temporal-polyfill` release.",
-      "state": "open",
+      "outcome": "Closed by us: the maintainer merged its `until` and `since` fix on its own (51b9c1e8), and keeps `chinese` and `dangi` on the host's `Intl` on purpose, so the calendar change will not land.",
+      "state": "closed",
       "draft": false,
       "reviewDecision": null,
-      "comments": 0,
+      "comments": 1,
       "maintainerComments": 0,
       "createdAt": "2026-11-13",
-      "updatedAt": "2026-11-13",
-      "closedAt": null,
+      "updatedAt": "2026-11-28",
+      "closedAt": "2026-11-28",
       "mergedAt": null
     },
     {
@@ -789,10 +791,10 @@
       "state": "open",
       "draft": false,
       "reviewDecision": null,
-      "comments": 2,
-      "maintainerComments": 1,
+      "comments": 3,
+      "maintainerComments": 2,
       "createdAt": "2026-11-16",
-      "updatedAt": "2026-11-18",
+      "updatedAt": "2026-11-25",
       "closedAt": null,
       "mergedAt": null
     },
@@ -964,7 +966,7 @@
       "tracker": "jira",
       "key": "CLDR-19917",
       "work": "report",
-      "title": "Bangladesh (BD) weekend should be Friday–Saturday\n",
+      "title": "Bangladesh (BD) weekend should be Friday–Saturday",
       "url": "https://unicode-org.atlassian.net/browse/CLDR-19917",
       "summary": "CLDR gives Bangladesh no weekend entry, so it falls back to Saturday and Sunday, where the weekly holiday is Friday and Saturday.",
       "pairsWith": [],
@@ -1306,10 +1308,10 @@
       "state": "open",
       "status": "NEW",
       "resolution": null,
-      "comments": 1,
-      "maintainerComments": 1,
+      "comments": 2,
+      "maintainerComments": 2,
       "createdAt": "2026-11-15",
-      "updatedAt": "2026-11-16",
+      "updatedAt": "2026-11-22",
       "closedAt": null
     },
     {
@@ -1328,10 +1330,10 @@
       "state": "open",
       "status": "NEW",
       "resolution": null,
-      "comments": 1,
-      "maintainerComments": 0,
+      "comments": 2,
+      "maintainerComments": 1,
       "createdAt": "2026-11-15",
-      "updatedAt": "2026-11-15",
+      "updatedAt": "2026-11-22",
       "closedAt": null
     },
     {
@@ -1350,10 +1352,10 @@
       "state": "open",
       "status": "NEW",
       "resolution": null,
-      "comments": 1,
-      "maintainerComments": 0,
+      "comments": 2,
+      "maintainerComments": 1,
       "createdAt": "2026-11-15",
-      "updatedAt": "2026-11-15",
+      "updatedAt": "2026-11-22",
       "closedAt": null
     },
     {
@@ -1394,7 +1396,7 @@
       "comments": 0,
       "maintainerComments": 0,
       "createdAt": "2026-11-07",
-      "updatedAt": "2026-11-07",
+      "updatedAt": "2026-11-27",
       "closedAt": null,
       "mergedAt": null
     },
