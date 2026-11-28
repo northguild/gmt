@@ -18,6 +18,10 @@ Rules, traps and runbooks for the site shell. Index: [index.md](index.md).
   allow-list that includes `apps/**`.
 - pnpm runs `pre`/`post` scripts, but steps that must stay together are still chained with `&&`.
 
+## Page shell chunk
+
+Scripts on every page ship as one `page-shell` chunk: `PAGE_SHELL_SCRIPTS` (`src/lib/page-shell.ts`) names them, the group lives on the client environment only, and `page-shell-built.test.ts` fails when the list and the every-page scripts differ. Reason: one request in place of many small ones, with no page loading code it did not load before. Rolldown's `entriesAware` merging is not used, because it loads code onto pages that never used it.
+
 ## Deploy
 
 - Worker `gmt-dox` serves `https://northguild.dev/gmt/` through `pnpm exec wrangler deploy`. The
