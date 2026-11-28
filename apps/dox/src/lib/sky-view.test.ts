@@ -348,6 +348,10 @@ describe("mountSkyView", () => {
     expect(bodyButton("Apophis")).toHaveFocus();
     await who.keyboard("{Home}");
     expect(bodyButton("Sun")).toHaveFocus();
+    await who.keyboard("{End}");
+    expect(bodyButton("Apophis")).toHaveFocus();
+    await who.keyboard("{Home}");
+    expect(bodyButton("Sun")).toHaveFocus();
     expect(bodyButton("Sun")).toHaveAttribute("tabindex", "0");
     expect(bodyButton("Moon")).toHaveAttribute("tabindex", "-1");
   });
